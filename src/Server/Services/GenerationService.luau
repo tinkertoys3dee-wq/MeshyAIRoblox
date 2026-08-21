@@ -1,0 +1,673 @@
+--!strict
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Config"))
+local Network = require(ReplicatedStorage:WaitForChild("Network"))
+local ModerationService = require(script.Parent.ModerationService)
+
+local GenerationService = {}
+GenerationService.__index = GenerationService
+
+local TERMINAL = {
+	SUCCEEDED = true,
+	FAILED = true,
+	IMAGE_READY = true,
+}
+
+local ACCESSORY_TYPES = {
+	Hat = true,
+	HairAccessory = true,
+	FaceAccessory = true,
+	NeckAccessory = true,
+	ShoulderAccessory = true,
+	FrontAccessory = true,
+	BackAccessory = true,
+	WaistAccessory = true,
+}
+
+local function productKeyFor(method: string): string
+	if method == "IMAGE_PREVIEW" then
+		return "ImagePreview"
+	elseif method == "IMAGE_TO_3D" then
+		return "ImageConversion"
+	end
+	return "DirectGeneration"
+end
+
+local function deterministicId(prefix: string, source: string): string
+	return prefix .. "_" .. string.sub(string.gsub(source, "%W", ""), 1, 54)
+end
+
+local function defaultFit(accessoryType: string): { [string]: any }
+	return {
+		position = { x = 0, y = 0, z = 0 },
+		rotation = { x = 0, y = 0, z = 0 },
+		scale = { x = 1, y = 1, z = 1 },
+		accessoryType = accessoryType,
+	}
+end
+
+function GenerationService.new(
+	profileService: any,
+	playerStateService: any,
+	backendService: any,
+	commerceService: any,
+	push: (Player, string, any) -> (),
+	analyticsService: any
+)
+	local self = setmetatable({
+		profiles = profileService,
+		playerStates = playerStateService,
+		backend = backendService,
+		commerce = commerceService,
+		analytics = analyticsService,
+		push = push,
+		polling = {} :: { [string]: boolean },
+		launching = {} :: { [string]: boolean },
+	}, GenerationService)
+
+	commerceService:Register("DirectGeneration", function(player, payload, intentId)
+		return self:_Grant(player, "DirectGeneration", payload, intentId)
+	end)
+	commerceService:Register("ImagePreview", function(player, payload, intentId)
+		return self:_Grant(player, "ImagePreview", payload, intentId)
+	end)
+	commerceService:Register("ImageConversion", function(player, payload, intentId)
+		return self:_Grant(player, "ImageConversion", payload, intentId)
+	end)
+	commerceService:Register("PriorityPass", function(player, _payload, intentId)
+		local granted = false
+		local mutateSuccess = self.profiles:Mutate(player, function(profile)
+			if not profile.grantedIntents[intentId] then
+				profile.grantedIntents[intentId] = { kind = "PRIORITY_PASS", grantedAt = os.time() }
+				profile.retryCredits.PriorityPass = (profile.retryCredits.PriorityPass or 0) + 1
+				granted = true
+			end
+		end)
+		if not mutateSuccess then
+			error("PROFILE_MUTATION_FAILED")
+		end
+		if granted then
+			return function()
+				local profile = self.profiles:Get(player)
+				if not profile or player.Parent == nil then
+					return
+				end
+				self.push(player, Network.PushEvents.Profile, { retryCredits = profile.retryCredits })
+				self.push(
+					player,
+					Network.PushEvents.Toast,
+					{ tone = "success", message = "Priority pass added to your account." }
+				)
+			end
+		end
+		return nil
+	end)
+	return self
+end
+
+function GenerationService:Create(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" then
+		return false, "INVALID_REQUEST"
+	end
+	local kind = payload.kind
+	if kind ~= "TEXT_TO_3D" and kind ~= "IMAGE_PREVIEW" then
+		return false, "INVALID_METHOD"
+	end
+	local accessoryType = payload.accessoryType
+	if type(accessoryType) ~= "string" or not ACCESSORY_TYPES[accessoryType] then
+		return false, "INVALID_ACCESSORY_TYPE"
+	end
+
+	local filterSuccess, filteredPrompt, filterError = ModerationService.FilterPrompt(player, payload.prompt)
+	if not filterSuccess then
+		return false, filterError
+	end
+	local studioMock = RunService:IsStudio() and Config.Studio.AllowMockBackend and not self.backend:IsConfigured()
+	if not studioMock then
+		local moderationSuccess, moderationResult = self.backend:ModeratePrompt(player, filteredPrompt)
+		if not moderationSuccess then
+			return false, moderationResult
+		end
+	end
+	if not self:_HasQueueSpace(player) then
+		return false, "QUEUE_FULL"
+	end
+
+	local productKey = if kind == "TEXT_TO_3D" then "DirectGeneration" else "ImagePreview"
+	local intentPayload = {
+		kind = kind,
+		filteredPrompt = filteredPrompt,
+		accessoryType = accessoryType,
+		usePriority = payload.usePriority == true,
+	}
+	return self:_UseCreditOrPrompt(player, productKey, intentPayload)
+end
+
+function GenerationService:ConvertImage(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" or type(payload.generationId) ~= "string" then
+		return false, "INVALID_REQUEST"
+	end
+	if not self:_HasQueueSpace(player) then
+		return false, "QUEUE_FULL"
+	end
+	if not self.backend:IsConfigured() and not (RunService:IsStudio() and Config.Studio.AllowMockBackend) then
+		return false, "BACKEND_NOT_CONFIGURED"
+	end
+	local profile = self.profiles:Get(player)
+	local source = profile and profile.generations[payload.generationId]
+	if not source or source.stage ~= "IMAGE_READY" or not source.backendJobId then
+		return false, "IMAGE_NOT_READY"
+	end
+	return self:_UseCreditOrPrompt(player, "ImageConversion", {
+		kind = "IMAGE_TO_3D",
+		filteredPrompt = source.filteredPrompt,
+		accessoryType = source.accessoryType,
+		sourceGenerationId = source.id,
+		sourceBackendJobId = source.backendJobId,
+		usePriority = payload.usePriority == true,
+	})
+end
+
+function GenerationService:_UseCreditOrPrompt(
+	player: Player,
+	productKey: string,
+	payload: { [string]: any }
+): (boolean, any)
+	local usedCredit = false
+	self.profiles:Mutate(player, function(profile)
+		local credits = profile.retryCredits[productKey] or 0
+		if credits > 0 then
+			profile.retryCredits[productKey] = credits - 1
+			usedCredit = true
+		end
+	end)
+	if usedCredit then
+		local intentId = self.profiles:GenerateId("credit")
+		local grantSuccess, postCommit = pcall(function()
+			return self:_Grant(player, productKey, payload, intentId)
+		end)
+		if not grantSuccess or type(postCommit) ~= "function" then
+			self.profiles:Mutate(player, function(profile)
+				profile.retryCredits[productKey] = (profile.retryCredits[productKey] or 0) + 1
+			end)
+			return false, "GRANT_FAILED"
+		end
+		if not self.profiles:Save(player) then
+			return false, "SAVE_FAILED"
+		end
+		task.spawn(postCommit)
+		return true, { usedRetryCredit = true, intentId = intentId }
+	end
+	return self.commerce:BeginIntent(player, productKey, payload)
+end
+
+function GenerationService:_Grant(
+	player: Player,
+	productKey: string,
+	payload: { [string]: any },
+	intentId: string
+): (() -> ())?
+	local profile = self.profiles:Get(player)
+	if not profile then
+		return nil
+	end
+	local existingGrant = profile.grantedIntents[intentId]
+	if type(existingGrant) == "table" then
+		if type(existingGrant.generationId) == "string" then
+			return function()
+				self:_Launch(player, existingGrant.generationId)
+			end
+		end
+		return nil
+	end
+
+	if payload.recoveryCredit then
+		local granted = false
+		local mutateSuccess = self.profiles:Mutate(player, function(mutableProfile)
+			if not mutableProfile.grantedIntents[intentId] then
+				mutableProfile.grantedIntents[intentId] = {
+					kind = "RECOVERY_CREDIT",
+					productKey = productKey,
+					grantedAt = os.time(),
+				}
+				mutableProfile.retryCredits[productKey] = (mutableProfile.retryCredits[productKey] or 0) + 1
+				granted = true
+			end
+		end)
+		if not mutateSuccess then
+			error("PROFILE_MUTATION_FAILED")
+		end
+		if granted then
+			return function()
+				local currentProfile = self.profiles:Get(player)
+				if not currentProfile or player.Parent == nil then
+					return
+				end
+				self.push(player, Network.PushEvents.Profile, { retryCredits = currentProfile.retryCredits })
+				self.push(player, Network.PushEvents.Toast, {
+					tone = "success",
+					message = "Your purchase was recovered as a generation credit.",
+				})
+			end
+		end
+		return nil
+	end
+	return self:_Prepare(player, productKey, payload, intentId)
+end
+
+function GenerationService:_Prepare(
+	player: Player,
+	productKey: string,
+	payload: { [string]: any },
+	intentId: string
+): (() -> ())?
+	local profile = self.profiles:Get(player)
+	if not profile then
+		return nil
+	end
+	local generationId = deterministicId("gen", intentId)
+	if profile.generations[generationId] then
+		return function()
+			self:_Launch(player, generationId)
+		end
+	end
+	if not self:_HasQueueSpace(player) then
+		local mutateSuccess = self.profiles:Mutate(player, function(mutableProfile)
+			if not mutableProfile.grantedIntents[intentId] then
+				mutableProfile.grantedIntents[intentId] = {
+					kind = "QUEUE_RECOVERY_CREDIT",
+					productKey = productKey,
+					grantedAt = os.time(),
+				}
+				mutableProfile.retryCredits[productKey] = (mutableProfile.retryCredits[productKey] or 0) + 1
+			end
+		end)
+		if not mutateSuccess then
+			error("PROFILE_MUTATION_FAILED")
+		end
+		return function()
+			local currentProfile = self.profiles:Get(player)
+			if not currentProfile or player.Parent == nil then
+				return
+			end
+			self.push(player, Network.PushEvents.Profile, { retryCredits = currentProfile.retryCredits })
+			self.push(player, Network.PushEvents.Toast, {
+				tone = "success",
+				message = "Your queue filled up, so the purchase became a retry credit.",
+			})
+		end
+	end
+
+	local now = os.time()
+	local priority = self.playerStates:Get(player).groupMember
+	if payload.usePriority == true and not priority then
+		self.profiles:Mutate(player, function(profile)
+			local passes = profile.retryCredits.PriorityPass or 0
+			if passes > 0 then
+				profile.retryCredits.PriorityPass = passes - 1
+				priority = true
+			end
+		end)
+	end
+
+	local mutateSuccess = self.profiles:Mutate(player, function(profile)
+		if profile.generations[generationId] then
+			return
+		end
+		profile.generations[generationId] = {
+			id = generationId,
+			method = payload.kind,
+			productKey = productKey,
+			priority = priority,
+			stage = "QUEUED",
+			stageText = "Joining the generation queue",
+			progress = 0,
+			filteredPrompt = payload.filteredPrompt,
+			accessoryType = payload.accessoryType,
+			createdAt = now,
+			updatedAt = now,
+			purchaseIntentId = intentId,
+			sourceBackendJobId = payload.sourceBackendJobId,
+		}
+		table.insert(profile.generationOrder, 1, generationId)
+		profile.stats.generationsStarted += 1
+		profile.grantedIntents[intentId] = {
+			kind = "GENERATION",
+			generationId = generationId,
+			productKey = productKey,
+			grantedAt = now,
+		}
+	end)
+	if not mutateSuccess then
+		error("PROFILE_MUTATION_FAILED")
+	end
+	return function()
+		self:_Launch(player, generationId)
+	end
+end
+
+function GenerationService:_Launch(player: Player, generationId: string)
+	if player.Parent == nil or self.launching[generationId] then
+		return
+	end
+	local profile = self.profiles:Get(player)
+	local generation = profile and profile.generations[generationId]
+	if not generation or TERMINAL[generation.stage] then
+		return
+	end
+	local productKey = generation.productKey or productKeyFor(generation.method)
+	if generation.backendJobId then
+		self:_Poll(player, generationId, generation.backendJobId, productKey)
+		return
+	end
+	self.launching[generationId] = true
+	self.push(player, Network.PushEvents.Profile, { retryCredits = profile.retryCredits })
+	self.push(player, Network.PushEvents.Generation, { generationId = generationId, stage = "QUEUED", progress = 0 })
+	local funnel = if generation.method == "IMAGE_PREVIEW" then "reference" else "generation"
+	self.analytics:Funnel(player, funnel, 3, "Paid job queued", { method = generation.method })
+
+	if not self.backend:IsConfigured() and RunService:IsStudio() and Config.Studio.AllowMockBackend then
+		self.launching[generationId] = nil
+		self:_RunStudioMock(player, generationId, generation.method)
+		return
+	end
+
+	local requestPayload = {
+		requestId = generationId,
+		kind = generation.method,
+		filteredPrompt = generation.filteredPrompt,
+		accessoryType = generation.accessoryType,
+		priority = generation.priority == true,
+	}
+	if generation.sourceBackendJobId then
+		requestPayload.sourceJobId = generation.sourceBackendJobId
+	end
+	local success, response = self.backend:CreateJob(player, requestPayload)
+	if not success then
+		self.launching[generationId] = nil
+		self:_Fail(player, generationId, tostring(response), true, productKey)
+		return
+	end
+	local job = response.job
+	if type(job) ~= "table" or type(job.id) ~= "string" then
+		self.launching[generationId] = nil
+		self:_Fail(player, generationId, "BACKEND_BAD_RESPONSE", true, productKey)
+		return
+	end
+	self.profiles:Mutate(player, function(profile)
+		local mutableGeneration = profile.generations[generationId]
+		if mutableGeneration then
+			mutableGeneration.backendJobId = job.id
+			mutableGeneration.updatedAt = os.time()
+		end
+	end)
+	self.launching[generationId] = nil
+	self:_Poll(player, generationId, job.id, productKey)
+end
+
+function GenerationService:_Poll(player: Player, generationId: string, backendJobId: string, productKey: string)
+	if self.polling[generationId] then
+		return
+	end
+	self.polling[generationId] = true
+	task.spawn(function()
+		while self.polling[generationId] and player.Parent do
+			local success, response = self.backend:GetJob(player, backendJobId)
+			if success and type(response.job) == "table" then
+				local job = response.job
+				self.profiles:Mutate(player, function(profile)
+					local generation = profile.generations[generationId]
+					if generation then
+						generation.stage = job.status
+						generation.stageText = job.stage
+						generation.progress = job.progress
+						generation.updatedAt = os.time()
+					end
+				end)
+				self.push(player, Network.PushEvents.Generation, {
+					generationId = generationId,
+					stage = job.status,
+					stageText = job.stage,
+					progress = job.progress,
+				})
+
+				if job.status == "IMAGE_READY" then
+					self.polling[generationId] = nil
+					local output = if type(job.output) == "table" then job.output else {}
+					if
+						not RunService:IsStudio()
+						and (type(output.previewAssetId) ~= "number" or output.previewAssetId <= 0)
+					then
+						self:_Fail(player, generationId, "BACKEND_PREVIEW_MISSING", true, productKey)
+						return
+					end
+					self.profiles:Mutate(player, function(profile)
+						local generation = profile.generations[generationId]
+						if generation then
+							generation.previewAssetId = output.previewAssetId
+						end
+					end)
+					self.profiles:Save(player)
+					self.push(player, Network.PushEvents.Generation, {
+						generationId = generationId,
+						previewAssetId = output.previewAssetId,
+					})
+					self.push(player, Network.PushEvents.Toast, {
+						tone = "ready",
+						message = "Your reference image is ready to review.",
+					})
+					self.analytics:Funnel(player, "reference", 4, "Reference image ready", {})
+					return
+				elseif job.status == "SUCCEEDED" then
+					self.polling[generationId] = nil
+					local output = if type(job.output) == "table" then job.output else {}
+					if
+						not RunService:IsStudio()
+						and (type(output.modelAssetId) ~= "number" or output.modelAssetId <= 0)
+					then
+						self:_Fail(player, generationId, "BACKEND_MODEL_MISSING", true, productKey)
+						return
+					end
+					self:_CompleteModel(player, generationId, output)
+					return
+				elseif job.status == "FAILED" then
+					self.polling[generationId] = nil
+					local errorCode = if job.error then job.error.code else "GENERATION_FAILED"
+					local retryable = if job.error then job.error.retryable == true else false
+					self:_Fail(player, generationId, errorCode, retryable, productKey)
+					return
+				end
+			end
+			task.wait(Config.Generation.StatusPollSeconds * self.playerStates:Get(player).queueSpeedMultiplier)
+		end
+		self.polling[generationId] = nil
+	end)
+end
+
+function GenerationService:_CompleteModel(player: Player, generationId: string, output: { [string]: any })
+	local profile = self.profiles:Get(player)
+	local existingGeneration = profile and profile.generations[generationId]
+	if not existingGeneration then
+		return
+	end
+	local itemId = existingGeneration.itemId or deterministicId("item", generationId)
+	local created = false
+	self.profiles:Mutate(player, function(profile)
+		local generation = profile.generations[generationId]
+		if not generation then
+			return
+		end
+		if profile.items[itemId] then
+			generation.stage = "SUCCEEDED"
+			generation.stageText = "Ready to fit"
+			generation.progress = 100
+			generation.itemId = itemId
+			generation.updatedAt = os.time()
+			return
+		end
+		local now = os.time()
+		profile.items[itemId] = {
+			id = itemId,
+			ownerUserId = player.UserId,
+			originalOwnerUserId = player.UserId,
+			license = "ORIGINAL",
+			canList = true,
+			canPublish = true,
+			name = string.sub(generation.filteredPrompt, 1, 48),
+			filteredPrompt = generation.filteredPrompt,
+			method = if generation.method == "TEXT_TO_3D" then "TEXT_TO_3D" else "IMAGE_TO_3D",
+			status = "READY",
+			createdAt = now,
+			updatedAt = now,
+			backendJobId = generation.backendJobId,
+			modelAssetId = output.modelAssetId,
+			thumbnailAssetId = output.thumbnailAssetId,
+			fit = defaultFit(generation.accessoryType),
+			visibility = "PRIVATE",
+			isListed = false,
+			likes = 0,
+			favorites = 0,
+			views = 0,
+		}
+		created = true
+		table.insert(profile.itemOrder, 1, itemId)
+		generation.stage = "SUCCEEDED"
+		generation.stageText = "Ready to fit"
+		generation.progress = 100
+		generation.itemId = itemId
+		generation.updatedAt = now
+		profile.stats.generationsCompleted += 1
+	end)
+	self.profiles:Save(player)
+	self.push(player, Network.PushEvents.Item, { itemId = itemId, item = self.profiles:Get(player).items[itemId] })
+	if created then
+		self.push(player, Network.PushEvents.Toast, { tone = "ready", message = "Your model is ready to fit." })
+		self.analytics:Funnel(player, "generation", 4, "Model ready to fit", {
+			method = self.profiles:Get(player).generations[generationId].method,
+		})
+		self.analytics:Custom(player, "GenerationCompleted", 1, {
+			durationSeconds = math.max(0, os.time() - existingGeneration.createdAt),
+		})
+	end
+end
+
+function GenerationService:_Fail(
+	player: Player,
+	generationId: string,
+	errorCode: string,
+	retryable: boolean,
+	productKey: string
+)
+	local firstFailure = false
+	self.profiles:Mutate(player, function(profile)
+		local generation = profile.generations[generationId]
+		if generation and not generation.failureHandled then
+			generation.failureHandled = true
+			generation.stage = "FAILED"
+			generation.stageText = "Generation failed"
+			generation.errorCode = errorCode
+			generation.progress = 0
+			generation.updatedAt = os.time()
+			firstFailure = true
+		end
+	end)
+	if not firstFailure then
+		return
+	end
+	self:_RefundCredit(player, productKey, "That attempt did not produce a usable item. A retry credit was added.")
+	self.profiles:Save(player)
+	self.analytics:Custom(player, "GenerationFailed", 1, {
+		code = errorCode,
+		retryable = retryable,
+		creditGranted = true,
+	})
+end
+
+function GenerationService:_RefundCredit(player: Player, productKey: string, message: string)
+	self.profiles:Mutate(player, function(profile)
+		profile.retryCredits[productKey] = (profile.retryCredits[productKey] or 0) + 1
+	end)
+	local profile = self.profiles:Get(player)
+	if profile and player.Parent then
+		self.push(player, Network.PushEvents.Profile, { retryCredits = profile.retryCredits })
+		self.push(player, Network.PushEvents.Toast, { tone = "success", message = message })
+	end
+end
+
+function GenerationService:_RunStudioMock(player: Player, generationId: string, kind: string)
+	task.spawn(function()
+		task.wait(1.25)
+		local profile = self.profiles:Get(player)
+		if not profile or not profile.generations[generationId] or player.Parent == nil then
+			return
+		end
+		if kind == "IMAGE_PREVIEW" then
+			self.profiles:Mutate(player, function(profile)
+				local generation = profile.generations[generationId]
+				generation.stage = "IMAGE_READY"
+				generation.stageText = "Studio mock reference ready"
+				generation.progress = 100
+				generation.previewAssetId = 0
+				generation.backendJobId = `00000000-0000-0000-0000-{string.sub(generationId, -12)}`
+			end)
+			self.push(
+				player,
+				Network.PushEvents.Generation,
+				{ generationId = generationId, stage = "IMAGE_READY", progress = 100 }
+			)
+		else
+			self:_CompleteModel(player, generationId, { modelAssetId = 0, thumbnailAssetId = 0 })
+		end
+	end)
+end
+
+function GenerationService:_HasQueueSpace(player: Player): boolean
+	local profile = self.profiles:Get(player)
+	if not profile then
+		return false
+	end
+	local active = 0
+	for _, generation in profile.generations do
+		if not TERMINAL[generation.stage] then
+			active += 1
+		end
+	end
+	return active < self.playerStates:Get(player).queueSlots
+end
+
+function GenerationService:Get(player: Player, generationId: string): (boolean, any)
+	local profile = self.profiles:Get(player)
+	local generation = profile and profile.generations[generationId]
+	if not generation then
+		return false, "NOT_FOUND"
+	end
+	return true, generation
+end
+
+function GenerationService:Resume(player: Player)
+	local profile = self.profiles:Get(player)
+	if not profile then
+		return
+	end
+	for generationId, generation in profile.generations do
+		if not TERMINAL[generation.stage] then
+			if generation.backendJobId then
+				self:_Poll(
+					player,
+					generationId,
+					generation.backendJobId,
+					generation.productKey or productKeyFor(generation.method)
+				)
+			else
+				task.spawn(function()
+					self:_Launch(player, generationId)
+				end)
+			end
+		end
+	end
+end
+
+return GenerationService

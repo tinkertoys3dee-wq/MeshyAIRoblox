@@ -1,1 +1,5 @@
-print("Hello world, from client!")
+--!strict
+
+local App = require(script.Parent.UI.App)
+
+App.new()

@@ -6,6 +6,14 @@
 /ServerPackages
 /DevPackages
 
+# Railway / Node
+/backend/node_modules
+/backend/dist
+/backend/coverage
+/backend/.env
+/node_modules
+*.tsbuildinfo
+
 # Artifacts
 /*.lock
 /*.rbxl

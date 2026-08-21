@@ -1,0 +1,70 @@
+--!strict
+
+-- Public, non-secret configuration. API keys and the Roblox-to-backend shared
+-- secret belong in Railway variables / Creator Hub secrets, never here.
+return table.freeze({
+	Brand = {
+		Name = "FORGE UGC",
+		Tagline = "Imagine it. Fit it. Wear it.",
+	},
+
+	Backend = {
+		BaseUrl = "", -- Example: https://forge-ugc-production.up.railway.app
+		SecretName = "FORGE_BACKEND_SECRET",
+	},
+
+	Group = {
+		Id = 0, -- Your Roblox group ID
+		GenerationSpeedMultiplier = 0.90,
+		ExtraQueueSlots = 1,
+	},
+
+	Generation = {
+		BaseQueueSlots = 1,
+		PromptMinLength = 6,
+		PromptMaxLength = 500,
+		TargetTriangles = 3600,
+		HardTriangleLimit = 3999,
+		HardVertexLimit = 3999,
+		TextureResolution = 2048,
+		StatusPollSeconds = 4,
+		IntentLifetimeSeconds = 15 * 60,
+	},
+
+	Products = {
+		DirectGeneration = { Id = 0, SuggestedPrice = 159 },
+		ImagePreview = { Id = 0, SuggestedPrice = 29 },
+		ImageConversion = { Id = 0, SuggestedPrice = 159 },
+		PriorityPass = { Id = 0, SuggestedPrice = 29 },
+	},
+
+	AvatarCreationTokens = {
+		Hat = "",
+		HairAccessory = "",
+		FaceAccessory = "",
+		NeckAccessory = "",
+		ShoulderAccessory = "",
+		FrontAccessory = "",
+		BackAccessory = "",
+		WaistAccessory = "",
+	},
+
+	Marketplace = {
+		MinimumTransferRobux = 10,
+		MaximumTransferRobux = 500,
+		SellerShare = 0.90,
+		PageSize = 24,
+		TransferIntentLifetimeSeconds = 30 * 60,
+	},
+
+	DataStores = {
+		Player = "ForgeUGC_Player_v1",
+		ItemIndex = "ForgeUGC_ItemIndex_v1",
+		ReceiptClaims = "ForgeUGC_ReceiptClaims_v1",
+	},
+
+	Studio = {
+		AllowMockPurchases = true,
+		AllowMockBackend = true,
+	},
+})
