@@ -63,7 +63,7 @@ return table.freeze({
 		NeckAccessory = "",
 		ShoulderAccessory = "",
 		FrontAccessory = "",
-		BackAccessory = "",
+		BackAccessory = "3e34e666-3680-419a-9a11-46b38a8664c3",
 		WaistAccessory = "",
 	},
 
