@@ -12,11 +12,11 @@ The cost model uses the standard DevEx rate of **$0.0038 per Earned Robux** and 
 | Text → textured Smart Topology model | $0.300 | 159 R$ | $0.423 | 29% |
 | Approved image → textured Smart Topology model | $0.300 | 159 R$ | $0.423 | 29% |
 | Priority queue pass | negligible variable cost | 29 R$ | $0.077 | n/a |
-| Custom Image Upload game pass | moderation/hosting over account lifetime | 499 R$ one time | $1.327 | usage-dependent |
+| Custom Image Upload game pass | moderation/hosting over account lifetime | 249 R$ one time | $0.662 | usage-dependent |
 
 The guided path is two explicit purchases: **29 R$** for the reviewable reference image and **159 R$** after approval for conversion, or **188 R$ total**. At the estimates above it nets about **$0.500** against **$0.353** of provider cost, a 29% contribution margin before hosting.
 
-The **499 R$ Custom Image Upload pass** is a permanent premium entitlement. Upload moderation and previewing are included after purchase, but every approved image still uses the normal **159 R$ Image → 3D Conversion** product. This prevents unlimited Meshy cost exposure while giving the pass durable value. At the baseline conversion assumptions, the pass nets about **$1.327** before lifetime moderation and hosting expense; review its attach rate, upload frequency, and support burden before changing the price.
+The **249 R$ Custom Image Upload pass** is a permanent premium entitlement. Upload moderation and previewing are included after purchase, but every approved image still uses the normal **159 R$ Image → 3D Conversion** product. This prevents unlimited Meshy cost exposure while giving the pass durable value. At the baseline conversion assumptions, the pass nets about **$0.662** before lifetime moderation and hosting expense; review its attach rate, upload frequency, and support burden before changing the price.
 
 Calculations use:
 

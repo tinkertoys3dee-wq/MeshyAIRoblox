@@ -12,7 +12,7 @@ No secret should be pasted into chat or committed to this repository.
    - Reference Image: 29 R$
    - Image → 3D Conversion: 159 R$
    - Priority Queue Pass: 29 R$
-5. Create a **Custom Image Upload** game pass for **499 R$**, enable it for sale, and enter its ID in `Config.Passes.CustomImageUpload.Id`. This is permanent access; it is not a developer product.
+5. Create a **Custom Image Upload** game pass for **249 R$**, enable it for sale, and enter its ID in `Config.Passes.CustomImageUpload.Id`. This is permanent access; it is not a developer product.
 6. Enter the Roblox group ID in `Config.Group.Id` to enable 10% faster queue polling, one extra queued job, and group-owned custom reference images.
 7. Create Avatar Creation Tokens for each accessory type you will permit. Enter those public token IDs in `Config.AvatarCreationTokens`.
 8. Keep the group or token owner ID-verified with Roblox Premium so in-experience avatar creation remains available.
@@ -23,7 +23,7 @@ No secret should be pasted into chat or committed to this repository.
 
 ## Player image upload flow
 
-Roblox runtime experiences cannot browse a player's local photo library. Players therefore upload a PNG/JPG through Roblox Creator Hub as an **Image** or **Decal**, wait for Roblox moderation, and paste the numeric asset ID into Forge.
+Roblox does not currently expose a general-purpose runtime picker that gives an experience an arbitrary local PNG/JPG for use by an external generation pipeline. `AvatarCreationService:PromptSelectAvatarGenerationImageAsync()` is limited to Roblox's sensitive Photo-to-Avatar flow: it returns a temporary file identifier for Roblox's avatar-generation methods, not image bytes, a URL, or an uploaded Image/Decal asset that Forge can send to Meshy. Players therefore upload a PNG/JPG through Roblox Creator Hub as an **Image** or **Decal**, wait for Roblox moderation, and paste the numeric asset ID into Forge.
 
 The asset must be owned by the player's Roblox account or by the group configured in `Config.Group.Id`. Forge rejects arbitrary URLs, non-image asset types, other creators' assets, pending/blocked thumbnails, malformed images, and accounts for which `IsContentSharingAllowed` is false. Railway downloads only through Roblox's fixed thumbnail endpoint and approved HTTPS CDN hosts, then performs a second multimodal moderation pass before showing or converting the reference.
 

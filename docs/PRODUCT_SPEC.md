@@ -8,7 +8,7 @@ This file is the durable source of truth for future Forge UGC updates. A change 
 - Creation has three paths:
   - Direct: filtered text → Meshy Smart Topology textured 3D.
   - Art-directed: filtered text → paid reference image → player approval → paid image-to-3D conversion. A reroll is another paid reference and never destroys the prior result.
-  - Upload Reference: a permanent 499 R$ game pass unlocks player-owned Roblox Image/Decal references. The reference is free to submit after unlock; an approved reference uses the normal paid image-to-3D conversion.
+  - Upload Reference: a permanent 249 R$ game pass unlocks player-owned Roblox Image/Decal references. The reference is free to submit after unlock; an approved reference uses the normal paid image-to-3D conversion.
 - Every path exposes an allowlisted visual-style preset (`Auto`, `Anime`, `Realistic`, `Stylized`, `Low poly`, or `Fantasy`) and detail density (`Clean`, `Balanced`, or `Intricate`). These settings guide both shape and texture without relaxing topology limits.
 - Meshy targets 3,600 triangle faces. Accepted output has one watertight textured mesh/primitive, usable UVs, fewer than 4,000 triangles and vertices, embedded textures no larger than 2048×2048, and a final file below the Roblox upload cap.
 - Players fit each owned item against an avatar reference with position, rotation, and per-axis scale, then save and equip that fit in the experience.
@@ -41,7 +41,7 @@ This file is the durable source of truth for future Forge UGC updates. A change 
 
 - Group members receive one extra concurrent queue slot, priority scheduling, and the configured 10% status-polling boost.
 - A priority pass is an optional transparent convenience product, not a requirement to complete a paid job.
-- Custom Image Upload is a permanent premium game pass, not a consumable. Its 499 R$ price pays for durable art-direction access; each resulting 3D conversion remains separately and transparently priced.
+- Custom Image Upload is a permanent premium game pass, not a consumable. Its 249 R$ price pays for durable art-direction access; each resulting 3D conversion remains separately and transparently priced.
 - Daily creative briefs and a three-day streak reward provide return reasons without random paid rewards or loss aversion.
 - The Avatar Lab supports Roblox catalog search, free try-on, platform purchase prompts, avatar saving, and reset.
 - Pricing uses the standard, lowest DevEx rate assumption. Provider cost, completion rate, retry liability, Railway cost, and live Roblox revenue must be remeasured before any price change.
