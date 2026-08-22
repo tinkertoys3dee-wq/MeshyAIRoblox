@@ -45,10 +45,10 @@ return table.freeze({
 	},
 
 	Products = {
-		DirectGeneration = { Id = 0, SuggestedPrice = 159 },
-		ImagePreview = { Id = 0, SuggestedPrice = 29 },
-		ImageConversion = { Id = 0, SuggestedPrice = 159 },
-		PriorityPass = { Id = 0, SuggestedPrice = 29 },
+		DirectGeneration = { Id = 3709322103, SuggestedPrice = 159 },
+		ImagePreview = { Id = 3709322158, SuggestedPrice = 29 },
+		ImageConversion = { Id = 3709322228, SuggestedPrice = 159 },
+		PriorityPass = { Id = 3709322304, SuggestedPrice = 29 },
 	},
 
 	Passes = {
