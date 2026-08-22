@@ -41,6 +41,20 @@ local ERROR_MESSAGES = {
 	GRANT_FAILED = "The purchase benefit could not be prepared. Try again in a moment.",
 	PURCHASE_ALREADY_PENDING = "Finish or close the current Roblox purchase prompt before starting another.",
 	PURCHASE_PROMPT_FAILED = "Roblox could not open the purchase prompt.",
+	GAME_PASS_ID_NOT_CONFIGURED = "Add the Custom Image Upload game pass ID in Config.luau.",
+	GAME_PASS_LOOKUP_FAILED = "Roblox could not verify that game pass right now. Try again shortly.",
+	GAME_PASS_PROMPT_FAILED = "Roblox could not open the game pass purchase prompt.",
+	CUSTOM_IMAGE_PASS_REQUIRED = "Unlock Custom Image Upload before submitting a reference.",
+	INVALID_IMAGE_ASSET_ID = "Enter the numeric ID of your Roblox Image or Decal.",
+	IMAGE_ASSET_UNAVAILABLE = "Roblox could not find that image asset, or it is still under moderation.",
+	IMAGE_ASSET_TYPE_REQUIRED = "That ID is not a Roblox Image or Decal asset.",
+	IMAGE_NOT_OWNED = "Use an Image or Decal uploaded by your account or the configured creator group.",
+	ROBLOX_IMAGE_NOT_READY = "That Roblox image is still processing or unavailable. Try again after moderation finishes.",
+	ROBLOX_IMAGE_UNAVAILABLE = "Roblox could not provide that reference image right now.",
+	REFERENCE_IMAGE_TOO_SMALL = "That reference image is too small. Upload an image at least 128×128.",
+	REFERENCE_IMAGE_INVALID = "That Roblox asset is not a valid still image.",
+	INVALID_STYLE_PRESET = "Choose one of the available visual styles.",
+	INVALID_DETAIL_LEVEL = "Choose one of the available detail levels.",
 	TRANSFER_PROMPT_FAILED = "Roblox could not open the Plus transfer prompt.",
 	TRANSFER_ALREADY_PENDING = "Finish the current creator transfer before starting another.",
 	SUBSCRIPTION_NOT_ALLOWED = "Roblox Plus subscriptions are unavailable for this account.",
@@ -116,6 +130,9 @@ function App.new()
 		activePage = "Create",
 		selectedMethod = "TEXT_TO_3D",
 		selectedAccessoryType = "Hat",
+		selectedStylePreset = "AUTO",
+		selectedDetailLevel = "BALANCED",
+		customImageAssetId = "",
 		draftPrompt = "",
 		selectedItemId = nil :: string?,
 		fitDrafts = {} :: { [string]: { [string]: any } },
@@ -533,6 +550,16 @@ function App:_RefreshLocalizedPrices()
 				end
 			end
 		end
+		for passKey, pass in Config.Passes do
+			if pass.Id > 0 then
+				local success, info = pcall(function()
+					return MarketplaceService:GetProductInfoAsync(pass.Id, Enum.InfoType.GamePass)
+				end)
+				if success and type(info) == "table" and type(info.PriceInRobux) == "number" then
+					state.prices[passKey] = info.PriceInRobux
+				end
+			end
+		end
 		if self.state == state then
 			self:_RenderActivePage()
 		end
@@ -631,6 +658,12 @@ function App:_ConnectPush()
 			task.delay(0.2, function()
 				self:_RefreshBootstrap()
 			end)
+		elseif eventName == Network.PushEvents.Entitlements then
+			for key, value in payload do
+				self.state.benefits[key] = value
+			end
+			self:_RenderStatus()
+			self:_RenderActivePage()
 		end
 	end)
 end
@@ -753,7 +786,7 @@ end
 function App:_RenderCreate()
 	self:_PageHeader(
 		"Create something impossible",
-		"Two paths, one Roblox-ready accessory. Every prompt is filtered before it leaves Roblox."
+		"Three paths, precise art direction, one Roblox-ready accessory. Every input is moderated."
 	)
 	local page = Factory.New("ScrollingFrame", {
 		Name = "CreateScroll",
@@ -775,8 +808,9 @@ function App:_RenderCreate()
 	})
 	Factory.List(stack, Enum.FillDirection.Vertical, 14)
 
+	local customUploadOwned = self.state.benefits.customImageUpload == true
 	local methodRow = Factory.New("Frame", {
-		Size = UDim2.new(1, 0, 0, if self.compact then 284 else 142),
+		Size = UDim2.new(1, 0, 0, if self.compact then 456 else 156),
 		BackgroundTransparency = 1,
 		LayoutOrder = 1,
 		Parent = stack,
@@ -799,14 +833,24 @@ function App:_RenderCreate()
 				price = self.state.prices.ImagePreview,
 				color = Colors.Rose,
 			},
+			{
+				id = "IMAGE_UPLOAD",
+				title = "Upload Reference",
+				kicker = "POWER USER",
+				body = "Use your own Roblox-moderated Image or Decal, then approve it before 3D conversion.",
+				priceText = if customUploadOwned
+					then "OWNED"
+					else string.format("R$ %d ONCE", self.state.prices.CustomImageUpload),
+				color = Colors.Gold,
+			},
 		}
 	do
 		local card = if self.compact
-			then Factory.Card(methodRow, UDim2.new(1, 0, 0, 136), UDim2.fromOffset(0, (index - 1) * 148))
+			then Factory.Card(methodRow, UDim2.new(1, 0, 0, 144), UDim2.fromOffset(0, (index - 1) * 156))
 			else Factory.Card(
 				methodRow,
-				UDim2.new(0.5, -7, 1, 0),
-				UDim2.new((index - 1) * 0.5, if index == 2 then 7 else 0, 0, 0)
+				UDim2.new(1 / 3, -8, 1, 0),
+				UDim2.new((index - 1) / 3, (index - 1) * 4, 0, 0)
 			)
 		local selected = self.selectedMethod == method.id
 		local stroke = card:FindFirstChildOfClass("UIStroke")
@@ -819,16 +863,18 @@ function App:_RenderCreate()
 		Factory.Label(card, method.title, UDim2.new(1, -118, 0, 31), {
 			Position = UDim2.fromOffset(16, 46),
 			Font = Theme.Fonts.Black,
-			TextSize = 20,
+			TextSize = if self.compact then 20 else 18,
+			Truncate = Enum.TextTruncate.AtEnd,
 		})
-		Factory.Label(card, method.body, UDim2.new(1, -128, 0, 50), {
+		Factory.Label(card, method.body, UDim2.new(1, -32, 0, 52), {
 			Position = UDim2.fromOffset(16, 80),
 			Color = Colors.TextMuted,
 			TextSize = 12,
 			Wrapped = true,
 			AlignY = Enum.TextYAlignment.Top,
 		})
-		Factory.Label(card, string.format("R$ %d", method.price), UDim2.fromOffset(94, 35), {
+		local priceText = method.priceText or string.format("R$ %d", method.price)
+		Factory.Label(card, priceText, UDim2.fromOffset(106, 35), {
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, -15, 0, 48),
 			AlignX = Enum.TextXAlignment.Right,
@@ -849,143 +895,330 @@ function App:_RenderCreate()
 		end)
 	end
 
-	local promptCard = Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 344 else 288), nil, "PromptCard")
-	promptCard.LayoutOrder = 2
-	Factory.Label(promptCard, "1  DESCRIBE YOUR ACCESSORY", UDim2.new(1, -32, 0, 24), {
-		Position = UDim2.fromOffset(16, 14),
-		Font = Theme.Fonts.Bold,
-		TextSize = 12,
-		Color = Colors.Cyan,
-	})
-	local prompt = self:_TextBox(
-		promptCard,
-		"Example: A glossy crescent-moon crown made of translucent violet crystal, chunky silhouette, no floating pieces",
-		UDim2.new(1, -32, 0, 92),
-		UDim2.fromOffset(16, 46),
-		true
-	)
-	prompt.Text = self.draftPrompt
-	prompt:GetPropertyChangedSignal("Text"):Connect(function()
-		self.draftPrompt = string.sub(prompt.Text, 1, Config.Generation.PromptMaxLength)
-	end)
-	local count = Factory.Label(
-		promptCard,
-		string.format("%d / %d", #self.draftPrompt, Config.Generation.PromptMaxLength),
-		UDim2.fromOffset(120, 20),
-		{
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -18, 0, 143),
-			AlignX = Enum.TextXAlignment.Right,
-			Color = Colors.TextMuted,
-			TextSize = 11,
-		}
-	)
-	prompt:GetPropertyChangedSignal("Text"):Connect(function()
-		count.Text = string.format("%d / %d", #prompt.Text, Config.Generation.PromptMaxLength)
-	end)
-	Factory.Label(promptCard, "2  CHOOSE A FIT REGION", UDim2.new(1, -32, 0, 22), {
-		Position = UDim2.fromOffset(16, 164),
-		Font = Theme.Fonts.Bold,
-		TextSize = 12,
-		Color = Colors.Cyan,
-	})
-	local chipRow = Factory.New("ScrollingFrame", {
-		Position = UDim2.fromOffset(16, 193),
-		Size = UDim2.new(1, -32, 0, 38),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		ScrollBarThickness = 0,
-		AutomaticCanvasSize = Enum.AutomaticSize.X,
-		CanvasSize = UDim2.new(),
-		ScrollingDirection = Enum.ScrollingDirection.X,
-		Parent = promptCard,
-	})
-	Factory.List(chipRow, Enum.FillDirection.Horizontal, 8)
-	for typeName, label in ACCESSORY_LABELS do
-		local selected = self.selectedAccessoryType == typeName
-		local chip = Factory.Button(chipRow, label, UDim2.fromOffset(88, 34), nil, if selected then "primary" else nil)
-		self:_BindButton(chip)
-		chip.Activated:Connect(function()
-			self.selectedAccessoryType = typeName
+	local isUpload = self.selectedMethod == "IMAGE_UPLOAD"
+	if isUpload and not customUploadOwned then
+		local unlock = Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 246 else 196), nil, "UploadUnlock")
+		unlock.LayoutOrder = 2
+		Factory.Pill(unlock, "PERMANENT CREATOR TOOL", Colors.Gold, 164).Position = UDim2.fromOffset(16, 15)
+		Factory.Label(unlock, "Bring your own art direction", UDim2.new(1, -32, 0, 34), {
+			Position = UDim2.fromOffset(16, 48),
+			Font = Theme.Fonts.Black,
+			TextSize = 22,
+		})
+		Factory.Label(
+			unlock,
+			string.format(
+				"Upload an Image or Decal to Roblox Creator Hub, wait for Roblox moderation, then paste its asset ID here. Forge performs another visual safety check before Meshy receives it. The R$ %d conversion is still charged only after you approve the image.",
+				self.state.prices.ImageConversion
+			),
+			if self.compact then UDim2.new(1, -32, 0, 92) else UDim2.new(1, -290, 0, 84),
+			{
+				Position = UDim2.fromOffset(16, 86),
+				Color = Colors.TextMuted,
+				TextSize = 12,
+				Wrapped = true,
+				AlignY = Enum.TextYAlignment.Top,
+			}
+		)
+		local unlockButton = Factory.Button(
+			unlock,
+			string.format("Unlock forever · R$ %d", self.state.prices.CustomImageUpload),
+			if self.compact then UDim2.new(1, -32, 0, 44) else UDim2.fromOffset(244, 44),
+			if self.compact then UDim2.new(0, 16, 1, -58) else UDim2.new(1, -260, 0.5, -22),
+			"mint"
+		)
+		self:_BindButton(unlockButton)
+		unlockButton.Activated:Connect(function()
+			unlockButton.Active = false
+			unlockButton.Text = "Checking ownership…"
+			task.spawn(function()
+				local success, result = self:_Invoke(Network.Actions.PromptCustomImagePass, {})
+				if success then
+					if result.mocked or result.alreadyOwned then
+						self:_RefreshBootstrap()
+						self:_Toast("success", "Custom image upload is unlocked.")
+					else
+						self.sounds:Play("PurchasePrompt")
+						self:_Toast("success", "Confirm the permanent upload pass in Roblox.")
+					end
+				else
+					unlockButton.Active = true
+					unlockButton.Text = string.format("Unlock forever · R$ %d", self.state.prices.CustomImageUpload)
+				end
+			end)
+		end)
+	else
+		local cursorY = 14
+		local promptCard = Factory.Card(stack, UDim2.new(1, 0, 0, 560), nil, "PromptCard")
+		promptCard.LayoutOrder = 2
+		Factory.Label(promptCard, "1  DESCRIBE YOUR ACCESSORY", UDim2.new(1, -32, 0, 24), {
+			Position = UDim2.fromOffset(16, cursorY),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = Colors.Cyan,
+		})
+		cursorY += 32
+		local prompt = self:_TextBox(
+			promptCard,
+			"Example: A glossy crescent-moon crown made of translucent violet crystal, chunky silhouette, no floating pieces",
+			UDim2.new(1, -32, 0, 80),
+			UDim2.fromOffset(16, cursorY),
+			true
+		)
+		prompt.Text = self.draftPrompt
+		local count = Factory.Label(
+			promptCard,
+			string.format("%d / %d", #self.draftPrompt, Config.Generation.PromptMaxLength),
+			UDim2.fromOffset(120, 20),
+			{
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -18, 0, cursorY + 82),
+				AlignX = Enum.TextXAlignment.Right,
+				Color = Colors.TextMuted,
+				TextSize = 11,
+			}
+		)
+		prompt:GetPropertyChangedSignal("Text"):Connect(function()
+			self.draftPrompt = string.sub(prompt.Text, 1, Config.Generation.PromptMaxLength)
+			count.Text = string.format("%d / %d", #prompt.Text, Config.Generation.PromptMaxLength)
+		end)
+		cursorY += 108
+
+		local step = 2
+		local imageAssetBox = nil :: TextBox?
+		if isUpload then
+			Factory.Label(promptCard, "2  ADD YOUR ROBLOX IMAGE / DECAL", UDim2.new(1, -32, 0, 22), {
+				Position = UDim2.fromOffset(16, cursorY),
+				Font = Theme.Fonts.Bold,
+				TextSize = 12,
+				Color = Colors.Gold,
+			})
+			cursorY += 27
+			imageAssetBox = self:_TextBox(
+				promptCard,
+				"Paste the numeric asset ID, for example 1234567890",
+				UDim2.new(1, -32, 0, 40),
+				UDim2.fromOffset(16, cursorY),
+				false
+			)
+			imageAssetBox.Text = self.customImageAssetId
+			imageAssetBox:GetPropertyChangedSignal("Text"):Connect(function()
+				local digits = string.sub(string.gsub(imageAssetBox.Text, "%D", ""), 1, 16)
+				if digits ~= imageAssetBox.Text then
+					imageAssetBox.Text = digits
+				end
+				self.customImageAssetId = digits
+			end)
+			cursorY += 45
+			Factory.Label(
+				promptCard,
+				"Upload in Creator Hub first and wait for approval · Player- or creator-group-owned assets only · Forge rechecks every image",
+				UDim2.new(1, -32, 0, 30),
+				{
+					Position = UDim2.fromOffset(16, cursorY),
+					Color = Colors.TextMuted,
+					TextSize = 11,
+					Wrapped = true,
+				}
+			)
+			cursorY += 38
+			step = 3
+		end
+
+		local function choiceRow(
+			options: { any },
+			selectedValue: string,
+			positionY: number,
+			color: Color3,
+			onChoose: (string) -> ()
+		)
+			local row = Factory.New("ScrollingFrame", {
+				Position = UDim2.fromOffset(16, positionY),
+				Size = UDim2.new(1, -32, 0, 38),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				ScrollBarThickness = 0,
+				AutomaticCanvasSize = Enum.AutomaticSize.X,
+				CanvasSize = UDim2.new(),
+				ScrollingDirection = Enum.ScrollingDirection.X,
+				Parent = promptCard,
+			})
+			Factory.List(row, Enum.FillDirection.Horizontal, 8)
+			for _, option in options do
+				local selected = selectedValue == option.Id
+				local chip = Factory.Button(
+					row,
+					option.Label,
+					UDim2.fromOffset(98, 34),
+					nil,
+					if selected then "primary" else nil
+				)
+				if selected then
+					chip.BackgroundColor3 = color
+				end
+				self:_BindButton(chip)
+				chip.Activated:Connect(function()
+					onChoose(option.Id)
+				end)
+			end
+		end
+
+		Factory.Label(promptCard, string.format("%d  CHOOSE A VISUAL STYLE", step), UDim2.new(1, -32, 0, 22), {
+			Position = UDim2.fromOffset(16, cursorY),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = Colors.Violet,
+		})
+		cursorY += 27
+		choiceRow(Config.Generation.StylePresets, self.selectedStylePreset, cursorY, Colors.Violet, function(value)
+			self.selectedStylePreset = value
 			self:_RenderActivePage()
 		end)
-	end
-	local price = if self.selectedMethod == "TEXT_TO_3D"
-		then self.state.prices.DirectGeneration
-		else self.state.prices.ImagePreview
-	local actionText = if self.selectedMethod == "TEXT_TO_3D"
-		then string.format("Forge 3D · R$ %d", price)
-		else string.format("Create reference · R$ %d", price)
-	local generate = Factory.Button(
-		promptCard,
-		actionText,
-		if self.compact then UDim2.new(0.5, -20, 0, 42) else UDim2.new(0, 226, 0, 42),
-		if self.compact then UDim2.new(0.5, 5, 1, -52) else UDim2.new(1, -242, 1, -52),
-		"primary"
-	)
-	local availablePasses = self.state.profile.retryCredits.PriorityPass or 0
-	local priority = Factory.Button(
-		promptCard,
-		if availablePasses > 0
-			then string.format(
-				"Priority %s · %d pass%s",
-				if self.usePriority then "✓" else "",
-				availablePasses,
-				if availablePasses == 1 then "" else "es"
-			)
-			else string.format("Priority pass · R$ %d", self.state.prices.PriorityPass),
-		if self.compact then UDim2.new(0.5, -20, 0, 42) else UDim2.fromOffset(184, 42),
-		if self.compact then UDim2.new(0, 15, 1, -52) else UDim2.new(1, -436, 1, -52),
-		if self.usePriority then "mint" else nil
-	)
-	self:_BindButton(generate)
-	self:_BindButton(priority)
-	priority.Activated:Connect(function()
-		if availablePasses > 0 then
-			self.usePriority = not self.usePriority
+		cursorY += 46
+		step += 1
+
+		Factory.Label(promptCard, string.format("%d  CHOOSE DETAIL DENSITY", step), UDim2.new(1, -32, 0, 22), {
+			Position = UDim2.fromOffset(16, cursorY),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = Colors.Rose,
+		})
+		cursorY += 27
+		choiceRow(Config.Generation.DetailLevels, self.selectedDetailLevel, cursorY, Colors.Rose, function(value)
+			self.selectedDetailLevel = value
 			self:_RenderActivePage()
-		else
-			task.spawn(function()
-				self:_Invoke(Network.Actions.BuyPriorityPass, {})
+		end)
+		cursorY += 46
+		step += 1
+
+		Factory.Label(promptCard, string.format("%d  CHOOSE A FIT REGION", step), UDim2.new(1, -32, 0, 22), {
+			Position = UDim2.fromOffset(16, cursorY),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = Colors.Cyan,
+		})
+		cursorY += 27
+		local chipRow = Factory.New("ScrollingFrame", {
+			Position = UDim2.fromOffset(16, cursorY),
+			Size = UDim2.new(1, -32, 0, 38),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 0,
+			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			CanvasSize = UDim2.new(),
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			Parent = promptCard,
+		})
+		Factory.List(chipRow, Enum.FillDirection.Horizontal, 8)
+		for typeName, label in ACCESSORY_LABELS do
+			local selected = self.selectedAccessoryType == typeName
+			local chip =
+				Factory.Button(chipRow, label, UDim2.fromOffset(88, 34), nil, if selected then "primary" else nil)
+			self:_BindButton(chip)
+			chip.Activated:Connect(function()
+				self.selectedAccessoryType = typeName
+				self:_RenderActivePage()
 			end)
 		end
-	end)
-	generate.Activated:Connect(function()
-		self.draftPrompt = prompt.Text
-		generate.Active = false
-		generate.Text = "Checking prompt…"
-		task.spawn(function()
-			local success, result = self:_Invoke(Network.Actions.CreateGeneration, {
-				kind = self.selectedMethod,
-				prompt = prompt.Text,
-				accessoryType = self.selectedAccessoryType,
-				usePriority = self.usePriority,
-			})
-			generate.Active = true
-			generate.Text = actionText
-			if success then
-				if result.usedRetryCredit then
-					self:_Toast("success", "Retry credit applied. Your generation is entering the queue.")
-				elseif result.mocked then
-					self:_Toast("success", "Studio mock purchase confirmed. Your generation is entering the queue.")
-				else
-					self.sounds:Play("PurchasePrompt")
-					self:_Toast("success", "Purchase prompt opened. Generation begins only after Roblox confirms it.")
-				end
+		cursorY += 50
+
+		local safetyY = cursorY
+		local buttonY = if self.compact then safetyY + 39 else safetyY
+		promptCard.Size = UDim2.new(1, 0, 0, buttonY + 58)
+		Factory.Label(
+			promptCard,
+			if isUpload
+				then "Roblox asset moderation + provider vision moderation · no conversion charge until approval"
+				else "Roblox TextService + provider moderation · 3,600 triangle target · 2K texture",
+			if self.compact then UDim2.new(1, -32, 0, 34) else UDim2.new(1, -462, 0, 42),
+			{
+				Position = UDim2.fromOffset(16, safetyY),
+				Color = Colors.TextMuted,
+				TextSize = 11,
+				Wrapped = true,
+			}
+		)
+
+		local price = if self.selectedMethod == "TEXT_TO_3D"
+			then self.state.prices.DirectGeneration
+			else self.state.prices.ImagePreview
+		local actionText = if self.selectedMethod == "TEXT_TO_3D"
+			then string.format("Forge 3D · R$ %d", price)
+			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · R$ %d", price)
+			else "Moderate my reference · Included"
+		local generate = Factory.Button(
+			promptCard,
+			actionText,
+			if self.compact then UDim2.new(0.5, -20, 0, 42) else UDim2.new(0, 250, 0, 42),
+			if self.compact then UDim2.new(0.5, 5, 0, buttonY) else UDim2.new(1, -266, 0, buttonY),
+			"primary"
+		)
+		local availablePasses = self.state.profile.retryCredits.PriorityPass or 0
+		local priority = Factory.Button(
+			promptCard,
+			if availablePasses > 0
+				then string.format(
+					"Priority %s · %d pass%s",
+					if self.usePriority then "✓" else "",
+					availablePasses,
+					if availablePasses == 1 then "" else "es"
+				)
+				else string.format("Priority pass · R$ %d", self.state.prices.PriorityPass),
+			if self.compact then UDim2.new(0.5, -20, 0, 42) else UDim2.fromOffset(184, 42),
+			if self.compact then UDim2.new(0, 15, 0, buttonY) else UDim2.new(1, -460, 0, buttonY),
+			if self.usePriority then "mint" else nil
+		)
+		self:_BindButton(generate)
+		self:_BindButton(priority)
+		priority.Activated:Connect(function()
+			if availablePasses > 0 then
+				self.usePriority = not self.usePriority
+				self:_RenderActivePage()
+			else
+				task.spawn(function()
+					self:_Invoke(Network.Actions.BuyPriorityPass, {})
+				end)
 			end
 		end)
-	end)
-	Factory.Label(
-		promptCard,
-		"Roblox TextService + provider moderation · 3,600 triangle target · 2K texture",
-		if self.compact then UDim2.new(1, -32, 0, 34) else UDim2.new(1, -462, 0, 34),
-		{
-			Position = UDim2.fromOffset(16, if self.compact then 238 else 241),
-			Color = Colors.TextMuted,
-			TextSize = 11,
-			Wrapped = true,
-		}
-	)
+		generate.Activated:Connect(function()
+			self.draftPrompt = prompt.Text
+			generate.Active = false
+			generate.Text = if isUpload then "Moderating image…" else "Checking prompt…"
+			task.spawn(function()
+				local request = {
+					kind = self.selectedMethod,
+					prompt = prompt.Text,
+					accessoryType = self.selectedAccessoryType,
+					stylePreset = self.selectedStylePreset,
+					detailLevel = self.selectedDetailLevel,
+					usePriority = self.usePriority,
+				}
+				if imageAssetBox then
+					request.sourceImageAssetId = tonumber(imageAssetBox.Text)
+				end
+				local success, result = if isUpload
+					then self:_Invoke(Network.Actions.CreateUploadedImage, request)
+					else self:_Invoke(Network.Actions.CreateGeneration, request)
+				generate.Active = true
+				generate.Text = actionText
+				if success then
+					if isUpload then
+						self:_Toast("success", "Your Roblox image is entering visual moderation at no extra charge.")
+					elseif result.usedRetryCredit then
+						self:_Toast("success", "Retry credit applied. Your generation is entering the queue.")
+					elseif result.mocked then
+						self:_Toast("success", "Studio mock purchase confirmed. Your generation is entering the queue.")
+					else
+						self.sounds:Play("PurchasePrompt")
+						self:_Toast(
+							"success",
+							"Purchase prompt opened. Generation begins only after Roblox confirms it."
+						)
+					end
+				end
+			end)
+		end)
+	end
 
 	local readyImage = nil
 	for _, generationId in self.state.profile.generationOrder do
@@ -1034,7 +1267,14 @@ function App:_RenderCreate()
 		)
 		Factory.Label(
 			reference,
-			"Approving starts the textured 3D conversion. Rerolling creates a new paid reference while preserving this one in history.",
+			string.format(
+				"%s style · %s detail\nApproving starts the textured 3D conversion. %s",
+				string.gsub(readyImage.stylePreset or "AUTO", "_", " "),
+				string.gsub(readyImage.detailLevel or "BALANCED", "_", " "),
+				if readyImage.method == "IMAGE_UPLOAD"
+					then "You can submit another owned image at no extra charge."
+					else "A reroll creates a new paid reference."
+			),
 			if self.compact then UDim2.new(1, -36, 0, 66) else UDim2.new(1, -232, 0, 54),
 			{
 				Position = if self.compact then UDim2.fromOffset(18, 220) else UDim2.fromOffset(210, 84),
@@ -1075,16 +1315,23 @@ function App:_RenderCreate()
 		end)
 		local reroll = Factory.Button(
 			reference,
-			if self.compact then "Reroll" else "Reroll · new reference",
+			if readyImage.method == "IMAGE_UPLOAD"
+				then (if self.compact then "Replace" else "Use another image")
+				else (if self.compact then "Reroll" else "Reroll · new reference"),
 			if self.compact then UDim2.new(0.5, -22, 0, 42) else UDim2.fromOffset(178, 42),
 			if self.compact then UDim2.new(0.5, 8, 1, -58) else UDim2.fromOffset(430, 150),
 			nil
 		)
 		self:_BindButton(reroll)
 		reroll.Activated:Connect(function()
-			self.selectedMethod = "IMAGE_PREVIEW"
+			self.selectedMethod = if readyImage.method == "IMAGE_UPLOAD" then "IMAGE_UPLOAD" else "IMAGE_PREVIEW"
 			self:_RenderActivePage()
-			self:_Toast("success", "Edit the prompt if you like, then create another reference.")
+			self:_Toast(
+				"success",
+				if readyImage.method == "IMAGE_UPLOAD"
+					then "Paste another owned Roblox image ID when you are ready."
+					else "Edit the prompt if you like, then create another paid reference."
+			)
 		end)
 	end
 
@@ -1359,6 +1606,16 @@ function App:_RenderStudio()
 		106
 	).Position =
 		UDim2.fromOffset(16, 47)
+	Factory.Pill(
+		body,
+		string.format(
+			"%s · %s",
+			string.gsub(selected.stylePreset or "AUTO", "_", " "),
+			string.gsub(selected.detailLevel or "BALANCED", "_", " ")
+		),
+		Colors.Violet,
+		164
+	).Position = UDim2.fromOffset(132, 47)
 	local viewport = Factory.New("ViewportFrame", {
 		Position = UDim2.fromOffset(16, 84),
 		Size = UDim2.new(1, -32, 0, 252),
@@ -1717,12 +1974,22 @@ function App:_RenderDiscover()
 			TextSize = 14,
 			Truncate = Enum.TextTruncate.AtEnd,
 		})
-		Factory.Label(card, "by @" .. tostring(item.ownerName), UDim2.new(1, -20, 0, 22), {
-			Position = UDim2.fromOffset(10, 221),
-			Color = Colors.TextMuted,
-			TextSize = 11,
-			Truncate = Enum.TextTruncate.AtEnd,
-		})
+		Factory.Label(
+			card,
+			string.format(
+				"by @%s · %s / %s",
+				tostring(item.ownerName),
+				string.gsub(item.stylePreset or "AUTO", "_", " "),
+				string.gsub(item.detailLevel or "BALANCED", "_", " ")
+			),
+			UDim2.new(1, -20, 0, 22),
+			{
+				Position = UDim2.fromOffset(10, 221),
+				Color = Colors.TextMuted,
+				TextSize = 11,
+				Truncate = Enum.TextTruncate.AtEnd,
+			}
+		)
 		local try = Factory.Button(card, "Try on", UDim2.new(0.48, -5, 0, 38), UDim2.fromOffset(10, 250), "primary")
 		local buy = Factory.Button(
 			card,
@@ -2029,7 +2296,7 @@ function App:_ShowOnboarding()
 		{
 			kicker = "WELCOME TO THE FORGE",
 			title = "Your idea becomes a Roblox-ready object.",
-			body = "Choose Direct Forge for value, or Art-Directed to approve a reference image first. Roblox filters every prompt before any AI provider sees it.",
+			body = "Choose Direct Forge for value, Art-Directed for an AI reference, or unlock Upload Reference for your own Roblox-moderated art. Style and detail controls guide every path.",
 			icon = "✦",
 		},
 		{

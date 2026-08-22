@@ -1,5 +1,6 @@
 --!strict
 
+local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -27,13 +28,42 @@ local ACCESSORY_TYPES = {
 	WaistAccessory = true,
 }
 
+local STYLE_PRESETS = {}
+for _, option in Config.Generation.StylePresets do
+	STYLE_PRESETS[option.Id] = true
+end
+
+local DETAIL_LEVELS = {}
+for _, option in Config.Generation.DetailLevels do
+	DETAIL_LEVELS[option.Id] = true
+end
+
+local IMAGE_ASSET_TYPES = {
+	[1] = true, -- Image
+	[13] = true, -- Decal
+}
+
 local function productKeyFor(method: string): string
 	if method == "IMAGE_PREVIEW" then
 		return "ImagePreview"
 	elseif method == "IMAGE_TO_3D" then
 		return "ImageConversion"
+	elseif method == "IMAGE_UPLOAD" then
+		return "CustomImageUpload"
 	end
 	return "DirectGeneration"
+end
+
+local function readGuidance(payload: { [string]: any }): (boolean, string, string)
+	local stylePreset = if type(payload.stylePreset) == "string" then payload.stylePreset else "AUTO"
+	local detailLevel = if type(payload.detailLevel) == "string" then payload.detailLevel else "BALANCED"
+	if not STYLE_PRESETS[stylePreset] then
+		return false, "INVALID_STYLE_PRESET", ""
+	end
+	if not DETAIL_LEVELS[detailLevel] then
+		return false, "INVALID_DETAIL_LEVEL", ""
+	end
+	return true, stylePreset, detailLevel
 end
 
 local function deterministicId(prefix: string, source: string): string
@@ -120,6 +150,10 @@ function GenerationService:Create(player: Player, payload: any): (boolean, any)
 	if type(accessoryType) ~= "string" or not ACCESSORY_TYPES[accessoryType] then
 		return false, "INVALID_ACCESSORY_TYPE"
 	end
+	local guidanceSuccess, stylePreset, detailLevel = readGuidance(payload)
+	if not guidanceSuccess then
+		return false, stylePreset
+	end
 
 	local filterSuccess, filteredPrompt, filterError = ModerationService.FilterPrompt(player, payload.prompt)
 	if not filterSuccess then
@@ -141,9 +175,103 @@ function GenerationService:Create(player: Player, payload: any): (boolean, any)
 		kind = kind,
 		filteredPrompt = filteredPrompt,
 		accessoryType = accessoryType,
+		stylePreset = stylePreset,
+		detailLevel = detailLevel,
 		usePriority = payload.usePriority == true,
 	}
 	return self:_UseCreditOrPrompt(player, productKey, intentPayload)
+end
+
+function GenerationService:CreateUploadedImage(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" then
+		return false, "INVALID_REQUEST"
+	end
+	local passLookupSuccess, ownsPass = self.commerce:OwnsPass(player, "CustomImageUpload", true)
+	if not passLookupSuccess then
+		return false, ownsPass
+	end
+	if ownsPass ~= true then
+		return false, "CUSTOM_IMAGE_PASS_REQUIRED"
+	end
+	if not self.playerStates:Get(player).contentSharingAllowed then
+		return false, "CONTENT_SHARING_DISABLED"
+	end
+
+	local accessoryType = payload.accessoryType
+	if type(accessoryType) ~= "string" or not ACCESSORY_TYPES[accessoryType] then
+		return false, "INVALID_ACCESSORY_TYPE"
+	end
+	local guidanceSuccess, stylePreset, detailLevel = readGuidance(payload)
+	if not guidanceSuccess then
+		return false, stylePreset
+	end
+	local sourceImageAssetId = tonumber(payload.sourceImageAssetId)
+	if
+		not sourceImageAssetId
+		or sourceImageAssetId <= 0
+		or sourceImageAssetId % 1 ~= 0
+		or sourceImageAssetId > 9_007_199_254_740_991
+	then
+		return false, "INVALID_IMAGE_ASSET_ID"
+	end
+
+	local filterSuccess, filteredPrompt, filterError = ModerationService.FilterPrompt(player, payload.prompt)
+	if not filterSuccess then
+		return false, filterError
+	end
+	local studioMock = RunService:IsStudio() and Config.Studio.AllowMockBackend and not self.backend:IsConfigured()
+	if not studioMock then
+		local metadataSuccess, metadata = pcall(function()
+			return MarketplaceService:GetProductInfoAsync(sourceImageAssetId, Enum.InfoType.Asset)
+		end)
+		if not metadataSuccess or type(metadata) ~= "table" then
+			return false, "IMAGE_ASSET_UNAVAILABLE"
+		end
+		if not IMAGE_ASSET_TYPES[tonumber(metadata.AssetTypeId)] then
+			return false, "IMAGE_ASSET_TYPE_REQUIRED"
+		end
+		local creator = metadata.Creator
+		local creatorId = if type(creator) == "table" then tonumber(creator.CreatorTargetId or creator.Id) else nil
+		local creatorType = if type(creator) == "table" then tostring(creator.CreatorType or "") else ""
+		creatorType = string.lower(string.gsub(creatorType, "^Enum%.CreatorType%.", ""))
+		local ownedByPlayer = creatorType == "user" and creatorId == player.UserId
+		local ownedByGroup = creatorType == "group" and Config.Group.Id > 0 and creatorId == Config.Group.Id
+		if not ownedByPlayer and not ownedByGroup then
+			return false, "IMAGE_NOT_OWNED"
+		end
+		local moderationSuccess, moderationResult = self.backend:ModeratePrompt(player, filteredPrompt)
+		if not moderationSuccess then
+			return false, moderationResult
+		end
+	end
+	if not self:_HasQueueSpace(player) then
+		return false, "QUEUE_FULL"
+	end
+	if not self.backend:IsConfigured() and not studioMock then
+		return false, "BACKEND_NOT_CONFIGURED"
+	end
+
+	local intentId = self.profiles:GenerateId("upload")
+	local postCommit = self:_Prepare(player, "CustomImageUpload", {
+		kind = "IMAGE_UPLOAD",
+		filteredPrompt = filteredPrompt,
+		accessoryType = accessoryType,
+		stylePreset = stylePreset,
+		detailLevel = detailLevel,
+		sourceImageAssetId = sourceImageAssetId,
+		usePriority = payload.usePriority == true,
+	}, intentId)
+	if type(postCommit) ~= "function" then
+		return false, "PROFILE_UNAVAILABLE"
+	end
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	task.spawn(postCommit)
+	return true, {
+		generationId = deterministicId("gen", intentId),
+		uploadAccepted = true,
+	}
 end
 
 function GenerationService:ConvertImage(player: Player, payload: any): (boolean, any)
@@ -165,6 +293,8 @@ function GenerationService:ConvertImage(player: Player, payload: any): (boolean,
 		kind = "IMAGE_TO_3D",
 		filteredPrompt = source.filteredPrompt,
 		accessoryType = source.accessoryType,
+		stylePreset = source.stylePreset or "AUTO",
+		detailLevel = source.detailLevel or "BALANCED",
 		sourceGenerationId = source.id,
 		sourceBackendJobId = source.backendJobId,
 		usePriority = payload.usePriority == true,
@@ -327,6 +457,9 @@ function GenerationService:_Prepare(
 			progress = 0,
 			filteredPrompt = payload.filteredPrompt,
 			accessoryType = payload.accessoryType,
+			stylePreset = payload.stylePreset or "AUTO",
+			detailLevel = payload.detailLevel or "BALANCED",
+			sourceImageAssetId = payload.sourceImageAssetId,
 			createdAt = now,
 			updatedAt = now,
 			purchaseIntentId = intentId,
@@ -334,6 +467,9 @@ function GenerationService:_Prepare(
 		}
 		table.insert(profile.generationOrder, 1, generationId)
 		profile.stats.generationsStarted += 1
+		if payload.kind == "IMAGE_UPLOAD" then
+			profile.stats.customImagesSubmitted = (profile.stats.customImagesSubmitted or 0) + 1
+		end
 		profile.grantedIntents[intentId] = {
 			kind = "GENERATION",
 			generationId = generationId,
@@ -366,8 +502,10 @@ function GenerationService:_Launch(player: Player, generationId: string)
 	self.launching[generationId] = true
 	self.push(player, Network.PushEvents.Profile, { retryCredits = profile.retryCredits })
 	self.push(player, Network.PushEvents.Generation, { generationId = generationId, stage = "QUEUED", progress = 0 })
-	local funnel = if generation.method == "IMAGE_PREVIEW" then "reference" else "generation"
-	self.analytics:Funnel(player, funnel, 3, "Paid job queued", { method = generation.method })
+	local funnel = if generation.method == "IMAGE_PREVIEW" or generation.method == "IMAGE_UPLOAD"
+		then "reference"
+		else "generation"
+	self.analytics:Funnel(player, funnel, 3, "Job queued", { method = generation.method })
 
 	if not self.backend:IsConfigured() and RunService:IsStudio() and Config.Studio.AllowMockBackend then
 		self.launching[generationId] = nil
@@ -380,10 +518,15 @@ function GenerationService:_Launch(player: Player, generationId: string)
 		kind = generation.method,
 		filteredPrompt = generation.filteredPrompt,
 		accessoryType = generation.accessoryType,
+		stylePreset = generation.stylePreset or "AUTO",
+		detailLevel = generation.detailLevel or "BALANCED",
 		priority = generation.priority == true,
 	}
 	if generation.sourceBackendJobId then
 		requestPayload.sourceJobId = generation.sourceBackendJobId
+	end
+	if generation.sourceImageAssetId then
+		requestPayload.sourceImageAssetId = generation.sourceImageAssetId
 	end
 	local success, response = self.backend:CreateJob(player, requestPayload)
 	if not success then
@@ -519,6 +662,8 @@ function GenerationService:_CompleteModel(player: Player, generationId: string, 
 			name = string.sub(generation.filteredPrompt, 1, 48),
 			filteredPrompt = generation.filteredPrompt,
 			method = if generation.method == "TEXT_TO_3D" then "TEXT_TO_3D" else "IMAGE_TO_3D",
+			stylePreset = generation.stylePreset or "AUTO",
+			detailLevel = generation.detailLevel or "BALANCED",
 			status = "READY",
 			createdAt = now,
 			updatedAt = now,
@@ -577,12 +722,19 @@ function GenerationService:_Fail(
 	if not firstFailure then
 		return
 	end
-	self:_RefundCredit(player, productKey, "That attempt did not produce a usable item. A retry credit was added.")
+	if productKey == "CustomImageUpload" then
+		self.push(player, Network.PushEvents.Toast, {
+			tone = "error",
+			message = "That image could not pass reference validation. You can try another image at no charge.",
+		})
+	else
+		self:_RefundCredit(player, productKey, "That attempt did not produce a usable item. A retry credit was added.")
+	end
 	self.profiles:Save(player)
 	self.analytics:Custom(player, "GenerationFailed", 1, {
 		code = errorCode,
 		retryable = retryable,
-		creditGranted = true,
+		creditGranted = productKey ~= "CustomImageUpload",
 	})
 end
 
@@ -604,13 +756,13 @@ function GenerationService:_RunStudioMock(player: Player, generationId: string, 
 		if not profile or not profile.generations[generationId] or player.Parent == nil then
 			return
 		end
-		if kind == "IMAGE_PREVIEW" then
+		if kind == "IMAGE_PREVIEW" or kind == "IMAGE_UPLOAD" then
 			self.profiles:Mutate(player, function(profile)
 				local generation = profile.generations[generationId]
 				generation.stage = "IMAGE_READY"
 				generation.stageText = "Studio mock reference ready"
 				generation.progress = 100
-				generation.previewAssetId = 0
+				generation.previewAssetId = generation.sourceImageAssetId or 0
 				generation.backendJobId = `00000000-0000-0000-0000-{string.sub(generationId, -12)}`
 			end)
 			self.push(

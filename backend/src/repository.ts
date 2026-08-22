@@ -38,7 +38,10 @@ export class MemoryJobRepository implements JobRepository {
       progress: 0,
       filteredPrompt: input.filteredPrompt,
       accessoryType: input.accessoryType,
+      stylePreset: input.stylePreset,
+      detailLevel: input.detailLevel,
       ...(input.sourceJobId ? { sourceJobId: input.sourceJobId } : {}),
+      ...(input.sourceImageAssetId ? { sourceImageAssetId: input.sourceImageAssetId } : {}),
       priority: input.priority,
       context: structuredClone(input.context),
       output: {},
@@ -87,7 +90,10 @@ type JobRow = {
   progress: number;
   filtered_prompt: string;
   accessory_type: Job["accessoryType"];
+  style_preset: Job["stylePreset"];
+  detail_level: Job["detailLevel"];
   source_job_id: string | null;
+  source_image_asset_id: string | null;
   priority: boolean;
   context: Job["context"];
   output: JobOutput;
@@ -124,8 +130,9 @@ export class PostgresJobRepository implements JobRepository {
     const result = await this.#pool.query<JobRow>(
       `INSERT INTO forge_jobs (
          id, request_id, player_user_id, kind, status, stage, progress,
-         filtered_prompt, accessory_type, source_job_id, priority, context
-       ) VALUES ($1, $2, $3, $4, 'QUEUED', 'Waiting for a worker', 0, $5, $6, $7, $8, $9)
+         filtered_prompt, accessory_type, style_preset, detail_level,
+         source_job_id, source_image_asset_id, priority, context
+       ) VALUES ($1, $2, $3, $4, 'QUEUED', 'Waiting for a worker', 0, $5, $6, $7, $8, $9, $10, $11, $12)
        ON CONFLICT (request_id) DO UPDATE SET request_id = EXCLUDED.request_id
        RETURNING *`,
       [
@@ -135,7 +142,10 @@ export class PostgresJobRepository implements JobRepository {
         input.kind,
         input.filteredPrompt,
         input.accessoryType,
+        input.stylePreset,
+        input.detailLevel,
         input.sourceJobId ?? null,
+        input.sourceImageAssetId ?? null,
         input.priority,
         input.context,
       ],
@@ -207,7 +217,10 @@ function rowToJob(row: JobRow): Job {
     progress: row.progress,
     filteredPrompt: row.filtered_prompt,
     accessoryType: row.accessory_type,
+    stylePreset: row.style_preset,
+    detailLevel: row.detail_level,
     ...(row.source_job_id ? { sourceJobId: row.source_job_id } : {}),
+    ...(row.source_image_asset_id ? { sourceImageAssetId: Number(row.source_image_asset_id) } : {}),
     priority: row.priority,
     context: row.context,
     output: row.output ?? {},

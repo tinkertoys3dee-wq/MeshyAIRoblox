@@ -12,6 +12,7 @@ Review these by new/returning player, device class, creation method, group membe
 | Reliability | paid-to-ready completion; median generation duration; retry rate | `GenerationCompleted`, `GenerationFailed` |
 | Retention | D1/D7 retention; sessions per user; median session length; streak return rate | `ForgeSessionStarted`, `ForgeSessionEnded`, `DailyStudioCheckIn` |
 | Creation demand | direct/guided mix; image approval-to-conversion; generations per creator | generation funnel method field and profile counters |
+| Upload feature | pass prompt-to-purchase; unlock-to-first-upload; moderation success; upload-to-conversion | `CustomImagePassPrompted`, `GamePassPurchased`, `customImagesSubmitted`, reference funnel |
 | Avatar engagement | catalog try-ons per session; generated-item fits; publishes | `CatalogSearch`, `CatalogItemTried`, `AccessoryFitSaved`, publish counters |
 | Community health | discovery visits; try-on rate; likes/favorites per view | marketplace funnel, reaction and view counters |
 | Monetization | payer conversion; ARPDAU; revenue per completed model; priority-pass attach rate | economy events by SKU plus completion events |
@@ -20,7 +21,7 @@ Review these by new/returning player, device class, creation method, group membe
 ## Funnels
 
 - Generation: creation attempt → method/prompt submitted → paid job queued → model ready to fit.
-- Reference: image-assisted attempt → prompt submitted → paid image job queued → reference ready.
+- Reference: AI-image attempt → prompt submitted → paid image job queued → reference ready; or custom-image submission → visual moderation queued → reference ready.
 - Marketplace: Discover opened → community item tried → Plus transfer prompted → personal copy granted.
 - Onboarding: entered Forge → understood the paths → understood fitting/marketplace → ready to create.
 

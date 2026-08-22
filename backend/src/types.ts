@@ -1,7 +1,13 @@
 import { z } from "zod";
 
-export const jobKindSchema = z.enum(["TEXT_TO_3D", "IMAGE_PREVIEW", "IMAGE_TO_3D"]);
+export const jobKindSchema = z.enum(["TEXT_TO_3D", "IMAGE_PREVIEW", "IMAGE_UPLOAD", "IMAGE_TO_3D"]);
 export type JobKind = z.infer<typeof jobKindSchema>;
+
+export const stylePresetSchema = z.enum(["AUTO", "ANIME", "REALISTIC", "STYLIZED", "LOW_POLY", "FANTASY"]);
+export type StylePreset = z.infer<typeof stylePresetSchema>;
+
+export const detailLevelSchema = z.enum(["CLEAN", "BALANCED", "INTRICATE"]);
+export type DetailLevel = z.infer<typeof detailLevelSchema>;
 
 export const accessoryTypeSchema = z.enum([
   "Hat",
@@ -22,7 +28,10 @@ export const createJobSchema = z
     kind: jobKindSchema,
     filteredPrompt: z.string().trim().min(6).max(500),
     accessoryType: accessoryTypeSchema,
+    stylePreset: stylePresetSchema.default("AUTO"),
+    detailLevel: detailLevelSchema.default("BALANCED"),
     sourceJobId: z.string().uuid().optional(),
+    sourceImageAssetId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
     priority: z.boolean().default(false),
     context: z
       .object({
@@ -39,6 +48,16 @@ export const createJobSchema = z
     }
     if (value.kind !== "IMAGE_TO_3D" && value.sourceJobId) {
       context.addIssue({ code: "custom", path: ["sourceJobId"], message: "sourceJobId is only valid for IMAGE_TO_3D" });
+    }
+    if (value.kind === "IMAGE_UPLOAD" && !value.sourceImageAssetId) {
+      context.addIssue({ code: "custom", path: ["sourceImageAssetId"], message: "sourceImageAssetId is required" });
+    }
+    if (value.kind !== "IMAGE_UPLOAD" && value.sourceImageAssetId) {
+      context.addIssue({
+        code: "custom",
+        path: ["sourceImageAssetId"],
+        message: "sourceImageAssetId is only valid for IMAGE_UPLOAD",
+      });
     }
   });
 
@@ -93,7 +112,10 @@ export type Job = {
   progress: number;
   filteredPrompt: string;
   accessoryType: AccessoryType;
+  stylePreset: StylePreset;
+  detailLevel: DetailLevel;
   sourceJobId?: string;
+  sourceImageAssetId?: number;
   priority: boolean;
   context: CreateJobInput["context"];
   output: JobOutput;
@@ -116,6 +138,8 @@ export function publicJob(job: Job) {
     stage: job.stage,
     progress: job.progress,
     accessoryType: job.accessoryType,
+    stylePreset: job.stylePreset,
+    detailLevel: job.detailLevel,
     priority: job.priority,
     ...(job.sourceJobId ? { sourceJobId: job.sourceJobId } : {}),
     output: {

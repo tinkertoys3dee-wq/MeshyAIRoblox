@@ -21,7 +21,7 @@ end
 local function defaultProfile(userId: number): { [string]: any }
 	local now = os.time()
 	return {
-		schemaVersion = 1,
+		schemaVersion = 2,
 		userId = userId,
 		items = {},
 		itemOrder = {},
@@ -41,6 +41,7 @@ local function defaultProfile(userId: number): { [string]: any }
 			generationsStarted = 0,
 			generationsCompleted = 0,
 			imagesRegenerated = 0,
+			customImagesSubmitted = 0,
 			itemsPublished = 0,
 			marketplacePurchases = 0,
 			catalogTryOns = 0,
@@ -128,6 +129,7 @@ function ProfileService:Load(player: Player): (boolean, string?)
 
 	local profile = if type(stored) == "table" then stored :: { [string]: any } else defaultProfile(player.UserId)
 	reconcile(profile, defaultProfile(player.UserId))
+	profile.schemaVersion = 2
 	profile.userId = player.UserId
 	profile.updatedAt = os.time()
 	profile.stats.sessions += 1
@@ -193,6 +195,7 @@ function ProfileService:ReadUser(userId: number): { [string]: any }?
 	if success and type(result) == "table" then
 		local profile = result :: { [string]: any }
 		reconcile(profile, defaultProfile(userId))
+		profile.schemaVersion = 2
 		return profile
 	end
 	return nil
@@ -210,6 +213,7 @@ function ProfileService:MutateUser(userId: number, mutator: ({ [string]: any }) 
 		return self.store:UpdateAsync(keyFor(userId), function(stored)
 			local profile = if type(stored) == "table" then stored else defaultProfile(userId)
 			reconcile(profile, defaultProfile(userId))
+			profile.schemaVersion = 2
 			mutator(profile)
 			profile.updatedAt = os.time()
 			return profile

@@ -24,6 +24,7 @@ export async function buildServer(config: AppConfig, repository: JobRepository):
   const moderator = new ImageProvider(config);
   const moderationWindows = new Map<number, number[]>();
   const jobWindows = new Map<number, number[]>();
+  const uploadWindows = new Map<number, number[]>();
 
   app.get("/health", async () => ({
     ok: true,
@@ -64,6 +65,13 @@ export async function buildServer(config: AppConfig, repository: JobRepository):
     const existing = await repository.getByRequestId(parsed.data.requestId);
     if (existing && !sameRequest(existing, parsed.data)) {
       return reply.code(409).send({ error: "IDEMPOTENCY_CONFLICT" });
+    }
+    if (
+      !existing &&
+      parsed.data.kind === "IMAGE_UPLOAD" &&
+      !consumeRateLimit(uploadWindows, parsed.data.playerUserId, 6, 5 * 60_000)
+    ) {
+      return reply.code(429).send({ error: "RATE_LIMITED" });
     }
     if (!existing && !consumeRateLimit(jobWindows, parsed.data.playerUserId, 12, 5 * 60_000)) {
       return reply.code(429).send({ error: "RATE_LIMITED" });
@@ -112,7 +120,10 @@ function sameRequest(existing: Job, incoming: CreateJobInput): boolean {
     existing.kind === incoming.kind &&
     existing.filteredPrompt === incoming.filteredPrompt &&
     existing.accessoryType === incoming.accessoryType &&
-    existing.sourceJobId === incoming.sourceJobId
+    existing.stylePreset === incoming.stylePreset &&
+    existing.detailLevel === incoming.detailLevel &&
+    existing.sourceJobId === incoming.sourceJobId &&
+    existing.sourceImageAssetId === incoming.sourceImageAssetId
   );
 }
 

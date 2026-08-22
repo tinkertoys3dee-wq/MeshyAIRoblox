@@ -6,9 +6,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
+local Network = require(ReplicatedStorage:WaitForChild("Network"))
 
 local CommerceService = {}
 CommerceService.__index = CommerceService
+
+local PASS_CACHE_SECONDS = 60
 
 export type PostCommit = () -> ()
 export type GrantHandler = (Player, { [string]: any }, string) -> PostCommit?
@@ -37,15 +40,40 @@ local function validateProductConfiguration()
 	end
 end
 
-function CommerceService.new(profileService: any, playerStateService: any, analyticsService: any)
+local function validatePassConfiguration()
+	local ownersById = {} :: { [number]: string }
+	for passKey, pass in Config.Passes do
+		local passId = pass.Id
+		if type(passId) ~= "number" or passId < 0 or passId % 1 ~= 0 then
+			error(string.format("Config.Passes.%s.Id must be a non-negative integer", passKey))
+		end
+		if passId > 0 then
+			local existingOwner = ownersById[passId]
+			if existingOwner then
+				error(string.format("Game pass ID %d is assigned to both %s and %s", passId, existingOwner, passKey))
+			end
+			ownersById[passId] = passKey
+		end
+	end
+end
+
+function CommerceService.new(
+	profileService: any,
+	playerStateService: any,
+	analyticsService: any,
+	push: (Player, string, any) -> ()
+)
 	validateProductConfiguration()
+	validatePassConfiguration()
 	local self = setmetatable({
 		profiles = profileService,
 		playerStates = playerStateService,
 		handlers = {} :: { [string]: GrantHandler },
 		analytics = analyticsService,
+		push = push,
 		priceCache = nil :: { [string]: number }?,
 		priceCacheAt = 0,
+		passCache = {} :: { [number]: { [string]: { owned: boolean, checkedAt: number } } },
 	}, CommerceService)
 
 	MarketplaceService.ProcessReceipt = function(receiptInfo)
@@ -73,6 +101,24 @@ function CommerceService.new(profileService: any, playerStateService: any, analy
 			self.profiles:Save(player)
 		end
 	end)
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, wasPurchased)
+		if not wasPurchased or player.Parent ~= Players then
+			return
+		end
+		local passKey = self:_PassKey(passId)
+		if not passKey then
+			return
+		end
+		self:_CachePass(player, passKey, true)
+		local prices = self:GetPrices()
+		self.analytics:Economy(player, prices[passKey] or 0, "GamePass_" .. passKey)
+		self.analytics:Custom(player, "GamePassPurchased", 1, { pass = passKey })
+		self.push(player, Network.PushEvents.Entitlements, self:GetEntitlements(player))
+		self.push(player, Network.PushEvents.Toast, {
+			tone = "ready",
+			message = "Custom image upload is permanently unlocked.",
+		})
+	end)
 	return self
 end
 
@@ -97,9 +143,108 @@ function CommerceService:GetPrices(): { [string]: number }
 		end
 		result[productKey] = price
 	end
+	for passKey, pass in Config.Passes do
+		local price = pass.SuggestedPrice
+		if pass.Id > 0 then
+			local success, info = pcall(function()
+				return MarketplaceService:GetProductInfoAsync(pass.Id, Enum.InfoType.GamePass)
+			end)
+			if success and type(info.PriceInRobux) == "number" then
+				price = info.PriceInRobux
+			end
+		end
+		result[passKey] = price
+	end
 	self.priceCache = result
 	self.priceCacheAt = os.clock()
 	return table.clone(result)
+end
+
+function CommerceService:_PassKey(passId: number): string?
+	for passKey, pass in Config.Passes do
+		if pass.Id == passId then
+			return passKey
+		end
+	end
+	return nil
+end
+
+function CommerceService:_CachePass(player: Player, passKey: string, owned: boolean)
+	local userCache = self.passCache[player.UserId]
+	if not userCache then
+		userCache = {}
+		self.passCache[player.UserId] = userCache
+	end
+	userCache[passKey] = { owned = owned, checkedAt = os.clock() }
+end
+
+function CommerceService:OwnsPass(player: Player, passKey: string, forceRefresh: boolean?): (boolean, boolean | string)
+	local pass = Config.Passes[passKey]
+	if not pass then
+		return false, "UNKNOWN_GAME_PASS"
+	end
+	local userCache = self.passCache[player.UserId]
+	local cached = userCache and userCache[passKey]
+	if cached and (cached.owned or (not forceRefresh and os.clock() - cached.checkedAt < PASS_CACHE_SECONDS)) then
+		return true, cached.owned
+	end
+	if pass.Id <= 0 then
+		if RunService:IsStudio() and Config.Studio.AllowMockPurchases then
+			return true, cached ~= nil and cached.owned == true
+		end
+		return false, "GAME_PASS_ID_NOT_CONFIGURED"
+	end
+	local success, owned = pcall(function()
+		return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.Id)
+	end)
+	if not success then
+		warn(string.format("[CommerceService] Game pass lookup failed for %d: %s", player.UserId, tostring(owned)))
+		return false, "GAME_PASS_LOOKUP_FAILED"
+	end
+	self:_CachePass(player, passKey, owned == true)
+	return true, owned == true
+end
+
+function CommerceService:GetEntitlements(player: Player): { [string]: boolean }
+	local success, owned = self:OwnsPass(player, "CustomImageUpload", false)
+	return { customImageUpload = success and owned == true }
+end
+
+function CommerceService:PromptPass(player: Player, passKey: string): (boolean, any)
+	local pass = Config.Passes[passKey]
+	if not pass then
+		return false, "UNKNOWN_GAME_PASS"
+	end
+	if not self.playerStates:Get(player).commerceAllowed then
+		return false, "COMMERCE_NOT_ALLOWED"
+	end
+	local lookupSuccess, owned = self:OwnsPass(player, passKey, true)
+	if lookupSuccess and owned == true then
+		return true, { alreadyOwned = true }
+	end
+	if pass.Id <= 0 then
+		if RunService:IsStudio() and Config.Studio.AllowMockPurchases then
+			self:_CachePass(player, passKey, true)
+			self.push(player, Network.PushEvents.Entitlements, self:GetEntitlements(player))
+			return true, { mocked = true }
+		end
+		return false, "GAME_PASS_ID_NOT_CONFIGURED"
+	end
+	if not lookupSuccess and owned ~= "GAME_PASS_LOOKUP_FAILED" then
+		return false, owned
+	end
+	local promptSuccess, problem = pcall(function()
+		MarketplaceService:PromptGamePassPurchase(player, pass.Id)
+	end)
+	if not promptSuccess then
+		warn(string.format("[CommerceService] Game pass prompt failed: %s", tostring(problem)))
+		return false, "GAME_PASS_PROMPT_FAILED"
+	end
+	return true, { prompted = true }
+end
+
+function CommerceService:Remove(player: Player)
+	self.passCache[player.UserId] = nil
 end
 
 function CommerceService:BeginIntent(

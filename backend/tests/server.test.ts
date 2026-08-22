@@ -103,5 +103,39 @@ describe("backend HTTP boundary", () => {
       status: "SUCCEEDED",
       output: { modelAssetId: 0, triangles: 3600, vertices: 2400 },
     });
+
+    const uploaded = await app.inject({
+      method: "POST",
+      url: "/v1/jobs",
+      headers: {
+        "x-forge-secret": "test-shared-secret",
+        "x-roblox-user-id": "12345",
+      },
+      payload: {
+        ...body,
+        requestId: "upload_request_12345",
+        kind: "IMAGE_UPLOAD",
+        sourceImageAssetId: 987654321,
+        stylePreset: "STYLIZED",
+        detailLevel: "CLEAN",
+      },
+    });
+    expect(uploaded.statusCode).toBe(202);
+    const uploadId = uploaded.json().job.id as string;
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    const uploadedReady = await app.inject({
+      method: "GET",
+      url: "/v1/jobs/" + uploadId,
+      headers: {
+        "x-forge-secret": "test-shared-secret",
+        "x-roblox-user-id": "12345",
+      },
+    });
+    expect(uploadedReady.json().job).toMatchObject({
+      status: "IMAGE_READY",
+      stylePreset: "STYLIZED",
+      detailLevel: "CLEAN",
+      output: { previewAssetId: 987654321 },
+    });
   });
 });

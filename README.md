@@ -5,10 +5,13 @@ Forge UGC is a Roblox experience for generating, fitting, trying on, publishing,
 - `src/` — the Roblox client/server project synchronized by Argon.
 - `backend/` — a Railway-ready TypeScript service that keeps Meshy, OpenAI, and Roblox Open Cloud keys out of the experience.
 
-The initial vertical slice supports the two creation paths in the product specification:
+The vertical slice supports three creation paths in the product specification:
 
 1. **Text → 3D** — a filtered prompt is sent to Meshy Smart Topology, textured, checked against Roblox's rigid-accessory limits, and uploaded as a group-owned model.
 2. **Text → image → 3D** — a filtered prompt creates an isolated reference image, the player can approve or regenerate it, and an approved image is converted to the same validated 3D pipeline.
+3. **Player image → 3D** — a permanent game pass unlocks references uploaded as a player- or creator-group-owned Roblox Image/Decal. Roblox asset moderation, ownership/type checks, Forge visual moderation, and player approval all occur before the separately paid conversion.
+
+All three paths include allowlisted style presets (`Auto`, `Anime`, `Realistic`, `Stylized`, `Low poly`, and `Fantasy`) plus `Clean`, `Balanced`, or `Intricate` detail guidance. These parameters affect generated references, Meshy geometry prompts, and texture prompts without changing the strict topology limits.
 
 Generated item metadata, ownership, fit transforms, likes, favorites, purchase receipts, and non-resellable licenses are stored under the individual player's DataStore key. Shared stores contain only discovery indexes and idempotency records; they are not the source of truth for player content.
 
@@ -16,6 +19,7 @@ Generated item metadata, ownership, fit transforms, likes, favorites, purchase r
 
 - Raw player text never reaches an AI provider. The Roblox server first calls `TextService:FilterStringAsync()` and uses its broadcast-safe result.
 - Filtered prompts receive a second provider-side safety check before any purchase prompt can open. Generated reference, texture, and thumbnail images are checked again before any visual asset is shown or uploaded.
+- Custom references accept numeric Roblox Image/Decal IDs only, require player/group ownership and `IsContentSharingAllowed`, resolve through fixed Roblox hosts, and pass independent image moderation before Meshy receives any bytes.
 - Public sharing, listings, likes, and other-player try-on are disabled when `PolicyService` reports `IsContentSharingAllowed == false`.
 - Meshy and OpenAI keys are Railway environment variables. The Roblox-to-Railway credential is a Creator Hub secret returned by `HttpService:GetSecret()`.
 - A generated rigid accessory targets 3,600 triangles and must remain strictly below 4,000 triangles and vertices. The backend requires one watertight textured mesh with UVs and normalizes its embedded texture to at most 2048×2048.

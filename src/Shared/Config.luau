@@ -23,6 +23,19 @@ return table.freeze({
 		BaseQueueSlots = 1,
 		PromptMinLength = 6,
 		PromptMaxLength = 500,
+		StylePresets = {
+			{ Id = "AUTO", Label = "Auto" },
+			{ Id = "ANIME", Label = "Anime" },
+			{ Id = "REALISTIC", Label = "Realistic" },
+			{ Id = "STYLIZED", Label = "Stylized" },
+			{ Id = "LOW_POLY", Label = "Low poly" },
+			{ Id = "FANTASY", Label = "Fantasy" },
+		},
+		DetailLevels = {
+			{ Id = "CLEAN", Label = "Clean" },
+			{ Id = "BALANCED", Label = "Balanced" },
+			{ Id = "INTRICATE", Label = "Intricate" },
+		},
 		TargetTriangles = 3600,
 		HardTriangleLimit = 3999,
 		HardVertexLimit = 3999,
@@ -36,6 +49,11 @@ return table.freeze({
 		ImagePreview = { Id = 0, SuggestedPrice = 29 },
 		ImageConversion = { Id = 0, SuggestedPrice = 159 },
 		PriorityPass = { Id = 0, SuggestedPrice = 29 },
+	},
+
+	Passes = {
+		-- Permanent access to player- or creator-group-owned Image/Decal references.
+		CustomImageUpload = { Id = 0, SuggestedPrice = 499 },
 	},
 
 	AvatarCreationTokens = {

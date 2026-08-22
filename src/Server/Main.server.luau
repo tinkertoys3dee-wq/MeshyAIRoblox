@@ -49,7 +49,7 @@ local playerStates = PlayerStateService.new()
 local analytics = AnalyticsService.new()
 local retention = RetentionService.new(profiles, analytics)
 local backend = BackendService.new()
-local commerce = CommerceService.new(profiles, playerStates, analytics)
+local commerce = CommerceService.new(profiles, playerStates, analytics, push)
 local items = ItemService.new(profiles, playerStates, push)
 local generations = GenerationService.new(profiles, playerStates, backend, commerce, push, analytics)
 local community = CommunityService.new(profiles, playerStates, push, analytics)
@@ -129,6 +129,7 @@ local function bootstrap(player: Player): (boolean, any)
 				queueSlots = state.queueSlots,
 				speedMultiplier = state.queueSpeedMultiplier,
 				plusSubscriber = state.plusSubscriber,
+				customImageUpload = commerce:GetEntitlements(player).customImageUpload == true,
 			},
 			prices = commerce:GetPrices(),
 			dailyBrief = retention:GetBrief(player),
@@ -151,10 +152,23 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		})
 		return generations:Create(player, payload)
 	end,
+	[Network.Actions.CreateUploadedImage] = function(player, payload)
+		analytics:BeginFunnel(player, "reference", "Custom image submitted", {
+			method = "IMAGE_UPLOAD",
+		})
+		analytics:Funnel(player, "reference", 2, "Custom image sent to moderation", {
+			method = "IMAGE_UPLOAD",
+		})
+		return generations:CreateUploadedImage(player, payload)
+	end,
 	[Network.Actions.ConvertImage] = function(player, payload)
 		analytics:BeginFunnel(player, "generation", "Approved conversion started", { method = "IMAGE_TO_3D" })
 		analytics:Funnel(player, "generation", 2, "Reference image approved", { method = "IMAGE_TO_3D" })
 		return generations:ConvertImage(player, payload)
+	end,
+	[Network.Actions.PromptCustomImagePass] = function(player)
+		analytics:Custom(player, "CustomImagePassPrompted", 1, {})
+		return commerce:PromptPass(player, "CustomImageUpload")
 	end,
 	[Network.Actions.BuyPriorityPass] = function(player)
 		return commerce:BeginIntent(player, "PriorityPass", {})
@@ -317,6 +331,7 @@ Players.PlayerRemoving:Connect(function(player)
 	analytics:Remove(player)
 	retention:Remove(player)
 	playerStates:Remove(player)
+	commerce:Remove(player)
 	profiles:Remove(player)
 end)
 
