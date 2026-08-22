@@ -14,7 +14,7 @@ return table.freeze({
 	},
 
 	Group = {
-		Id = 0, -- Your Roblox group ID
+		Id = 15575113, -- Your Roblox group ID
 		GenerationSpeedMultiplier = 0.90,
 		ExtraQueueSlots = 1,
 	},
