@@ -53,7 +53,7 @@ return table.freeze({
 
 	Passes = {
 		-- Permanent access to player- or creator-group-owned Image/Decal references.
-		CustomImageUpload = { Id = 0, SuggestedPrice = 249 },
+		CustomImageUpload = { Id = 1955130723, SuggestedPrice = 249 },
 	},
 
 	AvatarCreationTokens = {
