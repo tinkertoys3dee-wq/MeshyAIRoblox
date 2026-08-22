@@ -312,6 +312,10 @@ typedRequestRemote.OnServerInvoke = function(player: Player, action: any, payloa
 		warn(string.format("[Main] Remote %s failed for %d: %s", action, player.UserId, tostring(ok)))
 		return { ok = false, error = "SERVER_ERROR" }
 	end
+	if ok and result == nil then
+		warn(string.format("[Main] Remote %s returned success without response data for %d", action, player.UserId))
+		result = {}
+	end
 	return if ok then { ok = true, data = result } else { ok = false, error = result }
 end
 

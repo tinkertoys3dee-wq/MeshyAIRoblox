@@ -521,6 +521,10 @@ function App:_Invoke(action: string, payload: any?): (boolean, any)
 		self:_Toast("error", ERROR_MESSAGES[code] or "That action could not be completed.")
 		return false, code
 	end
+	if response.data == nil then
+		warn(string.format("[App] Remote %s succeeded without response data; using an empty result", action))
+		return true, {}
+	end
 	return true, response.data
 end
 
@@ -1615,7 +1619,8 @@ function App:_RenderStudio()
 		),
 		Colors.Violet,
 		164
-	).Position = UDim2.fromOffset(132, 47)
+	).Position =
+		UDim2.fromOffset(132, 47)
 	local viewport = Factory.New("ViewportFrame", {
 		Position = UDim2.fromOffset(16, 84),
 		Size = UDim2.new(1, -32, 0, 252),
