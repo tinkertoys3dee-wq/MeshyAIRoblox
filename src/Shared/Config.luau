@@ -9,7 +9,7 @@ return table.freeze({
 	},
 
 	Backend = {
-		BaseUrl = "", -- Example: https://forge-ugc-production.up.railway.app
+		BaseUrl = "https://meshyairoblox-production.up.railway.app", -- Example: https://forge-ugc-production.up.railway.app
 		SecretName = "FORGE_BACKEND_SECRET",
 	},
 
