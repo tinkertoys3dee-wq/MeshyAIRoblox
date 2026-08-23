@@ -70,7 +70,7 @@ The raw GLB/PNG bytes are never placed in a DataStore. Roblox DataStores are met
 ## Roblox asset lifecycle
 
 1. Railway downloads the provider result immediately because Meshy URLs expire.
-2. The GLB is normalized before upload: compatible Smart Topology parts are flattened and joined, then the result must contain exactly one mesh/primitive/node, watertight manifold geometry with usable UVs, fewer than 4,000 triangles and vertices, finite coordinates, no rig or animation data, an embedded base-color texture normalized to PNG at no more than 2048×2048, and a final file below the configured upload cap.
+2. The GLB is normalized before upload: compatible Smart Topology parts are flattened and joined; unused vertices, degenerate/duplicate faces, and safely repairable simple boundary loops are cleaned up; then the result must contain exactly one mesh/primitive/node, watertight manifold geometry with usable UVs, fewer than 4,000 triangles and vertices, finite coordinates, no rig or animation data, an embedded base-color texture normalized to PNG at no more than 2048×2048, and a final file below the configured upload cap. Image reconstruction targets 3,000 faces (instead of the direct path's 3,600) to leave room for UV seams and repair faces under both Roblox limits.
 3. Generated references, embedded textures, and thumbnails pass provider visual moderation before display or upload. Player-supplied references rely on completed Roblox moderation plus Forge ownership/type/CDN/image validation.
 4. Railway uploads the GLB as a group-owned Model using the Open Cloud Assets API.
 5. The Roblox server loads the owned model with `AssetService:LoadAssetAsync()` for private fitting and in-game equip.
@@ -81,7 +81,7 @@ The raw GLB/PNG bytes are never placed in a DataStore. Roblox DataStores are met
 - `ORIGINAL` — may be made public, listed, fitted, equipped, or sent through avatar creation by its owner.
 - `PERSONAL_COPY` — may be independently fitted, equipped, and sent through avatar creation by its buyer; may never be listed, transferred, or used as a source listing.
 
-Trying on a public item is free and does not require Plus or an active listing. Buying requires an active listing and a Roblox Plus transfer between 10 and 500 Robux. The buyer receives the copy only after the sender receipt is processed.
+Trying on a public item is free and does not require Plus or an active listing. Buying requires an active listing and a Roblox Plus transfer between 10 and 500 Robux. The buyer receives the copy only after the sender receipt is processed. A transfer waiting for a receipt never blocks a later prompt: only a prompt currently open in the same live server is exclusive. Recovery markers retain the validated listing snapshot by transfer request ID, so a late successful receipt remains grantable after the player rejoins or the short-lived profile intent is cleaned up.
 
 ## Analytics boundary
 

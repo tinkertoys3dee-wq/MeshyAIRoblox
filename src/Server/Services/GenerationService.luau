@@ -43,6 +43,27 @@ local IMAGE_ASSET_TYPES = {
 	[13] = true, -- Decal
 }
 
+local GENERATION_FAILURE_LABELS = {
+	PROVIDER_DOWNLOAD_FAILED = "Meshy finished, but its model file could not be downloaded",
+	INVALID_GLB = "Meshy returned an unreadable model file",
+	MESH_JOIN_FAILED = "The generated model parts could not be combined",
+	MULTI_MESH = "The generated model could not be reduced to one accessory mesh",
+	MULTI_PRIMITIVE = "The generated materials could not be reduced to one accessory mesh",
+	MULTI_MESH_NODE = "The generated scene could not be reduced to one accessory mesh",
+	NOT_WATERTIGHT = "The generated surface had openings that could not be repaired safely",
+	TRIANGLE_LIMIT = "The repaired model exceeded the triangle limit",
+	VERTEX_LIMIT = "The repaired model exceeded the vertex limit",
+	MISSING_UV = "The generated model did not contain usable texture coordinates",
+	MISSING_TEXTURE = "The generated model did not contain a usable color texture",
+	OUTPUT_CONTENT_REJECTED = "The generated visual did not pass the output safety check",
+	ROBLOX_UPLOAD_FAILED = "Roblox could not accept the validated model upload",
+}
+
+local function generationFailureText(errorCode: string): string
+	local label = GENERATION_FAILURE_LABELS[errorCode] or "Generation stopped before a usable item was produced"
+	return string.format("%s (%s)", label, errorCode)
+end
+
 local function productKeyFor(method: string): string
 	if method == "IMAGE_PREVIEW" then
 		return "ImagePreview"
@@ -720,9 +741,8 @@ function GenerationService:_Fail(
 		if generation and not generation.failureHandled then
 			generation.failureHandled = true
 			generation.stage = "FAILED"
-			generation.stageText = "Generation failed"
+			generation.stageText = generationFailureText(errorCode)
 			generation.errorCode = errorCode
-			generation.progress = 0
 			generation.updatedAt = os.time()
 			firstFailure = true
 		end
@@ -736,7 +756,7 @@ function GenerationService:_Fail(
 			message = "That image could not pass reference validation. You can try another image at no charge.",
 		})
 	else
-		self:_RefundCredit(player, productKey, "That attempt did not produce a usable item. A retry credit was added.")
+		self:_RefundCredit(player, productKey, generationFailureText(errorCode) .. ". A retry credit was added.")
 	end
 	self.profiles:Save(player)
 	self.analytics:Custom(player, "GenerationFailed", 1, {

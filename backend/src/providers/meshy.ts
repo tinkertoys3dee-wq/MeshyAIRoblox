@@ -14,10 +14,15 @@ type MeshyTask = {
 export class MeshyClient {
   readonly #config: AppConfig["meshy"];
   readonly #targetTriangles: number;
+  readonly #imageTargetTriangles: number;
 
   constructor(config: AppConfig) {
     this.#config = config.meshy;
     this.#targetTriangles = config.limits.targetTriangles;
+    // Image reconstruction tends to split more vertices at UV seams and may
+    // need a few cap faces during validation. Preserve headroom under Roblox's
+    // strict 4k triangle and vertex limits without lowering direct-text quality.
+    this.#imageTargetTriangles = Math.min(config.limits.targetTriangles, 3000);
   }
 
   async createTextPreview(filteredPrompt: string): Promise<string> {
@@ -55,7 +60,7 @@ export class MeshyClient {
       image_url: imageUrl,
       model_type: "smart-topology",
       ai_model: "meshy-t2",
-      target_polycount: this.#targetTriangles,
+      target_polycount: this.#imageTargetTriangles,
       should_texture: true,
       enable_pbr: false,
       texture_resolution: "2k",

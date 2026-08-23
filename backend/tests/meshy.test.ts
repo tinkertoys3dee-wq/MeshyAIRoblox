@@ -33,4 +33,44 @@ describe("MeshyClient", () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("leaves extra topology headroom for image reconstruction", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ result: "text-task" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ result: "image-task" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new MeshyClient(
+      loadConfig({
+        NODE_ENV: "test",
+        MESHY_API_KEY: "test-key",
+      }),
+    );
+
+    await client.createTextPreview("a polished hat");
+    await client.createImageTo3D(Buffer.from("image"), "image/png", "a polished hat");
+
+    const textRequest = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const imageRequest = fetchMock.mock.calls[1]?.[1] as RequestInit;
+    expect(JSON.parse(String(textRequest.body))).toMatchObject({
+      model_type: "smart-topology",
+      ai_model: "meshy-t2",
+      target_polycount: 3600,
+    });
+    expect(JSON.parse(String(imageRequest.body))).toMatchObject({
+      model_type: "smart-topology",
+      ai_model: "meshy-t2",
+      target_polycount: 3000,
+    });
+  });
 });

@@ -289,9 +289,11 @@ export class JobRunner {
 
   async #finishModel(job: Job, modelUrl: string | undefined, thumbnailUrl: string | undefined): Promise<void> {
     if (!modelUrl) throw new PipelineError("MISSING_MODEL", "Meshy returned no GLB model", true);
-    await this.#set(job.id, "VALIDATING", "Checking triangles, vertices, mesh count, and textures", 76);
+    await this.#set(job.id, "VALIDATING", "Downloading the finished Meshy model", 76);
     const rawGlb = await this.#meshy.download(modelUrl);
+    await this.#set(job.id, "VALIDATING", "Repairing and validating mesh topology", 79);
     const validated = await validateAndNormalizeGlb(rawGlb, this.#config);
+    await this.#set(job.id, "VALIDATING", "Checking generated textures for safety", 83);
     for (const texture of validated.textures) await this.#images.assertImageSafe(texture);
     await this.#mergeOutput(job.id, {
       triangles: validated.triangles,

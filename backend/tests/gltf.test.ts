@@ -75,10 +75,37 @@ describe("validateAndNormalizeGlb", () => {
     expect(normalized.getRoot().listMeshes()[0]?.listPrimitives()).toHaveLength(1);
   });
 
-  it("rejects open geometry", async () => {
+  it("repairs a simple open boundary before Roblox upload", async () => {
     const document = await new NodeIO().readBinary(new Uint8Array(await fixture()));
     const primitive = document.getRoot().listMeshes()[0]?.listPrimitives()[0];
-    primitive?.getIndices()?.setArray(new Uint16Array([0, 2, 1]));
+    primitive?.getIndices()?.setArray(new Uint16Array([0, 2, 1, 0, 1, 3, 0, 3, 2]));
+    const glb = Buffer.from(await new NodeIO().writeBinary(document));
+    await expect(validateAndNormalizeGlb(glb, config)).resolves.toMatchObject({ triangles: 4, vertices: 4 });
+  });
+
+  it("caps a larger simple boundary with validated attributes", async () => {
+    const document = await new NodeIO().readBinary(new Uint8Array(await fixture()));
+    const primitive = document.getRoot().listMeshes()[0]?.listPrimitives()[0];
+    primitive
+      ?.getAttribute("POSITION")
+      ?.setArray(new Float32Array([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0, 0, 0, 1]));
+    primitive
+      ?.getAttribute("TEXCOORD_0")
+      ?.setArray(new Float32Array([0, 0, 1, 0, 1, 1, 0, 1, 0.5, 0.5]));
+    primitive?.getIndices()?.setArray(new Uint16Array([0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 4]));
+    const glb = Buffer.from(await new NodeIO().writeBinary(document));
+    await expect(validateAndNormalizeGlb(glb, config)).resolves.toMatchObject({ triangles: 8, vertices: 6 });
+  });
+
+  it("still rejects non-manifold geometry that cannot be repaired safely", async () => {
+    const document = await new NodeIO().readBinary(new Uint8Array(await fixture()));
+    const primitive = document.getRoot().listMeshes()[0]?.listPrimitives()[0];
+    const position = primitive?.getAttribute("POSITION");
+    const texcoord = primitive?.getAttribute("TEXCOORD_0");
+    const indices = primitive?.getIndices();
+    position?.setArray(new Float32Array([...(position.getArray() ?? []), 0, 0, 2]));
+    texcoord?.setArray(new Float32Array([...(texcoord.getArray() ?? []), 0.5, 0.5]));
+    indices?.setArray(new Uint16Array([...(indices.getArray() ?? []), 0, 1, 4]));
     const glb = Buffer.from(await new NodeIO().writeBinary(document));
     await expect(validateAndNormalizeGlb(glb, config)).rejects.toMatchObject({ code: "NOT_WATERTIGHT" });
   });

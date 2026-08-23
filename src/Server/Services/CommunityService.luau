@@ -77,7 +77,11 @@ function CommunityService.new(
 		indexCache = nil :: { [string]: any }?,
 		indexCacheAt = 0,
 		nameCache = {} :: { [number]: string },
+		activeTransferPrompts = {} :: { [number]: string },
 	}, CommunityService)
+	Players.PlayerRemoving:Connect(function(player)
+		self.activeTransferPrompts[player.UserId] = nil
+	end)
 
 	MarketplaceService:BindReceiptHandler(Enum.ReceiptType.RobuxTransferSender, function(receiptInfo)
 		return self:_ProcessSenderReceipt(receiptInfo)
@@ -417,31 +421,37 @@ function CommunityService:BeginPurchase(player: Player, payload: any): (boolean,
 		return false, "PRICE_OUT_OF_RANGE"
 	end
 	local now = os.time()
-	local alreadyPending = false
+	local snapshot = deepCopy(item)
+	local preliminaryId = self.profiles:GenerateId("transfer")
+	if self.activeTransferPrompts[player.UserId] then
+		return false, "TRANSFER_ALREADY_PENDING"
+	end
+	-- This in-memory value represents only a prompt that can still be visible in
+	-- this live server. Persisted receipt intents must never act as the mutex.
+	self.activeTransferPrompts[player.UserId] = preliminaryId
+	local function releasePrompt()
+		if self.activeTransferPrompts[player.UserId] == preliminaryId then
+			self.activeTransferPrompts[player.UserId] = nil
+		end
+	end
 	local cleanupSuccess, cleanupProblem = self.profiles:Mutate(player, function(profile)
 		for transferId, pending in profile.pendingTransfers do
 			local createdAt = if type(pending) == "table" then tonumber(pending.createdAt) or 0 else 0
-			if
-				type(pending) ~= "table"
-				or (
-					pending.status == "PROMPTING"
-					and createdAt + Config.Marketplace.TransferIntentLifetimeSeconds < now
-				)
-			then
+			local status = if type(pending) == "table" then pending.status else nil
+			local expired = createdAt <= 0 or createdAt + Config.Marketplace.TransferIntentLifetimeSeconds < now
+			if type(pending) ~= "table" or expired or (status ~= "PROMPTING" and status ~= "AWAITING_RECEIPT") then
 				profile.pendingTransfers[transferId] = nil
-			else
-				alreadyPending = true
+			elseif status == "PROMPTING" then
+				-- A PROMPTING record from a previous server cannot still own a
+				-- visible Roblox prompt after the player rejoins.
+				profile.pendingTransfers[transferId] = nil
 			end
 		end
 	end)
 	if not cleanupSuccess then
+		releasePrompt()
 		return false, cleanupProblem or "PROFILE_UNAVAILABLE"
 	end
-	if alreadyPending then
-		return false, "TRANSFER_ALREADY_PENDING"
-	end
-	local snapshot = deepCopy(item)
-	local preliminaryId = self.profiles:GenerateId("transfer")
 	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(profile)
 		profile.pendingTransfers[preliminaryId] = {
 			transferRequestId = preliminaryId,
@@ -454,9 +464,11 @@ function CommunityService:BeginPurchase(player: Player, payload: any): (boolean,
 		}
 	end)
 	if not mutateSuccess then
+		releasePrompt()
 		return false, mutateProblem or "PROFILE_UNAVAILABLE"
 	end
 	if not self.profiles:Save(player) then
+		releasePrompt()
 		self.profiles:Mutate(player, function(profile)
 			profile.pendingTransfers[preliminaryId] = nil
 		end)
@@ -464,6 +476,7 @@ function CommunityService:BeginPurchase(player: Player, payload: any): (boolean,
 	end
 
 	if studioMock then
+		releasePrompt()
 		local granted, result = self:_GrantCopy(player, preliminaryId)
 		return granted, if granted then { mocked = true, item = result } else result
 	end
@@ -471,6 +484,7 @@ function CommunityService:BeginPurchase(player: Player, payload: any): (boolean,
 	local success, transferId = pcall(function()
 		return MarketplaceService:PromptRobuxTransferAsync(player, item.ownerUserId, amount)
 	end)
+	releasePrompt()
 	if not success or type(transferId) ~= "string" then
 		self.profiles:Mutate(player, function(profile)
 			profile.pendingTransfers[preliminaryId] = nil
@@ -478,6 +492,15 @@ function CommunityService:BeginPurchase(player: Player, payload: any): (boolean,
 		self.profiles:Save(player)
 		return false, "TRANSFER_PROMPT_FAILED"
 	end
+	local recoveryPending = {
+		transferRequestId = transferId,
+		status = "AWAITING_RECEIPT",
+		itemId = item.id,
+		sellerUserId = item.ownerUserId,
+		amount = amount,
+		sourceItem = snapshot,
+		createdAt = now,
+	}
 	local recoverySaved, recoveryProblem = pcall(function()
 		self.claimStore:UpdateAsync(transferId, function(stored)
 			if type(stored) == "table" and stored.state == "PROCESSED" then
@@ -487,6 +510,7 @@ function CommunityService:BeginPurchase(player: Player, payload: any): (boolean,
 				state = "PENDING",
 				buyerUserId = player.UserId,
 				preliminaryId = preliminaryId,
+				pending = recoveryPending,
 				createdAt = now,
 			}
 		end)
@@ -495,13 +519,8 @@ function CommunityService:BeginPurchase(player: Player, payload: any): (boolean,
 		warn(string.format("[CommunityService] Transfer recovery marker failed: %s", tostring(recoveryProblem)))
 	end
 	self.profiles:Mutate(player, function(profile)
-		local pending = profile.pendingTransfers[preliminaryId]
-		if pending then
-			profile.pendingTransfers[preliminaryId] = nil
-			pending.transferRequestId = transferId
-			pending.status = "AWAITING_RECEIPT"
-			profile.pendingTransfers[transferId] = pending
-		end
+		profile.pendingTransfers[preliminaryId] = nil
+		profile.pendingTransfers[transferId] = deepCopy(recoveryPending)
 	end)
 	if not self.profiles:Save(player) then
 		warn(string.format("[CommunityService] Transfer %s is awaiting a persistence retry", transferId))
@@ -599,18 +618,31 @@ function CommunityService:_ProcessSenderReceipt(receiptInfo: { [string]: any }):
 			if marker.state == "PROCESSED" then
 				return Enum.ReceiptDecision.Processed
 			end
-			local preliminaryId = marker.preliminaryId
-			if type(preliminaryId) == "string" then
+			if type(marker.pending) == "table" then
 				self.profiles:Mutate(player, function(mutableProfile)
-					local recovered = mutableProfile.pendingTransfers[preliminaryId]
-					if recovered then
-						mutableProfile.pendingTransfers[preliminaryId] = nil
+					if not mutableProfile.pendingTransfers[transferId] then
+						local recovered = deepCopy(marker.pending)
 						recovered.transferRequestId = transferId
 						recovered.status = "AWAITING_RECEIPT"
 						mutableProfile.pendingTransfers[transferId] = recovered
 					end
 				end)
+				self.profiles:Save(player)
 				pending = self.profiles:Get(player).pendingTransfers[transferId]
+			else
+				local preliminaryId = marker.preliminaryId
+				if type(preliminaryId) == "string" then
+					self.profiles:Mutate(player, function(mutableProfile)
+						local recovered = mutableProfile.pendingTransfers[preliminaryId]
+						if recovered then
+							mutableProfile.pendingTransfers[preliminaryId] = nil
+							recovered.transferRequestId = transferId
+							recovered.status = "AWAITING_RECEIPT"
+							mutableProfile.pendingTransfers[transferId] = recovered
+						end
+					end)
+					pending = self.profiles:Get(player).pendingTransfers[transferId]
+				end
 			end
 		end
 	end
