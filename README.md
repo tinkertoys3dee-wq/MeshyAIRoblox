@@ -8,7 +8,7 @@ Forge UGC is a Roblox experience for generating, fitting, trying on, publishing,
 The vertical slice supports three creation paths in the product specification:
 
 1. **Text → 3D** — a filtered prompt is sent to Meshy Smart Topology, textured, checked against Roblox's rigid-accessory limits, and uploaded as a group-owned model.
-2. **Text → image → 3D** — a filtered prompt creates an isolated reference image, the player can approve or regenerate it, and an approved image is converted to the same validated 3D pipeline.
+2. **Text → image → 3D** — a filtered prompt creates an isolated reference image at the player's chosen quality tier (Low/Medium/High, each its own priced developer product), the player can approve or regenerate it, and an approved image is converted to the same validated 3D pipeline.
 3. **Player image → 3D** — a permanent game pass unlocks references uploaded as a player- or creator-group-owned Roblox Image/Decal. Roblox asset moderation, ownership/type/CDN checks, image validation, and player approval all occur before the separately paid conversion; the already approved upload is not billed for redundant OpenAI vision moderation.
 
 All three paths include allowlisted style presets (`Auto`, `Anime`, `Realistic`, `Stylized`, `Low poly`, and `Fantasy`) plus `Clean`, `Balanced`, or `Intricate` detail guidance. These parameters affect generated references, Meshy geometry prompts, and texture prompts without changing the strict topology limits.

@@ -7,11 +7,11 @@ This file is the durable source of truth for future Forge UGC updates. A change 
 - Public servers support about 15 players and all gameplay systems must remain multiplayer-safe.
 - Creation has three paths:
   - Direct: filtered text → Meshy Smart Topology textured 3D.
-  - Art-directed: filtered text → paid reference image → player approval → paid image-to-3D conversion. A reroll is another paid reference and never destroys the prior result.
+  - Art-directed: filtered text → paid reference image → player approval → paid image-to-3D conversion. A reroll is another paid reference and never destroys the prior result. The reference image itself has three purchasable quality tiers (`Low`, `Medium`, `High`), each a separate developer product priced to its own OpenAI provider cost; see `docs/PRICING.md`.
   - Upload Reference: a permanent 249 R$ game pass unlocks player-owned Roblox Image/Decal references. The reference is free to submit after unlock; an approved reference uses the normal paid image-to-3D conversion.
 - Every path exposes an allowlisted visual-style preset (`Auto`, `Anime`, `Realistic`, `Stylized`, `Low poly`, or `Fantasy`) and detail density (`Clean`, `Balanced`, or `Intricate`). These settings guide both shape and texture without relaxing topology limits.
 - Meshy targets 3,600 triangle faces. Accepted output has one watertight textured mesh/primitive, usable UVs, fewer than 4,000 triangles and vertices, embedded textures no larger than 2048×2048, and a final file below the Roblox upload cap.
-- Players fit each owned item against an avatar reference with position, rotation, and per-axis scale, then save and equip that fit in the experience.
+- Players fit each owned item against an avatar reference with position, rotation, and per-axis scale, then save, equip, and unequip that fit in the experience. Unequip is server-authoritative and independent of equipping a different item, so multiple owned items may be equipped or removed one at a time.
 - An owner can use Roblox's `AvatarCreationService` and the matching Avatar Creation Token to prompt creation of a platform-wide wearable. This prompt can carry a separate Roblox token price and is never silently charged.
 
 ## Ownership and marketplace
@@ -23,7 +23,7 @@ This file is the durable source of truth for future Forge UGC updates. A change 
 - Payment uses `PromptRobuxTransferAsync`; the buyer receives a copy only after a matching sender receipt confirms the stored transfer request and amount.
 - A purchased copy is `PERSONAL_COPY`: the buyer may fit, equip, and publish it as their own wearable, but can never list, resell, transfer, or use it as a source listing inside Forge.
 - Listings are restricted to Roblox's current transfer range of 10–500 R$. The seller receives 90% and the experience receives 10% according to the current platform program.
-- Public discovery ranks recent engagement from views, likes, and favorites. The owner profile remains authoritative for ownership and visibility; the atomically updated public index is authoritative for the current listing flag and price so buyers in another server do not see stale sale state.
+- Public discovery ranks recent engagement from views, likes, and favorites by default. Players may switch to newest, lowest listed price, or most-liked, and may search by item name or by creator display name. The owner profile remains authoritative for ownership and visibility; the atomically updated public index is authoritative for the current listing flag and price so buyers in another server do not see stale sale state.
 
 ## Safety, privacy, and authority
 
@@ -52,6 +52,7 @@ This file is the durable source of truth for future Forge UGC updates. A change 
 - UI should remain glossy, vibrant, layered, responsive, and straightforward—not a collection of flat default frames.
 - Effects should be polished and restrained; excessive confetti or sparkle noise is out of scope.
 - Every sound ID remains creator-owned. `src/Shared/SoundIds.luau` is the only place to enter them, with directions in `docs/SOUND_SETUP.md`.
+- Accessibility is a durable requirement, not a one-time pass: a dedicated Settings page exposes interface scale (a single `UIScale` covering text and touch targets together), a high-contrast palette toggle, and a reduce-motion toggle that a player's saved profile settings apply the next time they open the studio. Status is never color-only — toasts and equipped-state indicators pair color with a glyph. Every interactive control remains keyboard/gamepad `Selectable`, and Tab or a gamepad's Y button hands focus to the nav rail.
 
 ## Delivery workflow
 
@@ -61,7 +62,7 @@ This file is the durable source of truth for future Forge UGC updates. A change 
 
 ## Checkpoint status
 
-Implemented in the current checkpoint: all three creation flows, permanent custom-image entitlement checks, player/group image ownership validation, generated-output visual moderation, style/detail guidance, receipt-safe developer products, Railway provider pipeline, GLB validation, fitting/equip/publish services, individual player profiles, Plus-transfer copies, discovery/reactions/trending score, catalog lab, policy gates, group/streak benefits, responsive UI, sound hooks, and analytics instrumentation.
+Implemented in the current checkpoint: all three creation flows with tiered reference-image quality, permanent custom-image entitlement checks, player/group image ownership validation, generated-output visual moderation, style/detail guidance, receipt-safe developer products, Railway provider pipeline, GLB validation, fitting/equip/unequip/publish services, individual player profiles, Plus-transfer copies, discovery/reactions/trending-newest-price-likes sorting, name/creator search, catalog lab, policy gates, group/streak benefits, a Settings page (interface scale, high contrast, reduce motion, sound, equipped-loadout management), keyboard/gamepad navigation entry point, responsive UI, sound hooks, and analytics instrumentation.
 
 Creator-owned activation still required: group ID, developer product IDs, Custom Image Upload game pass ID, Avatar Creation Token IDs and prices, sound asset IDs and permissions, Railway/PostgreSQL deployment, Creator Hub/Open Cloud secrets, maximum player setting, and live Studio/device testing.
 

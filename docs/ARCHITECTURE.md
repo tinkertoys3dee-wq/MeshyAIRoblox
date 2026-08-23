@@ -48,6 +48,8 @@ Custom-image submission has no per-submission developer product. The Roblox serv
 
 Style and detail choices are strict enums, not free-form instructions. Railway expands them into trusted prompt guidance for OpenAI reference generation and Meshy geometry/texture prompts. Meshy's deprecated `art_style` parameter is deliberately not used.
 
+The Art-Directed reference image has three purchasable quality tiers (`LOW`/`MEDIUM`/`HIGH`), each a distinct developer product because Roblox product prices cannot vary per purchase. A tier maps 1:1 onto the OpenAI `quality` request parameter (`low`/`medium`/`high`); the Roblox server resolves the player's chosen tier to both a product key and that provider parameter (`Config.Generation.ImageQualityTiers`) and forwards only the OpenAI-facing value to Railway. `imageQuality` is optional on `POST /v1/jobs` and valid only for `IMAGE_PREVIEW`; when absent, Railway falls back to its own `OPENAI_IMAGE_QUALITY` default. See `docs/PRICING.md` for the per-tier cost/price estimates.
+
 Developer-product intent data is saved before Roblox is prompted. Receipt grants use deterministic generation IDs, write the durable benefit and receipt marker to the player's profile before acknowledging Roblox, and submit the same backend request ID on every retry. Plus transfers likewise persist a source snapshot and transfer request ID before a sender receipt can grant a deterministic personal copy.
 
 ## Persistence
@@ -76,12 +78,16 @@ The raw GLB/PNG bytes are never placed in a DataStore. Roblox DataStores are met
 5. The Roblox server loads the owned model with `AssetService:LoadAssetAsync()` for private fitting and in-game equip.
 6. Final platform-wide creation uses `AvatarCreationService:PromptCreateAvatarAssetAsync()` and an Avatar Creation Token matching the selected accessory type.
 
+Equipping and unequipping are both server-authoritative (`ItemService:Equip`/`Unequip`). The player's `equippedItemIds` list is the durable record; the live `Accessory` instance is tagged with a `ForgeItemId` attribute so the server can find and remove the exact accessory on unequip, or skip re-adding one `RestoreEquipped` already finds present after a respawn.
+
 ## Marketplace license model
 
 - `ORIGINAL` — may be made public, listed, fitted, equipped, or sent through avatar creation by its owner.
 - `PERSONAL_COPY` — may be independently fitted, equipped, and sent through avatar creation by its buyer; may never be listed, transferred, or used as a source listing.
 
 Trying on a public item is free and does not require Plus or an active listing. Buying requires an active listing and a Roblox Plus transfer between 10 and 500 Robux. The buyer receives the copy only after the sender receipt is processed. A transfer waiting for a receipt never blocks a later prompt: only a prompt currently open in the same live server is exclusive. Recovery markers retain the validated listing snapshot by transfer request ID, so a late successful receipt remains grantable after the player rejoins or the short-lived profile intent is cleaned up.
+
+`CommunityService:GetMarketplace` accepts an optional `searchBy` (`NAME` default, or `CREATOR` to match the resolved owner display name instead of the item name) and `sortBy` (`TRENDING` default engagement score, `NEWEST`, `PRICE_LOW`, `MOST_LIKED`). All four sort modes read the same public index scan already required for pagination, so no additional DataStore reads are introduced.
 
 ## Analytics boundary
 
