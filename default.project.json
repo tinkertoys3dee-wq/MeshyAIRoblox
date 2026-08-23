@@ -2,6 +2,7 @@
   "name": "ForgeUGC",
   "tree": {
     "$className": "DataModel",
+    "$keepUnknowns": true,
     "ReplicatedStorage": {
       "$path": "src/Shared"
     },
@@ -11,21 +12,6 @@
     "StarterPlayer": {
       "StarterPlayerScripts": {
         "$path": "src/Client"
-      }
-    },
-    "Lighting": {
-      "$properties": {
-        "Brightness": 2.2,
-        "ClockTime": 18.4,
-        "EnvironmentDiffuseScale": 0.55,
-        "EnvironmentSpecularScale": 1,
-        "LightingStyle": "Realistic",
-        "PrioritizeLightingQuality": true
-      }
-    },
-    "Workspace": {
-      "$properties": {
-        "StreamingEnabled": true
       }
     }
   }

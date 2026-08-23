@@ -2,6 +2,10 @@
 
 No secret should be pasted into chat or committed to this repository.
 
+## Argon and the existing place
+
+`default.project.json` deliberately keeps unknown DataModel instances and does not map `Workspace` or `Lighting`. Server-priority Argon syncs may update Forge code, but must preserve the creator-built map and every place lighting setting. Do not add runtime world construction or lighting overrides to this repository.
+
 ## Roblox Creator Hub
 
 1. Set the experience's maximum player count to **15**.
@@ -16,10 +20,7 @@ No secret should be pasted into chat or committed to this repository.
 6. Enter the Roblox group ID in `Config.Group.Id` to enable 10% faster queue polling, one extra queued job, and group-owned custom reference images.
 7. Create Avatar Creation Tokens for each accessory type you will permit. Enter those public token IDs in `Config.AvatarCreationTokens`.
 8. Keep the group or token owner ID-verified with Roblox Premium so in-experience avatar creation remains available.
-9. Enable the experience capabilities used by the current Roblox APIs:
-   - `AssetRead` and `Players` for Avatar Lab inventory/catalog access and editable mesh/image reads.
-   - `PlatformAvatarEditing` for the save-avatar prompt.
-   - `LoadUnownedAsset` for `AssetService:LoadAssetAsync()`; Roblox still enforces the asset's creator permissions.
+9. Leave `Workspace.SandboxedInstanceMode` set to `Default`. `AssetRead`, `Players`, `PlatformAvatarEditing`, and `LoadUnownedAsset` are experimental **script sandbox** labels shown in the API reference, not Creator Hub experience switches. The current Forge scripts are intentionally not sandboxed; Avatar Lab requests inventory access from each player at runtime.
 10. Enable API access for the Open Cloud key used by Railway:
    - Assets API read/write for the experience's group creator.
    - Restrict the key by IP if Railway provides a stable egress IP.

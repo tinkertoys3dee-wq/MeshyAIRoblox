@@ -1877,9 +1877,27 @@ function App:_RenderStudio()
 	local dialY = 64
 	for _, group in
 		{
-			{ title = "POSITION", field = "position", minimum = -4, maximum = 4, step = 0.05 },
-			{ title = "ROTATION", field = "rotation", minimum = -180, maximum = 180, step = 5 },
-			{ title = "SCALE", field = "scale", minimum = 0.25, maximum = 3, step = 0.05 },
+			{
+				title = "POSITION",
+				field = "position",
+				minimum = Config.Fitting.Position.Minimum,
+				maximum = Config.Fitting.Position.Maximum,
+				step = Config.Fitting.Position.Step,
+			},
+			{
+				title = "ROTATION",
+				field = "rotation",
+				minimum = Config.Fitting.Rotation.Minimum,
+				maximum = Config.Fitting.Rotation.Maximum,
+				step = Config.Fitting.Rotation.Step,
+			},
+			{
+				title = "SCALE",
+				field = "scale",
+				minimum = Config.Fitting.Scale.Minimum,
+				maximum = Config.Fitting.Scale.Maximum,
+				step = Config.Fitting.Scale.Step,
+			},
 		}
 	do
 		Factory.Label(controls, group.title, UDim2.new(1, -28, 0, 20), {
@@ -2345,7 +2363,7 @@ function App:_RequestCatalogAccess()
 			self.catalogAccessPrompting = false
 			self.catalogAccess = false
 			self.catalogError =
-				"Roblox could not request catalog access. Try again or check the experience's Avatar Asset Read capability."
+				"Roblox could not request catalog access. Rejoin a published server and try the consent prompt again."
 			warn(string.format("[App] Inventory access prompt failed: %s", tostring(problem)))
 			self:_Toast("error", self.catalogError)
 			if self.activePage == "Avatar Lab" then
@@ -2385,7 +2403,7 @@ function App:_SearchCatalog(query: string)
 		else
 			self.catalogResults = {}
 			self.catalogError =
-				"Roblox catalog search failed. Retry after checking inventory access and the experience's Asset Read capability."
+				"Roblox catalog search failed. Confirm inventory access was approved, then retry in a published server."
 			warn(string.format("[App] Catalog search failed: %s", tostring(resultsOrProblem)))
 			self:_Toast("error", self.catalogError)
 		end

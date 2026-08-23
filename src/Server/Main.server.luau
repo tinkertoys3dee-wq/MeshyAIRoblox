@@ -15,7 +15,6 @@ local CommunityService = require(script.Parent.Services.CommunityService)
 local CatalogService = require(script.Parent.Services.CatalogService)
 local AnalyticsService = require(script.Parent.Services.AnalyticsService)
 local RetentionService = require(script.Parent.Services.RetentionService)
-local WorldService = require(script.Parent.Services.WorldService)
 
 local remoteFolder = ReplicatedStorage:FindFirstChild(Network.FolderName)
 if not remoteFolder then
@@ -59,8 +58,6 @@ local reactionLimiter = RateLimiter.new(8, 10)
 local loaded = {} :: { [Player]: boolean }
 local loading = {} :: { [Player]: boolean }
 local characterConnections = {} :: { [Player]: RBXScriptConnection }
-
-WorldService.Build()
 
 local function initializePlayer(player: Player)
 	if loaded[player] then

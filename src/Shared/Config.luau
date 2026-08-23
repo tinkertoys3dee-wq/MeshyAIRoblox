@@ -44,6 +44,14 @@ return table.freeze({
 		IntentLifetimeSeconds = 15 * 60,
 	},
 
+	-- Shared by the fitting UI and the authoritative server validator so the
+	-- controls can never advertise a transform that SaveFit later rejects.
+	Fitting = {
+		Position = { Minimum = -10, Maximum = 10, Step = 0.05 },
+		Rotation = { Minimum = -360, Maximum = 360, Step = 5 },
+		Scale = { Minimum = 0.1, Maximum = 8, Step = 0.05 },
+	},
+
 	Products = {
 		DirectGeneration = { Id = 3709322103, SuggestedPrice = 159 },
 		ImagePreview = { Id = 3709322158, SuggestedPrice = 29 },

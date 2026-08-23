@@ -87,9 +87,11 @@ function ItemService:SaveFit(player: Player, payload: any): (boolean, any)
 	if type(payload) ~= "table" or type(payload.itemId) ~= "string" or type(payload.fit) ~= "table" then
 		return false, "INVALID_REQUEST"
 	end
-	local position = sanitizeVector(payload.fit.position, -4, 4)
-	local rotation = sanitizeVector(payload.fit.rotation, -180, 180)
-	local scale = sanitizeVector(payload.fit.scale, 0.25, 3)
+	local position =
+		sanitizeVector(payload.fit.position, Config.Fitting.Position.Minimum, Config.Fitting.Position.Maximum)
+	local rotation =
+		sanitizeVector(payload.fit.rotation, Config.Fitting.Rotation.Minimum, Config.Fitting.Rotation.Maximum)
+	local scale = sanitizeVector(payload.fit.scale, Config.Fitting.Scale.Minimum, Config.Fitting.Scale.Maximum)
 	if not position or not rotation or not scale then
 		return false, "INVALID_TRANSFORM"
 	end
@@ -428,7 +430,6 @@ function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean)
 	handle.Material = Enum.Material.Plastic
 	handle.Transparency = 0
 	handle.Color = Color3.new(1, 1, 1)
-	handle.VertexColor = Vector3.new(1, 1, 1)
 	local scale = item.fit.scale
 	handle.Size = Vector3.new(handle.Size.X * scale.x, handle.Size.Y * scale.y, handle.Size.Z * scale.z)
 	for _, child in handle:GetChildren() do

@@ -1,10 +1,13 @@
 --!strict
 
+local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local ViewportController = {}
 ViewportController.__index = ViewportController
+
+local nextControllerId = 0
 
 local PREVIEW_ANCHORS = {
 	Hat = Vector3.new(0, 3.25, 0),
@@ -30,7 +33,32 @@ local function prepare(root: Instance)
 	end
 end
 
+local function pointInsideVisibleBounds(gui: GuiObject, point: Vector2): boolean
+	if not gui.Visible then
+		return false
+	end
+	local minimum = gui.AbsolutePosition
+	local maximum = minimum + gui.AbsoluteSize
+	local ancestor = gui.Parent
+	while ancestor do
+		if ancestor:IsA("GuiObject") then
+			if not ancestor.Visible then
+				return false
+			end
+			if ancestor.ClipsDescendants then
+				local ancestorMinimum = ancestor.AbsolutePosition
+				local ancestorMaximum = ancestorMinimum + ancestor.AbsoluteSize
+				minimum = Vector2.new(math.max(minimum.X, ancestorMinimum.X), math.max(minimum.Y, ancestorMinimum.Y))
+				maximum = Vector2.new(math.min(maximum.X, ancestorMaximum.X), math.min(maximum.Y, ancestorMaximum.Y))
+			end
+		end
+		ancestor = ancestor.Parent
+	end
+	return point.X >= minimum.X and point.X <= maximum.X and point.Y >= minimum.Y and point.Y <= maximum.Y
+end
+
 function ViewportController.new(viewport: ViewportFrame)
+	nextControllerId += 1
 	local world = Instance.new("WorldModel")
 	world.Name = "ForgePreviewWorld"
 	world.Parent = viewport
@@ -54,6 +82,9 @@ function ViewportController.new(viewport: ViewportFrame)
 		dragging = false,
 		dragTouch = nil :: InputObject?,
 		lastPointer = Vector2.zero,
+		zoomActionName = `ForgeViewportZoom_{nextControllerId}`,
+		scrollFrame = viewport:FindFirstAncestorWhichIsA("ScrollingFrame") :: ScrollingFrame?,
+		scrollRestore = nil :: boolean?,
 		connections = {} :: { RBXScriptConnection },
 		destroyed = false,
 	}, ViewportController)
@@ -62,7 +93,26 @@ function ViewportController.new(viewport: ViewportFrame)
 	local function connect(signal: RBXScriptSignal, callback: (...any) -> ())
 		table.insert(self.connections, signal:Connect(callback))
 	end
+	local function setPageScrollLocked(locked: boolean)
+		local scrollFrame = self.scrollFrame
+		if not scrollFrame or not scrollFrame.Parent then
+			return
+		end
+		if locked and self.scrollRestore == nil then
+			self.scrollRestore = scrollFrame.ScrollingEnabled
+			scrollFrame.ScrollingEnabled = false
+		elseif not locked and self.scrollRestore ~= nil then
+			scrollFrame.ScrollingEnabled = self.scrollRestore
+			self.scrollRestore = nil
+		end
+	end
 
+	connect(viewport.MouseEnter, function()
+		setPageScrollLocked(true)
+	end)
+	connect(viewport.MouseLeave, function()
+		setPageScrollLocked(false)
+	end)
 	connect(viewport.InputBegan, function(input: InputObject)
 		if
 			input.UserInputType == Enum.UserInputType.MouseButton1
@@ -79,13 +129,33 @@ function ViewportController.new(viewport: ViewportFrame)
 			self.dragTouch = nil
 		end
 	end)
-	connect(viewport.InputChanged, function(input: InputObject)
-		if input.UserInputType == Enum.UserInputType.MouseWheel then
-			self.distance = math.clamp(self.distance - input.Position.Z * 0.85, 4.25, 14)
-			self:_UpdateCamera()
-		end
-	end)
+	ContextActionService:BindActionAtPriority(
+		self.zoomActionName,
+		function(_actionName: string, inputState: Enum.UserInputState, input: InputObject)
+			local point = Vector2.new(input.Position.X, input.Position.Y)
+			if
+				self.destroyed
+				or input.UserInputType ~= Enum.UserInputType.MouseWheel
+				or not pointInsideVisibleBounds(viewport, point)
+			then
+				return Enum.ContextActionResult.Pass
+			end
+			setPageScrollLocked(true)
+			if inputState == Enum.UserInputState.Change then
+				self.distance = math.clamp(self.distance - input.Position.Z * 0.85, 4.25, 14)
+				self:_UpdateCamera()
+			end
+			return Enum.ContextActionResult.Sink
+		end,
+		false,
+		Enum.ContextActionPriority.High.Value + 1,
+		Enum.UserInputType.MouseWheel
+	)
 	connect(UserInputService.InputChanged, function(input: InputObject)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			local point = Vector2.new(input.Position.X, input.Position.Y)
+			setPageScrollLocked(pointInsideVisibleBounds(viewport, point))
+		end
 		if not self.dragging then
 			return
 		end
@@ -182,6 +252,11 @@ function ViewportController:Destroy()
 		return
 	end
 	self.destroyed = true
+	ContextActionService:UnbindAction(self.zoomActionName)
+	if self.scrollFrame and self.scrollFrame.Parent and self.scrollRestore ~= nil then
+		self.scrollFrame.ScrollingEnabled = self.scrollRestore
+		self.scrollRestore = nil
+	end
 	for _, connection in self.connections do
 		connection:Disconnect()
 	end
