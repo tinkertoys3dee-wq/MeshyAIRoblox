@@ -44,6 +44,7 @@ local CommunityService = require(script.Parent.Services.CommunityService)
 local CatalogService = require(script.Parent.Services.CatalogService)
 local AnalyticsService = require(script.Parent.Services.AnalyticsService)
 local RetentionService = require(script.Parent.Services.RetentionService)
+local AdRewardService = require(script.Parent.Services.AdRewardService)
 
 local function push(player: Player, eventName: string, payload: any)
 	if player.Parent == Players then
@@ -57,6 +58,7 @@ local analytics = AnalyticsService.new()
 local retention = RetentionService.new(profiles, analytics)
 local backend = BackendService.new()
 local commerce = CommerceService.new(profiles, playerStates, analytics, push)
+local adRewards = AdRewardService.new(profiles, playerStates, commerce, push, analytics)
 local items = ItemService.new(profiles, playerStates, push)
 local generations = GenerationService.new(profiles, playerStates, backend, commerce, push, analytics)
 local community = CommunityService.new(profiles, playerStates, push, analytics)
@@ -175,8 +177,21 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		analytics:Custom(player, "CustomImagePassPrompted", 1, {})
 		return commerce:PromptPass(player, "CustomImageUpload")
 	end,
-	[Network.Actions.BuyPriorityPass] = function(player)
+	[Network.Actions.BuyPriorityPass] = function(player, payload)
+		if type(payload) == "table" and payload.paymentMethod == "TOKENS" then
+			return commerce:BeginIntentWithTokens(player, "PriorityPass", {})
+		end
 		return commerce:BeginIntent(player, "PriorityPass", {})
+	end,
+	[Network.Actions.RequestRewardedAd] = function(player)
+		return adRewards:RequestAd(player)
+	end,
+	-- Roblox requires a rewarded-ad reward product to also be normally
+	-- purchasable with Robux (see AdRewardService), so this is both a real
+	-- purchase path and the way to test token spending in Studio without a
+	-- live ad.
+	[Network.Actions.BuyTokens] = function(player)
+		return commerce:BeginIntent(player, "AdRewardTokens", {})
 	end,
 	[Network.Actions.GetGeneration] = function(player, payload)
 		if type(payload) ~= "table" or type(payload.generationId) ~= "string" then

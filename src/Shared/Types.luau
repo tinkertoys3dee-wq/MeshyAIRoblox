@@ -110,6 +110,8 @@ export type PlayerProfile = {
 	equippedItemIds: { string },
 	fitPresets: { [string]: FitPreset },
 	fitPresetOrder: { string },
+	tokens: number,
+	adWatch: { day: number, count: number },
 	settings: { soundsEnabled: boolean, reduceMotion: boolean, highContrast: boolean, uiScale: number },
 	stats: { [string]: number },
 	daily: { lastDay: number, streak: number, best: number },

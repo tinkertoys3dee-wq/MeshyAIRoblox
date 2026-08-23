@@ -218,6 +218,7 @@ function GenerationService:Create(player: Player, payload: any): (boolean, any)
 		detailLevel = detailLevel,
 		imageQuality = imageQualityTier,
 		usePriority = payload.usePriority == true,
+		paymentMethod = if payload.paymentMethod == "TOKENS" then "TOKENS" else "ROBUX",
 	}
 	return self:_UseCreditOrPrompt(player, productKey, intentPayload)
 end
@@ -346,6 +347,7 @@ function GenerationService:ConvertImage(player: Player, payload: any): (boolean,
 		sourceBackendJobId = source.backendJobId,
 		sourceImageAssetId = if sourceImageAssetId and sourceImageAssetId > 0 then sourceImageAssetId else nil,
 		usePriority = payload.usePriority == true,
+		paymentMethod = if payload.paymentMethod == "TOKENS" then "TOKENS" else "ROBUX",
 	})
 end
 
@@ -378,6 +380,9 @@ function GenerationService:_UseCreditOrPrompt(
 		end
 		task.spawn(postCommit)
 		return true, { usedRetryCredit = true, intentId = intentId }
+	end
+	if payload.paymentMethod == "TOKENS" then
+		return self.commerce:BeginIntentWithTokens(player, productKey, payload)
 	end
 	return self.commerce:BeginIntent(player, productKey, payload)
 end

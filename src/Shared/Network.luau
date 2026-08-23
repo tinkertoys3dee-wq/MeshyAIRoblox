@@ -34,6 +34,8 @@ Network.Actions = table.freeze({
 	UpdateSettings = "UpdateSettings",
 	CompleteOnboarding = "CompleteOnboarding",
 	Track = "Track",
+	RequestRewardedAd = "RequestRewardedAd",
+	BuyTokens = "BuyTokens",
 })
 
 Network.PushEvents = table.freeze({

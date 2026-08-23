@@ -338,6 +338,61 @@ function CommerceService:BeginIntent(
 	return true, { intentId = intentId, prompted = true }
 end
 
+-- Pays for a product with Forge Tokens (earned by watching rewarded ads —
+-- see AdRewardService) instead of prompting a Robux purchase. Mirrors
+-- BeginIntent's studio-mock-purchase shape: mutate first, call the same
+-- registered grant handler every Robux/receipt path uses, then only commit
+-- the side effect once the mutation is durably saved.
+function CommerceService:BeginIntentWithTokens(
+	player: Player,
+	productKey: string,
+	payload: { [string]: any }
+): (boolean, any)
+	local handler = self.handlers[productKey]
+	if not handler then
+		return false, "UNKNOWN_PRODUCT"
+	end
+	if not self.playerStates:Get(player).commerceAllowed then
+		return false, "COMMERCE_NOT_ALLOWED"
+	end
+	local robuxPrice = self:GetPrices()[productKey]
+	if type(robuxPrice) ~= "number" or robuxPrice <= 0 then
+		return false, "UNKNOWN_PRODUCT"
+	end
+	local tokenPrice = math.ceil(robuxPrice * Config.Ads.TokenPurchaseMarkup)
+	local profile = self.profiles:Get(player)
+	if not profile then
+		return false, "PROFILE_UNAVAILABLE"
+	end
+	if (profile.tokens or 0) < tokenPrice then
+		return false, "INSUFFICIENT_TOKENS"
+	end
+
+	local intentId = self.profiles:GenerateId("tokenpurchase")
+	local mutateSuccess = self.profiles:Mutate(player, function(mutableProfile)
+		mutableProfile.tokens -= tokenPrice
+	end)
+	if not mutateSuccess then
+		return false, "PROFILE_UNAVAILABLE"
+	end
+	local grantSuccess, postCommit = pcall(handler, player, payload, intentId)
+	if not grantSuccess then
+		warn(string.format("[CommerceService] Token-funded grant failed for %s: %s", productKey, tostring(postCommit)))
+		self.profiles:Mutate(player, function(mutableProfile)
+			mutableProfile.tokens += tokenPrice
+		end)
+		return false, "GRANT_FAILED"
+	end
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	if type(postCommit) == "function" then
+		task.spawn(postCommit)
+	end
+	self.analytics:Custom(player, "TokenPurchase", tokenPrice, { product = productKey })
+	return true, { intentId = intentId, tokensSpent = tokenPrice, tokens = self.profiles:Get(player).tokens }
+end
+
 function CommerceService:_ProductKey(productId: number): string?
 	for productKey, product in Config.Products do
 		if product.Id == productId then

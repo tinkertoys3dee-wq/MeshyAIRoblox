@@ -52,6 +52,12 @@ The Art-Directed reference image has three purchasable quality tiers (`LOW`/`MED
 
 Developer-product intent data is saved before Roblox is prompted. Receipt grants use deterministic generation IDs, write the durable benefit and receipt marker to the player's profile before acknowledging Roblox, and submit the same backend request ID on every retry. Plus transfers likewise persist a source snapshot and transfer request ID before a sender receipt can grant a deterministic personal copy.
 
+## Forge Tokens and rewarded ads
+
+Every product `CommerceService` grants can be bought with Robux (`BeginIntent`) or with Forge Tokens (`BeginIntentWithTokens`); the client only ever chooses which one to request, the server recomputes the token price from the live Robux price and enforces the player's balance. `BeginIntentWithTokens` deducts tokens then calls the exact same registered `GrantHandler` a real receipt or a Studio mock purchase would call, so a product's grant logic never needs to know which payment path funded it.
+
+Forge Tokens are earned by watching a Roblox Rewarded Video ad (`Class.AdService`), which Roblox splits across two run contexts: `AdService:GetAdAvailabilityNowAsync` may only run on the client, while `AdService:CreateAdRewardFromDevProductId` and `AdService:ShowRewardedVideoAdAsync` may only run on the server. The client checks availability itself (gating the "Watch ad" button) and asks the server to show the ad; `AdRewardService` does the privileged half and reports `AD_NOT_COMPLETED` for any `Enum.ShowAdResult` other than `ShowCompleted`, per Roblox's own guidance not to grant off that return value. The actual grant always arrives asynchronously through the same `MarketplaceService.ProcessReceipt` callback `CommerceService` already installs for every developer product — Roblox routes a completed rewarded ad through that identical pipeline (with `receipt.ProductPurchaseChannel == Enum.ProductPurchaseChannel.AdReward`), so `AdRewardService` only needs to register one `GrantHandler` for `Config.Products.AdRewardTokens`, exactly like any other product.
+
 ## Persistence
 
 `ForgeUGC_Player_v1` stores one document per user key (`u_<userId>`):
@@ -62,6 +68,7 @@ Developer-product intent data is saved before Roblox is prompted. Receipt grants
 - fit transforms, equipped item IDs, and named fit presets;
 - liked/favorited item references;
 - pending generation purchases and Plus transfers;
+- Forge Token balance and the daily rewarded-ad watch counter;
 - processed developer-product receipt IDs;
 - settings, onboarding, streak, and analytics counters.
 

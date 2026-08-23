@@ -1,5 +1,6 @@
 --!strict
 
+local AdService = game:GetService("AdService")
 local AvatarEditorService = game:GetService("AvatarEditorService")
 local GuiService = game:GetService("GuiService")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -119,6 +120,10 @@ local ERROR_MESSAGES = {
 	INVALID_IMAGE_QUALITY = "Choose one of the available reference image quality tiers.",
 	FIT_PRESET_LIMIT_REACHED = "You have saved the maximum number of fit presets. Delete one to save another.",
 	FIT_PRESET_NOT_FOUND = "That saved fit preset no longer exists.",
+	INSUFFICIENT_TOKENS = "You don't have enough Forge Tokens for that yet. Watch a rewarded ad to earn more.",
+	AD_UNAVAILABLE = "No rewarded ad is available right now. Try again in a few minutes.",
+	AD_NOT_COMPLETED = "The ad was closed before it finished, so no tokens were earned.",
+	AD_WATCH_LIMIT_REACHED = "You've reached today's rewarded-ad limit. Come back tomorrow for more Forge Tokens.",
 }
 
 local CATALOG_TYPES = {
@@ -202,6 +207,23 @@ local function formatNumber(value: number): string
 	return text
 end
 
+-- Display-only mirror of CommerceService:BeginIntentWithTokens's math; the
+-- server always recomputes and enforces this, this is purely so the button
+-- can show the right token price before the click round-trips.
+local function tokenPrice(robuxPrice: number): number
+	return math.ceil(robuxPrice * Config.Ads.TokenPurchaseMarkup)
+end
+
+-- Display-only mirror of AdRewardService's daily-reset math, used only to
+-- seed the watches-remaining counter from the bootstrapped profile; the
+-- server response after each watch is the value actually trusted afterward.
+local function watchesRemainingFromProfile(profile: { [string]: any }): number
+	local watch = profile.adWatch or { day = 0, count = 0 }
+	local today = math.floor(os.time() / 86400)
+	local count = if watch.day == today then watch.count else 0
+	return math.max(0, Config.Ads.MaxAdWatchesPerDay - count)
+end
+
 local function clear(parent: Instance)
 	for _, child in parent:GetChildren() do
 		child:Destroy()
@@ -239,6 +261,10 @@ function App.new()
 		catalogMinPrice = "",
 		catalogMaxPrice = "",
 		usePriority = false,
+		paymentMethod = "ROBUX",
+		adAvailable = nil :: boolean?,
+		adAvailabilityChecking = false,
+		adWatchesRemaining = nil :: number?,
 		pageVersion = 0,
 		toastVersion = 0,
 		queuedSoundIds = {} :: { [string]: boolean },
@@ -722,6 +748,32 @@ function App:_Track(payload: { [string]: any })
 	end)
 end
 
+-- AdService:GetAdAvailabilityNowAsync may only be called from a client
+-- script (confirmed against Roblox's own class reference), and Roblox's own
+-- performance guidance is to call it right before you might show the ad
+-- rather than continuously, so this runs once per Create-page visit rather
+-- than on a timer.
+function App:_RefreshAdAvailability()
+	if self.adAvailabilityChecking then
+		return
+	end
+	self.adAvailabilityChecking = true
+	task.spawn(function()
+		local success, result = pcall(function()
+			return AdService:GetAdAvailabilityNowAsync(Enum.AdFormat.RewardedVideo)
+		end)
+		self.adAvailabilityChecking = false
+		if success and type(result) == "table" then
+			self.adAvailable = result.AdAvailabilityResult == Enum.AdAvailabilityResult.IsAvailable
+		else
+			self.adAvailable = false
+		end
+		if self.activePage == "Create" then
+			self:_RenderActivePage()
+		end
+	end)
+end
+
 function App:_RefreshLocalizedPrices()
 	local state = self.state
 	if not state then
@@ -769,6 +821,7 @@ function App:_Bootstrap()
 			return
 		end
 		self.state = data
+		self.adWatchesRemaining = watchesRemainingFromProfile(data.profile)
 		self.sounds:SetEnabled(data.profile.settings.soundsEnabled ~= false)
 		if data.profile.settings.highContrast == true then
 			Theme.SetHighContrast(true)
@@ -808,6 +861,7 @@ function App:_RefreshBootstrap()
 		local success, data = self:_Invoke(Network.Actions.Bootstrap, {})
 		if success then
 			self.state = data
+			self.adWatchesRemaining = watchesRemainingFromProfile(data.profile)
 			self:_RenderStatus()
 			self:_RenderActivePage()
 			self:_RefreshLocalizedPrices()
@@ -1042,6 +1096,142 @@ function App:_RenderCreate()
 		Parent = page,
 	})
 	Factory.List(stack, Enum.FillDirection.Vertical, 14)
+
+	if self.adAvailable == nil and not self.adAvailabilityChecking then
+		self:_RefreshAdAvailability()
+	end
+	local tokens = self.state.profile.tokens or 0
+	local watchesRemaining = self.adWatchesRemaining or 0
+	local tokensCardHeight = if self.compact then 260 else 156
+	local tokensCard = Factory.Card(stack, UDim2.new(1, 0, 0, tokensCardHeight), nil, "TokensCard")
+	tokensCard.LayoutOrder = 0
+	Factory.Label(tokensCard, "FORGE TOKENS", UDim2.new(0.42, -16, 0, 18), {
+		Position = UDim2.fromOffset(16, 12),
+		Font = Theme.Fonts.Bold,
+		TextSize = 11,
+		Color = Colors.Gold,
+	})
+	Factory.Label(tokensCard, formatNumber(tokens), UDim2.new(0.42, -16, 0, 36), {
+		Position = UDim2.fromOffset(16, 30),
+		Font = Theme.Fonts.Black,
+		TextSize = 28,
+	})
+	Factory.Label(
+		tokensCard,
+		"Earn tokens by watching a rewarded ad. Paying with tokens costs 20% more than the Robux price.",
+		UDim2.new(0.42, -16, 0, if self.compact then 32 else 50),
+		{
+			Position = UDim2.fromOffset(16, 70),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
+		}
+	)
+	-- Right-hand controls: on compact layouts this column collapses to full
+	-- width below the balance (see the Y offsets below); on wide layouts it
+	-- sits beside it, always sized/positioned in Scale so it can never
+	-- overlap the left column regardless of the card's actual pixel width.
+	-- inset is a pixel margin applied inside the band on both sides; gap is
+	-- the pixel gap between the two toggle buttons. Both toggle buttons use
+	-- the identical width formula below so their edges land exactly at
+	-- band-start+inset, gap/2 either side of the midpoint, and
+	-- band-end-inset — verified algebraically, not just visually guessed.
+	local rightX = if self.compact then 0 else 0.46
+	local rightWidth = if self.compact then 1 else 0.54
+	local inset = if self.compact then 16 else 0
+	local gap = 8
+	local payLabelY = if self.compact then 112 else 12
+	Factory.Label(tokensCard, "PAY WITH", UDim2.new(rightWidth, -2 * inset, 0, 16), {
+		Position = UDim2.new(rightX, inset, 0, payLabelY),
+		Font = Theme.Fonts.Bold,
+		TextSize = 10,
+		Color = Colors.TextMuted,
+	})
+	local toggleY = payLabelY + 20
+	local toggleWidth = UDim2.new(rightWidth / 2, -(inset + gap / 2), 0, 30)
+	local payRobux = Factory.Button(
+		tokensCard,
+		"Robux",
+		toggleWidth,
+		UDim2.new(rightX, inset, 0, toggleY),
+		if self.paymentMethod == "ROBUX" then "primary" else nil
+	)
+	local payTokens = Factory.Button(
+		tokensCard,
+		"Tokens",
+		toggleWidth,
+		UDim2.new(rightX + rightWidth / 2, gap / 2, 0, toggleY),
+		if self.paymentMethod == "TOKENS" then "mint" else nil
+	)
+	self:_BindButton(payRobux)
+	self:_BindButton(payTokens)
+	payRobux.Activated:Connect(function()
+		self.paymentMethod = "ROBUX"
+		self:_RenderActivePage()
+	end)
+	payTokens.Activated:Connect(function()
+		self.paymentMethod = "TOKENS"
+		self:_RenderActivePage()
+	end)
+	local watchAdActive = self.adAvailable == true and watchesRemaining > 0
+	local watchAdY = toggleY + 38
+	local watchAd = Factory.Button(
+		tokensCard,
+		if self.adAvailabilityChecking
+			then "Checking for an ad…"
+			elseif self.adAvailable == false then "No ad available right now"
+			elseif watchesRemaining <= 0 then "Ad limit reached for today"
+			else string.format(
+				"Watch ad · +%d tokens (%d left today)",
+				Config.Ads.TokenGrantPerPurchase,
+				watchesRemaining
+			),
+		UDim2.new(rightWidth, -2 * inset, 0, 34),
+		UDim2.new(rightX, inset, 0, watchAdY),
+		if watchAdActive then "mint" else nil
+	)
+	watchAd.Active = watchAdActive
+	self:_BindButton(watchAd)
+	watchAd.Activated:Connect(function()
+		watchAd.Active = false
+		watchAd.Text = "Loading ad…"
+		task.spawn(function()
+			local success, result = self:_Invoke(Network.Actions.RequestRewardedAd, {})
+			if success then
+				self.adWatchesRemaining = result.watchesRemainingToday
+				self:_Toast("ready", "Thanks for watching! Your tokens are on the way.")
+			end
+			self:_RenderActivePage()
+		end)
+	end)
+	local buyTokensY = watchAdY + 42
+	local buyTokens = Factory.Button(
+		tokensCard,
+		string.format("Buy %d tokens · R$ %d", Config.Ads.TokenGrantPerPurchase, self.state.prices.AdRewardTokens),
+		UDim2.new(rightWidth, -2 * inset, 0, 30),
+		UDim2.new(rightX, inset, 0, buyTokensY),
+		nil
+	)
+	self:_BindButton(buyTokens)
+	buyTokens.Activated:Connect(function()
+		buyTokens.Active = false
+		task.spawn(function()
+			local success, result = self:_Invoke(Network.Actions.BuyTokens, {})
+			if success then
+				if result.mocked then
+					self:_RefreshBootstrap()
+					self:_Toast("success", "Studio mock purchase confirmed. Tokens added.")
+				else
+					self.sounds:Play("PurchasePrompt")
+					self:_Toast("success", "Confirm the token pack purchase in Roblox.")
+				end
+			end
+			if buyTokens.Parent then
+				buyTokens.Active = true
+			end
+		end)
+	end)
 
 	local customUploadOwned = self.state.benefits.customImageUpload == true
 	local methodRow = Factory.New("Frame", {
@@ -1434,9 +1624,13 @@ function App:_RenderCreate()
 			then self.state.prices.DirectGeneration
 			elseif selectedQualityTier then self.state.prices[selectedQualityTier.ProductKey]
 			else self.state.prices.ImagePreviewLow
+		local payWithTokens = self.paymentMethod == "TOKENS" and self.selectedMethod ~= "IMAGE_UPLOAD"
+		local priceText = if payWithTokens
+			then string.format("%d tokens", tokenPrice(price))
+			else string.format("R$ %d", price)
 		local actionText = if self.selectedMethod == "TEXT_TO_3D"
-			then string.format("Forge 3D · R$ %d", price)
-			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · R$ %d", price)
+			then string.format("Forge 3D · %s", priceText)
+			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · %s", priceText)
 			else "Moderate my reference · Included"
 		local generate = Factory.Button(
 			promptCard,
@@ -1455,6 +1649,10 @@ function App:_RenderCreate()
 					availablePasses,
 					if availablePasses == 1 then "" else "es"
 				)
+				elseif self.paymentMethod == "TOKENS" then string.format(
+					"Priority pass · %d tokens",
+					tokenPrice(self.state.prices.PriorityPass)
+				)
 				else string.format("Priority pass · R$ %d", self.state.prices.PriorityPass),
 			if self.compact then UDim2.new(0.5, -20, 0, 42) else UDim2.fromOffset(184, 42),
 			if self.compact then UDim2.new(0, 15, 0, buttonY) else UDim2.new(1, -460, 0, buttonY),
@@ -1468,7 +1666,17 @@ function App:_RenderCreate()
 				self:_RenderActivePage()
 			else
 				task.spawn(function()
-					self:_Invoke(Network.Actions.BuyPriorityPass, {})
+					local success, result =
+						self:_Invoke(Network.Actions.BuyPriorityPass, { paymentMethod = self.paymentMethod })
+					if success and result.tokensSpent then
+						self.state.profile.tokens = result.tokens
+						self.sounds:Play("Success")
+						self:_Toast("success", string.format("%d tokens spent on a priority pass.", result.tokensSpent))
+						self:_RenderActivePage()
+					elseif success and not result.mocked then
+						self.sounds:Play("PurchasePrompt")
+						self:_Toast("success", "Confirm the priority pass purchase in Roblox.")
+					end
 				end)
 			end
 		end)
@@ -1484,6 +1692,7 @@ function App:_RenderCreate()
 					stylePreset = self.selectedStylePreset,
 					detailLevel = self.selectedDetailLevel,
 					usePriority = self.usePriority,
+					paymentMethod = self.paymentMethod,
 				}
 				if self.selectedMethod == "IMAGE_PREVIEW" then
 					request.imageQuality = self.selectedImageQuality
@@ -1503,6 +1712,13 @@ function App:_RenderCreate()
 						self:_Toast("success", "Retry credit applied. Your generation is entering the queue.")
 					elseif result.mocked then
 						self:_Toast("success", "Studio mock purchase confirmed. Your generation is entering the queue.")
+					elseif result.tokensSpent then
+						self.state.profile.tokens = result.tokens
+						self.sounds:Play("Success")
+						self:_Toast(
+							"success",
+							string.format("%d tokens spent. Your generation is entering the queue.", result.tokensSpent)
+						)
 					else
 						self.sounds:Play("PurchasePrompt")
 						self:_Toast(
@@ -1583,11 +1799,14 @@ function App:_RenderCreate()
 				AlignY = Enum.TextYAlignment.Top,
 			}
 		)
+		local conversionPriceText = if self.paymentMethod == "TOKENS"
+			then string.format("%d tokens", tokenPrice(self.state.prices.ImageConversion))
+			else string.format("R$ %d", self.state.prices.ImageConversion)
 		local approve = Factory.Button(
 			reference,
 			if self.compact
-				then string.format("Build · R$ %d", self.state.prices.ImageConversion)
-				else string.format("Approve & build · R$ %d", self.state.prices.ImageConversion),
+				then string.format("Build · %s", conversionPriceText)
+				else string.format("Approve & build · %s", conversionPriceText),
 			if self.compact then UDim2.new(0.5, -22, 0, 42) else UDim2.fromOffset(210, 42),
 			if self.compact then UDim2.new(0, 14, 1, -58) else UDim2.fromOffset(210, 150),
 			"mint"
@@ -1595,15 +1814,23 @@ function App:_RenderCreate()
 		self:_BindButton(approve)
 		approve.Activated:Connect(function()
 			task.spawn(function()
-				local success, result = self:_Invoke(
-					Network.Actions.ConvertImage,
-					{ generationId = readyImage.id, usePriority = self.usePriority }
-				)
+				local success, result = self:_Invoke(Network.Actions.ConvertImage, {
+					generationId = readyImage.id,
+					usePriority = self.usePriority,
+					paymentMethod = self.paymentMethod,
+				})
 				if success then
 					if result.usedRetryCredit then
 						self:_Toast("success", "Conversion credit applied. Your model is entering the queue.")
 					elseif result.mocked then
 						self:_Toast("success", "Studio mock conversion confirmed.")
+					elseif result.tokensSpent then
+						self.state.profile.tokens = result.tokens
+						self.sounds:Play("Success")
+						self:_Toast(
+							"success",
+							string.format("%d tokens spent. Your model is entering the queue.", result.tokensSpent)
+						)
 					else
 						self.sounds:Play("PurchasePrompt")
 						self:_Toast("success", "Confirm the conversion in Roblox to begin building your model.")
