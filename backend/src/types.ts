@@ -52,11 +52,11 @@ export const createJobSchema = z
     if (value.kind === "IMAGE_UPLOAD" && !value.sourceImageAssetId) {
       context.addIssue({ code: "custom", path: ["sourceImageAssetId"], message: "sourceImageAssetId is required" });
     }
-    if (value.kind !== "IMAGE_UPLOAD" && value.sourceImageAssetId) {
+    if (value.kind !== "IMAGE_UPLOAD" && value.kind !== "IMAGE_TO_3D" && value.sourceImageAssetId) {
       context.addIssue({
         code: "custom",
         path: ["sourceImageAssetId"],
-        message: "sourceImageAssetId is only valid for IMAGE_UPLOAD",
+        message: "sourceImageAssetId is only valid for IMAGE_UPLOAD or IMAGE_TO_3D",
       });
     }
   });

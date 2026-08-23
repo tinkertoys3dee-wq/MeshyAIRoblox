@@ -1734,18 +1734,20 @@ function App:_RenderStudio()
 	local viewport = Factory.New("ViewportFrame", {
 		Position = UDim2.fromOffset(16, 84),
 		Size = UDim2.new(1, -32, 0, 292),
-		BackgroundColor3 = Color3.fromRGB(28, 34, 58),
+		BackgroundColor3 = Color3.fromRGB(62, 72, 108),
 		BorderSizePixel = 0,
 		Parent = body,
 	})
 	Factory.Corner(viewport, 14)
 	Factory.Stroke(viewport, Colors.Violet, 0.45)
-	Factory.Gradient(viewport, { Color3.fromRGB(42, 50, 82), Color3.fromRGB(49, 38, 73) }, 115)
 	local controller = ViewportController.new(viewport)
 	self.activeViewport = controller
-	local orbitHint = Factory.Pill(viewport, "DRAG TO ORBIT · WHEEL TO ZOOM", Colors.Cyan, 212)
+	local orbitHint = Factory.Pill(viewport, "DRAG ORBIT · RIGHT/SHIFT DRAG PAN", Colors.Cyan, 234)
 	orbitHint.Position = UDim2.fromOffset(12, 12)
 	orbitHint.ZIndex = 5
+	local zoomHint = Factory.Pill(viewport, "WHEEL ZOOM", Colors.Violet, 92)
+	zoomHint.Position = UDim2.fromOffset(12, 43)
+	zoomHint.ZIndex = 5
 	local resetCamera = Factory.Button(viewport, "↺", UDim2.fromOffset(38, 34), UDim2.new(1, -50, 0, 10), nil)
 	resetCamera.Name = "ResetCamera"
 	resetCamera.TextSize = 18

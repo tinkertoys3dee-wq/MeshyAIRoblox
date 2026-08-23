@@ -14,6 +14,71 @@ type Logger = {
   error(object: unknown, message?: string): void;
 };
 
+type ApprovedReferenceDownloader = Pick<RobloxReferenceClient, "downloadImage">;
+
+export async function resolveApprovedReferenceImage(
+  job: Job,
+  repository: Pick<JobRepository, "get">,
+  references: ApprovedReferenceDownloader,
+): Promise<{ image: Buffer; recoveredFromRoblox: boolean }> {
+  // A conversion job keeps its own copy before Meshy is started. This lets a
+  // Railway restart resume polling without depending on the older preview job.
+  if (job.imageArtifact) {
+    return { image: Buffer.from(job.imageArtifact), recoveredFromRoblox: false };
+  }
+  if (!job.sourceJobId) {
+    throw new PipelineError("MISSING_SOURCE", "Image conversion has no source job", false);
+  }
+
+  const source = await repository.get(job.sourceJobId);
+  if (source) {
+    const approvedKind = source.kind === "IMAGE_PREVIEW" || source.kind === "IMAGE_UPLOAD";
+    if (source.playerUserId !== job.playerUserId || source.status !== "IMAGE_READY" || !approvedKind) {
+      throw new PipelineError("INVALID_SOURCE", "The selected reference image is not approved for this player", false);
+    }
+    if (source.imageArtifact) {
+      return { image: Buffer.from(source.imageArtifact), recoveredFromRoblox: false };
+    }
+  }
+
+  // The Roblox server supplies this ID from the player's saved IMAGE_READY
+  // generation, never from the client. It is an already moderated preview and
+  // provides a durable fallback if the original Railway job/artifact expired.
+  if (!job.sourceImageAssetId) {
+    throw new PipelineError("INVALID_SOURCE", "The approved reference image is no longer available", false);
+  }
+  return {
+    image: await references.downloadImage(job.sourceImageAssetId),
+    recoveredFromRoblox: true,
+  };
+}
+
+async function normalizeApprovedReferenceImage(image: Buffer): Promise<Buffer> {
+  try {
+    const source = sharp(image, { animated: false, failOn: "error", limitInputPixels: 16_777_216 });
+    const metadata = await source.metadata();
+    if (!metadata.width || !metadata.height || metadata.width < 128 || metadata.height < 128) {
+      throw new PipelineError(
+        "REFERENCE_IMAGE_TOO_SMALL",
+        "The approved reference must be at least 128 pixels in both dimensions",
+        false,
+      );
+    }
+    return await source
+      .rotate()
+      .resize(1024, 1024, {
+        fit: "contain",
+        background: { r: 245, g: 246, b: 250, alpha: 1 },
+      })
+      .flatten({ background: { r: 245, g: 246, b: 250 } })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+  } catch (error) {
+    if (error instanceof PipelineError) throw error;
+    throw new PipelineError("REFERENCE_IMAGE_INVALID", "The approved reference was not a valid still image", false);
+  }
+}
+
 export class JobRunner {
   readonly #config: AppConfig;
   readonly #repository: JobRepository;
@@ -188,23 +253,26 @@ export class JobRunner {
   }
 
   async #runImageTo3D(job: Job): Promise<void> {
-    if (!job.sourceJobId) throw new PipelineError("MISSING_SOURCE", "Image conversion has no source job", false);
-    const source = await this.#repository.get(job.sourceJobId);
-    if (!source || source.playerUserId !== job.playerUserId || source.status !== "IMAGE_READY" || !source.imageArtifact) {
-      throw new PipelineError("INVALID_SOURCE", "The approved reference image is unavailable", false);
-    }
-
     // IMAGE_READY is the moderation boundary. Generated references were checked
     // after creation, while uploaded references have already passed Roblox asset
     // moderation and the ownership/type checks in RobloxReferenceClient. Re-running
     // vision moderation here would charge for the same image a second time.
     const guidedPrompt = composeMeshyPrompt(job.filteredPrompt, job.stylePreset, job.detailLevel);
 
-    const current = await this.#requiredJob(job.id);
+    let current = await this.#requiredJob(job.id);
     let finalTaskId = current.output.meshyFinalTaskId;
     if (!finalTaskId) {
-      await this.#set(job.id, "GENERATING_MESH", "Turning the approved image into Smart Topology", 8);
-      finalTaskId = await this.#meshy.createImageTo3D(source.imageArtifact, "image/png", guidedPrompt);
+      const approved = await resolveApprovedReferenceImage(current, this.#repository, this.#robloxReferences);
+      const image = await normalizeApprovedReferenceImage(approved.image);
+      await this.#repository.update(job.id, {
+        imageArtifact: image,
+        status: "GENERATING_MESH",
+        stage: approved.recoveredFromRoblox
+          ? "Recovered the approved image; starting Smart Topology"
+          : "Turning the approved image into Smart Topology",
+        progress: 8,
+      });
+      finalTaskId = await this.#meshy.createImageTo3D(image, "image/png", guidedPrompt);
       await this.#mergeOutput(job.id, { meshyFinalTaskId: finalTaskId });
     }
 

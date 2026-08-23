@@ -6,22 +6,12 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local AccessoryFit = require(ReplicatedStorage:WaitForChild("AccessoryFit"))
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 
 local ItemService = {}
 ItemService.__index = ItemService
-
-local ATTACHMENTS = {
-	Hat = "HatAttachment",
-	HairAccessory = "HairAttachment",
-	FaceAccessory = "FaceFrontAttachment",
-	NeckAccessory = "NeckAttachment",
-	ShoulderAccessory = "RightShoulderAttachment",
-	FrontAccessory = "BodyFrontAttachment",
-	BackAccessory = "BodyBackAttachment",
-	WaistAccessory = "WaistFrontAttachment",
-}
 
 local ACCESSORY_ENUMS = {
 	Hat = Enum.AccessoryType.Hat,
@@ -44,6 +34,11 @@ local AVATAR_ASSET_ENUMS = {
 	BackAccessory = Enum.AvatarAssetType.BackAccessory,
 	WaistAccessory = Enum.AvatarAssetType.WaistAccessory,
 }
+
+-- AvatarCreationService validates these values exactly for a rigid accessory
+-- produced by CreateMeshPartAsync. Runtime accessories can remain massless,
+-- but the instance passed to the creation prompt must retain upload-safe data.
+local AVATAR_CREATION_HANDLE_COLOR = Color3.fromRGB(163, 162, 165)
 
 local function finite(value: any): boolean
 	return type(value) == "number" and value == value and value > -math.huge and value < math.huge
@@ -405,6 +400,7 @@ function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean)
 					local surface = AssetService:CreateSurfaceAppearanceAsync({
 						ColorMap = Content.fromObject(editableImage),
 					})
+					surface.AlphaMode = Enum.AlphaMode.Overlay
 					surface.Parent = created
 				end
 			end
@@ -426,10 +422,10 @@ function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean)
 	handle.CanCollide = false
 	handle.CanQuery = false
 	handle.CanTouch = false
-	handle.Massless = true
+	handle.Massless = not editable
 	handle.Material = Enum.Material.Plastic
 	handle.Transparency = 0
-	handle.Color = Color3.new(1, 1, 1)
+	handle.Color = if editable then AVATAR_CREATION_HANDLE_COLOR else Color3.new(1, 1, 1)
 	local scale = item.fit.scale
 	handle.Size = Vector3.new(handle.Size.X * scale.x, handle.Size.Y * scale.y, handle.Size.Z * scale.z)
 	for _, child in handle:GetChildren() do
@@ -438,12 +434,8 @@ function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean)
 		end
 	end
 	local attachment = Instance.new("Attachment")
-	attachment.Name = ATTACHMENTS[item.fit.accessoryType] or "HatAttachment"
-	local position = item.fit.position
-	local rotation = item.fit.rotation
-	local desiredOffset = CFrame.new(position.x, position.y, position.z)
-		* CFrame.Angles(math.rad(rotation.x), math.rad(rotation.y), math.rad(rotation.z))
-	attachment.CFrame = desiredOffset:Inverse()
+	attachment.Name = AccessoryFit.GetAttachmentName(item.fit.accessoryType)
+	attachment.CFrame = AccessoryFit.GetHandleAttachmentCFrame(item.fit)
 	attachment.Parent = handle
 
 	local accessory = Instance.new("Accessory")

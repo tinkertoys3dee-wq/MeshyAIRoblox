@@ -76,11 +76,32 @@ export class MeshyClient {
   }
 
   async download(url: string): Promise<Buffer> {
-    const response = await fetchWithTimeout(url, {}, 120_000);
-    if (!response.ok) {
-      throw new PipelineError("PROVIDER_DOWNLOAD_FAILED", `Meshy artifact download returned ${response.status}`, true);
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const response = await fetchWithTimeout(url, {}, 120_000);
+        if (!response.ok) {
+          const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
+          throw new PipelineError(
+            "PROVIDER_DOWNLOAD_FAILED",
+            `Meshy artifact download returned ${response.status}`,
+            retryable,
+          );
+        }
+        return Buffer.from(await response.arrayBuffer());
+      } catch (error) {
+        const downloadError =
+          error instanceof PipelineError
+            ? error
+            : new PipelineError(
+                "PROVIDER_DOWNLOAD_FAILED",
+                error instanceof Error ? error.message : "Meshy artifact download failed",
+                true,
+              );
+        if (!downloadError.retryable || attempt === 3) throw downloadError;
+        await delay(500 * attempt);
+      }
     }
-    return Buffer.from(await response.arrayBuffer());
+    throw new PipelineError("PROVIDER_DOWNLOAD_FAILED", "Meshy artifact download failed", true);
   }
 
   async #create(path: string, body: Record<string, unknown>): Promise<string> {
@@ -99,10 +120,29 @@ export class MeshyClient {
   async #poll(path: string, onProgress: (progress: number) => Promise<void>): Promise<MeshyTask> {
     const deadline = Date.now() + this.#config.timeoutMs;
     let previousProgress = -1;
+    let consecutiveRequestFailures = 0;
 
     while (Date.now() < deadline) {
-      const response = await this.#request(path, { method: "GET" });
-      const task = (await response.json()) as MeshyTask;
+      let task: MeshyTask;
+      try {
+        const response = await this.#request(path, { method: "GET" });
+        task = (await response.json()) as MeshyTask;
+        consecutiveRequestFailures = 0;
+      } catch (error) {
+        const requestError =
+          error instanceof PipelineError
+            ? error
+            : new PipelineError(
+                "PROVIDER_BAD_RESPONSE",
+                error instanceof Error ? error.message : "Meshy returned an unreadable task response",
+                true,
+              );
+        if (!requestError.retryable) throw requestError;
+        consecutiveRequestFailures += 1;
+        if (consecutiveRequestFailures >= 4) throw requestError;
+        await delay(Math.min(this.#config.pollIntervalMs, 500 * 2 ** (consecutiveRequestFailures - 1)));
+        continue;
+      }
       const progress = Math.max(0, Math.min(100, Math.floor(task.progress ?? 0)));
       if (progress !== previousProgress) {
         previousProgress = progress;

@@ -2,35 +2,38 @@
 
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+
+local AccessoryFit = require(ReplicatedStorage:WaitForChild("AccessoryFit"))
 
 local ViewportController = {}
 ViewportController.__index = ViewportController
 
 local nextControllerId = 0
 
-local PREVIEW_ANCHORS = {
-	Hat = Vector3.new(0, 3.25, 0),
-	HairAccessory = Vector3.new(0, 3.05, 0.05),
-	FaceAccessory = Vector3.new(0, 2.55, -0.5),
-	NeckAccessory = Vector3.new(0, 1.85, 0),
-	ShoulderAccessory = Vector3.new(0.9, 1.75, 0),
-	FrontAccessory = Vector3.new(0, 1.05, -0.48),
-	BackAccessory = Vector3.new(0, 1.1, 0.48),
-	WaistAccessory = Vector3.new(0, 0.05, 0),
-}
+local DEFAULT_FOCUS = Vector3.new(0, 1.15, 0)
+
+local function prepareInstance(instance: Instance)
+	if instance:IsA("LuaSourceContainer") then
+		instance:Destroy()
+	elseif instance:IsA("BasePart") then
+		instance.Anchored = true
+		instance.CanCollide = false
+		instance.CanQuery = false
+		instance.CanTouch = false
+	end
+end
 
 local function prepare(root: Instance)
+	prepareInstance(root)
 	for _, descendant in root:GetDescendants() do
-		if descendant:IsA("LuaSourceContainer") then
-			descendant:Destroy()
-		elseif descendant:IsA("BasePart") then
-			descendant.Anchored = true
-			descendant.CanCollide = false
-			descendant.CanQuery = false
-			descendant.CanTouch = false
-		end
+		prepareInstance(descendant)
 	end
+end
+
+local function clampFocus(focus: Vector3): Vector3
+	return Vector3.new(math.clamp(focus.X, -6, 6), math.clamp(focus.Y, -4, 7), math.clamp(focus.Z, -6, 6))
 end
 
 local function pointInsideVisibleBounds(gui: GuiObject, point: Vector2): boolean
@@ -67,19 +70,26 @@ function ViewportController.new(viewport: ViewportFrame)
 	camera.Parent = viewport
 	viewport.CurrentCamera = camera
 	viewport.Active = true
-	viewport.Ambient = Color3.fromRGB(218, 224, 255)
-	viewport.LightColor = Color3.fromRGB(255, 249, 235)
-	viewport.LightDirection = Vector3.new(-0.8, -0.65, -0.4)
+	viewport.Ambient = Color3.fromRGB(246, 247, 255)
+	viewport.LightColor = Color3.fromRGB(255, 255, 255)
+	viewport.LightDirection = Vector3.new(-0.8, -0.45, -0.55).Unit
+	viewport.ImageColor3 = Color3.new(1, 1, 1)
+	viewport.ImageTransparency = 0
 	local self = setmetatable({
 		viewport = viewport,
 		world = world,
 		camera = camera,
 		accessory = nil :: Model?,
-		focus = Vector3.new(0, 1.15, 0),
+		handle = nil :: MeshPart?,
+		baseHandleSize = Vector3.zero,
+		avatar = nil :: Model?,
+		currentFit = nil :: { [string]: any }?,
+		focus = DEFAULT_FOCUS,
 		yaw = 0,
 		pitch = -4,
 		distance = 9.25,
-		dragging = false,
+		dragMode = nil :: string?,
+		dragButton = nil :: Enum.UserInputType?,
 		dragTouch = nil :: InputObject?,
 		lastPointer = Vector2.zero,
 		zoomActionName = `ForgeViewportZoom_{nextControllerId}`,
@@ -116,16 +126,26 @@ function ViewportController.new(viewport: ViewportFrame)
 	connect(viewport.InputBegan, function(input: InputObject)
 		if
 			input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.MouseButton2
+			or input.UserInputType == Enum.UserInputType.MouseButton3
 			or input.UserInputType == Enum.UserInputType.Touch
 		then
-			self.dragging = true
+			local shiftDown = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
+				or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
+			self.dragMode = if input.UserInputType == Enum.UserInputType.MouseButton2
+					or input.UserInputType == Enum.UserInputType.MouseButton3
+					or shiftDown
+				then "PAN"
+				else "ORBIT"
+			self.dragButton = input.UserInputType
 			self.dragTouch = if input.UserInputType == Enum.UserInputType.Touch then input else nil
 			self.lastPointer = Vector2.new(input.Position.X, input.Position.Y)
 		end
 	end)
 	connect(viewport.InputEnded, function(input: InputObject)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input == self.dragTouch then
-			self.dragging = false
+		if input.UserInputType == self.dragButton or input == self.dragTouch then
+			self.dragMode = nil
+			self.dragButton = nil
 			self.dragTouch = nil
 		end
 	end)
@@ -156,7 +176,7 @@ function ViewportController.new(viewport: ViewportFrame)
 			local point = Vector2.new(input.Position.X, input.Position.Y)
 			setPageScrollLocked(pointInsideVisibleBounds(viewport, point))
 		end
-		if not self.dragging then
+		if not self.dragMode then
 			return
 		end
 		if input.UserInputType ~= Enum.UserInputType.MouseMovement and input ~= self.dragTouch then
@@ -165,13 +185,22 @@ function ViewportController.new(viewport: ViewportFrame)
 		local pointer = Vector2.new(input.Position.X, input.Position.Y)
 		local delta = pointer - self.lastPointer
 		self.lastPointer = pointer
-		self.yaw -= delta.X * 0.42
-		self.pitch = math.clamp(self.pitch - delta.Y * 0.32, -58, 58)
+		if self.dragMode == "PAN" then
+			local viewportHeight = math.max(viewport.AbsoluteSize.Y, 1)
+			local studsPerPixel = 2 * self.distance * math.tan(math.rad(self.camera.FieldOfView * 0.5)) / viewportHeight
+			local movement = -self.camera.CFrame.RightVector * delta.X * studsPerPixel
+				+ self.camera.CFrame.UpVector * delta.Y * studsPerPixel
+			self.focus = clampFocus(self.focus + movement)
+		else
+			self.yaw -= delta.X * 0.42
+			self.pitch = math.clamp(self.pitch - delta.Y * 0.32, -58, 58)
+		end
 		self:_UpdateCamera()
 	end)
 	connect(UserInputService.InputEnded, function(input: InputObject)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input == self.dragTouch then
-			self.dragging = false
+		if input.UserInputType == self.dragButton or input == self.dragTouch then
+			self.dragMode = nil
+			self.dragButton = nil
 			self.dragTouch = nil
 		end
 	end)
@@ -179,6 +208,14 @@ function ViewportController.new(viewport: ViewportFrame)
 	task.spawn(function()
 		local player = Players.LocalPlayer
 		local success, avatar = pcall(function()
+			local character = player.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				return Players:CreateHumanoidModelFromDescriptionAsync(
+					humanoid:GetAppliedDescription(),
+					humanoid.RigType
+				)
+			end
 			return Players:CreateHumanoidModelFromUserIdAsync(player.UserId)
 		end)
 		if success and avatar then
@@ -187,6 +224,10 @@ function ViewportController.new(viewport: ViewportFrame)
 				avatar.Name = "AvatarReference"
 				avatar:PivotTo(CFrame.new())
 				avatar.Parent = world
+				self.avatar = avatar
+				if self.currentFit then
+					self:ApplyFit(self.currentFit)
+				end
 			else
 				avatar:Destroy()
 			end
@@ -205,6 +246,7 @@ function ViewportController:_UpdateCamera()
 end
 
 function ViewportController:ResetCamera()
+	self.focus = DEFAULT_FOCUS
 	self.yaw = 0
 	self.pitch = -4
 	self.distance = 9.25
@@ -215,35 +257,50 @@ function ViewportController:SetAccessory(source: Model, fit: { [string]: any })
 	if self.accessory then
 		self.accessory:Destroy()
 	end
-	local clone = source:Clone()
-	prepare(clone)
-	clone.Name = "ForgeAccessory"
-	clone.Parent = self.world
-	self.accessory = clone
+	self.accessory = nil
+	self.handle = nil
+	local sourceHandle = source:FindFirstChildWhichIsA("MeshPart", true)
+	if not sourceHandle then
+		return
+	end
+	local previewModel = Instance.new("Model")
+	previewModel.Name = "ForgeAccessory"
+	local handle = sourceHandle:Clone()
+	for _, child in handle:GetChildren() do
+		if not child:IsA("SurfaceAppearance") then
+			child:Destroy()
+		end
+	end
+	handle.Name = "Handle"
+	prepare(handle)
+	-- Match the runtime accessory's untinted appearance; imported MeshParts often
+	-- retain Roblox's gray default Color even when their texture is full-color.
+	handle.Material = Enum.Material.Plastic
+	handle.Transparency = 0
+	handle.Color = Color3.new(1, 1, 1)
+	handle.Parent = previewModel
+	previewModel.Parent = self.world
+	self.accessory = previewModel
+	self.handle = handle
+	self.baseHandleSize = handle.Size
 	self:ApplyFit(fit)
 end
 
 function ViewportController:ApplyFit(fit: { [string]: any })
-	if not self.accessory then
+	self.currentFit = fit
+	local handle = self.handle
+	local avatar = self.avatar
+	if not handle or not avatar then
 		return
 	end
-	local position = fit.position
-	local rotation = fit.rotation
 	local scale = fit.scale
-	local anchor = PREVIEW_ANCHORS[fit.accessoryType] or PREVIEW_ANCHORS.Hat
-	self.accessory:PivotTo(
-		CFrame.new(anchor + Vector3.new(position.x, position.y, position.z))
-			* CFrame.Angles(math.rad(rotation.x), math.rad(rotation.y), math.rad(rotation.z))
-	)
-	for _, descendant in self.accessory:GetDescendants() do
-		if descendant:IsA("BasePart") then
-			local baseSize = descendant:GetAttribute("ForgeBaseSize")
-			if typeof(baseSize) ~= "Vector3" then
-				baseSize = descendant.Size
-				descendant:SetAttribute("ForgeBaseSize", baseSize)
-			end
-			descendant.Size = Vector3.new(baseSize.X * scale.x, baseSize.Y * scale.y, baseSize.Z * scale.z)
-		end
+	handle.Size =
+		Vector3.new(self.baseHandleSize.X * scale.x, self.baseHandleSize.Y * scale.y, self.baseHandleSize.Z * scale.z)
+	local avatarAttachment = AccessoryFit.FindAvatarAttachment(avatar, fit.accessoryType)
+	if avatarAttachment then
+		-- This is the same equation Humanoid:AddAccessory resolves when the
+		-- Handle attachment is AccessoryFit.GetOffsetCFrame(fit):Inverse().
+		handle.CFrame = avatarAttachment.WorldCFrame * AccessoryFit.GetOffsetCFrame(fit)
 	end
 end
 
@@ -264,6 +321,9 @@ function ViewportController:Destroy()
 	if self.world.Parent then
 		self.world:Destroy()
 	end
+	self.accessory = nil
+	self.handle = nil
+	self.avatar = nil
 	if self.camera.Parent then
 		self.camera:Destroy()
 	end

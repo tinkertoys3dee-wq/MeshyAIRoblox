@@ -31,6 +31,16 @@ describe("createJobSchema", () => {
     expect(createJobSchema.safeParse({ ...base, kind: "TEXT_TO_3D", sourceImageAssetId: 123 }).success).toBe(false);
   });
 
+  it("accepts an approved Roblox preview as an image-conversion recovery source", () => {
+    const conversion = createJobSchema.safeParse({
+      ...base,
+      kind: "IMAGE_TO_3D",
+      sourceJobId: "11111111-1111-4111-8111-111111111111",
+      sourceImageAssetId: 1234567890,
+    });
+    expect(conversion.success).toBe(true);
+  });
+
   it("rejects unrecognized style and detail controls", () => {
     expect(createJobSchema.safeParse({ ...base, kind: "TEXT_TO_3D", stylePreset: "PHOTOCOPY" }).success).toBe(false);
     expect(createJobSchema.safeParse({ ...base, kind: "TEXT_TO_3D", detailLevel: "UNLIMITED" }).success).toBe(false);

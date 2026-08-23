@@ -289,6 +289,13 @@ function GenerationService:ConvertImage(player: Player, payload: any): (boolean,
 	if not source or source.stage ~= "IMAGE_READY" or not source.backendJobId then
 		return false, "IMAGE_NOT_READY"
 	end
+	local sourceImageAssetId = tonumber(source.previewAssetId)
+	if
+		not (RunService:IsStudio() and Config.Studio.AllowMockBackend)
+		and (not sourceImageAssetId or sourceImageAssetId <= 0 or sourceImageAssetId % 1 ~= 0)
+	then
+		return false, "IMAGE_NOT_READY"
+	end
 	return self:_UseCreditOrPrompt(player, "ImageConversion", {
 		kind = "IMAGE_TO_3D",
 		filteredPrompt = source.filteredPrompt,
@@ -297,6 +304,7 @@ function GenerationService:ConvertImage(player: Player, payload: any): (boolean,
 		detailLevel = source.detailLevel or "BALANCED",
 		sourceGenerationId = source.id,
 		sourceBackendJobId = source.backendJobId,
+		sourceImageAssetId = if sourceImageAssetId and sourceImageAssetId > 0 then sourceImageAssetId else nil,
 		usePriority = payload.usePriority == true,
 	})
 end
