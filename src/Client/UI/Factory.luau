@@ -110,13 +110,21 @@ function Factory.Card(parent: Instance, size: UDim2, position: UDim2?, name: str
 		Position = position or UDim2.new(),
 		BackgroundColor3 = Colors.PanelRaised,
 		BorderSizePixel = 0,
+		-- Every card is a rounded-corner container with hand-positioned
+		-- children; clipping keeps any child that overflows (a long label, an
+		-- unusually wide row on a narrow/compact layout) from visibly bleeding
+		-- past the card's own bounds instead of just being cropped by nothing.
+		ClipsDescendants = true,
 		Parent = parent,
 	})
 	Factory.Corner(card)
 	Factory.Stroke(card)
+	-- The gradient's own colors render the card's visible surface (a
+	-- UIGradient paints over BackgroundColor3), so the mid-tone target lives
+	-- here, not just in Colors.PanelRaised.
 	Factory.Gradient(card, {
-		Color3.fromRGB(35, 42, 76),
-		Color3.fromRGB(20, 26, 50),
+		Color3.fromRGB(64, 72, 104),
+		Color3.fromRGB(46, 52, 80),
 	}, 115)
 	local gloss = Factory.New("Frame", {
 		Name = "Gloss",
@@ -180,6 +188,27 @@ function Factory.Pill(parent: Instance, text: string, color: Color3?, width: num
 	Factory.Corner(pill, 99)
 	Factory.Stroke(pill, color or Colors.Line, 0.5)
 	return pill
+end
+
+-- A soft, oversized, mostly-transparent circle used purely as a background
+-- accent. Roblox frames can't blur, so a large low-opacity circle sitting
+-- behind normal content is the cheapest way to add the same sense of depth a
+-- blurred color blob gives a page, without hurting text contrast in front of
+-- it. Callers should parent it first (or set a low ZIndex) so it renders
+-- behind everything else.
+function Factory.Blob(parent: Instance, diameter: number, position: UDim2, color: Color3, transparency: number?): Frame
+	local blob = Factory.New("Frame", {
+		Name = "Blob",
+		Size = UDim2.fromOffset(diameter, diameter),
+		Position = position,
+		BackgroundColor3 = color,
+		BackgroundTransparency = transparency or 0.9,
+		BorderSizePixel = 0,
+		ZIndex = 0,
+		Parent = parent,
+	})
+	Factory.Corner(blob, diameter / 2)
+	return blob
 end
 
 function Factory.List(parent: Instance, direction: Enum.FillDirection, gap: number): UIListLayout

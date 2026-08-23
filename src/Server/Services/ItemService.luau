@@ -115,6 +115,87 @@ function ItemService:SaveFit(player: Player, payload: any): (boolean, any)
 	return true, { item = self.profiles:Get(player).items[payload.itemId] }
 end
 
+local MAX_FIT_PRESETS = 20
+local MAX_PRESET_NAME_LENGTH = 24
+
+-- Fit presets are purely a personal convenience: saved names are never shown
+-- to another player, so (unlike an item name or listing) they do not need
+-- TextService filtering, only length/shape sanitizing.
+function ItemService:SaveFitPreset(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" or type(payload.fit) ~= "table" then
+		return false, "INVALID_REQUEST"
+	end
+	local accessoryType = payload.accessoryType
+	if type(accessoryType) ~= "string" or not ACCESSORY_ENUMS[accessoryType] then
+		return false, "INVALID_ASSET_TYPE"
+	end
+	local position =
+		sanitizeVector(payload.fit.position, Config.Fitting.Position.Minimum, Config.Fitting.Position.Maximum)
+	local rotation =
+		sanitizeVector(payload.fit.rotation, Config.Fitting.Rotation.Minimum, Config.Fitting.Rotation.Maximum)
+	local scale = sanitizeVector(payload.fit.scale, Config.Fitting.Scale.Minimum, Config.Fitting.Scale.Maximum)
+	if not position or not rotation or not scale then
+		return false, "INVALID_TRANSFORM"
+	end
+	local rawName = if type(payload.name) == "string" then payload.name else ""
+	local name = string.match(rawName, "^%s*(.-)%s*$") or ""
+	if name == "" then
+		name = "Untitled fit"
+	elseif #name > MAX_PRESET_NAME_LENGTH then
+		name = string.sub(name, 1, MAX_PRESET_NAME_LENGTH)
+	end
+	local profile = self.profiles:Get(player)
+	if not profile then
+		return false, "PROFILE_UNAVAILABLE"
+	end
+	if #profile.fitPresetOrder >= MAX_FIT_PRESETS then
+		return false, "FIT_PRESET_LIMIT_REACHED"
+	end
+	local id = self.profiles:GenerateId("preset")
+	local record = {
+		id = id,
+		name = name,
+		accessoryType = accessoryType,
+		fit = { position = position, rotation = rotation, scale = scale, accessoryType = accessoryType },
+		createdAt = os.time(),
+	}
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(mutableProfile)
+		mutableProfile.fitPresets[id] = record
+		table.insert(mutableProfile.fitPresetOrder, id)
+	end)
+	if not mutateSuccess then
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	return true, { preset = record }
+end
+
+function ItemService:DeleteFitPreset(player: Player, presetId: any): (boolean, any)
+	if type(presetId) ~= "string" then
+		return false, "INVALID_REQUEST"
+	end
+	local profile = self.profiles:Get(player)
+	if not profile or not profile.fitPresets[presetId] then
+		return false, "FIT_PRESET_NOT_FOUND"
+	end
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(mutableProfile)
+		mutableProfile.fitPresets[presetId] = nil
+		local index = table.find(mutableProfile.fitPresetOrder, presetId)
+		if index then
+			table.remove(mutableProfile.fitPresetOrder, index)
+		end
+	end)
+	if not mutateSuccess then
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	return true, { deleted = true }
+end
+
 function ItemService:Equip(player: Player, itemId: string): (boolean, any)
 	local profile = self.profiles:Get(player)
 	local item = profile and profile.items[itemId]

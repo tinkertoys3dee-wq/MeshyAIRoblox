@@ -75,6 +75,14 @@ export type PendingIntent = {
 	expiresAt: number,
 }
 
+export type FitPreset = {
+	id: string,
+	name: string,
+	accessoryType: string,
+	fit: FitTransform,
+	createdAt: number,
+}
+
 export type PendingTransfer = {
 	transferRequestId: string,
 	status: "PROMPTING" | "AWAITING_RECEIPT",
@@ -100,6 +108,8 @@ export type PlayerProfile = {
 	grantedIntents: { [string]: { [string]: any } },
 	retryCredits: { [string]: number },
 	equippedItemIds: { string },
+	fitPresets: { [string]: FitPreset },
+	fitPresetOrder: { string },
 	settings: { soundsEnabled: boolean, reduceMotion: boolean, highContrast: boolean, uiScale: number },
 	stats: { [string]: number },
 	daily: { lastDay: number, streak: number, best: number },

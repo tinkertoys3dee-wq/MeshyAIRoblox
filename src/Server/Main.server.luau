@@ -191,6 +191,19 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		return success, result
 	end,
+	[Network.Actions.SaveFitPreset] = function(player, payload)
+		local success, result = items:SaveFitPreset(player, payload)
+		if success then
+			analytics:Custom(player, "FitPresetSaved", 1, {})
+		end
+		return success, result
+	end,
+	[Network.Actions.DeleteFitPreset] = function(player, payload)
+		if type(payload) ~= "table" or type(payload.presetId) ~= "string" then
+			return false, "INVALID_REQUEST"
+		end
+		return items:DeleteFitPreset(player, payload.presetId)
+	end,
 	[Network.Actions.EquipItem] = function(player, payload)
 		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
 			return false, "INVALID_REQUEST"

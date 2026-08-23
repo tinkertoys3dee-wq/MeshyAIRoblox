@@ -1,13 +1,16 @@
 --!strict
 
+-- A mid-tone palette: dark enough to stay easy on the eyes for a long
+-- creation session, light enough that panels read as slate/navy rather than
+-- near-black. Accent hues are untouched; only the neutral surface ramp moved.
 local DEFAULT_COLORS = {
-	Ink = Color3.fromRGB(8, 11, 23),
-	Panel = Color3.fromRGB(17, 22, 42),
-	PanelRaised = Color3.fromRGB(27, 34, 61),
-	PanelSoft = Color3.fromRGB(36, 43, 74),
-	Line = Color3.fromRGB(72, 83, 128),
+	Ink = Color3.fromRGB(24, 27, 44),
+	Panel = Color3.fromRGB(44, 50, 78),
+	PanelRaised = Color3.fromRGB(60, 67, 98),
+	PanelSoft = Color3.fromRGB(74, 82, 114),
+	Line = Color3.fromRGB(112, 122, 160),
 	Text = Color3.fromRGB(247, 249, 255),
-	TextMuted = Color3.fromRGB(168, 178, 207),
+	TextMuted = Color3.fromRGB(196, 204, 226),
 	Violet = Color3.fromRGB(135, 94, 255),
 	Cyan = Color3.fromRGB(55, 220, 255),
 	Mint = Color3.fromRGB(76, 239, 175),

@@ -103,18 +103,42 @@ function ViewportController.new(viewport: ViewportFrame)
 	local function connect(signal: RBXScriptSignal, callback: (...any) -> ())
 		table.insert(self.connections, signal:Connect(callback))
 	end
+	-- ScrollingFrame's own wheel-scroll response is a built-in engine
+	-- behavior, not a bindable ContextActionService action, so sinking the
+	-- MouseWheel input alone cannot reliably stop it from also scrolling the
+	-- page underneath the viewport. Disabling ScrollingEnabled is the real
+	-- lever; pinning CanvasPosition while locked is a second guard in case a
+	-- wheel tick is still processed by the engine in the same input step
+	-- that our lock takes effect.
+	local scrollLocked = false
+	local pinnedCanvasPosition = Vector2.zero
 	local function setPageScrollLocked(locked: boolean)
 		local scrollFrame = self.scrollFrame
 		if not scrollFrame or not scrollFrame.Parent then
 			return
 		end
-		if locked and self.scrollRestore == nil then
-			self.scrollRestore = scrollFrame.ScrollingEnabled
+		if locked and not scrollLocked then
+			scrollLocked = true
+			pinnedCanvasPosition = scrollFrame.CanvasPosition
+			if self.scrollRestore == nil then
+				self.scrollRestore = scrollFrame.ScrollingEnabled
+			end
 			scrollFrame.ScrollingEnabled = false
-		elseif not locked and self.scrollRestore ~= nil then
-			scrollFrame.ScrollingEnabled = self.scrollRestore
-			self.scrollRestore = nil
+		elseif not locked and scrollLocked then
+			scrollLocked = false
+			if self.scrollRestore ~= nil then
+				scrollFrame.ScrollingEnabled = self.scrollRestore
+				self.scrollRestore = nil
+			end
 		end
+	end
+	if self.scrollFrame then
+		connect(self.scrollFrame:GetPropertyChangedSignal("CanvasPosition"), function()
+			local scrollFrame = self.scrollFrame
+			if scrollLocked and scrollFrame and scrollFrame.CanvasPosition ~= pinnedCanvasPosition then
+				scrollFrame.CanvasPosition = pinnedCanvasPosition
+			end
+		end)
 	end
 
 	connect(viewport.MouseEnter, function()

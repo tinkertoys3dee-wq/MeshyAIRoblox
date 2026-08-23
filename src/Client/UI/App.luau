@@ -117,6 +117,8 @@ local ERROR_MESSAGES = {
 	UGC_VALIDATION_FAILED = "Roblox validation did not accept this fit. Adjust it and try again.",
 	ITEM_NOT_EQUIPPED = "That item is not currently equipped.",
 	INVALID_IMAGE_QUALITY = "Choose one of the available reference image quality tiers.",
+	FIT_PRESET_LIMIT_REACHED = "You have saved the maximum number of fit presets. Delete one to save another.",
+	FIT_PRESET_NOT_FOUND = "That saved fit preset no longer exists.",
 }
 
 local CATALOG_TYPES = {
@@ -139,6 +141,33 @@ local ACCESSORY_LABELS = {
 	FrontAccessory = "Front",
 	BackAccessory = "Back",
 	WaistAccessory = "Waist",
+}
+
+local CATALOG_SORT_TYPES = {
+	Relevance = Enum.CatalogSortType.Relevance,
+	Bestselling = Enum.CatalogSortType.Bestselling,
+	MostFavorited = Enum.CatalogSortType.MostFavorited,
+	PriceLowToHigh = Enum.CatalogSortType.PriceLowToHigh,
+	PriceHighToLow = Enum.CatalogSortType.PriceHighToLow,
+	RecentlyCreated = Enum.CatalogSortType.RecentlyCreated,
+}
+
+local CATALOG_SORT_ORDER = {
+	"Relevance",
+	"Bestselling",
+	"MostFavorited",
+	"PriceLowToHigh",
+	"PriceHighToLow",
+	"RecentlyCreated",
+}
+
+local CATALOG_SORT_LABELS = {
+	Relevance = "Relevance",
+	Bestselling = "Bestselling",
+	MostFavorited = "Most favorited",
+	PriceLowToHigh = "Price ↑",
+	PriceHighToLow = "Price ↓",
+	RecentlyCreated = "Newest",
 }
 
 local function thumbnail(assetId: any, size: number?): string
@@ -205,6 +234,10 @@ function App.new()
 		catalogError = nil :: string?,
 		catalogType = "Hat",
 		catalogQuery = "",
+		catalogSortType = "Relevance",
+		catalogCreatorName = "",
+		catalogMinPrice = "",
+		catalogMaxPrice = "",
 		usePriority = false,
 		pageVersion = 0,
 		toastVersion = 0,
@@ -292,7 +325,7 @@ function App:_BuildChrome()
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromScale(0.9, 0.88),
-		BackgroundColor3 = Color3.fromRGB(13, 17, 34),
+		BackgroundColor3 = Colors.Panel,
 		BackgroundTransparency = 0.03,
 		BorderSizePixel = 0,
 		ClipsDescendants = true,
@@ -328,9 +361,10 @@ function App:_BuildChrome()
 	local topbar = Factory.New("Frame", {
 		Name = "Topbar",
 		Size = UDim2.new(1, 0, 0, 78),
-		BackgroundColor3 = Color3.fromRGB(18, 22, 43),
+		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.12,
 		BorderSizePixel = 0,
+		ClipsDescendants = true,
 		Parent = shell,
 	})
 	Factory.New("Frame", {
@@ -395,9 +429,10 @@ function App:_BuildChrome()
 		Name = "Navigation",
 		Position = UDim2.fromOffset(0, 78),
 		Size = UDim2.new(0.145, 0, 1, -78),
-		BackgroundColor3 = Color3.fromRGB(15, 19, 38),
+		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.2,
 		BorderSizePixel = 0,
+		ClipsDescendants = true,
 		Parent = shell,
 	})
 	self.nav = nav
@@ -924,6 +959,12 @@ function App:_RenderActivePage()
 	if not self.state then
 		return
 	end
+	-- Purely decorative depth: two oversized, near-transparent circles
+	-- anchored off the top-right and bottom-left corners of every page, kept
+	-- behind all real content by Factory.Blob's low ZIndex and self.content's
+	-- own ClipsDescendants.
+	Factory.Blob(self.content, 560, UDim2.new(1, -160, 0, -220), Colors.Cyan, 0.93)
+	Factory.Blob(self.content, 460, UDim2.new(0, -220, 1, -160), Colors.Violet, 0.94)
 	if self.activePage == "Create" then
 		self:_RenderCreate()
 	elseif self.activePage == "My Studio" then
@@ -956,7 +997,7 @@ function App:_TextBox(parent: Instance, placeholder: string, size: UDim2, positi
 	local box = Factory.New("TextBox", {
 		Size = size,
 		Position = position,
-		BackgroundColor3 = Color3.fromRGB(10, 14, 30),
+		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.12,
 		BorderSizePixel = 0,
 		ClearTextOnFocus = false,
@@ -1491,7 +1532,7 @@ function App:_RenderCreate()
 		local image = Factory.New("ImageLabel", {
 			Size = if self.compact then UDim2.fromOffset(132, 132) else UDim2.fromOffset(172, 172),
 			Position = if self.compact then UDim2.new(0.5, -66, 0, 16) else UDim2.fromOffset(18, 19),
-			BackgroundColor3 = Color3.fromRGB(8, 12, 28),
+			BackgroundColor3 = Colors.Ink,
 			BorderSizePixel = 0,
 			Image = thumbnail(readyImage.previewAssetId, 420),
 			ScaleType = Enum.ScaleType.Crop,
@@ -1613,7 +1654,7 @@ function App:_RenderCreate()
 			local row = Factory.New("Frame", {
 				Position = UDim2.fromOffset(16, y),
 				Size = UDim2.new(1, -32, 0, 36),
-				BackgroundColor3 = Color3.fromRGB(12, 17, 34),
+				BackgroundColor3 = Colors.Ink,
 				BackgroundTransparency = 0.22,
 				BorderSizePixel = 0,
 				Parent = activity,
@@ -1775,9 +1816,7 @@ function App:_RenderStudio()
 		if item then
 			local row = Factory.New("TextButton", {
 				Size = UDim2.new(1, 0, 0, 82),
-				BackgroundColor3 = if itemId == self.selectedItemId
-					then Color3.fromRGB(48, 43, 91)
-					else Color3.fromRGB(14, 19, 38),
+				BackgroundColor3 = if itemId == self.selectedItemId then Color3.fromRGB(66, 58, 112) else Colors.Ink,
 				BorderSizePixel = 0,
 				AutoButtonColor = false,
 				Text = "",
@@ -1866,7 +1905,7 @@ function App:_RenderStudio()
 	})
 	Factory.ScalePadding(inspectScroll, 0.006, 0.006)
 	local body = Factory.New("Frame", {
-		Size = UDim2.new(1, -8, 0, 1080),
+		Size = UDim2.new(1, -8, 0, 1240),
 		BackgroundTransparency = 1,
 		Parent = inspectScroll,
 	})
@@ -1939,9 +1978,10 @@ function App:_RenderStudio()
 	local controls = Factory.New("Frame", {
 		Position = UDim2.fromOffset(16, 392),
 		Size = UDim2.new(1, -32, 0, 414),
-		BackgroundColor3 = Color3.fromRGB(14, 19, 39),
+		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.08,
 		BorderSizePixel = 0,
+		ClipsDescendants = true,
 		Parent = body,
 	})
 	Factory.Corner(controls, 13)
@@ -1972,7 +2012,7 @@ function App:_RenderStudio()
 		local track = Factory.New("TextButton", {
 			Position = UDim2.new(0.17, 0, 0, y + 4),
 			Size = UDim2.new(0.55, 0, 0, 20),
-			BackgroundColor3 = Color3.fromRGB(42, 49, 78),
+			BackgroundColor3 = Colors.PanelSoft,
 			BorderSizePixel = 0,
 			AutoButtonColor = false,
 			Text = "",
@@ -2117,20 +2157,145 @@ function App:_RenderStudio()
 		dialY += 23
 	end
 
+	-- Fit presets: save the current position/rotation/scale under a name so it
+	-- can be reapplied later, without touching whatever fit is currently being
+	-- drafted for a different item.
+	local presetsY = 822
+	local presetsHeight = 140
+	local presets = Factory.New("Frame", {
+		Position = UDim2.fromOffset(16, presetsY),
+		Size = UDim2.new(1, -32, 0, presetsHeight),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.08,
+		BorderSizePixel = 0,
+		ClipsDescendants = true,
+		Parent = body,
+	})
+	Factory.Corner(presets, 13)
+	Factory.Stroke(presets, Colors.Line, 0.5)
+	Factory.Label(presets, "FIT PRESETS", UDim2.new(1, -28, 0, 18), {
+		Position = UDim2.fromOffset(14, 10),
+		Font = Theme.Fonts.Bold,
+		TextSize = 12,
+		Color = Colors.Cyan,
+	})
+	Factory.Label(
+		presets,
+		"Save this fit to reuse later while you customize a different item.",
+		UDim2.new(1, -28, 0, 14),
+		{
+			Position = UDim2.fromOffset(14, 30),
+			Color = Colors.TextMuted,
+			TextSize = 10,
+			Truncate = Enum.TextTruncate.AtEnd,
+		}
+	)
+	local presetNameBox =
+		self:_TextBox(presets, "Name this fit", UDim2.new(1, -122, 0, 32), UDim2.fromOffset(14, 52), false)
+	local savePresetButton =
+		Factory.Button(presets, "Save preset", UDim2.fromOffset(96, 32), UDim2.new(1, -110, 0, 52), "mint")
+	self:_BindButton(savePresetButton)
+	savePresetButton.Activated:Connect(function()
+		savePresetButton.Active = false
+		task.spawn(function()
+			local success, data = self:_Invoke(Network.Actions.SaveFitPreset, {
+				name = presetNameBox.Text,
+				accessoryType = fit.accessoryType,
+				fit = fit,
+			})
+			if success then
+				self.state.profile.fitPresets[data.preset.id] = data.preset
+				table.insert(self.state.profile.fitPresetOrder, data.preset.id)
+				self.sounds:Play("Success")
+				self:_Toast("success", "Fit preset saved.")
+				self:_RenderActivePage()
+				return
+			end
+			if savePresetButton.Parent then
+				savePresetButton.Active = true
+			end
+		end)
+	end)
+	local presetList = Factory.New("ScrollingFrame", {
+		Position = UDim2.fromOffset(14, 92),
+		Size = UDim2.new(1, -28, 0, presetsHeight - 100),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 3,
+		ScrollBarImageColor3 = Colors.Cyan,
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(),
+		ScrollingDirection = Enum.ScrollingDirection.X,
+		Parent = presets,
+	})
+	Factory.List(presetList, Enum.FillDirection.Horizontal, 8)
+	local presetOrder = profile.fitPresetOrder or {}
+	if #presetOrder == 0 then
+		Factory.Label(presetList, "No saved presets yet.", UDim2.fromOffset(220, 30), {
+			AlignY = Enum.TextYAlignment.Center,
+			Color = Colors.TextMuted,
+			TextSize = 11,
+		})
+	else
+		for _, presetId in presetOrder do
+			local preset = profile.fitPresets[presetId]
+			if preset then
+				local nameWidth = math.clamp(#preset.name * 7 + 40, 90, 150)
+				local chip = Factory.New("Frame", {
+					Size = UDim2.fromOffset(nameWidth + 34, 30),
+					BackgroundTransparency = 1,
+					Parent = presetList,
+				})
+				local apply = Factory.Button(
+					chip,
+					preset.name,
+					UDim2.fromOffset(nameWidth, 30),
+					UDim2.fromOffset(0, 0),
+					if preset.accessoryType == fit.accessoryType then "primary" else nil
+				)
+				apply.TextTruncate = Enum.TextTruncate.AtEnd
+				self:_BindButton(apply)
+				apply.Activated:Connect(function()
+					fit.position = deepCopy(preset.fit.position)
+					fit.rotation = deepCopy(preset.fit.rotation)
+					fit.scale = deepCopy(preset.fit.scale)
+					self:_RenderActivePage()
+				end)
+				local remove =
+					Factory.Button(chip, "×", UDim2.fromOffset(26, 30), UDim2.fromOffset(nameWidth + 8, 0), "danger")
+				self:_BindButton(remove)
+				remove.Activated:Connect(function()
+					task.spawn(function()
+						local success = self:_Invoke(Network.Actions.DeleteFitPreset, { presetId = presetId })
+						if success then
+							self.state.profile.fitPresets[presetId] = nil
+							local index = table.find(self.state.profile.fitPresetOrder, presetId)
+							if index then
+								table.remove(self.state.profile.fitPresetOrder, index)
+							end
+							self:_RenderActivePage()
+						end
+					end)
+				end)
+			end
+		end
+	end
+
+	local actionsY = presetsY + presetsHeight + 16
 	local isEquipped = table.find(profile.equippedItemIds or {}, selected.id) ~= nil
-	local save = Factory.Button(body, "Save fit", UDim2.new(0.31, -6, 0, 42), UDim2.fromOffset(16, 824), "primary")
+	local save = Factory.Button(body, "Save fit", UDim2.new(0.31, -6, 0, 42), UDim2.fromOffset(16, actionsY), "primary")
 	local equip = Factory.Button(
 		body,
 		if isEquipped then "Unequip" else "Equip in game",
 		UDim2.new(0.34, -6, 0, 42),
-		UDim2.new(0.32, 6, 0, 824),
+		UDim2.new(0.32, 6, 0, actionsY),
 		if isEquipped then "danger" else "mint"
 	)
 	local publish = Factory.Button(
 		body,
 		if selected.publishedAssetId then "Published ✓" else "Publish wearable",
 		UDim2.new(0.34, -22, 0, 42),
-		UDim2.new(0.66, 6, 0, 824),
+		UDim2.new(0.66, 6, 0, actionsY),
 		nil
 	)
 	for _, button in { save, equip, publish } do
@@ -2218,24 +2383,27 @@ function App:_RenderStudio()
 			end
 		end)
 	end)
+	local noteY = actionsY + 50
 	Factory.Label(
 		body,
 		"Publishing opens Roblox's creation prompt and can have a separate token price.",
 		UDim2.new(1, -32, 0, 16),
 		{
-			Position = UDim2.fromOffset(16, 874),
+			Position = UDim2.fromOffset(16, noteY),
 			Color = Colors.TextMuted,
 			TextSize = 10,
 			Truncate = Enum.TextTruncate.AtEnd,
 		}
 	)
 
+	local socialY = noteY + 26
 	local social = Factory.New("Frame", {
-		Position = UDim2.fromOffset(16, 900),
+		Position = UDim2.fromOffset(16, socialY),
 		Size = UDim2.new(1, -32, 0, 154),
-		BackgroundColor3 = Color3.fromRGB(12, 17, 35),
+		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.12,
 		BorderSizePixel = 0,
+		ClipsDescendants = true,
 		Parent = body,
 	})
 	Factory.Corner(social, 12)
@@ -2515,7 +2683,7 @@ function App:_RenderDiscover()
 		local image = Factory.New("ImageLabel", {
 			Size = UDim2.new(1, -20, 0, 176),
 			Position = UDim2.fromOffset(10, 10),
-			BackgroundColor3 = Color3.fromRGB(8, 12, 28),
+			BackgroundColor3 = Colors.Ink,
 			BorderSizePixel = 0,
 			Image = thumbnail(item.thumbnailAssetId, 420),
 			ScaleType = Enum.ScaleType.Crop,
@@ -2665,6 +2833,28 @@ function App:_RequestCatalogAccess()
 	end)
 end
 
+-- Reads every live catalog filter control (query, sort has already been set
+-- directly on self by its chip; creator name and price range still live in
+-- their TextBoxes until this runs) and re-searches. Used by the Search
+-- button, Enter on any filter field, and the type/sort chips so a filter you
+-- just typed but never blurred is never silently dropped.
+function App:_ApplyCatalogFilters()
+	if self.catalogSearchBox and self.catalogSearchBox.Parent then
+		self.catalogQuery = self.catalogSearchBox.Text
+	end
+	if self.catalogCreatorBox and self.catalogCreatorBox.Parent then
+		self.catalogCreatorName = self.catalogCreatorBox.Text
+	end
+	if self.catalogMinBox and self.catalogMinBox.Parent then
+		self.catalogMinPrice = self.catalogMinBox.Text
+	end
+	if self.catalogMaxBox and self.catalogMaxBox.Parent then
+		self.catalogMaxPrice = self.catalogMaxBox.Text
+	end
+	self.catalogResults = nil
+	self:_SearchCatalog(self.catalogQuery)
+end
+
 function App:_SearchCatalog(query: string)
 	if self.catalogSearching then
 		return
@@ -2682,6 +2872,19 @@ function App:_SearchCatalog(query: string)
 		parameters.AssetTypes = { CATALOG_TYPES[self.catalogType] }
 		parameters.IncludeOffSale = false
 		parameters.Limit = 30
+		parameters.SortType = CATALOG_SORT_TYPES[self.catalogSortType] or Enum.CatalogSortType.Relevance
+		local creatorName = string.match(self.catalogCreatorName or "", "^%s*(.-)%s*$")
+		if creatorName ~= "" then
+			parameters.CreatorName = string.sub(creatorName, 1, 50)
+		end
+		local minPrice = tonumber(self.catalogMinPrice)
+		if minPrice then
+			parameters.MinPrice = math.clamp(math.floor(minPrice), 0, 2147483647)
+		end
+		local maxPrice = tonumber(self.catalogMaxPrice)
+		if maxPrice then
+			parameters.MaxPrice = math.clamp(math.floor(maxPrice), 0, 2147483647)
+		end
 		local success, resultsOrProblem = pcall(function()
 			local pages = AvatarEditorService:SearchCatalogAsync(parameters)
 			return pages:GetCurrentPage()
@@ -2711,12 +2914,9 @@ function App:_RenderAvatarLab()
 		"Avatar Lab",
 		"Mix Roblox Marketplace accessories with your Forge creations and stay longer in the look."
 	)
-	local controls = Factory.Card(
-		self.content,
-		UDim2.new(0.95, 0, 0, if self.compact then 150 else 104),
-		UDim2.new(0.025, 0, 0, 94),
-		"CatalogControls"
-	)
+	local controlsHeight = if self.compact then 276 else 200
+	local controls =
+		Factory.Card(self.content, UDim2.new(0.95, 0, 0, controlsHeight), UDim2.new(0.025, 0, 0, 94), "CatalogControls")
 	local search = self:_TextBox(
 		controls,
 		"Search the Roblox avatar marketplace",
@@ -2749,16 +2949,6 @@ function App:_RenderAvatarLab()
 	for _, button in { searchButton, saveAvatar, reset } do
 		self:_BindButton(button)
 	end
-	searchButton.Activated:Connect(function()
-		self.catalogResults = nil
-		self:_SearchCatalog(search.Text)
-	end)
-	search.FocusLost:Connect(function(enterPressed)
-		if enterPressed then
-			self.catalogResults = nil
-			self:_SearchCatalog(search.Text)
-		end
-	end)
 	saveAvatar.Activated:Connect(function()
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -2779,8 +2969,9 @@ function App:_RenderAvatarLab()
 			self:_Invoke(Network.Actions.ResetAvatar, {})
 		end)
 	end)
+	local accessoryChipsY = if self.compact then 106 else 63
 	local chips = Factory.New("ScrollingFrame", {
-		Position = UDim2.fromOffset(14, if self.compact then 106 else 63),
+		Position = UDim2.fromOffset(14, accessoryChipsY),
 		Size = UDim2.new(1, -28, 0, 32),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
@@ -2802,11 +2993,95 @@ function App:_RenderAvatarLab()
 		self:_BindButton(chip)
 		chip.Activated:Connect(function()
 			self.catalogType = typeName
-			self.catalogResults = nil
-			self:_SearchCatalog(self.catalogQuery)
+			self:_ApplyCatalogFilters()
 			self:_RenderActivePage()
 		end)
 	end
+
+	-- Real Roblox Marketplace search options: sort order, then creator name
+	-- and price range. A visible Label precedes every input here (rather than
+	-- relying on placeholder text alone) so the row reads correctly for
+	-- screen-reader-style access and keyboard/gamepad users tabbing through.
+	local sortY = accessoryChipsY + 40
+	Factory.Label(controls, "SORT", UDim2.fromOffset(60, 32), {
+		Position = UDim2.fromOffset(14, sortY),
+		AlignY = Enum.TextYAlignment.Center,
+		Font = Theme.Fonts.Bold,
+		TextSize = 10,
+		Color = Colors.TextMuted,
+	})
+	local sortChips = Factory.New("ScrollingFrame", {
+		Position = UDim2.fromOffset(66, sortY),
+		Size = UDim2.new(1, -80, 0, 32),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 0,
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(),
+		ScrollingDirection = Enum.ScrollingDirection.X,
+		Parent = controls,
+	})
+	Factory.List(sortChips, Enum.FillDirection.Horizontal, 7)
+	for _, sortKey in CATALOG_SORT_ORDER do
+		local chip = Factory.Button(
+			sortChips,
+			CATALOG_SORT_LABELS[sortKey],
+			UDim2.fromOffset(math.max(72, #CATALOG_SORT_LABELS[sortKey] * 7 + 24), 30),
+			nil,
+			if self.catalogSortType == sortKey then "primary" else nil
+		)
+		self:_BindButton(chip)
+		chip.Activated:Connect(function()
+			self.catalogSortType = sortKey
+			self:_ApplyCatalogFilters()
+			self:_RenderActivePage()
+		end)
+	end
+
+	local filterY = sortY + 40
+	local filterFieldHeight = 34
+	local creatorField = self:_TextBox(
+		controls,
+		"Search by creator",
+		if self.compact then UDim2.new(1, -28, 0, filterFieldHeight) else UDim2.new(0, 220, 0, filterFieldHeight),
+		UDim2.fromOffset(14, filterY),
+		false
+	)
+	creatorField.Text = self.catalogCreatorName
+	local priceRowY = if self.compact then filterY + filterFieldHeight + 8 else filterY
+	local minField = self:_TextBox(
+		controls,
+		"Min R$",
+		if self.compact then UDim2.new(0.5, -18, 0, filterFieldHeight) else UDim2.fromOffset(90, filterFieldHeight),
+		if self.compact then UDim2.fromOffset(14, priceRowY) else UDim2.fromOffset(242, filterY),
+		false
+	)
+	minField.Text = self.catalogMinPrice
+	minField.TextXAlignment = Enum.TextXAlignment.Center
+	local maxField = self:_TextBox(
+		controls,
+		"Max R$",
+		if self.compact then UDim2.new(0.5, -18, 0, filterFieldHeight) else UDim2.fromOffset(90, filterFieldHeight),
+		if self.compact then UDim2.new(0.5, 4, 0, priceRowY) else UDim2.fromOffset(340, filterY),
+		false
+	)
+	maxField.Text = self.catalogMaxPrice
+	maxField.TextXAlignment = Enum.TextXAlignment.Center
+	self.catalogSearchBox = search
+	self.catalogCreatorBox = creatorField
+	self.catalogMinBox = minField
+	self.catalogMaxBox = maxField
+	searchButton.Activated:Connect(function()
+		self:_ApplyCatalogFilters()
+	end)
+	for _, field in { search, creatorField, minField, maxField } do
+		field.FocusLost:Connect(function(enterPressed)
+			if enterPressed then
+				self:_ApplyCatalogFilters()
+			end
+		end)
+	end
+
 	if self.catalogAccess ~= true then
 		if self.catalogAccess == nil and not self.catalogAccessPrompting then
 			self:_RequestCatalogAccess()
@@ -2814,7 +3089,7 @@ function App:_RenderAvatarLab()
 		local access = Factory.Card(
 			self.content,
 			UDim2.new(0.95, 0, 0, 190),
-			UDim2.new(0.025, 0, 0, if self.compact then 220 else 178),
+			UDim2.new(0.025, 0, 0, 94 + controlsHeight + 16),
 			"CatalogAccess"
 		)
 		Factory.Label(access, "Enable Roblox catalog access", UDim2.new(1, -32, 0, 34), {
@@ -2852,9 +3127,10 @@ function App:_RenderAvatarLab()
 	if self.catalogResults == nil and not self.catalogSearching then
 		self:_SearchCatalog(self.catalogQuery)
 	end
+	local belowControls = 94 + controlsHeight + 16
 	if self.catalogSearching then
 		Factory.Label(self.content, "Searching Roblox Marketplace…", UDim2.new(1, -52, 0, 60), {
-			Position = UDim2.fromOffset(26, 230),
+			Position = UDim2.fromOffset(26, belowControls + 20),
 			AlignX = Enum.TextXAlignment.Center,
 			Color = Colors.TextMuted,
 			Font = Theme.Fonts.Bold,
@@ -2862,8 +3138,8 @@ function App:_RenderAvatarLab()
 		return
 	end
 	local grid = Factory.New("ScrollingFrame", {
-		Position = UDim2.new(0.02, 0, 0, if self.compact then 258 else 212),
-		Size = UDim2.new(0.96, 0, 1, if self.compact then -274 else -228),
+		Position = UDim2.new(0.02, 0, 0, belowControls),
+		Size = UDim2.new(0.96, 0, 1, -(belowControls + 16)),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -2887,7 +3163,7 @@ function App:_RenderAvatarLab()
 			local image = Factory.New("ImageLabel", {
 				Size = UDim2.new(1, -20, 0, 180),
 				Position = UDim2.fromOffset(10, 10),
-				BackgroundColor3 = Color3.fromRGB(8, 12, 28),
+				BackgroundColor3 = Colors.Ink,
 				BorderSizePixel = 0,
 				Image = thumbnail(assetId, 420),
 				ScaleType = Enum.ScaleType.Crop,
@@ -3115,7 +3391,7 @@ function App:_RenderSettings()
 				local row = Factory.New("Frame", {
 					Position = UDim2.fromOffset(16, y),
 					Size = UDim2.new(1, -32, 0, 56),
-					BackgroundColor3 = Color3.fromRGB(12, 17, 34),
+					BackgroundColor3 = Colors.Ink,
 					BackgroundTransparency = 0.22,
 					BorderSizePixel = 0,
 					Parent = loadout,
@@ -3358,7 +3634,7 @@ function App:_Toast(tone: string, message: string)
 	local toast = Factory.New("Frame", {
 		Name = "Toast",
 		Size = UDim2.fromOffset(350, 70),
-		BackgroundColor3 = Color3.fromRGB(25, 31, 57),
+		BackgroundColor3 = Colors.PanelRaised,
 		BackgroundTransparency = 0.03,
 		BorderSizePixel = 0,
 		LayoutOrder = -self.toastVersion,
