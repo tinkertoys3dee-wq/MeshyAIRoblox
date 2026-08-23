@@ -9,6 +9,11 @@ export type StylePreset = z.infer<typeof stylePresetSchema>;
 export const detailLevelSchema = z.enum(["CLEAN", "BALANCED", "INTRICATE"]);
 export type DetailLevel = z.infer<typeof detailLevelSchema>;
 
+// Mirrors OpenAI's own gpt-image quality tiers, so a purchased tier maps
+// directly onto the provider parameter with no translation layer.
+export const imageQualitySchema = z.enum(["low", "medium", "high"]);
+export type ImageQuality = z.infer<typeof imageQualitySchema>;
+
 export const accessoryTypeSchema = z.enum([
   "Hat",
   "HairAccessory",
@@ -30,6 +35,7 @@ export const createJobSchema = z
     accessoryType: accessoryTypeSchema,
     stylePreset: stylePresetSchema.default("AUTO"),
     detailLevel: detailLevelSchema.default("BALANCED"),
+    imageQuality: imageQualitySchema.optional(),
     sourceJobId: z.string().uuid().optional(),
     sourceImageAssetId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
     priority: z.boolean().default(false),
@@ -57,6 +63,13 @@ export const createJobSchema = z
         code: "custom",
         path: ["sourceImageAssetId"],
         message: "sourceImageAssetId is only valid for IMAGE_UPLOAD or IMAGE_TO_3D",
+      });
+    }
+    if (value.kind !== "IMAGE_PREVIEW" && value.imageQuality) {
+      context.addIssue({
+        code: "custom",
+        path: ["imageQuality"],
+        message: "imageQuality is only valid for IMAGE_PREVIEW",
       });
     }
   });
@@ -114,6 +127,7 @@ export type Job = {
   accessoryType: AccessoryType;
   stylePreset: StylePreset;
   detailLevel: DetailLevel;
+  imageQuality?: ImageQuality;
   sourceJobId?: string;
   sourceImageAssetId?: number;
   priority: boolean;
@@ -140,6 +154,7 @@ export function publicJob(job: Job) {
     accessoryType: job.accessoryType,
     stylePreset: job.stylePreset,
     detailLevel: job.detailLevel,
+    ...(job.imageQuality ? { imageQuality: job.imageQuality } : {}),
     priority: job.priority,
     ...(job.sourceJobId ? { sourceJobId: job.sourceJobId } : {}),
     output: {

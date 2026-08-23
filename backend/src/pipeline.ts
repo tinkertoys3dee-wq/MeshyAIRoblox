@@ -177,6 +177,7 @@ export class JobRunner {
         job.id,
         job.stylePreset,
         job.detailLevel,
+        job.imageQuality,
       );
       image = await sharp(image).resize(1024, 1024, { fit: "cover" }).png({ compressionLevel: 9 }).toBuffer();
       await this.#images.assertImageSafe(image);

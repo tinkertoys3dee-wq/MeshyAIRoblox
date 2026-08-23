@@ -137,5 +137,33 @@ describe("backend HTTP boundary", () => {
       detailLevel: "CLEAN",
       output: { previewAssetId: 987654321 },
     });
+
+    const preview = await app.inject({
+      method: "POST",
+      url: "/v1/jobs",
+      headers: {
+        "x-forge-secret": "test-shared-secret",
+        "x-roblox-user-id": "12345",
+      },
+      payload: {
+        ...body,
+        requestId: "preview_request_12345",
+        kind: "IMAGE_PREVIEW",
+        imageQuality: "high",
+      },
+    });
+    expect(preview.statusCode).toBe(202);
+    expect(preview.json().job).toMatchObject({ kind: "IMAGE_PREVIEW", imageQuality: "high" });
+
+    const invalidTier = await app.inject({
+      method: "POST",
+      url: "/v1/jobs",
+      headers: {
+        "x-forge-secret": "test-shared-secret",
+        "x-roblox-user-id": "12345",
+      },
+      payload: { ...body, requestId: "bad_tier_request_12345", imageQuality: "high" },
+    });
+    expect(invalidTier.statusCode).toBe(400);
   });
 });

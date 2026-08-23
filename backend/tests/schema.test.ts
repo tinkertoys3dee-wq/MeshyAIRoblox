@@ -49,4 +49,13 @@ describe("createJobSchema", () => {
   it("rejects unsupported accessory types", () => {
     expect(createJobSchema.safeParse({ ...base, kind: "TEXT_TO_3D", accessoryType: "Weapon" }).success).toBe(false);
   });
+
+  it("accepts an image quality tier only for IMAGE_PREVIEW", () => {
+    expect(createJobSchema.safeParse({ ...base, kind: "IMAGE_PREVIEW", imageQuality: "medium" }).success).toBe(true);
+    expect(createJobSchema.safeParse({ ...base, kind: "IMAGE_PREVIEW", imageQuality: "high" }).success).toBe(true);
+    expect(createJobSchema.safeParse({ ...base, kind: "TEXT_TO_3D", imageQuality: "high" }).success).toBe(false);
+    expect(
+      createJobSchema.safeParse({ ...base, kind: "IMAGE_PREVIEW", imageQuality: "ultra" }).success,
+    ).toBe(false);
+  });
 });

@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import type { AppConfig } from "../config.js";
 import { detailGuidance, styleGuidance } from "../guidance.js";
-import { PipelineError, type DetailLevel, type StylePreset } from "../types.js";
+import { PipelineError, type DetailLevel, type ImageQuality, type StylePreset } from "../types.js";
 
 export class ImageProvider {
   readonly #client: OpenAI;
@@ -47,6 +47,9 @@ export class ImageProvider {
     requestId: string,
     stylePreset: StylePreset,
     detailLevel: DetailLevel,
+    // The purchased tier, when the request carries one. Falls back to the
+    // Railway-configured default so non-tiered callers keep working.
+    quality?: ImageQuality,
   ): Promise<Buffer> {
     const prompt = [
       "Create one clean product-reference image for a single 3D avatar accessory.",
@@ -65,7 +68,7 @@ export class ImageProvider {
           model: this.#model,
           prompt,
           size: "1024x1024",
-          quality: this.#quality,
+          quality: quality ?? this.#quality,
           n: 1,
         },
         { headers: { "Idempotency-Key": `forge-image-${requestId}` } },
