@@ -65,13 +65,17 @@ function CommunityService.new(
 	profileService: any,
 	playerStateService: any,
 	push: (Player, string, any) -> (),
-	analyticsService: any
+	analyticsService: any,
+	achievementService: any,
+	leaderboardService: any
 )
 	local self = setmetatable({
 		profiles = profileService,
 		playerStates = playerStateService,
 		push = push,
 		analytics = analyticsService,
+		achievements = achievementService,
+		leaderboard = leaderboardService,
 		indexStore = DataStoreService:GetDataStore(Config.DataStores.ItemIndex),
 		claimStore = DataStoreService:GetDataStore(Config.DataStores.ReceiptClaims),
 		indexCache = nil :: { [string]: any }?,
@@ -208,6 +212,10 @@ function CommunityService:_ResolvePublic(itemId: string, forceRefresh: boolean?)
 		item.listingPriceRobux = reference.listingPriceRobux
 	end
 	return item, self:_OwnerName(reference.ownerUserId)
+end
+
+function CommunityService:GetLeaderboard(_player: Player): (boolean, any)
+	return true, { creators = self.leaderboard:GetTop() }
 end
 
 function CommunityService:GetMarketplace(player: Player, payload: any): (boolean, any)
@@ -349,6 +357,9 @@ function CommunityService:SetListing(player: Player, payload: any): (boolean, an
 		isListed = payload.isListed,
 		price = if payload.isListed then price else 0,
 	})
+	if payload.isListed then
+		self.achievements:Unlock(player, "FIRST_LISTING")
+	end
 	return true, { item = item }
 end
 
@@ -375,12 +386,20 @@ function CommunityService:_ToggleReaction(
 	end
 	local delta = if enabled then 1 else -1
 	self:_AdjustIndex(itemId, countField, delta)
+	local newLikesTotal = nil :: number?
 	self.profiles:MutateUser(item.ownerUserId, function(ownerProfile)
 		local ownerItem = ownerProfile.items[itemId]
 		if ownerItem then
 			ownerItem[countField] = math.max(0, (ownerItem[countField] or 0) + delta)
 		end
+		if countField == "likes" then
+			ownerProfile.stats.likesReceived = math.max(0, (ownerProfile.stats.likesReceived or 0) + delta)
+			newLikesTotal = ownerProfile.stats.likesReceived
+		end
 	end)
+	if newLikesTotal then
+		self.leaderboard:SetScore(item.ownerUserId, newLikesTotal)
+	end
 	self.analytics:Custom(
 		player,
 		if countField == "likes" then "CommunityLikeToggled" else "CommunityFavoriteToggled",
@@ -396,7 +415,11 @@ function CommunityService:ToggleLike(player: Player, payload: any): (boolean, an
 	if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
 		return false, "INVALID_REQUEST"
 	end
-	return self:_ToggleReaction(player, payload.itemId, "likedItems", "likes")
+	local success, result = self:_ToggleReaction(player, payload.itemId, "likedItems", "likes")
+	if success and type(result) == "table" and result.enabled then
+		self.achievements:Unlock(player, "FIRST_LIKE_GIVEN")
+	end
+	return success, result
 end
 
 function CommunityService:ToggleFavorite(player: Player, payload: any): (boolean, any)
@@ -627,6 +650,7 @@ function CommunityService:_GrantCopy(player: Player, transferId: string): (boole
 		message = "Purchase verified. Your personal, non-resellable copy is ready to fit.",
 	})
 	self.analytics:Funnel(player, "marketplace", 4, "Personal copy granted", { price = pending.amount })
+	self.achievements:Unlock(player, "FIRST_MARKETPLACE_PURCHASE")
 	return true, copy
 end
 

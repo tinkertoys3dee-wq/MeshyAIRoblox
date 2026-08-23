@@ -23,6 +23,7 @@ Network.Actions = table.freeze({
 	SetVisibility = "SetVisibility",
 	SetListing = "SetListing",
 	GetMarketplace = "GetMarketplace",
+	GetLeaderboard = "GetLeaderboard",
 	ToggleLike = "ToggleLike",
 	ToggleFavorite = "ToggleFavorite",
 	BeginMarketplacePurchase = "BeginMarketplacePurchase",
@@ -34,6 +35,9 @@ Network.Actions = table.freeze({
 	UpdateSettings = "UpdateSettings",
 	CompleteOnboarding = "CompleteOnboarding",
 	Track = "Track",
+	RequestRewardedAd = "RequestRewardedAd",
+	BuyTokens = "BuyTokens",
+	ReportInviteSent = "ReportInviteSent",
 })
 
 Network.PushEvents = table.freeze({

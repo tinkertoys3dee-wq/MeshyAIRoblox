@@ -10,9 +10,21 @@ local CLIENT_EVENTS = {
 	AppOpenedTab = true,
 	OnboardingStep = true,
 	CatalogSearch = true,
+	FitPresetApplied = true,
 }
 
-local PAGE_VALUES = { Create = true, ["My Studio"] = true, Discover = true, ["Avatar Lab"] = true }
+-- "Settings" was missing here for a while: every Settings-page visit was
+-- silently rejected by TrackClient below (INVALID_ANALYTICS_FIELDS) and
+-- never reached Roblox analytics at all.
+local PAGE_VALUES = { Create = true, ["My Studio"] = true, Discover = true, ["Avatar Lab"] = true, Settings = true }
+local CATALOG_SORT_VALUES = {
+	Relevance = true,
+	Bestselling = true,
+	MostFavorited = true,
+	PriceLowToHigh = true,
+	PriceHighToLow = true,
+	RecentlyCreated = true,
+}
 local ASSET_TYPE_VALUES = {
 	Hat = true,
 	HairAccessory = true,
@@ -154,6 +166,14 @@ function AnalyticsService:TrackClient(player: Player, payload: any): (boolean, a
 		end
 		fields.assetType = assetType
 		fields.resultCount = math.clamp(math.floor(tonumber(payload.fields.resultCount) or 0), 0, 100)
+		-- Enum choice and presence flags only, never the entered creator name
+		-- or price text, to respect the no-catalog-query-text analytics rule.
+		local sortType = payload.fields.sortType
+		if type(sortType) == "string" and CATALOG_SORT_VALUES[sortType] then
+			fields.sortType = sortType
+		end
+		fields.hasCreatorFilter = payload.fields.hasCreatorFilter == true
+		fields.hasPriceFilter = payload.fields.hasPriceFilter == true
 	end
 	self:Custom(player, payload.event, 1, fields)
 	if payload.event == "OnboardingStep" then

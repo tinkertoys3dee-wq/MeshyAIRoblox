@@ -111,7 +111,8 @@ function GenerationService.new(
 	backendService: any,
 	commerceService: any,
 	push: (Player, string, any) -> (),
-	analyticsService: any
+	analyticsService: any,
+	achievementService: any
 )
 	local self = setmetatable({
 		profiles = profileService,
@@ -119,6 +120,7 @@ function GenerationService.new(
 		backend = backendService,
 		commerce = commerceService,
 		analytics = analyticsService,
+		achievements = achievementService,
 		push = push,
 		polling = {} :: { [string]: boolean },
 		launching = {} :: { [string]: boolean },
@@ -218,6 +220,7 @@ function GenerationService:Create(player: Player, payload: any): (boolean, any)
 		detailLevel = detailLevel,
 		imageQuality = imageQualityTier,
 		usePriority = payload.usePriority == true,
+		paymentMethod = if payload.paymentMethod == "TOKENS" then "TOKENS" else "ROBUX",
 	}
 	return self:_UseCreditOrPrompt(player, productKey, intentPayload)
 end
@@ -346,6 +349,7 @@ function GenerationService:ConvertImage(player: Player, payload: any): (boolean,
 		sourceBackendJobId = source.backendJobId,
 		sourceImageAssetId = if sourceImageAssetId and sourceImageAssetId > 0 then sourceImageAssetId else nil,
 		usePriority = payload.usePriority == true,
+		paymentMethod = if payload.paymentMethod == "TOKENS" then "TOKENS" else "ROBUX",
 	})
 end
 
@@ -378,6 +382,9 @@ function GenerationService:_UseCreditOrPrompt(
 		end
 		task.spawn(postCommit)
 		return true, { usedRetryCredit = true, intentId = intentId }
+	end
+	if payload.paymentMethod == "TOKENS" then
+		return self.commerce:BeginIntentWithTokens(player, productKey, payload)
 	end
 	return self.commerce:BeginIntent(player, productKey, payload)
 end
@@ -748,7 +755,12 @@ function GenerationService:_CompleteModel(player: Player, generationId: string, 
 		})
 		self.analytics:Custom(player, "GenerationCompleted", 1, {
 			durationSeconds = math.max(0, os.time() - existingGeneration.createdAt),
+			productKey = existingGeneration.productKey,
+			method = existingGeneration.method,
 		})
+		self.achievements:Unlock(player, "FIRST_CREATION")
+		local completedCount = self.profiles:Get(player).stats.generationsCompleted
+		self.achievements:CheckCount(player, "FIVE_CREATIONS", completedCount, 5)
 	end
 end
 
@@ -787,6 +799,7 @@ function GenerationService:_Fail(
 		code = errorCode,
 		retryable = retryable,
 		creditGranted = productKey ~= "CustomImageUpload",
+		productKey = productKey,
 	})
 end
 

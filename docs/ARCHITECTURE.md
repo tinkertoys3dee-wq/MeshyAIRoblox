@@ -52,6 +52,14 @@ The Art-Directed reference image has three purchasable quality tiers (`LOW`/`MED
 
 Developer-product intent data is saved before Roblox is prompted. Receipt grants use deterministic generation IDs, write the durable benefit and receipt marker to the player's profile before acknowledging Roblox, and submit the same backend request ID on every retry. Plus transfers likewise persist a source snapshot and transfer request ID before a sender receipt can grant a deterministic personal copy.
 
+## Forge Tokens and rewarded ads
+
+Every product `CommerceService` grants can be bought with Robux (`BeginIntent`) or with Forge Tokens (`BeginIntentWithTokens`); the client only ever chooses which one to request, the server recomputes the token price from the live Robux price and enforces the player's balance. `BeginIntentWithTokens` deducts tokens then calls the exact same registered `GrantHandler` a real receipt or a Studio mock purchase would call, so a product's grant logic never needs to know which payment path funded it.
+
+`AchievementService` grants a one-time Forge Tokens reward per milestone (`src/Shared/Achievements.luau` is the shared definition list, so the client can render locked/unlocked state without a server round trip). Each hook lives at the point an action genuinely completed, not where it was merely requested — e.g. `FIRST_AD_WATCHED` unlocks in `AdRewardService:RequestAd` on a confirmed `Enum.ShowAdResult.ShowCompleted`, deliberately not in the shared `AdRewardTokens` grant handler, since that handler also fires for a plain Robux purchase of the same product. `FIRST_INVITE_SENT` is the one achievement with client-reported completion (`SocialService.GameInvitePromptClosed` only exists client-side, and Roblox exposes no accepted-invite signal at all) — the reward is for taking the native-UI-verified action of sending an invite, not for a friend joining, and stays small enough that a spoofed report is a negligible economic risk.
+
+Forge Tokens are earned by watching a Roblox Rewarded Video ad (`Class.AdService`), which Roblox splits across two run contexts: `AdService:GetAdAvailabilityNowAsync` may only run on the client, while `AdService:CreateAdRewardFromDevProductId` and `AdService:ShowRewardedVideoAdAsync` may only run on the server. The client checks availability itself (gating the "Watch ad" button) and asks the server to show the ad; `AdRewardService` does the privileged half and reports `AD_NOT_COMPLETED` for any `Enum.ShowAdResult` other than `ShowCompleted`, per Roblox's own guidance not to grant off that return value. The actual grant always arrives asynchronously through the same `MarketplaceService.ProcessReceipt` callback `CommerceService` already installs for every developer product — Roblox routes a completed rewarded ad through that identical pipeline (with `receipt.ProductPurchaseChannel == Enum.ProductPurchaseChannel.AdReward`), so `AdRewardService` only needs to register one `GrantHandler` for `Config.Products.AdRewardTokens`, exactly like any other product.
+
 ## Persistence
 
 `ForgeUGC_Player_v1` stores one document per user key (`u_<userId>`):
@@ -62,6 +70,7 @@ Developer-product intent data is saved before Roblox is prompted. Receipt grants
 - fit transforms, equipped item IDs, and named fit presets;
 - liked/favorited item references;
 - pending generation purchases and Plus transfers;
+- Forge Token balance and the daily rewarded-ad watch counter;
 - processed developer-product receipt IDs;
 - settings, onboarding, streak, and analytics counters.
 
@@ -90,6 +99,8 @@ A player may save the fit currently being dialed in (position/rotation/scale) as
 - `PERSONAL_COPY` — may be independently fitted, equipped, and sent through avatar creation by its buyer; may never be listed, transferred, or used as a source listing.
 
 Trying on a public item is free and does not require Plus or an active listing. Buying requires an active listing and a Roblox Plus transfer between 10 and 500 Robux. The buyer receives the copy only after the sender receipt is processed. A transfer waiting for a receipt never blocks a later prompt: only a prompt currently open in the same live server is exclusive. Recovery markers retain the validated listing snapshot by transfer request ID, so a late successful receipt remains grantable after the player rejoins or the short-lived profile intent is cleaned up.
+
+`LeaderboardService` maintains a separate `OrderedDataStore` ranking players by `profile.stats.likesReceived`, updated inline whenever `CommunityService:_ToggleReaction` changes a like count (fire-and-forget — a DataStore failure there must never block the like/unlike action itself). `GetTop` reads the top `Config.Leaderboard.TopCount` entries and resolves display names lazily; like `ItemIndex`, it is a ranking convenience, not a source of truth.
 
 `CommunityService:GetMarketplace` accepts an optional `searchBy` (`NAME` default, or `CREATOR` to match the resolved owner display name instead of the item name) and `sortBy` (`TRENDING` default engagement score, `NEWEST`, `PRICE_LOW`, `MOST_LIKED`). All four sort modes read the same public index scan already required for pagination, so no additional DataStore reads are introduced.
 

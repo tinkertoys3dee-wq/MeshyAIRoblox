@@ -44,6 +44,9 @@ local CommunityService = require(script.Parent.Services.CommunityService)
 local CatalogService = require(script.Parent.Services.CatalogService)
 local AnalyticsService = require(script.Parent.Services.AnalyticsService)
 local RetentionService = require(script.Parent.Services.RetentionService)
+local AdRewardService = require(script.Parent.Services.AdRewardService)
+local AchievementService = require(script.Parent.Services.AchievementService)
+local LeaderboardService = require(script.Parent.Services.LeaderboardService)
 
 local function push(player: Player, eventName: string, payload: any)
 	if player.Parent == Players then
@@ -54,12 +57,15 @@ end
 local profiles = ProfileService.new()
 local playerStates = PlayerStateService.new()
 local analytics = AnalyticsService.new()
-local retention = RetentionService.new(profiles, analytics)
+local achievements = AchievementService.new(profiles, push, analytics)
+local retention = RetentionService.new(profiles, analytics, achievements)
 local backend = BackendService.new()
 local commerce = CommerceService.new(profiles, playerStates, analytics, push)
+local adRewards = AdRewardService.new(profiles, playerStates, commerce, push, analytics, achievements)
 local items = ItemService.new(profiles, playerStates, push)
-local generations = GenerationService.new(profiles, playerStates, backend, commerce, push, analytics)
-local community = CommunityService.new(profiles, playerStates, push, analytics)
+local generations = GenerationService.new(profiles, playerStates, backend, commerce, push, analytics, achievements)
+local leaderboard = LeaderboardService.new()
+local community = CommunityService.new(profiles, playerStates, push, analytics, achievements, leaderboard)
 local catalog = CatalogService.new(profiles, playerStates, analytics)
 local remoteLimiter = RateLimiter.new(50, 10)
 local reactionLimiter = RateLimiter.new(8, 10)
@@ -175,8 +181,35 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		analytics:Custom(player, "CustomImagePassPrompted", 1, {})
 		return commerce:PromptPass(player, "CustomImageUpload")
 	end,
-	[Network.Actions.BuyPriorityPass] = function(player)
+	[Network.Actions.BuyPriorityPass] = function(player, payload)
+		if type(payload) == "table" and payload.paymentMethod == "TOKENS" then
+			return commerce:BeginIntentWithTokens(player, "PriorityPass", {})
+		end
 		return commerce:BeginIntent(player, "PriorityPass", {})
+	end,
+	[Network.Actions.RequestRewardedAd] = function(player)
+		return adRewards:RequestAd(player)
+	end,
+	-- Roblox's SocialService.GameInvitePromptClosed only reports the local
+	-- player sent invites to at least one recipient, never whether anyone
+	-- accepted — there is no accepted-invite signal in the public API. The
+	-- reward is therefore for taking the (real, Roblox-verified-by-its-own-
+	-- native-UI) action of sending an invite, not for a friend joining.
+	[Network.Actions.ReportInviteSent] = function(player, payload)
+		local recipientCount = type(payload) == "table" and tonumber(payload.recipientCount) or nil
+		if not recipientCount or recipientCount < 1 then
+			return false, "INVALID_REQUEST"
+		end
+		achievements:Unlock(player, "FIRST_INVITE_SENT")
+		analytics:Custom(player, "GameInviteSent", math.min(math.floor(recipientCount), 20), {})
+		return true, {}
+	end,
+	-- Roblox requires a rewarded-ad reward product to also be normally
+	-- purchasable with Robux (see AdRewardService), so this is both a real
+	-- purchase path and the way to test token spending in Studio without a
+	-- live ad.
+	[Network.Actions.BuyTokens] = function(player)
+		return commerce:BeginIntent(player, "AdRewardTokens", {})
 	end,
 	[Network.Actions.GetGeneration] = function(player, payload)
 		if type(payload) ~= "table" or type(payload.generationId) ~= "string" then
@@ -195,6 +228,7 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		local success, result = items:SaveFitPreset(player, payload)
 		if success then
 			analytics:Custom(player, "FitPresetSaved", 1, {})
+			achievements:Unlock(player, "FIRST_FIT_PRESET")
 		end
 		return success, result
 	end,
@@ -202,7 +236,11 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		if type(payload) ~= "table" or type(payload.presetId) ~= "string" then
 			return false, "INVALID_REQUEST"
 		end
-		return items:DeleteFitPreset(player, payload.presetId)
+		local success, result = items:DeleteFitPreset(player, payload.presetId)
+		if success then
+			analytics:Custom(player, "FitPresetDeleted", 1, {})
+		end
+		return success, result
 	end,
 	[Network.Actions.EquipItem] = function(player, payload)
 		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
@@ -211,6 +249,7 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		local success, result = items:Equip(player, payload.itemId)
 		if success then
 			analytics:Custom(player, "GeneratedItemEquipped", 1, {})
+			achievements:Unlock(player, "FIRST_EQUIP")
 		end
 		return success, result
 	end,
@@ -230,9 +269,11 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		local success, result = items:Publish(player, payload.itemId)
 		if success then
-			analytics:Custom(player, "GeneratedItemPublished", 1, {
-				alreadyPublished = type(result) == "table" and result.alreadyPublished == true,
-			})
+			local alreadyPublished = type(result) == "table" and result.alreadyPublished == true
+			analytics:Custom(player, "GeneratedItemPublished", 1, { alreadyPublished = alreadyPublished })
+			if not alreadyPublished then
+				achievements:Unlock(player, "FIRST_PUBLISH")
+			end
 		end
 		return success, result
 	end,
@@ -244,6 +285,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	end,
 	[Network.Actions.GetMarketplace] = function(player, payload)
 		return community:GetMarketplace(player, payload)
+	end,
+	[Network.Actions.GetLeaderboard] = function(player)
+		return community:GetLeaderboard(player)
 	end,
 	[Network.Actions.ToggleLike] = function(player, payload)
 		if not reactionLimiter:consume(player.UserId) then
@@ -285,7 +329,11 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		return community:PromptPlus(player)
 	end,
 	[Network.Actions.TryCatalogAsset] = function(player, payload)
-		return catalog:TryOn(player, payload)
+		local success, result = catalog:TryOn(player, payload)
+		if success then
+			achievements:Unlock(player, "FIRST_TRY_ON")
+		end
+		return success, result
 	end,
 	[Network.Actions.ResetAvatar] = function(player)
 		return catalog:Reset(player)
@@ -334,6 +382,10 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		if not profiles:Save(player) then
 			return false, "SAVE_FAILED"
 		end
+		-- Booleans/numbers only (the exact values a toggle or slider can take),
+		-- never free text, so this is safe under the no-prompt-text rule while
+		-- still surfacing accessibility-feature adoption.
+		analytics:Custom(player, "SettingsChanged", 1, updates)
 		return true, { settings = profiles:Get(player).settings }
 	end,
 	[Network.Actions.CompleteOnboarding] = function(player)

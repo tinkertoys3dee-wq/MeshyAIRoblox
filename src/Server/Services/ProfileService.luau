@@ -37,6 +37,9 @@ local function defaultProfile(userId: number): { [string]: any }
 		equippedItemIds = {},
 		fitPresets = {},
 		fitPresetOrder = {},
+		tokens = 0,
+		adWatch = { day = 0, count = 0 },
+		achievements = {},
 		settings = { soundsEnabled = true, reduceMotion = false, highContrast = false, uiScale = 1 },
 		stats = {
 			sessions = 0,
@@ -47,6 +50,7 @@ local function defaultProfile(userId: number): { [string]: any }
 			itemsPublished = 0,
 			marketplacePurchases = 0,
 			catalogTryOns = 0,
+			likesReceived = 0,
 		},
 		daily = { lastDay = 0, streak = 0, best = 0 },
 		onboarding = { completed = false, step = 1 },
