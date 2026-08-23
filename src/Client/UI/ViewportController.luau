@@ -1,6 +1,5 @@
 --!strict
 
-local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -9,8 +8,6 @@ local AccessoryFit = require(ReplicatedStorage:WaitForChild("AccessoryFit"))
 
 local ViewportController = {}
 ViewportController.__index = ViewportController
-
-local nextControllerId = 0
 
 local DEFAULT_FOCUS = Vector3.new(0, 1.15, 0)
 
@@ -61,7 +58,6 @@ local function pointInsideVisibleBounds(gui: GuiObject, point: Vector2): boolean
 end
 
 function ViewportController.new(viewport: ViewportFrame)
-	nextControllerId += 1
 	local world = Instance.new("WorldModel")
 	world.Name = "ForgePreviewWorld"
 	world.Parent = viewport
@@ -92,7 +88,6 @@ function ViewportController.new(viewport: ViewportFrame)
 		dragButton = nil :: Enum.UserInputType?,
 		dragTouch = nil :: InputObject?,
 		lastPointer = Vector2.zero,
-		zoomActionName = `ForgeViewportZoom_{nextControllerId}`,
 		scrollFrame = viewport:FindFirstAncestorWhichIsA("ScrollingFrame") :: ScrollingFrame?,
 		scrollRestore = nil :: boolean?,
 		connections = {} :: { RBXScriptConnection },
@@ -173,29 +168,21 @@ function ViewportController.new(viewport: ViewportFrame)
 			self.dragTouch = nil
 		end
 	end)
-	ContextActionService:BindActionAtPriority(
-		self.zoomActionName,
-		function(_actionName: string, inputState: Enum.UserInputState, input: InputObject)
+	-- Zoom deliberately reads the raw UserInputService signal instead of a
+	-- ContextActionService-bound action: ContextActionService actions can be
+	-- sunk by another, higher-priority bound action (Roblox's own default
+	-- camera controller binds MouseWheel too) before ours ever runs, which
+	-- left zoom silently doing nothing. UserInputService.InputChanged always
+	-- fires for every input regardless of what else is bound or focused.
+	connect(UserInputService.InputChanged, function(input: InputObject)
+		if input.UserInputType == Enum.UserInputType.MouseWheel then
 			local point = Vector2.new(input.Position.X, input.Position.Y)
-			if
-				self.destroyed
-				or input.UserInputType ~= Enum.UserInputType.MouseWheel
-				or not pointInsideVisibleBounds(viewport, point)
-			then
-				return Enum.ContextActionResult.Pass
-			end
-			setPageScrollLocked(true)
-			if inputState == Enum.UserInputState.Change then
+			if not self.destroyed and pointInsideVisibleBounds(viewport, point) then
+				setPageScrollLocked(true)
 				self.distance = math.clamp(self.distance - input.Position.Z * 0.85, 4.25, 14)
 				self:_UpdateCamera()
 			end
-			return Enum.ContextActionResult.Sink
-		end,
-		false,
-		Enum.ContextActionPriority.High.Value + 1,
-		Enum.UserInputType.MouseWheel
-	)
-	connect(UserInputService.InputChanged, function(input: InputObject)
+		end
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			local point = Vector2.new(input.Position.X, input.Position.Y)
 			setPageScrollLocked(pointInsideVisibleBounds(viewport, point))
@@ -333,7 +320,6 @@ function ViewportController:Destroy()
 		return
 	end
 	self.destroyed = true
-	ContextActionService:UnbindAction(self.zoomActionName)
 	if self.scrollFrame and self.scrollFrame.Parent and self.scrollRestore ~= nil then
 		self.scrollFrame.ScrollingEnabled = self.scrollRestore
 		self.scrollRestore = nil

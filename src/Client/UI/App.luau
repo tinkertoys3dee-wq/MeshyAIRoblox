@@ -364,7 +364,6 @@ function App:_BuildChrome()
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.12,
 		BorderSizePixel = 0,
-		ClipsDescendants = true,
 		Parent = shell,
 	})
 	Factory.New("Frame", {
@@ -432,7 +431,6 @@ function App:_BuildChrome()
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.2,
 		BorderSizePixel = 0,
-		ClipsDescendants = true,
 		Parent = shell,
 	})
 	self.nav = nav
@@ -1981,7 +1979,6 @@ function App:_RenderStudio()
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.08,
 		BorderSizePixel = 0,
-		ClipsDescendants = true,
 		Parent = body,
 	})
 	Factory.Corner(controls, 13)
@@ -2168,7 +2165,6 @@ function App:_RenderStudio()
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.08,
 		BorderSizePixel = 0,
-		ClipsDescendants = true,
 		Parent = body,
 	})
 	Factory.Corner(presets, 13)
@@ -2403,7 +2399,6 @@ function App:_RenderStudio()
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.12,
 		BorderSizePixel = 0,
-		ClipsDescendants = true,
 		Parent = body,
 	})
 	Factory.Corner(social, 12)

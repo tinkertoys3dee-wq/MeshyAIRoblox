@@ -110,11 +110,10 @@ function Factory.Card(parent: Instance, size: UDim2, position: UDim2?, name: str
 		Position = position or UDim2.new(),
 		BackgroundColor3 = Colors.PanelRaised,
 		BorderSizePixel = 0,
-		-- Every card is a rounded-corner container with hand-positioned
-		-- children; clipping keeps any child that overflows (a long label, an
-		-- unusually wide row on a narrow/compact layout) from visibly bleeding
-		-- past the card's own bounds instead of just being cropped by nothing.
-		ClipsDescendants = true,
+		-- Deliberately NOT ClipsDescendants: Roblox clips to the object's
+		-- axis-aligned rectangle, not its UICorner shape, so a clipped card
+		-- shows a visible square notch cut into its own rounded corners
+		-- wherever a child's opaque background reaches into that curve.
 		Parent = parent,
 	})
 	Factory.Corner(card)
