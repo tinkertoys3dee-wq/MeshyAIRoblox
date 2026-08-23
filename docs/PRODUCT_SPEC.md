@@ -23,15 +23,15 @@ This file is the durable source of truth for future Forge UGC updates. A change 
 - Payment uses `PromptRobuxTransferAsync`; the buyer receives a copy only after a matching sender receipt confirms the stored transfer request and amount.
 - A purchased copy is `PERSONAL_COPY`: the buyer may fit, equip, and publish it as their own wearable, but can never list, resell, transfer, or use it as a source listing inside Forge.
 - Listings are restricted to Roblox's current transfer range of 10–500 R$. The seller receives 90% and the experience receives 10% according to the current platform program.
-- Public discovery ranks recent engagement from views, likes, and favorites. An owner profile remains authoritative if an index entry disagrees.
+- Public discovery ranks recent engagement from views, likes, and favorites. The owner profile remains authoritative for ownership and visibility; the atomically updated public index is authoritative for the current listing flag and price so buyers in another server do not see stale sale state.
 
 ## Safety, privacy, and authority
 
 - The server filters all player generation text with Roblox `TextService` before it can reach Railway or an AI provider. Filtering fails closed.
-- Provider moderation is a second gate for filtered text before purchase and for every generated visual output before display/upload. Meshy moderation remains enabled as an additional layer.
-- A custom reference must be a Roblox Image or Decal owned by the player or the configured creator group. It must finish Roblox moderation, then pass Forge's independent provider-side image moderation before it can appear as an approvable reference or reach Meshy. Arbitrary URLs and raw client image bytes are never accepted.
+- Provider moderation is a second gate for filtered text before purchase and for generated visual output before display/upload. Meshy moderation remains enabled as an additional layer.
+- A custom reference must be a Roblox Image or Decal owned by the player or the configured creator group and must finish Roblox moderation before Forge can resolve it. Forge verifies ownership, type, moderation availability, format, dimensions, and fixed Roblox CDN provenance, but deliberately does not pay to re-run OpenAI vision moderation on an already Roblox-approved upload. Arbitrary URLs and raw client image bytes are never accepted.
 - `PolicyService.IsContentSharingAllowed` disables public sharing, listings, reactions, and other-player generated-item try-on. Private creation stays available.
-- Custom-image submission additionally requires `IsContentSharingAllowed`; it fails closed when the policy lookup, pass lookup, asset metadata, ownership, or either moderation layer is unavailable.
+- Custom-image submission additionally requires `IsContentSharingAllowed`; it fails closed when the policy lookup, pass lookup, asset metadata, ownership, Roblox moderation state, or image validation is unavailable.
 - Commerce, subscription, and paid-trading policy flags are enforced server-side.
 - Provider keys and the Open Cloud key exist only in Railway variables. The Roblox experience authenticates with a Creator Hub secret; no secret belongs in Git or client-visible Luau.
 - Client values are requests, never authority. The server rechecks price, ownership, listing state, transforms, policy, rate limits, and receipt identity.
@@ -61,7 +61,7 @@ This file is the durable source of truth for future Forge UGC updates. A change 
 
 ## Checkpoint status
 
-Implemented in the current checkpoint: all three creation flows, permanent custom-image entitlement checks, player/group image ownership validation, dual image moderation, style/detail guidance, receipt-safe developer products, Railway provider pipeline, GLB validation, fitting/equip/publish services, individual player profiles, Plus-transfer copies, discovery/reactions/trending score, catalog lab, policy gates, group/streak benefits, responsive UI, sound hooks, and analytics instrumentation.
+Implemented in the current checkpoint: all three creation flows, permanent custom-image entitlement checks, player/group image ownership validation, generated-output visual moderation, style/detail guidance, receipt-safe developer products, Railway provider pipeline, GLB validation, fitting/equip/publish services, individual player profiles, Plus-transfer copies, discovery/reactions/trending score, catalog lab, policy gates, group/streak benefits, responsive UI, sound hooks, and analytics instrumentation.
 
 Creator-owned activation still required: group ID, developer product IDs, Custom Image Upload game pass ID, Avatar Creation Token IDs and prices, sound asset IDs and permissions, Railway/PostgreSQL deployment, Creator Hub/Open Cloud secrets, maximum player setting, and live Studio/device testing.
 

@@ -8,13 +8,13 @@ The cost model uses the standard DevEx rate of **$0.0038 per Earned Robux** and 
 
 | Operation | Estimated provider cost | Suggested product price | Net at standard DevEx | Contribution margin before hosting |
 |---|---:|---:|---:|---:|
-| Isolated reference image, GPT Image 2 medium | $0.053 | 29 R$ | $0.077 | 31% |
+| Isolated reference image, GPT Image 2 low | $0.006 | 29 R$ | $0.077 | 92% |
 | Text → textured Smart Topology model | $0.300 | 159 R$ | $0.423 | 29% |
 | Approved image → textured Smart Topology model | $0.300 | 159 R$ | $0.423 | 29% |
 | Priority queue pass | negligible variable cost | 29 R$ | $0.077 | n/a |
 | Custom Image Upload game pass | moderation/hosting over account lifetime | 249 R$ one time | $0.662 | usage-dependent |
 
-The guided path is two explicit purchases: **29 R$** for the reviewable reference image and **159 R$** after approval for conversion, or **188 R$ total**. At the estimates above it nets about **$0.500** against **$0.353** of provider cost, a 29% contribution margin before hosting.
+The guided path is two explicit purchases: **29 R$** for the reviewable reference image and **159 R$** after approval for conversion, or **188 R$ total**. At the estimates above it nets about **$0.500** against **$0.306** of provider cost, a 39% contribution margin before hosting. Low-quality GPT Image 2 is intentionally used for the disposable reference stage; Meshy, rather than the reference image itself, produces the final player-facing texture.
 
 The **249 R$ Custom Image Upload pass** is a permanent premium entitlement. Upload moderation and previewing are included after purchase, but every approved image still uses the normal **159 R$ Image → 3D Conversion** product. This prevents unlimited Meshy cost exposure while giving the pass durable value. At the baseline conversion assumptions, the pass nets about **$0.662** before lifetime moderation and hosting expense; review its attach rate, upload frequency, and support burden before changing the price.
 
@@ -30,7 +30,7 @@ At the current Meshy API schedule, Smart Topology T2 is 5 credits for geometry p
 
 “30% markup on cost” and “30% contribution margin” are different targets. In the user's $0.30 example, 159 R$ creates about $0.123 gross contribution: a 41% cost markup or 29% contribution margin before hosting. With a hypothetical $0.02 per-job hosting reserve, those become roughly 32% and 24%. The configured price therefore clears the requested +30% cost markup with that reserve, but should not be described as a 30% contribution margin.
 
-Railway expense and failed-generation retries are usage-dependent. Before launch, replace every estimate with one week of measured cost per completed job, then adjust prices to maintain the chosen margin. Keep the UI driven by Roblox's live localized product information so Roblox Plus discounts display correctly while creator earnings remain based on the base price.
+Railway expense and failed-generation retries are usage-dependent. Before launch, replace every estimate with one week of measured cost per completed job, then adjust prices to maintain the chosen margin. Keep the UI driven by Roblox's live localized product information so Roblox Plus discounts display correctly while creator earnings remain based on the base price. If Railway already defines `OPENAI_IMAGE_QUALITY`, change it to `low`; the application default cannot override an explicit environment variable.
 
 ## Player-to-player sales
 

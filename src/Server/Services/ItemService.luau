@@ -119,9 +119,6 @@ function ItemService:SaveFit(player: Player, payload: any): (boolean, any)
 end
 
 function ItemService:Equip(player: Player, itemId: string): (boolean, any)
-	if not self.playerStates:Get(player).contentSharingAllowed then
-		return false, "CONTENT_SHARING_DISABLED"
-	end
 	local profile = self.profiles:Get(player)
 	local item = profile and profile.items[itemId]
 	if not item or type(item.modelAssetId) ~= "number" or item.modelAssetId <= 0 then
@@ -143,7 +140,14 @@ function ItemService:Equip(player: Player, itemId: string): (boolean, any)
 	end
 	local accessory = accessoryOrError :: Accessory
 	accessory:SetAttribute("ForgeItemId", itemId)
-	humanoid:AddAccessory(accessory)
+	local addSuccess, addProblem = pcall(function()
+		humanoid:AddAccessory(accessory)
+	end)
+	if not addSuccess then
+		accessory:Destroy()
+		warn(`[ItemService] Could not equip {itemId}: {addProblem}`)
+		return false, "EQUIP_FAILED"
+	end
 	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(mutableProfile)
 		if not table.find(mutableProfile.equippedItemIds, itemId) then
 			table.insert(mutableProfile.equippedItemIds, itemId)
@@ -160,9 +164,6 @@ function ItemService:Equip(player: Player, itemId: string): (boolean, any)
 end
 
 function ItemService:RestoreEquipped(player: Player)
-	if not self.playerStates:Get(player).contentSharingAllowed then
-		return
-	end
 	local profile = self.profiles:Get(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -184,7 +185,13 @@ function ItemService:RestoreEquipped(player: Player)
 				if success then
 					local accessory = accessoryOrError :: Accessory
 					accessory:SetAttribute("ForgeItemId", itemId)
-					humanoid:AddAccessory(accessory)
+					local addSuccess, addProblem = pcall(function()
+						humanoid:AddAccessory(accessory)
+					end)
+					if not addSuccess then
+						accessory:Destroy()
+						warn(`[ItemService] Could not restore {itemId}: {addProblem}`)
+					end
 				end
 			end
 		end
@@ -212,7 +219,14 @@ function ItemService:TryOn(player: Player, item: { [string]: any }): (boolean, a
 	local accessory = accessoryOrError :: Accessory
 	accessory:SetAttribute("ForgeCommunityTryOn", true)
 	accessory:SetAttribute("ForgeItemId", item.id)
-	humanoid:AddAccessory(accessory)
+	local addSuccess, addProblem = pcall(function()
+		humanoid:AddAccessory(accessory)
+	end)
+	if not addSuccess then
+		accessory:Destroy()
+		warn(`[ItemService] Community try-on failed for {item.id}: {addProblem}`)
+		return false, "TRY_ON_FAILED"
+	end
 	return true, { triedOn = true }
 end
 
@@ -293,15 +307,23 @@ function ItemService:Publish(player: Player, itemId: string): (boolean, any)
 	end
 	if result ~= Enum.PromptCreateAssetResult.Success then
 		accessory:Destroy()
-		return false, tostring(resultMessage)
+		warn(string.format("[ItemService] Avatar creation was not completed: %s", tostring(resultMessage)))
+		return false, "AVATAR_CREATION_REJECTED"
 	end
 	accessory:Destroy()
 	local assetId = tonumber(resultMessage)
-	self.profiles:Mutate(player, function(mutableProfile)
+	if not assetId or assetId <= 0 then
+		warn(string.format("[ItemService] Avatar creation returned an invalid asset id: %s", tostring(resultMessage)))
+		return false, "AVATAR_CREATION_BAD_RESPONSE"
+	end
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(mutableProfile)
 		mutableProfile.items[itemId].publishedAssetId = assetId
 		mutableProfile.items[itemId].updatedAt = os.time()
 		mutableProfile.stats.itemsPublished += 1
 	end)
+	if not mutateSuccess then
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
 	if not self.profiles:Save(player) then
 		warn(string.format("[ItemService] Published asset %s is awaiting a profile save retry", tostring(assetId)))
 	end
@@ -313,20 +335,42 @@ function ItemService:_LoadModel(assetId: number): (boolean, Model | string)
 	if cached then
 		return true, cached:Clone()
 	end
-	local success, loaded = pcall(function()
-		return AssetService:LoadAssetAsync(assetId)
-	end)
-	if not success or not loaded then
-		warn(`[ItemService] Could not load asset {assetId}: {loaded}`)
-		return false, "ASSET_LOAD_FAILED"
+	local lastProblem: any = "No model returned"
+	for attempt = 1, 4 do
+		local success, loaded = pcall(function()
+			return AssetService:LoadAssetAsync(assetId)
+		end)
+		if success and typeof(loaded) == "Instance" and loaded:IsA("Model") then
+			local model = loaded :: Model
+			stripUnsafe(model)
+			model.Parent = nil
+			self.assetCache[assetId] = model
+			return true, model:Clone()
+		end
+		lastProblem = loaded
+		if attempt < 4 then
+			-- Open Cloud uploads can be acknowledged before the asset is available
+			-- to live servers. A short bounded retry keeps the first fit/equip click
+			-- from failing during that propagation window.
+			task.wait(attempt)
+		end
 	end
-	stripUnsafe(loaded)
-	loaded.Parent = nil
-	self.assetCache[assetId] = loaded
-	return true, loaded:Clone()
+	warn(`[ItemService] Could not load asset {assetId} after retries: {lastProblem}`)
+	return false, "ASSET_STILL_PROCESSING"
 end
 
 function ItemService:_CreateAccessory(item: { [string]: any }, editable: boolean): (boolean, Accessory | string)
+	local callSuccess, creationSuccess, accessoryOrProblem = pcall(function()
+		return self:_BuildAccessory(item, editable)
+	end)
+	if not callSuccess then
+		warn(`[ItemService] Accessory preparation crashed for {item.id}: {creationSuccess}`)
+		return false, "ACCESSORY_PREPARATION_FAILED"
+	end
+	return creationSuccess, accessoryOrProblem
+end
+
+function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean): (boolean, Accessory | string)
 	local success, modelOrError = self:_LoadModel(item.modelAssetId)
 	if not success then
 		return false, modelOrError

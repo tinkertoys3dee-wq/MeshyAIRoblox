@@ -16,16 +16,20 @@ No secret should be pasted into chat or committed to this repository.
 6. Enter the Roblox group ID in `Config.Group.Id` to enable 10% faster queue polling, one extra queued job, and group-owned custom reference images.
 7. Create Avatar Creation Tokens for each accessory type you will permit. Enter those public token IDs in `Config.AvatarCreationTokens`.
 8. Keep the group or token owner ID-verified with Roblox Premium so in-experience avatar creation remains available.
-9. Enable API access for the Open Cloud key used by Railway:
+9. Enable the experience capabilities used by the current Roblox APIs:
+   - `AssetRead` and `Players` for Avatar Lab inventory/catalog access and editable mesh/image reads.
+   - `PlatformAvatarEditing` for the save-avatar prompt.
+   - `LoadUnownedAsset` for `AssetService:LoadAssetAsync()`; Roblox still enforces the asset's creator permissions.
+10. Enable API access for the Open Cloud key used by Railway:
    - Assets API read/write for the experience's group creator.
    - Restrict the key by IP if Railway provides a stable egress IP.
-10. Complete the experience's Maturity & Compliance questionnaire, disclose paid item trading and player-supplied image references, and confirm that the experience enforces `IsPaidItemTradingAllowed` and `IsContentSharingAllowed` per player.
+11. Complete the experience's Maturity & Compliance questionnaire, disclose paid item trading and player-supplied image references, and confirm that the experience enforces `IsPaidItemTradingAllowed` and `IsContentSharingAllowed` per player.
 
 ## Player image upload flow
 
 Roblox does not currently expose a general-purpose runtime picker that gives an experience an arbitrary local PNG/JPG for use by an external generation pipeline. `AvatarCreationService:PromptSelectAvatarGenerationImageAsync()` is limited to Roblox's sensitive Photo-to-Avatar flow: it returns a temporary file identifier for Roblox's avatar-generation methods, not image bytes, a URL, or an uploaded Image/Decal asset that Forge can send to Meshy. Players therefore upload a PNG/JPG through Roblox Creator Hub as an **Image** or **Decal**, wait for Roblox moderation, and paste the numeric asset ID into Forge.
 
-The asset must be owned by the player's Roblox account or by the group configured in `Config.Group.Id`. Forge rejects arbitrary URLs, non-image asset types, other creators' assets, pending/blocked thumbnails, malformed images, and accounts for which `IsContentSharingAllowed` is false. Railway downloads only through Roblox's fixed thumbnail endpoint and approved HTTPS CDN hosts, then performs a second multimodal moderation pass before showing or converting the reference.
+The asset must be owned by the player's Roblox account or by the group configured in `Config.Group.Id`. Forge rejects arbitrary URLs, non-image asset types, other creators' assets, pending/blocked thumbnails, malformed images, and accounts for which `IsContentSharingAllowed` is false. Railway downloads only through Roblox's fixed thumbnail endpoint and approved HTTPS CDN hosts. Because the asset has already completed Roblox moderation, Forge does not spend OpenAI vision credits rechecking the same upload; generated references and Meshy-produced textures/thumbnails still receive provider-side visual moderation.
 
 ## Railway variables
 
@@ -38,6 +42,8 @@ Copy every field from `backend/.env.example` into the Railway service. Required 
 - `ROBLOX_CREATOR_TYPE=group`
 - `ROBLOX_SHARED_SECRET`
 - `DATABASE_URL` (attach Railway PostgreSQL)
+
+Set `OPENAI_IMAGE_MODEL=gpt-image-2` and `OPENAI_IMAGE_QUALITY=low`. If Railway already has `OPENAI_IMAGE_QUALITY=medium`, change or remove that explicit value so the cheaper reference-image default takes effect.
 
 Create a Railway service from this repository with `backend/` as its root directory. Use `npm run build` as the build command, `npm run start` as the start command, and `/health` as the health-check path. A production boot deliberately fails if PostgreSQL, the Roblox shared secret, or any live provider credential is absent.
 

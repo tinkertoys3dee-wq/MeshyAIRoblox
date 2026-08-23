@@ -5,6 +5,13 @@ local Workspace = game:GetService("Workspace")
 
 local WorldService = {}
 
+local STATIONS = {
+	{ page = "Create", title = "GENERATION FORGE", color = Color3.fromRGB(118, 91, 255) },
+	{ page = "My Studio", title = "FITTING STUDIO", color = Color3.fromRGB(62, 220, 255) },
+	{ page = "Discover", title = "CREATOR MARKET", color = Color3.fromRGB(255, 94, 176) },
+	{ page = "Avatar Lab", title = "AVATAR LAB", color = Color3.fromRGB(83, 238, 178) },
+}
+
 local function part(
 	parent: Instance,
 	name: string,
@@ -83,14 +90,64 @@ function WorldService.Build()
 	for index = 1, 6 do
 		local angle = math.rad((index - 1) * 60)
 		local position = Vector3.new(math.cos(angle) * 29, 1.5, math.sin(angle) * 29)
-		part(
+		local plinth = part(
 			studio,
-			"ShowcasePlinth",
+			if STATIONS[index] then string.gsub(STATIONS[index].page, " ", "") .. "Station" else "ShowcasePlinth",
 			Vector3.new(8, 3, 8),
 			CFrame.new(position),
 			Color3.fromRGB(29, 36, 65),
 			Enum.Material.Marble
 		)
+		local station = STATIONS[index]
+		if station then
+			local trim = part(
+				studio,
+				"StationGlow",
+				Vector3.new(8.25, 0.22, 8.25),
+				CFrame.new(position + Vector3.new(0, 1.61, 0)),
+				station.color,
+				Enum.Material.Neon
+			)
+			trim.CanCollide = false
+
+			local prompt = Instance.new("ProximityPrompt")
+			prompt.Name = "OpenForgeStation"
+			prompt.ActionText = "Open"
+			prompt.ObjectText = station.title
+			prompt.KeyboardKeyCode = Enum.KeyCode.E
+			prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
+			prompt.HoldDuration = 0
+			prompt.MaxActivationDistance = 13
+			prompt.RequiresLineOfSight = false
+			prompt:SetAttribute("ForgePage", station.page)
+			prompt.Parent = plinth
+
+			local sign = Instance.new("BillboardGui")
+			sign.Name = "StationSign"
+			sign.Size = UDim2.fromOffset(220, 54)
+			sign.StudsOffsetWorldSpace = Vector3.new(0, 5.2, 0)
+			sign.AlwaysOnTop = false
+			sign.MaxDistance = 80
+			sign.Parent = plinth
+			local label = Instance.new("TextLabel")
+			label.Size = UDim2.fromScale(1, 1)
+			label.BackgroundColor3 = Color3.fromRGB(11, 15, 31)
+			label.BackgroundTransparency = 0.12
+			label.BorderSizePixel = 0
+			label.Text = station.title
+			label.TextColor3 = Color3.fromRGB(244, 247, 255)
+			label.Font = Enum.Font.GothamBold
+			label.TextSize = 15
+			label.Parent = sign
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(0, 12)
+			corner.Parent = label
+			local stroke = Instance.new("UIStroke")
+			stroke.Color = station.color
+			stroke.Transparency = 0.15
+			stroke.Thickness = 1.5
+			stroke.Parent = label
+		end
 	end
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "ForgeSpawn"

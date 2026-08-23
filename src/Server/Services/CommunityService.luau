@@ -88,8 +88,8 @@ function CommunityService.new(
 	return self
 end
 
-function CommunityService:_ReadIndex(): { [string]: any }
-	if self.indexCache and os.clock() - self.indexCacheAt < CACHE_SECONDS then
+function CommunityService:_ReadIndex(forceRefresh: boolean?): { [string]: any }
+	if not forceRefresh and self.indexCache and os.clock() - self.indexCacheAt < CACHE_SECONDS then
 		return deepCopy(self.indexCache)
 	end
 	local success, result = pcall(function()
@@ -117,6 +117,8 @@ function CommunityService:_UpdateIndex(item: { [string]: any }, visible: boolean
 					itemId = item.id,
 					ownerUserId = item.ownerUserId,
 					updatedAt = os.time(),
+					isListed = item.isListed == true,
+					listingPriceRobux = item.listingPriceRobux,
 					likes = item.likes or old.likes or 0,
 					favorites = item.favorites or old.favorites or 0,
 					views = item.views or old.views or 0,
@@ -179,8 +181,8 @@ function CommunityService:_OwnerName(userId: number): string
 	return name
 end
 
-function CommunityService:_ResolvePublic(itemId: string): ({ [string]: any }?, string?)
-	local index = self:_ReadIndex()
+function CommunityService:_ResolvePublic(itemId: string, forceRefresh: boolean?): ({ [string]: any }?, string?)
+	local index = self:_ReadIndex(forceRefresh)
 	local reference = index.entries[itemId]
 	if not reference then
 		return nil, nil
@@ -193,6 +195,14 @@ function CommunityService:_ResolvePublic(itemId: string): ({ [string]: any }?, s
 	item.likes = reference.likes or item.likes or 0
 	item.favorites = reference.favorites or item.favorites or 0
 	item.views = reference.views or item.views or 0
+	-- Listing state changes more often than the owner's full profile and may be
+	-- read from another live server. The public index is updated atomically with
+	-- listing changes, so use it as the marketplace authority. Older entries
+	-- without these fields still fall back to the profile for migration safety.
+	if reference.isListed ~= nil then
+		item.isListed = reference.isListed == true
+		item.listingPriceRobux = reference.listingPriceRobux
+	end
 	return item, self:_OwnerName(reference.ownerUserId)
 end
 
@@ -398,7 +408,7 @@ function CommunityService:BeginPurchase(player: Player, payload: any): (boolean,
 	if not state.contentSharingAllowed or not state.paidTradingAllowed then
 		return false, "COMMERCE_NOT_ALLOWED"
 	end
-	local item = self:_ResolvePublic(payload.itemId)
+	local item = self:_ResolvePublic(payload.itemId, true)
 	if not item or not item.isListed or item.ownerUserId == player.UserId then
 		return false, "LISTING_UNAVAILABLE"
 	end

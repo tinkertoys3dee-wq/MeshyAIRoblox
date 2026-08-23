@@ -69,6 +69,17 @@ function Factory.Padding(parent: Instance, horizontal: number, vertical: number?
 	})
 end
 
+function Factory.ScalePadding(parent: Instance, horizontal: number, vertical: number?): UIPadding
+	local y = vertical or horizontal
+	return Factory.New("UIPadding", {
+		PaddingLeft = UDim.new(horizontal, 0),
+		PaddingRight = UDim.new(horizontal, 0),
+		PaddingTop = UDim.new(y, 0),
+		PaddingBottom = UDim.new(y, 0),
+		Parent = parent,
+	})
+end
+
 function Factory.Label(parent: Instance, text: string, size: UDim2, options: { [string]: any }?): TextLabel
 	options = options or {}
 	return Factory.New("TextLabel", {

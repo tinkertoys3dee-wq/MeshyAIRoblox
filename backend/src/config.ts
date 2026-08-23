@@ -17,7 +17,7 @@ const schema = z.object({
   MESHY_TASK_TIMEOUT_MS: z.coerce.number().int().min(30_000).default(900_000),
   OPENAI_API_KEY: z.string().optional().or(z.literal("")),
   OPENAI_IMAGE_MODEL: z.string().default("gpt-image-2"),
-  OPENAI_IMAGE_QUALITY: z.enum(["low", "medium", "high", "auto"]).default("medium"),
+  OPENAI_IMAGE_QUALITY: z.enum(["low", "medium", "high", "auto"]).default("low"),
   ROBLOX_OPEN_CLOUD_API_KEY: z.string().optional().or(z.literal("")),
   ROBLOX_CREATOR_TYPE: z.enum(["group", "user"]).default("group"),
   ROBLOX_CREATOR_ID: z.coerce.number().int().positive().optional(),

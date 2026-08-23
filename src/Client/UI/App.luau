@@ -3,8 +3,10 @@
 local AvatarEditorService = game:GetService("AvatarEditorService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
@@ -21,6 +23,10 @@ local App = {}
 App.__index = App
 
 local ERROR_MESSAGES = {
+	SERVER_ERROR = "The Roblox server hit an unexpected error. Check Server Output for the logged cause, then retry.",
+	PROFILE_UNAVAILABLE = "Your creator profile is still loading. Try again in a moment.",
+	PROFILE_MUTATION_FAILED = "Roblox could not update your saved profile safely.",
+	INVALID_TRANSFORM = "That fit is outside the supported position, rotation, or scale range.",
 	PROMPT_REQUIRED = "Describe the accessory you want to make.",
 	PROMPT_TOO_SHORT = "Add a little more detail to your prompt.",
 	PROMPT_TOO_LONG = "Keep your prompt under 500 characters.",
@@ -35,8 +41,25 @@ local ERROR_MESSAGES = {
 	COMMERCE_NOT_ALLOWED = "Purchases are unavailable for this account.",
 	PLUS_REQUIRED = "Roblox Plus is required to buy another creator's model.",
 	LISTING_UNAVAILABLE = "This creator is not currently selling that model.",
+	ITEM_NOT_FOUND = "That model is no longer available. Refresh the page and try again.",
+	ITEM_NOT_SHAREABLE = "Only original creations can be shared publicly.",
+	ITEM_NOT_LISTABLE = "Only an original creation can be listed for sale.",
+	ITEM_NOT_PUBLISHABLE = "This model cannot be published as a wearable.",
+	MARKETPLACE_UNAVAILABLE = "The creator marketplace could not update. Your saved item is unchanged; try again.",
+	PRICE_OUT_OF_RANGE = "Choose a sale price from R$ 10 to R$ 500.",
 	CREATION_TOKEN_NOT_CONFIGURED = "Add the Avatar Creation Token for this accessory type in Config.luau.",
 	MODEL_UNAVAILABLE = "The model asset is not available yet.",
+	ASSET_STILL_PROCESSING = "Roblox is still processing this new model. Wait a few seconds and try again.",
+	ASSET_LOAD_FAILED = "Roblox could not load this model. Check that the uploaded asset belongs to this experience's creator.",
+	MESH_NOT_FOUND = "The uploaded model does not contain a usable MeshPart.",
+	ACCESSORY_PREPARATION_FAILED = "Roblox could not turn this model into an accessory. The server log now includes the exact failure.",
+	EDITABLE_ASSET_FAILED = "Roblox could not prepare this mesh for wearable publishing. Check EditableMesh permissions and memory limits.",
+	EQUIP_FAILED = "Roblox could not attach this model to your avatar. Try another fit region or rejoin.",
+	CHARACTER_UNAVAILABLE = "Your avatar is still loading. Try again in a moment.",
+	PLAYER_GUI_UNAVAILABLE = "Your private preview cache is unavailable. Rejoin and try again.",
+	AVATAR_CREATION_UNAVAILABLE = "Roblox could not open the wearable publishing prompt. Check the creation token and asset permissions.",
+	AVATAR_CREATION_REJECTED = "Wearable publishing was cancelled or Roblox rejected the asset.",
+	AVATAR_CREATION_BAD_RESPONSE = "Roblox completed the prompt but did not return a valid wearable asset ID.",
 	SAVE_FAILED = "Roblox could not safely save this transaction. Nothing new was prompted; try again.",
 	GRANT_FAILED = "The purchase benefit could not be prepared. Try again in a moment.",
 	PURCHASE_ALREADY_PENDING = "Finish or close the current Roblox purchase prompt before starting another.",
@@ -55,6 +78,10 @@ local ERROR_MESSAGES = {
 	REFERENCE_IMAGE_INVALID = "That Roblox asset is not a valid still image.",
 	INVALID_STYLE_PRESET = "Choose one of the available visual styles.",
 	INVALID_DETAIL_LEVEL = "Choose one of the available detail levels.",
+	INVALID_ASSET_TYPE = "Choose a supported accessory category.",
+	CATALOG_ITEM_UNAVAILABLE = "That catalog item is unavailable or does not match this accessory category.",
+	TRY_ON_FAILED = "Roblox could not apply that item to your avatar. Try another item.",
+	AVATAR_UNAVAILABLE = "Roblox could not restore your avatar right now.",
 	TRANSFER_PROMPT_FAILED = "Roblox could not open the Plus transfer prompt.",
 	TRANSFER_ALREADY_PENDING = "Finish the current creator transfer before starting another.",
 	SUBSCRIPTION_NOT_ALLOWED = "Roblox Plus subscriptions are unavailable for this account.",
@@ -136,9 +163,13 @@ function App.new()
 		draftPrompt = "",
 		selectedItemId = nil :: string?,
 		fitDrafts = {} :: { [string]: { [string]: any } },
+		pageConnections = {} :: { RBXScriptConnection },
 		marketplaceItems = nil :: { any }?,
 		catalogResults = nil :: { any }?,
 		catalogSearching = false,
+		catalogAccess = nil :: boolean?,
+		catalogAccessPrompting = false,
+		catalogError = nil :: string?,
 		catalogType = "Hat",
 		catalogQuery = "",
 		usePriority = false,
@@ -149,6 +180,34 @@ function App.new()
 		activeViewport = nil :: any,
 	}, App)
 	self:_BuildChrome()
+	AvatarEditorService.PromptAllowInventoryReadAccessCompleted:Connect(function(result)
+		self.catalogAccessPrompting = false
+		self.catalogAccess = result == Enum.AvatarPromptResult.Success
+		if self.catalogAccess then
+			self.catalogError = nil
+			self.catalogResults = nil
+			self:_SearchCatalog(self.catalogQuery)
+		else
+			self.catalogError = "Catalog access was not approved. You can enable it whenever you are ready."
+			if self.activePage == "Avatar Lab" then
+				self:_RenderActivePage()
+			end
+		end
+	end)
+	ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt, triggeringPlayer: Player?)
+		if triggeringPlayer and triggeringPlayer ~= player then
+			return
+		end
+		local page = prompt:GetAttribute("ForgePage")
+		if type(page) == "string" then
+			self:_SetStudioOpen(true)
+			if self.state then
+				self:_OpenPage(page)
+			else
+				self.activePage = page
+			end
+		end
+	end)
 	player:GetPropertyChangedSignal("HasRobloxSubscription"):Connect(function()
 		if self.state then
 			self:_RefreshBootstrap()
@@ -173,47 +232,16 @@ function App:_BuildChrome()
 		Name = "Backdrop",
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		Parent = gui,
 	})
-	Factory.Gradient(backdrop, {
-		Color3.fromRGB(8, 11, 24),
-		Color3.fromRGB(20, 14, 45),
-		Color3.fromRGB(7, 26, 42),
-	}, 28)
-	for index, data in
-		{
-			{ UDim2.fromScale(0.08, 0.12), UDim2.fromOffset(360, 360), Colors.Violet },
-			{ UDim2.fromScale(0.82, 0.62), UDim2.fromOffset(420, 420), Colors.Cyan },
-			{ UDim2.fromScale(0.58, -0.08), UDim2.fromOffset(250, 250), Colors.Rose },
-		}
-	do
-		local glow = Factory.New("Frame", {
-			Name = "AmbientGlow" .. tostring(index),
-			Position = data[1],
-			Size = data[2],
-			BackgroundColor3 = data[3],
-			BackgroundTransparency = 0.88,
-			BorderSizePixel = 0,
-			Parent = backdrop,
-		})
-		Factory.Corner(glow, 999)
-		Factory.New("UIGradient", {
-			Color = ColorSequence.new(data[3], Colors.Ink),
-			Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 0.2),
-				NumberSequenceKeypoint.new(1, 1),
-			}),
-			Rotation = 35,
-			Parent = glow,
-		})
-	end
 
 	local shell = Factory.New("Frame", {
 		Name = "Shell",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromScale(0.965, 0.94),
+		Size = UDim2.fromScale(0.9, 0.88),
 		BackgroundColor3 = Color3.fromRGB(13, 17, 34),
 		BackgroundTransparency = 0.03,
 		BorderSizePixel = 0,
@@ -223,11 +251,27 @@ function App:_BuildChrome()
 	Factory.Corner(shell, 22)
 	Factory.Stroke(shell, Color3.fromRGB(101, 113, 170), 0.35, 1.2)
 	Factory.New("UISizeConstraint", {
-		MaxSize = Vector2.new(1540, 920),
-		MinSize = Vector2.new(340, 480),
+		MaxSize = Vector2.new(1440, 860),
+		MinSize = Vector2.new(330, 450),
 		Parent = shell,
 	})
 	self.shell = shell
+
+	local launcher = Factory.Button(
+		gui,
+		"✦  Open Forge Studio",
+		UDim2.fromOffset(220, 48),
+		UDim2.new(0, 18, 1, -66),
+		"primary"
+	)
+	launcher.Name = "StudioLauncher"
+	launcher.Visible = false
+	launcher.ZIndex = 30
+	self:_BindButton(launcher)
+	launcher.Activated:Connect(function()
+		self:_SetStudioOpen(true)
+	end)
+	self.launcher = launcher
 
 	local topbar = Factory.New("Frame", {
 		Name = "Topbar",
@@ -272,7 +316,7 @@ function App:_BuildChrome()
 	local statusArea = Factory.New("Frame", {
 		Name = "StatusArea",
 		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -18, 0.5, 0),
+		Position = UDim2.new(1, -68, 0.5, 0),
 		Size = UDim2.fromOffset(430, 48),
 		BackgroundTransparency = 1,
 		Parent = topbar,
@@ -286,11 +330,19 @@ function App:_BuildChrome()
 		Parent = statusArea,
 	})
 	self.statusArea = statusArea
+	local closeStudio = Factory.Button(topbar, "×", UDim2.fromOffset(40, 40), UDim2.new(1, -54, 0.5, -20), nil)
+	closeStudio.Name = "CloseStudio"
+	closeStudio.TextSize = 21
+	closeStudio.ZIndex = 4
+	self:_BindButton(closeStudio)
+	closeStudio.Activated:Connect(function()
+		self:_SetStudioOpen(false)
+	end)
 
 	local nav = Factory.New("Frame", {
 		Name = "Navigation",
 		Position = UDim2.fromOffset(0, 78),
-		Size = UDim2.new(0, 188, 1, -78),
+		Size = UDim2.new(0.145, 0, 1, -78),
 		BackgroundColor3 = Color3.fromRGB(15, 19, 38),
 		BackgroundTransparency = 0.2,
 		BorderSizePixel = 0,
@@ -376,8 +428,8 @@ function App:_BuildChrome()
 
 	local content = Factory.New("Frame", {
 		Name = "Content",
-		Position = UDim2.fromOffset(188, 78),
-		Size = UDim2.new(1, -188, 1, -78),
+		Position = UDim2.new(0.145, 0, 0, 78),
+		Size = UDim2.new(0.855, 0, 1, -78),
 		BackgroundTransparency = 1,
 		ClipsDescendants = true,
 		Parent = shell,
@@ -447,17 +499,31 @@ function App:_BuildChrome()
 	self:_HighlightNavigation()
 end
 
+function App:_SetStudioOpen(open: boolean)
+	local changed = self.shell.Visible ~= open
+	self.shell.Visible = open
+	self.launcher.Visible = not open
+	if changed and open then
+		self.sounds:Play("PanelOpen")
+	elseif changed then
+		self.sounds:Play("PanelClose")
+	end
+end
+
 function App:_ApplyResponsiveLayout()
 	local camera = Workspace.CurrentCamera
 	local width = if camera then camera.ViewportSize.X else 1200
 	local height = if camera then camera.ViewportSize.Y else 800
 	local compact = width < 760
-	local layoutChanged = self.compact ~= nil and self.compact ~= compact
+	local gridColumns = if compact then 1 elseif width < 1050 then 2 elseif width < 1420 then 3 else 4
+	local layoutChanged = self.compact ~= nil
+		and (self.compact ~= compact or (self.gridColumns ~= nil and self.gridColumns ~= gridColumns))
 	self.compact = compact
-	local navWidth = if compact then 72 else 188
-	self.nav.Size = UDim2.new(0, navWidth, 1, -78)
-	self.content.Position = UDim2.fromOffset(navWidth, 78)
-	self.content.Size = UDim2.new(1, -navWidth, 1, -78)
+	self.gridColumns = gridColumns
+	local navScale = if compact then 0.16 else 0.145
+	self.nav.Size = UDim2.new(navScale, 0, 1, -78)
+	self.content.Position = UDim2.new(navScale, 0, 0, 78)
+	self.content.Size = UDim2.new(1 - navScale, 0, 1, -78)
 	self.navStack.Position = UDim2.fromOffset(if compact then 8 else 12, 18)
 	self.navStack.Size = UDim2.new(1, if compact then -16 else -24, 0, 290)
 	for page, button in self.navButtons do
@@ -474,7 +540,7 @@ function App:_ApplyResponsiveLayout()
 	if tip then
 		tip.Visible = not compact and height >= 620
 	end
-	self.statusArea.Visible = width >= 670
+	self.statusArea.Visible = width >= 1120
 	if layoutChanged and self.state then
 		task.defer(function()
 			self:_RenderActivePage()
@@ -730,7 +796,12 @@ end
 
 function App:_RenderActivePage()
 	self.pageVersion += 1
+	for _, connection in self.pageConnections do
+		connection:Disconnect()
+	end
+	table.clear(self.pageConnections)
 	if self.activeViewport then
+		self.activeViewport:Destroy()
 		self.activeViewport = nil
 	end
 	clear(self.content)
@@ -749,15 +820,17 @@ function App:_RenderActivePage()
 end
 
 function App:_PageHeader(title: string, subtitle: string)
-	Factory.Label(self.content, title, UDim2.new(1, -52, 0, 42), {
-		Position = UDim2.fromOffset(26, 18),
+	Factory.Label(self.content, title, UDim2.new(0.95, 0, 0, 42), {
+		Position = UDim2.new(0.025, 0, 0, 18),
 		Font = Theme.Fonts.Black,
 		TextSize = 28,
 	})
-	Factory.Label(self.content, subtitle, UDim2.new(1, -52, 0, 28), {
-		Position = UDim2.fromOffset(27, 57),
+	Factory.Label(self.content, subtitle, UDim2.new(0.95, 0, 0, 32), {
+		Position = UDim2.new(0.025, 0, 0, 57),
 		Color = Colors.TextMuted,
 		TextSize = 13,
+		Wrapped = true,
+		AlignY = Enum.TextYAlignment.Top,
 	})
 end
 
@@ -794,8 +867,8 @@ function App:_RenderCreate()
 	)
 	local page = Factory.New("ScrollingFrame", {
 		Name = "CreateScroll",
-		Position = UDim2.fromOffset(22, 96),
-		Size = UDim2.new(1, -44, 1, -112),
+		Position = UDim2.new(0.02, 0, 0, 96),
+		Size = UDim2.new(0.96, 0, 1, -112),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 4,
@@ -804,6 +877,7 @@ function App:_RenderCreate()
 		CanvasSize = UDim2.new(),
 		Parent = self.content,
 	})
+	Factory.ScalePadding(page, 0.006, 0.006)
 	local stack = Factory.New("Frame", {
 		Size = UDim2.new(1, -8, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
@@ -864,7 +938,7 @@ function App:_RenderCreate()
 			stroke.Thickness = if selected then 2 else 1
 		end
 		Factory.Pill(card, method.kicker, method.color, 104).Position = UDim2.fromOffset(16, 14)
-		Factory.Label(card, method.title, UDim2.new(1, -118, 0, 31), {
+		Factory.Label(card, method.title, UDim2.new(1, -150, 0, 31), {
 			Position = UDim2.fromOffset(16, 46),
 			Font = Theme.Fonts.Black,
 			TextSize = if self.compact then 20 else 18,
@@ -912,7 +986,7 @@ function App:_RenderCreate()
 		Factory.Label(
 			unlock,
 			string.format(
-				"Upload an Image or Decal to Roblox Creator Hub, wait for Roblox moderation, then paste its asset ID here. Forge performs another visual safety check before Meshy receives it. The R$ %d conversion is still charged only after you approve the image.",
+				"Upload an Image or Decal to Roblox Creator Hub, wait for Roblox moderation, then paste its asset ID here. Forge verifies its type and ownership without spending OpenAI vision credits. The R$ %d conversion is still charged only after you approve the image.",
 				self.state.prices.ImageConversion
 			),
 			if self.compact then UDim2.new(1, -32, 0, 92) else UDim2.new(1, -290, 0, 84),
@@ -1016,7 +1090,7 @@ function App:_RenderCreate()
 			cursorY += 45
 			Factory.Label(
 				promptCard,
-				"Upload in Creator Hub first and wait for approval · Player- or creator-group-owned assets only · Forge rechecks every image",
+				"Upload in Creator Hub first and wait for approval · Player- or creator-group-owned assets only · Roblox-approved images are not billed for another vision check",
 				UDim2.new(1, -32, 0, 30),
 				{
 					Position = UDim2.fromOffset(16, cursorY),
@@ -1132,7 +1206,7 @@ function App:_RenderCreate()
 		Factory.Label(
 			promptCard,
 			if isUpload
-				then "Roblox asset moderation + provider vision moderation · no conversion charge until approval"
+				then "Roblox asset moderation + ownership verification · no duplicate OpenAI image check"
 				else "Roblox TextService + provider moderation · 3,600 triangle target · 2K texture",
 			if self.compact then UDim2.new(1, -32, 0, 34) else UDim2.new(1, -462, 0, 42),
 			{
@@ -1455,7 +1529,7 @@ function App:_RenderStudio()
 	self:_PageHeader("My Studio", "Fit, equip, share, list, or publish every original and personal copy you own.")
 	local profile = self.state.profile
 	if #profile.itemOrder == 0 then
-		local empty = Factory.Card(self.content, UDim2.new(1, -52, 0, 260), UDim2.fromOffset(26, 112))
+		local empty = Factory.Card(self.content, UDim2.new(0.95, 0, 0, 260), UDim2.new(0.025, 0, 0, 112))
 		Factory.Label(empty, "◇", UDim2.new(1, 0, 0, 70), {
 			Position = UDim2.fromOffset(0, 34),
 			AlignX = Enum.TextXAlignment.Center,
@@ -1488,8 +1562,8 @@ function App:_RenderStudio()
 	local selected = profile.items[self.selectedItemId]
 
 	local collection = if self.compact
-		then Factory.Card(self.content, UDim2.new(1, -48, 0, 164), UDim2.fromOffset(24, 100), "Collection")
-		else Factory.Card(self.content, UDim2.new(0.42, -31, 1, -118), UDim2.fromOffset(24, 100), "Collection")
+		then Factory.Card(self.content, UDim2.new(0.95, 0, 0, 164), UDim2.new(0.025, 0, 0, 100), "Collection")
+		else Factory.Card(self.content, UDim2.new(0.39, 0, 1, -118), UDim2.new(0.02, 0, 0, 100), "Collection")
 	Factory.Label(collection, string.format("COLLECTION · %d", #profile.itemOrder), UDim2.new(1, -28, 0, 30), {
 		Position = UDim2.fromOffset(14, 12),
 		Font = Theme.Fonts.Bold,
@@ -1507,6 +1581,7 @@ function App:_RenderStudio()
 		ScrollBarImageColor3 = Colors.Violet,
 		Parent = collection,
 	})
+	Factory.ScalePadding(itemScroll, 0.008, 0.008)
 	local itemStack = Factory.New("Frame", {
 		Size = UDim2.new(1, -6, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
@@ -1579,8 +1654,8 @@ function App:_RenderStudio()
 	end
 
 	local inspector = if self.compact
-		then Factory.Card(self.content, UDim2.new(1, -48, 1, -284), UDim2.fromOffset(24, 274), "Inspector")
-		else Factory.Card(self.content, UDim2.new(0.58, -31, 1, -118), UDim2.new(0.42, 7, 0, 100), "Inspector")
+		then Factory.Card(self.content, UDim2.new(0.95, 0, 1, -284), UDim2.new(0.025, 0, 0, 274), "Inspector")
+		else Factory.Card(self.content, UDim2.new(0.56, 0, 1, -118), UDim2.new(0.42, 0, 0, 100), "Inspector")
 	local inspectScroll = Factory.New("ScrollingFrame", {
 		Size = UDim2.new(1, -12, 1, -12),
 		Position = UDim2.fromOffset(6, 6),
@@ -1592,8 +1667,9 @@ function App:_RenderStudio()
 		ScrollBarImageColor3 = Colors.Cyan,
 		Parent = inspector,
 	})
+	Factory.ScalePadding(inspectScroll, 0.006, 0.006)
 	local body = Factory.New("Frame", {
-		Size = UDim2.new(1, -8, 0, 770),
+		Size = UDim2.new(1, -8, 0, 1080),
 		BackgroundTransparency = 1,
 		Parent = inspectScroll,
 	})
@@ -1623,16 +1699,27 @@ function App:_RenderStudio()
 		UDim2.fromOffset(132, 47)
 	local viewport = Factory.New("ViewportFrame", {
 		Position = UDim2.fromOffset(16, 84),
-		Size = UDim2.new(1, -32, 0, 252),
-		BackgroundColor3 = Color3.fromRGB(8, 12, 27),
+		Size = UDim2.new(1, -32, 0, 292),
+		BackgroundColor3 = Color3.fromRGB(28, 34, 58),
 		BorderSizePixel = 0,
 		Parent = body,
 	})
 	Factory.Corner(viewport, 14)
 	Factory.Stroke(viewport, Colors.Violet, 0.45)
-	Factory.Gradient(viewport, { Color3.fromRGB(17, 22, 48), Color3.fromRGB(34, 25, 57) }, 115)
+	Factory.Gradient(viewport, { Color3.fromRGB(42, 50, 82), Color3.fromRGB(49, 38, 73) }, 115)
 	local controller = ViewportController.new(viewport)
 	self.activeViewport = controller
+	local orbitHint = Factory.Pill(viewport, "DRAG TO ORBIT · WHEEL TO ZOOM", Colors.Cyan, 212)
+	orbitHint.Position = UDim2.fromOffset(12, 12)
+	orbitHint.ZIndex = 5
+	local resetCamera = Factory.Button(viewport, "↺", UDim2.fromOffset(38, 34), UDim2.new(1, -50, 0, 10), nil)
+	resetCamera.Name = "ResetCamera"
+	resetCamera.TextSize = 18
+	resetCamera.ZIndex = 5
+	self:_BindButton(resetCamera)
+	resetCamera.Activated:Connect(function()
+		controller:ResetCamera()
+	end)
 
 	if not self.fitDrafts[selected.id] then
 		self.fitDrafts[selected.id] = deepCopy(selected.fit)
@@ -1650,75 +1737,231 @@ function App:_RenderStudio()
 		end
 	end)
 
-	Factory.Label(body, "FIT CONTROLS", UDim2.new(1, -32, 0, 26), {
-		Position = UDim2.fromOffset(16, 350),
+	local controls = Factory.New("Frame", {
+		Position = UDim2.fromOffset(16, 392),
+		Size = UDim2.new(1, -32, 0, 414),
+		BackgroundColor3 = Color3.fromRGB(14, 19, 39),
+		BackgroundTransparency = 0.08,
+		BorderSizePixel = 0,
+		Parent = body,
+	})
+	Factory.Corner(controls, 13)
+	Factory.Stroke(controls, Colors.Line, 0.5)
+	Factory.Label(controls, "FIT CONTROLS", UDim2.new(0.5, -14, 0, 24), {
+		Position = UDim2.fromOffset(14, 10),
 		Font = Theme.Fonts.Bold,
 		TextSize = 12,
 		Color = Colors.Cyan,
 	})
-	local function vectorRow(title: string, field: string, y: number, minimum: number, maximum: number)
-		Factory.Label(body, title, UDim2.fromOffset(82, 38), {
-			Position = UDim2.fromOffset(16, y),
+	Factory.Label(controls, "Drag a dial or tap − / +", UDim2.new(0.5, -24, 0, 24), {
+		Position = UDim2.new(0.5, 8, 0, 10),
+		AlignX = Enum.TextXAlignment.Right,
+		Color = Colors.TextMuted,
+		TextSize = 10,
+	})
+
+	local function sliderRow(
+		field: string,
+		axis: string,
+		y: number,
+		minimum: number,
+		maximum: number,
+		step: number
+	)
+		Factory.Label(controls, string.upper(axis), UDim2.new(0.06, 0, 0, 28), {
+			Position = UDim2.new(0.015, 0, 0, y),
+			AlignX = Enum.TextXAlignment.Center,
 			Font = Theme.Fonts.Bold,
 			TextSize = 11,
+			Color = if axis == "x" then Colors.Rose elseif axis == "y" then Colors.Mint else Colors.Cyan,
+		})
+		local minus = Factory.Button(controls, "−", UDim2.new(0.075, -4, 0, 28), UDim2.new(0.08, 0, 0, y), nil)
+		Factory.New("UISizeConstraint", { MinSize = Vector2.new(26, 28), Parent = minus })
+		local track = Factory.New("TextButton", {
+			Position = UDim2.new(0.17, 0, 0, y + 4),
+			Size = UDim2.new(0.55, 0, 0, 20),
+			BackgroundColor3 = Color3.fromRGB(42, 49, 78),
+			BorderSizePixel = 0,
+			AutoButtonColor = false,
+			Text = "",
+			Parent = controls,
+		})
+		Factory.Corner(track, 99)
+		local fill = Factory.New("Frame", {
+			Size = UDim2.fromScale(0, 1),
+			BackgroundColor3 = Colors.Violet,
+			BorderSizePixel = 0,
+			Parent = track,
+		})
+		Factory.Corner(fill, 99)
+		Factory.Gradient(fill, { Colors.Violet, Colors.Cyan }, 0)
+		local knob = Factory.New("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0, 0.5),
+			Size = UDim2.fromOffset(16, 16),
+			BackgroundColor3 = Color3.fromRGB(248, 250, 255),
+			BorderSizePixel = 0,
+			Parent = track,
+		})
+		Factory.Corner(knob, 99)
+		Factory.Stroke(knob, Colors.Cyan, 0.15)
+		local plus = Factory.Button(controls, "+", UDim2.new(0.075, -4, 0, 28), UDim2.new(0.735, 0, 0, y), nil)
+		Factory.New("UISizeConstraint", { MinSize = Vector2.new(26, 28), Parent = plus })
+		local valueLabel = Factory.Label(controls, "", UDim2.new(0.17, -10, 0, 28), {
+			Position = UDim2.new(0.82, 0, 0, y),
+			AlignX = Enum.TextXAlignment.Right,
+			Font = Theme.Fonts.Bold,
+			TextSize = 11,
+			Color = Colors.Text,
+		})
+
+		local function refresh()
+			local value = fit[field][axis]
+			local alpha = math.clamp((value - minimum) / (maximum - minimum), 0, 1)
+			fill.Size = UDim2.fromScale(alpha, 1)
+			knob.Position = UDim2.fromScale(alpha, 0.5)
+			if field == "rotation" then
+				valueLabel.Text = string.format("%d°", math.floor(value + 0.5))
+			elseif field == "scale" then
+				valueLabel.Text = string.format("%.2f×", value)
+			else
+				valueLabel.Text = string.format("%.2f", value)
+			end
+		end
+		local function setValue(rawValue: number)
+			local steps = math.floor(((rawValue - minimum) / step) + 0.5)
+			local value = math.clamp(minimum + steps * step, minimum, maximum)
+			if math.abs(value) < step * 0.25 then
+				value = 0
+			end
+			fit[field][axis] = value
+			refresh()
+			controller:ApplyFit(fit)
+		end
+		local function setFromPointer(pointerX: number)
+			if track.AbsoluteSize.X <= 0 then
+				return
+			end
+			local alpha = math.clamp((pointerX - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+			setValue(minimum + (maximum - minimum) * alpha)
+		end
+
+		local dragging = false
+		local dragTouch = nil :: InputObject?
+		track.InputBegan:Connect(function(input: InputObject)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				dragTouch = if input.UserInputType == Enum.UserInputType.Touch then input else nil
+				setFromPointer(input.Position.X)
+			end
+		end)
+		table.insert(self.pageConnections, UserInputService.InputChanged:Connect(function(input: InputObject)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input == dragTouch) then
+				setFromPointer(input.Position.X)
+			end
+		end))
+		table.insert(self.pageConnections, UserInputService.InputEnded:Connect(function(input: InputObject)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input == dragTouch then
+				dragging = false
+				dragTouch = nil
+			end
+		end))
+		minus.Activated:Connect(function()
+			setValue(fit[field][axis] - step)
+		end)
+		plus.Activated:Connect(function()
+			setValue(fit[field][axis] + step)
+		end)
+		self:_BindButton(minus)
+		self:_BindButton(plus)
+		refresh()
+	end
+
+	local dialY = 64
+	for _, group in {
+		{ title = "POSITION", field = "position", minimum = -4, maximum = 4, step = 0.05 },
+		{ title = "ROTATION", field = "rotation", minimum = -180, maximum = 180, step = 5 },
+		{ title = "SCALE", field = "scale", minimum = 0.25, maximum = 3, step = 0.05 },
+	} do
+		Factory.Label(controls, group.title, UDim2.new(1, -28, 0, 20), {
+			Position = UDim2.fromOffset(14, dialY - 22),
+			Font = Theme.Fonts.Bold,
+			TextSize = 10,
 			Color = Colors.TextMuted,
 		})
-		for index, axis in { "x", "y", "z" } do
-			local box = self:_TextBox(
-				body,
-				string.upper(axis),
-				UDim2.new(0.21, -7, 0, 38),
-				UDim2.new(0.16 + (index - 1) * 0.22, 0, 0, y),
-				false
-			)
-			box.Text = string.format("%.2f", fit[field][axis])
-			box.TextXAlignment = Enum.TextXAlignment.Center
-			box.FocusLost:Connect(function()
-				local value = tonumber(box.Text)
-				if value then
-					fit[field][axis] = math.clamp(value, minimum, maximum)
-				end
-				box.Text = string.format("%.2f", fit[field][axis])
-				controller:ApplyFit(fit)
-			end)
+		for _, axis in { "x", "y", "z" } do
+			sliderRow(group.field, axis, dialY, group.minimum, group.maximum, group.step)
+			dialY += 30
 		end
+		dialY += 23
 	end
-	vectorRow("POSITION", "position", 382, -4, 4)
-	vectorRow("ROTATION", "rotation", 428, -180, 180)
-	vectorRow("SCALE", "scale", 474, 0.25, 3)
 
-	local save = Factory.Button(body, "Save fit", UDim2.new(0.31, -6, 0, 42), UDim2.fromOffset(16, 530), "primary")
-	local equip = Factory.Button(body, "Equip in game", UDim2.new(0.34, -6, 0, 42), UDim2.new(0.32, 6, 0, 530), "mint")
+	local save = Factory.Button(body, "Save fit", UDim2.new(0.31, -6, 0, 42), UDim2.fromOffset(16, 824), "primary")
+	local equip = Factory.Button(body, "Equip in game", UDim2.new(0.34, -6, 0, 42), UDim2.new(0.32, 6, 0, 824), "mint")
 	local publish = Factory.Button(
 		body,
 		if selected.publishedAssetId then "Published ✓" else "Publish wearable",
 		UDim2.new(0.34, -22, 0, 42),
-		UDim2.new(0.66, 6, 0, 530),
+		UDim2.new(0.66, 6, 0, 824),
 		nil
 	)
 	for _, button in { save, equip, publish } do
 		self:_BindButton(button)
 	end
+	publish.Active = not selected.publishedAssetId
+	local function saveCurrentFit(): (boolean, any)
+		local success, data = self:_Invoke(Network.Actions.SaveFit, { itemId = selected.id, fit = fit })
+		if success then
+			self.state.profile.items[selected.id] = data.item
+			self.sounds:Play("Success")
+		end
+		return success, data
+	end
 	save.Activated:Connect(function()
+		save.Active = false
+		save.Text = "Saving…"
 		task.spawn(function()
-			local success, data = self:_Invoke(Network.Actions.SaveFit, { itemId = selected.id, fit = fit })
-			if success then
-				self.state.profile.items[selected.id] = data.item
-				self.sounds:Play("Success")
+			saveCurrentFit()
+			if save.Parent then
+				save.Active = true
+				save.Text = "Save fit"
 			end
 		end)
 	end)
 	equip.Activated:Connect(function()
+		equip.Active = false
+		equip.Text = "Applying fit…"
 		task.spawn(function()
-			self:_Invoke(Network.Actions.EquipItem, { itemId = selected.id })
+			local saved = saveCurrentFit()
+			if saved then
+				local success = self:_Invoke(Network.Actions.EquipItem, { itemId = selected.id })
+				if success then
+					self:_Toast("success", "Equipped on your in-game avatar.")
+				end
+			end
+			if equip.Parent then
+				equip.Active = true
+				equip.Text = "Equip in game"
+			end
 		end)
 	end)
 	publish.Activated:Connect(function()
+		publish.Active = false
+		publish.Text = "Preparing wearable…"
 		task.spawn(function()
-			local success, data = self:_Invoke(Network.Actions.PublishItem, { itemId = selected.id })
-			if success then
-				self.state.profile.items[selected.id].publishedAssetId = data.assetId
-				self:_RenderActivePage()
+			local saved = saveCurrentFit()
+			if saved then
+				local success, data = self:_Invoke(Network.Actions.PublishItem, { itemId = selected.id })
+				if success then
+					self.state.profile.items[selected.id].publishedAssetId = data.assetId
+					self:_Toast("success", "Your wearable was published to Roblox.")
+					self:_RenderActivePage()
+					return
+				end
+			end
+			if publish.Parent then
+				publish.Active = true
+				publish.Text = "Publish wearable"
 			end
 		end)
 	end)
@@ -1727,7 +1970,7 @@ function App:_RenderStudio()
 		"Publishing opens Roblox's creation prompt and can have a separate token price.",
 		UDim2.new(1, -32, 0, 16),
 		{
-			Position = UDim2.fromOffset(16, 576),
+			Position = UDim2.fromOffset(16, 874),
 			Color = Colors.TextMuted,
 			TextSize = 10,
 			Truncate = Enum.TextTruncate.AtEnd,
@@ -1735,7 +1978,7 @@ function App:_RenderStudio()
 	)
 
 	local social = Factory.New("Frame", {
-		Position = UDim2.fromOffset(16, 592),
+		Position = UDim2.fromOffset(16, 900),
 		Size = UDim2.new(1, -32, 0, 154),
 		BackgroundColor3 = Color3.fromRGB(12, 17, 35),
 		BackgroundTransparency = 0.12,
@@ -1864,7 +2107,7 @@ function App:_RenderDiscover()
 		"Try on every public design for free. Like, favorite, and support creators through verified Plus transfers."
 	)
 	if not self.state.policy.contentSharingAllowed then
-		local blocked = Factory.Card(self.content, UDim2.new(1, -52, 0, 230), UDim2.fromOffset(26, 112))
+		local blocked = Factory.Card(self.content, UDim2.new(0.95, 0, 0, 230), UDim2.new(0.025, 0, 0, 112))
 		Factory.Label(blocked, "Shared creations are unavailable", UDim2.new(1, -40, 0, 38), {
 			Position = UDim2.fromOffset(20, 38),
 			AlignX = Enum.TextXAlignment.Center,
@@ -1886,8 +2129,8 @@ function App:_RenderDiscover()
 		return
 	end
 	local tools = Factory.New("Frame", {
-		Position = UDim2.fromOffset(26, 96),
-		Size = UDim2.new(1, -52, 0, if self.compact then 98 else 48),
+		Position = UDim2.new(0.025, 0, 0, 96),
+		Size = UDim2.new(0.95, 0, 0, if self.compact then 98 else 48),
 		BackgroundTransparency = 1,
 		Parent = self.content,
 	})
@@ -1940,8 +2183,8 @@ function App:_RenderDiscover()
 		return
 	end
 	local grid = Factory.New("ScrollingFrame", {
-		Position = UDim2.fromOffset(24, if self.compact then 208 else 158),
-		Size = UDim2.new(1, -48, 1, if self.compact then -224 else -174),
+		Position = UDim2.new(0.02, 0, 0, if self.compact then 208 else 158),
+		Size = UDim2.new(0.96, 0, 1, if self.compact then -224 else -174),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -1950,14 +2193,15 @@ function App:_RenderDiscover()
 		ScrollBarImageColor3 = Colors.Violet,
 		Parent = self.content,
 	})
+	Factory.ScalePadding(grid, 0.004, 0.004)
 	Factory.New("UIGridLayout", {
-		CellSize = if self.compact then UDim2.new(1, -8, 0, 336) else UDim2.fromOffset(238, 336),
+		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 336),
 		CellPadding = UDim2.fromOffset(12, 12),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = grid,
 	})
 	for index, item in self.marketplaceItems do
-		local card = Factory.Card(grid, UDim2.fromOffset(238, 336), nil, "CommunityItem")
+		local card = Factory.Card(grid, UDim2.fromScale(1, 1), nil, "CommunityItem")
 		card.LayoutOrder = index
 		local image = Factory.New("ImageLabel", {
 			Size = UDim2.new(1, -20, 0, 176),
@@ -2007,15 +2251,35 @@ function App:_RenderDiscover()
 		self:_BindButton(buy)
 		buy.Active = item.isListed == true
 		try.Activated:Connect(function()
+			try.Active = false
+			try.Text = "Applying…"
 			task.spawn(function()
-				self:_Invoke(Network.Actions.TryOnCommunityItem, { itemId = item.id })
+				local success = self:_Invoke(Network.Actions.TryOnCommunityItem, { itemId = item.id })
+				if success then
+					self:_Toast("success", "Trying this creator's model on your avatar.")
+				end
+				if try.Parent then
+					try.Active = true
+					try.Text = "Try on"
+				end
 			end)
 		end)
 		buy.Activated:Connect(function()
+			buy.Active = false
+			buy.Text = "Checking listing…"
 			task.spawn(function()
 				local success, errorCode = self:_Invoke(Network.Actions.BeginMarketplacePurchase, { itemId = item.id })
-				if not success and errorCode == "PLUS_REQUIRED" then
+				if success then
+					self:_Toast("success", "Confirm the verified creator transfer in Roblox.")
+				elseif errorCode == "PLUS_REQUIRED" then
 					self:_ShowPlus()
+				elseif errorCode == "LISTING_UNAVAILABLE" then
+					self.marketplaceItems = nil
+					self:_RefreshMarketplace(search.Text)
+				end
+				if buy.Parent then
+					buy.Active = item.isListed == true
+					buy.Text = if item.isListed then "Buy copy" else "Not for sale"
 				end
 			end)
 		end)
@@ -2068,30 +2332,61 @@ function App:_RenderDiscover()
 	end
 end
 
+function App:_RequestCatalogAccess()
+	if self.catalogAccessPrompting then
+		return
+	end
+	self.catalogAccessPrompting = true
+	self.catalogError = nil
+	task.spawn(function()
+		local success, problem = pcall(function()
+			AvatarEditorService:PromptAllowInventoryReadAccess()
+		end)
+		if not success then
+			self.catalogAccessPrompting = false
+			self.catalogAccess = false
+			self.catalogError = "Roblox could not request catalog access. Try again or check the experience's Avatar Asset Read capability."
+			warn(string.format("[App] Inventory access prompt failed: %s", tostring(problem)))
+			self:_Toast("error", self.catalogError)
+			if self.activePage == "Avatar Lab" then
+				self:_RenderActivePage()
+			end
+		end
+	end)
+end
+
 function App:_SearchCatalog(query: string)
 	if self.catalogSearching then
 		return
 	end
-	self.catalogSearching = true
 	self.catalogQuery = query
+	if self.catalogAccess ~= true then
+		self:_RequestCatalogAccess()
+		return
+	end
+	self.catalogSearching = true
+	self.catalogError = nil
 	task.spawn(function()
 		local parameters = CatalogSearchParams.new()
 		parameters.SearchKeyword = string.sub(query, 1, 60)
 		parameters.AssetTypes = { CATALOG_TYPES[self.catalogType] }
 		parameters.IncludeOffSale = false
-		parameters.Limit = 24
-		local success, pages = pcall(function()
-			return AvatarEditorService:SearchCatalogAsync(parameters)
+		parameters.Limit = 30
+		local success, resultsOrProblem = pcall(function()
+			local pages = AvatarEditorService:SearchCatalogAsync(parameters)
+			return pages:GetCurrentPage()
 		end)
 		if success then
-			self.catalogResults = pages:GetCurrentPage()
+			self.catalogResults = resultsOrProblem
 			self:_Track({
 				event = "CatalogSearch",
 				fields = { assetType = self.catalogType, resultCount = #self.catalogResults },
 			})
 		else
 			self.catalogResults = {}
-			self:_Toast("error", "Roblox catalog search is temporarily unavailable.")
+			self.catalogError = "Roblox catalog search failed. Retry after checking inventory access and the experience's Asset Read capability."
+			warn(string.format("[App] Catalog search failed: %s", tostring(resultsOrProblem)))
+			self:_Toast("error", self.catalogError)
 		end
 		self.catalogSearching = false
 		if self.activePage == "Avatar Lab" then
@@ -2107,8 +2402,8 @@ function App:_RenderAvatarLab()
 	)
 	local controls = Factory.Card(
 		self.content,
-		UDim2.new(1, -52, 0, if self.compact then 150 else 104),
-		UDim2.fromOffset(26, 94),
+		UDim2.new(0.95, 0, 0, if self.compact then 150 else 104),
+		UDim2.new(0.025, 0, 0, 94),
 		"CatalogControls"
 	)
 	local search = self:_TextBox(
@@ -2157,7 +2452,15 @@ function App:_RenderAvatarLab()
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		if humanoid then
-			AvatarEditorService:PromptSaveAvatar(humanoid:GetAppliedDescription(), Enum.HumanoidRigType.R15)
+			local success, problem = pcall(function()
+				AvatarEditorService:PromptSaveAvatar(humanoid:GetAppliedDescription(), Enum.HumanoidRigType.R15)
+			end)
+			if not success then
+				warn(string.format("[App] Save avatar prompt failed: %s", tostring(problem)))
+				self:_Toast("error", "Roblox could not open the save-avatar prompt.")
+			end
+		else
+			self:_Toast("error", ERROR_MESSAGES.CHARACTER_UNAVAILABLE)
 		end
 	end)
 	reset.Activated:Connect(function()
@@ -2193,6 +2496,48 @@ function App:_RenderAvatarLab()
 			self:_RenderActivePage()
 		end)
 	end
+	if self.catalogAccess ~= true then
+		if self.catalogAccess == nil and not self.catalogAccessPrompting then
+			self:_RequestCatalogAccess()
+		end
+		local access = Factory.Card(
+			self.content,
+			UDim2.new(0.95, 0, 0, 190),
+			UDim2.new(0.025, 0, 0, if self.compact then 220 else 178),
+			"CatalogAccess"
+		)
+		Factory.Label(access, "Enable Roblox catalog access", UDim2.new(1, -32, 0, 34), {
+			Position = UDim2.fromOffset(16, 18),
+			Font = Theme.Fonts.Black,
+			TextSize = 20,
+		})
+		Factory.Label(
+			access,
+			self.catalogError
+				or "Roblox asks once per session before Forge can search your inventory and the avatar marketplace.",
+			UDim2.new(1, -32, 0, 62),
+			{
+				Position = UDim2.fromOffset(16, 56),
+				Color = Colors.TextMuted,
+				TextSize = 12,
+				Wrapped = true,
+				AlignY = Enum.TextYAlignment.Top,
+			}
+		)
+		local enable = Factory.Button(
+			access,
+			if self.catalogAccessPrompting then "Waiting for Roblox…" else "Enable catalog",
+			UDim2.new(0.42, 0, 0, 40),
+			UDim2.fromOffset(16, 132),
+			"primary"
+		)
+		enable.Active = not self.catalogAccessPrompting
+		self:_BindButton(enable)
+		enable.Activated:Connect(function()
+			self:_RequestCatalogAccess()
+		end)
+		return
+	end
 	if self.catalogResults == nil and not self.catalogSearching then
 		self:_SearchCatalog(self.catalogQuery)
 	end
@@ -2206,8 +2551,8 @@ function App:_RenderAvatarLab()
 		return
 	end
 	local grid = Factory.New("ScrollingFrame", {
-		Position = UDim2.fromOffset(24, if self.compact then 258 else 212),
-		Size = UDim2.new(1, -48, 1, if self.compact then -274 else -228),
+		Position = UDim2.new(0.02, 0, 0, if self.compact then 258 else 212),
+		Size = UDim2.new(0.96, 0, 1, if self.compact then -274 else -228),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -2216,8 +2561,9 @@ function App:_RenderAvatarLab()
 		ScrollBarImageColor3 = Colors.Cyan,
 		Parent = self.content,
 	})
+	Factory.ScalePadding(grid, 0.004, 0.004)
 	Factory.New("UIGridLayout", {
-		CellSize = if self.compact then UDim2.new(1, -8, 0, 292) else UDim2.fromOffset(216, 292),
+		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 292),
 		CellPadding = UDim2.fromOffset(12, 12),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = grid,
@@ -2225,7 +2571,7 @@ function App:_RenderAvatarLab()
 	for index, item in self.catalogResults or {} do
 		local assetId = tonumber(item.Id or item.AssetId) or 0
 		if assetId > 0 then
-			local card = Factory.Card(grid, UDim2.fromOffset(216, 292), nil, "CatalogItem")
+			local card = Factory.Card(grid, UDim2.fromScale(1, 1), nil, "CatalogItem")
 			card.LayoutOrder = index
 			local image = Factory.New("ImageLabel", {
 				Size = UDim2.new(1, -20, 0, 180),
@@ -2260,17 +2606,45 @@ function App:_RenderAvatarLab()
 			self:_BindButton(try)
 			self:_BindButton(buy)
 			try.Activated:Connect(function()
+				try.Active = false
+				try.Text = "Applying…"
 				task.spawn(function()
-					self:_Invoke(Network.Actions.TryCatalogAsset, {
+					local success = self:_Invoke(Network.Actions.TryCatalogAsset, {
 						assetId = assetId,
 						avatarAssetType = self.catalogType,
 					})
+					if success then
+						self:_Toast("success", "Catalog item applied. Keep browsing to build your look.")
+					end
+					if try.Parent then
+						try.Active = true
+						try.Text = "Try"
+					end
 				end)
 			end)
 			buy.Activated:Connect(function()
-				MarketplaceService:PromptPurchase(player, assetId)
+				local success, problem = pcall(function()
+					MarketplaceService:PromptPurchase(player, assetId)
+				end)
+				if not success then
+					warn(string.format("[App] Catalog purchase prompt failed: %s", tostring(problem)))
+					self:_Toast("error", "Roblox could not open the catalog purchase prompt.")
+				end
 			end)
 		end
+	end
+	if #(self.catalogResults or {}) == 0 then
+		Factory.Label(
+			grid,
+			self.catalogError or "No catalog items matched this search.",
+			UDim2.new(1, -8, 0, 100),
+			{
+				AlignX = Enum.TextXAlignment.Center,
+				Color = Colors.TextMuted,
+				Wrapped = true,
+				TextSize = 13,
+			}
+		)
 	end
 end
 

@@ -141,14 +141,12 @@ export class JobRunner {
     }
     let image = job.imageArtifact;
     if (!image) {
-      await this.#set(job.id, "MODERATING", "Downloading the Roblox-moderated reference", 12);
+      await this.#set(job.id, "MODERATING", "Verifying the Roblox-approved reference", 12);
       image = await this.#robloxReferences.downloadImage(job.sourceImageAssetId);
-      await this.#set(job.id, "MODERATING", "Running visual safety checks", 58);
-      await this.#images.assertImageSafe(image);
       await this.#repository.update(job.id, {
         imageArtifact: image,
         progress: 84,
-        stage: "Custom reference approved",
+        stage: "Roblox-approved reference ready",
       });
     }
 
@@ -196,7 +194,10 @@ export class JobRunner {
       throw new PipelineError("INVALID_SOURCE", "The approved reference image is unavailable", false);
     }
 
-    await this.#images.assertImageSafe(source.imageArtifact);
+    // IMAGE_READY is the moderation boundary. Generated references were checked
+    // after creation, while uploaded references have already passed Roblox asset
+    // moderation and the ownership/type checks in RobloxReferenceClient. Re-running
+    // vision moderation here would charge for the same image a second time.
     const guidedPrompt = composeMeshyPrompt(job.filteredPrompt, job.stylePreset, job.detailLevel);
 
     const current = await this.#requiredJob(job.id);

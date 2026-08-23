@@ -7,6 +7,8 @@ describe("loadConfig", () => {
     expect(config.limits.targetTriangles).toBe(3600);
     expect(config.limits.maxTriangles).toBe(3999);
     expect(config.limits.maxVertices).toBe(3999);
+    expect(config.openai.imageModel).toBe("gpt-image-2");
+    expect(config.openai.imageQuality).toBe("low");
     expect(config.mockProviders).toBe(true);
   });
 
