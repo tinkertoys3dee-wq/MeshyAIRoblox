@@ -23,6 +23,7 @@ Network.Actions = table.freeze({
 	SetVisibility = "SetVisibility",
 	SetListing = "SetListing",
 	GetMarketplace = "GetMarketplace",
+	GetLeaderboard = "GetLeaderboard",
 	ToggleLike = "ToggleLike",
 	ToggleFavorite = "ToggleFavorite",
 	BeginMarketplacePurchase = "BeginMarketplacePurchase",

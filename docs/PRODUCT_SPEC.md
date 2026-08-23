@@ -25,6 +25,7 @@ This file is the durable source of truth for future Forge UGC updates. A change 
 - A purchased copy is `PERSONAL_COPY`: the buyer may fit, equip, and publish it as their own wearable, but can never list, resell, transfer, or use it as a source listing inside Forge.
 - Listings are restricted to Roblox's current transfer range of 10–500 R$. The seller receives 90% and the experience receives 10% according to the current platform program.
 - Public discovery ranks recent engagement from views, likes, and favorites by default. Players may switch to newest, lowest listed price, or most-liked, and may search by item name or by creator display name. The owner profile remains authoritative for ownership and visibility; the atomically updated public index is authoritative for the current listing flag and price so buyers in another server do not see stale sale state.
+- A cross-server Top Creators leaderboard ranks players by total likes received across every published/listed item, backed by an `OrderedDataStore` (`Config.DataStores.LikesLeaderboard`) kept in step every time a like is toggled. It is a ranking signal, not a source of truth — item-level like counts on the owner's own profile remain authoritative.
 
 ## Safety, privacy, and authority
 

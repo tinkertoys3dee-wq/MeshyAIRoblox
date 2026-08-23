@@ -136,6 +136,11 @@ return table.freeze({
 		Player = "ForgeUGC_Player_v1",
 		ItemIndex = "ForgeUGC_ItemIndex_v1",
 		ReceiptClaims = "ForgeUGC_ReceiptClaims_v1",
+		LikesLeaderboard = "ForgeUGC_LikesLeaderboard_v1",
+	},
+
+	Leaderboard = {
+		TopCount = 10,
 	},
 
 	Studio = {

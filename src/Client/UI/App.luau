@@ -2879,6 +2879,11 @@ function App:_RenderDiscover()
 			self:_RenderActivePage()
 		end)
 	end
+	local leaderboardChip = Factory.Button(filters, "🏆 Top Creators", UDim2.fromOffset(130, 30), nil, "mint")
+	self:_BindButton(leaderboardChip)
+	leaderboardChip.Activated:Connect(function()
+		self:_ShowLeaderboard()
+	end)
 
 	if self.marketplaceItems == nil then
 		Factory.Label(self.content, "Loading trending creations…", UDim2.new(1, -52, 0, 60), {
@@ -3940,6 +3945,126 @@ function App:_ShowPlus()
 	closeButton.Activated:Connect(function()
 		self.sounds:Play("PanelClose")
 		overlay:Destroy()
+	end)
+end
+
+function App:_ShowLeaderboard()
+	local overlay = Factory.New("Frame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.2,
+		BorderSizePixel = 0,
+		ZIndex = 210,
+		Parent = self.gui,
+	})
+	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, 480), UDim2.fromScale(0.5, 0.5), "LeaderboardModal")
+	modal.AnchorPoint = Vector2.new(0.5, 0.5)
+	modal.ZIndex = 211
+	Factory.New("UISizeConstraint", {
+		MaxSize = Vector2.new(440, 480),
+		Parent = modal,
+	})
+	Factory.Pill(modal, "TOP CREATORS", Colors.Gold, 130).Position = UDim2.fromOffset(16, 16)
+	Factory.Label(
+		modal,
+		"Ranked by likes received across every published and listed creation.",
+		UDim2.new(1, -100, 0, 34),
+		{
+			Position = UDim2.fromOffset(16, 46),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Wrapped = true,
+			ZIndex = 212,
+		}
+	)
+	local closeButton = Factory.Button(modal, "×", UDim2.fromOffset(34, 34), UDim2.new(1, -50, 0, 14), nil)
+	closeButton.ZIndex = 213
+	self:_BindButton(closeButton)
+	closeButton.Activated:Connect(function()
+		self.sounds:Play("PanelClose")
+		overlay:Destroy()
+	end)
+	local list = Factory.New("ScrollingFrame", {
+		Position = UDim2.fromOffset(12, 88),
+		Size = UDim2.new(1, -24, 1, -100),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 3,
+		ScrollBarImageColor3 = Colors.Gold,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		ZIndex = 212,
+		Parent = modal,
+	})
+	local listStack = Factory.New("Frame", {
+		Size = UDim2.new(1, -6, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		ZIndex = 212,
+		Parent = list,
+	})
+	Factory.List(listStack, Enum.FillDirection.Vertical, 8)
+	Factory.Label(listStack, "Loading leaderboard…", UDim2.new(1, 0, 0, 40), {
+		AlignX = Enum.TextXAlignment.Center,
+		Color = Colors.TextMuted,
+		TextSize = 12,
+		ZIndex = 212,
+	})
+	task.spawn(function()
+		local success, result = self:_Invoke(Network.Actions.GetLeaderboard, {})
+		if not overlay.Parent then
+			return
+		end
+		clear(listStack)
+		local creators = if success and type(result) == "table" then result.creators or {} else {}
+		if #creators == 0 then
+			Factory.Label(listStack, "No liked creations yet — be the first!", UDim2.new(1, 0, 0, 40), {
+				AlignX = Enum.TextXAlignment.Center,
+				Color = Colors.TextMuted,
+				TextSize = 12,
+				ZIndex = 212,
+			})
+			return
+		end
+		local medals = { "🥇", "🥈", "🥉" }
+		for rank, creator in creators do
+			local row = Factory.New("Frame", {
+				Size = UDim2.new(1, 0, 0, 46),
+				BackgroundColor3 = Colors.Ink,
+				BorderSizePixel = 0,
+				LayoutOrder = rank,
+				ZIndex = 212,
+				Parent = listStack,
+			})
+			Factory.Corner(row, 10)
+			Factory.Label(row, medals[rank] or string.format("#%d", rank), UDim2.fromOffset(40, 46), {
+				Font = Theme.Fonts.Black,
+				TextSize = 16,
+				AlignX = Enum.TextXAlignment.Center,
+				ZIndex = 213,
+			})
+			Factory.Label(row, string.format("@%s", tostring(creator.name)), UDim2.new(1, -140, 0, 46), {
+				Position = UDim2.fromOffset(48, 0),
+				Font = Theme.Fonts.Bold,
+				TextSize = 13,
+				Truncate = Enum.TextTruncate.AtEnd,
+				ZIndex = 213,
+			})
+			Factory.Label(
+				row,
+				string.format("♥ %s", formatNumber(tonumber(creator.likes) or 0)),
+				UDim2.fromOffset(80, 46),
+				{
+					AnchorPoint = Vector2.new(1, 0),
+					Position = UDim2.new(1, -12, 0, 0),
+					AlignX = Enum.TextXAlignment.Right,
+					Color = Colors.Rose,
+					Font = Theme.Fonts.Bold,
+					TextSize = 13,
+					ZIndex = 213,
+				}
+			)
+		end
 	end)
 end
 

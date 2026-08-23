@@ -46,6 +46,7 @@ local AnalyticsService = require(script.Parent.Services.AnalyticsService)
 local RetentionService = require(script.Parent.Services.RetentionService)
 local AdRewardService = require(script.Parent.Services.AdRewardService)
 local AchievementService = require(script.Parent.Services.AchievementService)
+local LeaderboardService = require(script.Parent.Services.LeaderboardService)
 
 local function push(player: Player, eventName: string, payload: any)
 	if player.Parent == Players then
@@ -63,7 +64,8 @@ local commerce = CommerceService.new(profiles, playerStates, analytics, push)
 local adRewards = AdRewardService.new(profiles, playerStates, commerce, push, analytics, achievements)
 local items = ItemService.new(profiles, playerStates, push)
 local generations = GenerationService.new(profiles, playerStates, backend, commerce, push, analytics, achievements)
-local community = CommunityService.new(profiles, playerStates, push, analytics, achievements)
+local leaderboard = LeaderboardService.new()
+local community = CommunityService.new(profiles, playerStates, push, analytics, achievements, leaderboard)
 local catalog = CatalogService.new(profiles, playerStates, analytics)
 local remoteLimiter = RateLimiter.new(50, 10)
 local reactionLimiter = RateLimiter.new(8, 10)
@@ -269,6 +271,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	end,
 	[Network.Actions.GetMarketplace] = function(player, payload)
 		return community:GetMarketplace(player, payload)
+	end,
+	[Network.Actions.GetLeaderboard] = function(player)
+		return community:GetLeaderboard(player)
 	end,
 	[Network.Actions.ToggleLike] = function(player, payload)
 		if not reactionLimiter:consume(player.UserId) then

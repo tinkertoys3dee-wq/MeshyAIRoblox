@@ -50,6 +50,7 @@ local function defaultProfile(userId: number): { [string]: any }
 			itemsPublished = 0,
 			marketplacePurchases = 0,
 			catalogTryOns = 0,
+			likesReceived = 0,
 		},
 		daily = { lastDay = 0, streak = 0, best = 0 },
 		onboarding = { completed = false, step = 1 },

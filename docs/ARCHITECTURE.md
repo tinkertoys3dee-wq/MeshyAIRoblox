@@ -98,6 +98,8 @@ A player may save the fit currently being dialed in (position/rotation/scale) as
 
 Trying on a public item is free and does not require Plus or an active listing. Buying requires an active listing and a Roblox Plus transfer between 10 and 500 Robux. The buyer receives the copy only after the sender receipt is processed. A transfer waiting for a receipt never blocks a later prompt: only a prompt currently open in the same live server is exclusive. Recovery markers retain the validated listing snapshot by transfer request ID, so a late successful receipt remains grantable after the player rejoins or the short-lived profile intent is cleaned up.
 
+`LeaderboardService` maintains a separate `OrderedDataStore` ranking players by `profile.stats.likesReceived`, updated inline whenever `CommunityService:_ToggleReaction` changes a like count (fire-and-forget — a DataStore failure there must never block the like/unlike action itself). `GetTop` reads the top `Config.Leaderboard.TopCount` entries and resolves display names lazily; like `ItemIndex`, it is a ranking convenience, not a source of truth.
+
 `CommunityService:GetMarketplace` accepts an optional `searchBy` (`NAME` default, or `CREATOR` to match the resolved owner display name instead of the item name) and `sortBy` (`TRENDING` default engagement score, `NEWEST`, `PRICE_LOW`, `MOST_LIKED`). All four sort modes read the same public index scan already required for pagination, so no additional DataStore reads are introduced.
 
 ## Analytics boundary
