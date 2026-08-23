@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS forge_jobs (
 ALTER TABLE forge_jobs ADD COLUMN IF NOT EXISTS style_preset TEXT NOT NULL DEFAULT 'AUTO';
 ALTER TABLE forge_jobs ADD COLUMN IF NOT EXISTS detail_level TEXT NOT NULL DEFAULT 'BALANCED';
 ALTER TABLE forge_jobs ADD COLUMN IF NOT EXISTS source_image_asset_id BIGINT NULL;
+ALTER TABLE forge_jobs ADD COLUMN IF NOT EXISTS image_quality TEXT NULL;
 
 CREATE INDEX IF NOT EXISTS forge_jobs_player_created_idx
   ON forge_jobs (player_user_id, created_at DESC);

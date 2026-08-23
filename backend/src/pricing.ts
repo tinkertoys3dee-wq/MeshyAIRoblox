@@ -1,6 +1,17 @@
 export const STANDARD_DEVEX_USD_PER_ROBUX = 0.0038;
 export const STANDARD_PRODUCT_CREATOR_SHARE = 0.7;
 
+// Estimated OpenAI gpt-image-2 cost per isolated 1024x1024 reference at each
+// purchasable quality tier, scaled off the measured "low" baseline using
+// OpenAI's published low/medium/high cost ratios (~1x / ~3.8x / ~15x). These
+// are planning estimates, not billing data; replace with one week of
+// measured Railway/OpenAI spend per tier before treating them as final.
+export const IMAGE_QUALITY_PROVIDER_COST_USD: Readonly<Record<"low" | "medium" | "high", number>> = Object.freeze({
+  low: 0.006,
+  medium: 0.023,
+  high: 0.091,
+});
+
 export function requiredRobuxPrice(
   providerCostUsd: number,
   targetCostMarkup: number,

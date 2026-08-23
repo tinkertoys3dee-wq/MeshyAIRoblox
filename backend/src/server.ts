@@ -122,6 +122,7 @@ function sameRequest(existing: Job, incoming: CreateJobInput): boolean {
     existing.accessoryType === incoming.accessoryType &&
     existing.stylePreset === incoming.stylePreset &&
     existing.detailLevel === incoming.detailLevel &&
+    (existing.imageQuality ?? undefined) === (incoming.imageQuality ?? undefined) &&
     existing.sourceJobId === incoming.sourceJobId &&
     existing.sourceImageAssetId === incoming.sourceImageAssetId
   );

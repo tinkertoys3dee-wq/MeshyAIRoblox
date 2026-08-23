@@ -160,6 +160,37 @@ function ItemService:Equip(player: Player, itemId: string): (boolean, any)
 	return true, { equipped = true }
 end
 
+function ItemService:Unequip(player: Player, itemId: string): (boolean, any)
+	local profile = self.profiles:Get(player)
+	if not profile or not profile.items[itemId] then
+		return false, "ITEM_NOT_FOUND"
+	end
+	if not table.find(profile.equippedItemIds, itemId) then
+		return false, "ITEM_NOT_EQUIPPED"
+	end
+	local character = player.Character
+	if character then
+		for _, child in character:GetChildren() do
+			if child:IsA("Accessory") and child:GetAttribute("ForgeItemId") == itemId then
+				child:Destroy()
+			end
+		end
+	end
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(mutableProfile)
+		local index = table.find(mutableProfile.equippedItemIds, itemId)
+		if index then
+			table.remove(mutableProfile.equippedItemIds, index)
+		end
+	end)
+	if not mutateSuccess then
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	return true, { unequipped = true }
+end
+
 function ItemService:RestoreEquipped(player: Player)
 	local profile = self.profiles:Get(player)
 	local character = player.Character

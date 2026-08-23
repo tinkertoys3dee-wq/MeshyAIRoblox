@@ -36,6 +36,15 @@ return table.freeze({
 			{ Id = "BALANCED", Label = "Balanced" },
 			{ Id = "INTRICATE", Label = "Intricate" },
 		},
+		-- Purchasable reference-image quality tiers. Each maps 1:1 onto an
+		-- OpenAI gpt-image quality parameter (see backend/src/pricing.ts) and a
+		-- distinct developer product below, since Roblox developer products
+		-- cannot carry a dynamic price per purchase.
+		ImageQualityTiers = {
+			{ Id = "LOW", Label = "Low", ProductKey = "ImagePreviewLow", OpenAIQuality = "low" },
+			{ Id = "MEDIUM", Label = "Medium", ProductKey = "ImagePreviewMedium", OpenAIQuality = "medium" },
+			{ Id = "HIGH", Label = "High", ProductKey = "ImagePreviewHigh", OpenAIQuality = "high" },
+		},
 		TargetTriangles = 3600,
 		HardTriangleLimit = 3999,
 		HardVertexLimit = 3999,
@@ -54,7 +63,12 @@ return table.freeze({
 
 	Products = {
 		DirectGeneration = { Id = 3709322103, SuggestedPrice = 159 },
-		ImagePreview = { Id = 3709322158, SuggestedPrice = 29 },
+		-- Tiered reference-image pricing. Low keeps the original product ID and
+		-- price; Medium/High are new products awaiting Creator Hub IDs (0 = not
+		-- configured yet, same convention as every other placeholder below).
+		ImagePreviewLow = { Id = 3709322158, SuggestedPrice = 29 },
+		ImagePreviewMedium = { Id = 0, SuggestedPrice = 49 },
+		ImagePreviewHigh = { Id = 0, SuggestedPrice = 129 },
 		ImageConversion = { Id = 3709322228, SuggestedPrice = 159 },
 		PriorityPass = { Id = 3709322304, SuggestedPrice = 29 },
 	},

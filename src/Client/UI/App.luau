@@ -1,6 +1,7 @@
 --!strict
 
 local AvatarEditorService = game:GetService("AvatarEditorService")
+local GuiService = game:GetService("GuiService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -114,6 +115,8 @@ local ERROR_MESSAGES = {
 	SUBSCRIPTION_PROMPT_FAILED = "Roblox could not open the Plus subscription prompt.",
 	RATE_LIMITED = "Slow down for a moment, then try again.",
 	UGC_VALIDATION_FAILED = "Roblox validation did not accept this fit. Adjust it and try again.",
+	ITEM_NOT_EQUIPPED = "That item is not currently equipped.",
+	INVALID_IMAGE_QUALITY = "Choose one of the available reference image quality tiers.",
 }
 
 local CATALOG_TYPES = {
@@ -185,12 +188,16 @@ function App.new()
 		selectedAccessoryType = "Hat",
 		selectedStylePreset = "AUTO",
 		selectedDetailLevel = "BALANCED",
+		selectedImageQuality = "LOW",
 		customImageAssetId = "",
 		draftPrompt = "",
 		selectedItemId = nil :: string?,
 		fitDrafts = {} :: { [string]: { [string]: any } },
 		pageConnections = {} :: { RBXScriptConnection },
 		marketplaceItems = nil :: { any }?,
+		marketplaceQuery = "",
+		marketplaceSearchBy = "NAME",
+		marketplaceSortBy = "TRENDING",
 		catalogResults = nil :: { any }?,
 		catalogSearching = false,
 		catalogAccess = nil :: boolean?,
@@ -239,6 +246,23 @@ function App.new()
 			self:_RefreshBootstrap()
 		end
 	end)
+	-- Keyboard/gamepad accessibility: Tab, or a gamepad's Y button, hands
+	-- focus to the nav rail so the whole studio becomes reachable without a
+	-- mouse. Roblox's default GuiObject/SelectionOrder traversal takes over
+	-- from there once something is selected.
+	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed or not self.shell.Visible then
+			return
+		end
+		if input.KeyCode == Enum.KeyCode.Tab or input.KeyCode == Enum.KeyCode.ButtonY then
+			if not GuiService.SelectedObject or not GuiService.SelectedObject:IsDescendantOf(self.shell) then
+				local target = self.navButtons[self.activePage] or self.navButtons["Create"]
+				if target then
+					GuiService.SelectedObject = target
+				end
+			end
+		end
+	end)
 	self:_Bootstrap()
 	return self
 end
@@ -282,6 +306,13 @@ function App:_BuildChrome()
 		Parent = shell,
 	})
 	self.shell = shell
+	-- Accessibility: a single UIScale scales the entire studio (text, controls,
+	-- and touch targets together) from the Settings page, without every
+	-- literal TextSize/UDim needing its own scale-aware rewrite.
+	self.uiScaleInstance = Factory.New("UIScale", {
+		Scale = if self.state then tonumber(self.state.profile.settings.uiScale) or 1 else 1,
+		Parent = shell,
+	})
 
 	local launcher =
 		Factory.Button(gui, "✦  Open Forge Studio", UDim2.fromOffset(220, 48), UDim2.new(0, 18, 1, -66), "primary")
@@ -380,18 +411,19 @@ function App:_BuildChrome()
 	})
 	local navStack = Factory.New("Frame", {
 		Position = UDim2.fromOffset(12, 18),
-		Size = UDim2.new(1, -24, 0, 290),
+		Size = UDim2.new(1, -24, 0, 330),
 		BackgroundTransparency = 1,
 		Parent = nav,
 	})
 	Factory.List(navStack, Enum.FillDirection.Vertical, 9)
 	self.navStack = navStack
-	for index, page in { "Create", "My Studio", "Discover", "Avatar Lab" } do
-		local symbols = { "✦", "◈", "◎", "◇" }
+	for index, page in { "Create", "My Studio", "Discover", "Avatar Lab", "Settings" } do
+		local symbols = { "✦", "◈", "◎", "◇", "⚙" }
 		local button = Factory.Button(navStack, symbols[index] .. "   " .. page, UDim2.new(1, 0, 0, 48), nil, nil)
 		button.Name = page
 		button.LayoutOrder = index
 		button.TextXAlignment = Enum.TextXAlignment.Left
+		button.Selectable = true
 		Factory.Padding(button, 15, 0)
 		self.sounds:Bind(button)
 		button.Activated:Connect(function()
@@ -399,34 +431,6 @@ function App:_BuildChrome()
 		end)
 		self.navButtons[page] = button
 	end
-	local soundButton = Factory.Button(navStack, "♪   UI sound", UDim2.new(1, 0, 0, 42), nil, nil)
-	soundButton.Name = "SoundToggle"
-	soundButton.LayoutOrder = 5
-	soundButton.TextXAlignment = Enum.TextXAlignment.Left
-	Factory.Padding(soundButton, 15, 0)
-	self.sounds:Bind(soundButton)
-	soundButton.Activated:Connect(function()
-		if not self.state then
-			return
-		end
-		local enabled = self.state.profile.settings.soundsEnabled == false
-		self.sounds:SetEnabled(enabled)
-		self.state.profile.settings.soundsEnabled = enabled
-		self:_UpdateSoundButton()
-		task.spawn(function()
-			local success, data = self:_Invoke(Network.Actions.UpdateSettings, { soundsEnabled = enabled })
-			if success then
-				self.state.profile.settings = data.settings
-				self.sounds:SetEnabled(data.settings.soundsEnabled)
-				self:_UpdateSoundButton()
-			else
-				self.state.profile.settings.soundsEnabled = not enabled
-				self.sounds:SetEnabled(not enabled)
-				self:_UpdateSoundButton()
-			end
-		end)
-	end)
-	self.soundButton = soundButton
 	local tip = Factory.Card(nav, UDim2.new(1, -24, 0, 142), UDim2.new(0, 12, 1, -160), "GroupTip")
 	Factory.Label(tip, "GROUP BOOST", UDim2.new(1, -24, 0, 22), {
 		Position = UDim2.fromOffset(12, 12),
@@ -546,13 +550,14 @@ function App:_ApplyResponsiveLayout()
 	self.content.Position = UDim2.new(navScale, 0, 0, 78)
 	self.content.Size = UDim2.new(1 - navScale, 0, 1, -78)
 	self.navStack.Position = UDim2.fromOffset(if compact then 8 else 12, 18)
-	self.navStack.Size = UDim2.new(1, if compact then -16 else -24, 0, 290)
+	self.navStack.Size = UDim2.new(1, if compact then -16 else -24, 0, 330)
 	for page, button in self.navButtons do
 		local symbol = if page == "Create"
 			then "✦"
 			elseif page == "My Studio" then "◈"
 			elseif page == "Discover" then "◎"
-			else "◇"
+			elseif page == "Avatar Lab" then "◇"
+			else "⚙"
 		button.Text = if compact then symbol else symbol .. "   " .. page
 		button.TextXAlignment = if compact then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
 	end
@@ -570,26 +575,77 @@ function App:_ApplyResponsiveLayout()
 end
 
 function App:_UpdateSoundButton()
-	if not self.soundButton then
+	if not self.soundButton or not self.soundButton.Parent then
 		return
 	end
 	local enabled = not self.state or self.state.profile.settings.soundsEnabled ~= false
-	self.soundButton.Text = if self.compact
-		then (if enabled then "♪" else "×")
-		else (if enabled then "♪   UI sound on" else "×   UI sound off")
-	self.soundButton.TextXAlignment = if self.compact then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
+	self.soundButton.Text = if enabled then "♪   UI sound on" else "×   UI sound off"
 	self.soundButton.BackgroundColor3 = if enabled then Colors.PanelSoft else Color3.fromRGB(47, 31, 48)
+end
+
+-- Builds the sound toggle used on the Settings page. Extracted from the old
+-- persistent nav-rail button so it can be recreated each time that page
+-- renders, like every other page-scoped control.
+function App:_BuildSoundButton(parent: Instance, size: UDim2, position: UDim2): TextButton
+	local button = Factory.Button(parent, "", size, position, nil)
+	button.Name = "SoundToggle"
+	button.TextXAlignment = Enum.TextXAlignment.Left
+	Factory.Padding(button, 15, 0)
+	self:_BindButton(button)
+	self.soundButton = button
+	self:_UpdateSoundButton()
+	button.Activated:Connect(function()
+		if not self.state then
+			return
+		end
+		local enabled = self.state.profile.settings.soundsEnabled == false
+		self.sounds:SetEnabled(enabled)
+		self.state.profile.settings.soundsEnabled = enabled
+		self:_UpdateSoundButton()
+		task.spawn(function()
+			local success, data = self:_Invoke(Network.Actions.UpdateSettings, { soundsEnabled = enabled })
+			if success then
+				self.state.profile.settings = data.settings
+				self.sounds:SetEnabled(data.settings.soundsEnabled)
+			else
+				self.state.profile.settings.soundsEnabled = not enabled
+				self.sounds:SetEnabled(not enabled)
+			end
+			self:_UpdateSoundButton()
+		end)
+	end)
+	return button
+end
+
+-- Respects the reduce-motion accessibility setting by applying the target
+-- properties instantly instead of tweening them.
+function App:_Animate(instance: Instance, info: TweenInfo, properties: { [string]: any }): Tween?
+	if self.state and self.state.profile.settings.reduceMotion == true then
+		for property, value in properties do
+			(instance :: any)[property] = value
+		end
+		return nil
+	end
+	local tween = TweenService:Create(instance, info, properties)
+	tween:Play()
+	return tween
 end
 
 function App:_BindButton(button: GuiButton)
 	self.sounds:Bind(button)
+	button.Selectable = true
 	local original = button.BackgroundTransparency
 	button.MouseEnter:Connect(function()
-		TweenService:Create(button, TweenInfo.new(0.14), { BackgroundTransparency = math.min(0.18, original + 0.06) })
-			:Play()
+		self:_Animate(button, TweenInfo.new(0.14), { BackgroundTransparency = math.min(0.18, original + 0.06) })
 	end)
 	button.MouseLeave:Connect(function()
-		TweenService:Create(button, TweenInfo.new(0.14), { BackgroundTransparency = original }):Play()
+		self:_Animate(button, TweenInfo.new(0.14), { BackgroundTransparency = original })
+	end)
+	button.SelectionGained:Connect(function()
+		self:_Animate(button, TweenInfo.new(0.1), { BackgroundTransparency = math.min(0.18, original + 0.06) })
+	end)
+	button.SelectionLost:Connect(function()
+		self:_Animate(button, TweenInfo.new(0.1), { BackgroundTransparency = original })
 	end)
 end
 
@@ -681,6 +737,12 @@ function App:_Bootstrap()
 		end
 		self.state = data
 		self.sounds:SetEnabled(data.profile.settings.soundsEnabled ~= false)
+		if data.profile.settings.highContrast == true then
+			Theme.SetHighContrast(true)
+			self.gui:Destroy()
+			self:_BuildChrome()
+		end
+		self.uiScaleInstance.Scale = tonumber(data.profile.settings.uiScale) or 1
 		self:_UpdateSoundButton()
 		self.loading:Destroy()
 		self:_RenderStatus()
@@ -718,6 +780,26 @@ function App:_RefreshBootstrap()
 			self:_RefreshLocalizedPrices()
 		end
 	end)
+end
+
+-- Swaps the shared color palette and rebuilds the studio chrome so already
+-- rendered elements (which hold their color as a plain value, not a live
+-- binding) pick up the change too. Used by the Settings page toggle and,
+-- once, right after bootstrap if the player saved this preference before.
+function App:_SetHighContrast(enabled: boolean)
+	if Theme.IsHighContrast == enabled then
+		return
+	end
+	local wasOpen = self.shell.Visible
+	Theme.SetHighContrast(enabled)
+	self.gui:Destroy()
+	self:_BuildChrome()
+	self.loading:Destroy()
+	self.shell.Visible = wasOpen
+	self.launcher.Visible = not wasOpen
+	self:_UpdateSoundButton()
+	self:_RenderStatus()
+	self:_RenderActivePage()
 end
 
 function App:_ConnectPush()
@@ -848,8 +930,10 @@ function App:_RenderActivePage()
 		self:_RenderStudio()
 	elseif self.activePage == "Discover" then
 		self:_RenderDiscover()
-	else
+	elseif self.activePage == "Avatar Lab" then
 		self:_RenderAvatarLab()
+	else
+		self:_RenderSettings()
 	end
 end
 
@@ -941,8 +1025,8 @@ function App:_RenderCreate()
 				id = "IMAGE_PREVIEW",
 				title = "Art-Directed",
 				kicker = "MORE CONTROL",
-				body = "Text → reference image → 3D. Approve the look before spending on the model.",
-				price = self.state.prices.ImagePreview,
+				body = "Text → reference image → 3D. Choose a reference quality tier, then approve the look before spending on the model.",
+				priceText = string.format("FROM R$ %d", self.state.prices.ImagePreviewLow),
 				color = Colors.Rose,
 			},
 			{
@@ -1203,6 +1287,55 @@ function App:_RenderCreate()
 		cursorY += 46
 		step += 1
 
+		if self.selectedMethod == "IMAGE_PREVIEW" then
+			Factory.Label(promptCard, string.format("%d  CHOOSE REFERENCE QUALITY", step), UDim2.new(1, -32, 0, 22), {
+				Position = UDim2.fromOffset(16, cursorY),
+				Font = Theme.Fonts.Bold,
+				TextSize = 12,
+				Color = Colors.Gold,
+			})
+			cursorY += 27
+			local qualityRow = Factory.New("ScrollingFrame", {
+				Position = UDim2.fromOffset(16, cursorY),
+				Size = UDim2.new(1, -32, 0, 38),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				ScrollBarThickness = 0,
+				AutomaticCanvasSize = Enum.AutomaticSize.X,
+				CanvasSize = UDim2.new(),
+				ScrollingDirection = Enum.ScrollingDirection.X,
+				Parent = promptCard,
+			})
+			Factory.List(qualityRow, Enum.FillDirection.Horizontal, 8)
+			for _, tier in Config.Generation.ImageQualityTiers do
+				local tierSelected = self.selectedImageQuality == tier.Id
+				local chip = Factory.Button(
+					qualityRow,
+					string.format("%s · R$ %d", tier.Label, self.state.prices[tier.ProductKey] or 0),
+					UDim2.fromOffset(146, 34),
+					nil,
+					if tierSelected then "primary" else nil
+				)
+				if tierSelected then
+					chip.BackgroundColor3 = Colors.Gold
+				end
+				self:_BindButton(chip)
+				chip.Activated:Connect(function()
+					self.selectedImageQuality = tier.Id
+					self:_RenderActivePage()
+				end)
+			end
+			cursorY += 46
+			step += 1
+			Factory.Label(
+				promptCard,
+				"Higher tiers use a more detailed OpenAI render for a closer, cleaner reference before you approve the 3D build.",
+				UDim2.new(1, -32, 0, 18),
+				{ Position = UDim2.fromOffset(16, cursorY), Color = Colors.TextMuted, TextSize = 10 }
+			)
+			cursorY += 24
+		end
+
 		Factory.Label(promptCard, string.format("%d  CHOOSE A FIT REGION", step), UDim2.new(1, -32, 0, 22), {
 			Position = UDim2.fromOffset(16, cursorY),
 			Font = Theme.Fonts.Bold,
@@ -1251,9 +1384,17 @@ function App:_RenderCreate()
 			}
 		)
 
+		local selectedQualityTier = nil :: { Id: string, Label: string, ProductKey: string, OpenAIQuality: string }?
+		for _, tier in Config.Generation.ImageQualityTiers do
+			if tier.Id == self.selectedImageQuality then
+				selectedQualityTier = tier
+				break
+			end
+		end
 		local price = if self.selectedMethod == "TEXT_TO_3D"
 			then self.state.prices.DirectGeneration
-			else self.state.prices.ImagePreview
+			elseif selectedQualityTier then self.state.prices[selectedQualityTier.ProductKey]
+			else self.state.prices.ImagePreviewLow
 		local actionText = if self.selectedMethod == "TEXT_TO_3D"
 			then string.format("Forge 3D · R$ %d", price)
 			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · R$ %d", price)
@@ -1305,6 +1446,9 @@ function App:_RenderCreate()
 					detailLevel = self.selectedDetailLevel,
 					usePriority = self.usePriority,
 				}
+				if self.selectedMethod == "IMAGE_PREVIEW" then
+					request.imageQuality = self.selectedImageQuality
+				end
 				if imageAssetBox then
 					request.sourceImageAssetId = tonumber(imageAssetBox.Text)
 				end
@@ -1380,9 +1524,12 @@ function App:_RenderCreate()
 		Factory.Label(
 			reference,
 			string.format(
-				"%s style · %s detail\nApproving starts the textured 3D conversion. %s",
+				"%s style · %s detail%s\nApproving starts the textured 3D conversion. %s",
 				string.gsub(readyImage.stylePreset or "AUTO", "_", " "),
 				string.gsub(readyImage.detailLevel or "BALANCED", "_", " "),
+				if readyImage.imageQuality
+					then string.format(" · %s quality", string.lower(readyImage.imageQuality))
+					else "",
 				if readyImage.method == "IMAGE_UPLOAD"
 					then "You can submit another owned image at no extra charge."
 					else "A reroll creates a new paid reference."
@@ -1653,6 +1800,22 @@ function App:_RenderStudio()
 				Parent = row,
 			})
 			Factory.Corner(image, 9)
+			if table.find(profile.equippedItemIds or {}, itemId) then
+				local badge = Factory.New("TextLabel", {
+					Size = UDim2.fromOffset(20, 20),
+					AnchorPoint = Vector2.new(1, 0),
+					Position = UDim2.fromOffset(83, 3),
+					BackgroundColor3 = Colors.Mint,
+					BorderSizePixel = 0,
+					Text = "✓",
+					TextColor3 = Colors.Ink,
+					Font = Theme.Fonts.Black,
+					TextSize = 13,
+					Parent = row,
+				})
+				Factory.Corner(badge, 99)
+				Factory.Stroke(badge, Color3.fromRGB(14, 19, 38), 0, 2)
+			end
 			Factory.Label(row, item.name, UDim2.new(1, -168, 0, 27), {
 				Position = UDim2.fromOffset(86, 12),
 				Font = Theme.Fonts.Bold,
@@ -1954,8 +2117,15 @@ function App:_RenderStudio()
 		dialY += 23
 	end
 
+	local isEquipped = table.find(profile.equippedItemIds or {}, selected.id) ~= nil
 	local save = Factory.Button(body, "Save fit", UDim2.new(0.31, -6, 0, 42), UDim2.fromOffset(16, 824), "primary")
-	local equip = Factory.Button(body, "Equip in game", UDim2.new(0.34, -6, 0, 42), UDim2.new(0.32, 6, 0, 824), "mint")
+	local equip = Factory.Button(
+		body,
+		if isEquipped then "Unequip" else "Equip in game",
+		UDim2.new(0.34, -6, 0, 42),
+		UDim2.new(0.32, 6, 0, 824),
+		if isEquipped then "danger" else "mint"
+	)
 	local publish = Factory.Button(
 		body,
 		if selected.publishedAssetId then "Published ✓" else "Publish wearable",
@@ -1988,20 +2158,45 @@ function App:_RenderStudio()
 	end)
 	equip.Activated:Connect(function()
 		equip.Active = false
-		equip.Text = "Applying fit…"
-		task.spawn(function()
-			local saved = saveCurrentFit()
-			if saved then
-				local success = self:_Invoke(Network.Actions.EquipItem, { itemId = selected.id })
+		if isEquipped then
+			equip.Text = "Removing…"
+			task.spawn(function()
+				local success = self:_Invoke(Network.Actions.UnequipItem, { itemId = selected.id })
 				if success then
-					self:_Toast("success", "Equipped on your in-game avatar.")
+					local index = table.find(self.state.profile.equippedItemIds, selected.id)
+					if index then
+						table.remove(self.state.profile.equippedItemIds, index)
+					end
+					self:_Toast("success", "Unequipped.")
+					self:_RenderActivePage()
+					return
 				end
-			end
-			if equip.Parent then
-				equip.Active = true
-				equip.Text = "Equip in game"
-			end
-		end)
+				if equip.Parent then
+					equip.Active = true
+					equip.Text = "Unequip"
+				end
+			end)
+		else
+			equip.Text = "Applying fit…"
+			task.spawn(function()
+				local saved = saveCurrentFit()
+				if saved then
+					local success = self:_Invoke(Network.Actions.EquipItem, { itemId = selected.id })
+					if success then
+						if not table.find(self.state.profile.equippedItemIds, selected.id) then
+							table.insert(self.state.profile.equippedItemIds, selected.id)
+						end
+						self:_Toast("success", "Equipped on your in-game avatar.")
+						self:_RenderActivePage()
+						return
+					end
+				end
+				if equip.Parent then
+					equip.Active = true
+					equip.Text = "Equip in game"
+				end
+			end)
+		end
 	end)
 	publish.Activated:Connect(function()
 		publish.Active = false
@@ -2148,8 +2343,13 @@ function App:_RenderStudio()
 end
 
 function App:_RefreshMarketplace(query: string?)
+	self.marketplaceQuery = query or self.marketplaceQuery or ""
 	task.spawn(function()
-		local success, data = self:_Invoke(Network.Actions.GetMarketplace, { query = query or "" })
+		local success, data = self:_Invoke(Network.Actions.GetMarketplace, {
+			query = self.marketplaceQuery,
+			searchBy = self.marketplaceSearchBy,
+			sortBy = self.marketplaceSortBy,
+		})
 		if success then
 			self.marketplaceItems = data.items
 			if self.activePage == "Discover" then
@@ -2194,11 +2394,12 @@ function App:_RenderDiscover()
 	})
 	local search = self:_TextBox(
 		tools,
-		"Search public designs",
+		if self.marketplaceSearchBy == "CREATOR" then "Search by creator username" else "Search public designs",
 		if self.compact then UDim2.new(1, 0, 0, 42) else UDim2.new(1, -232, 0, 42),
 		UDim2.new(),
 		false
 	)
+	search.Text = self.marketplaceQuery
 	local refresh = Factory.Button(
 		tools,
 		"Search",
@@ -2230,19 +2431,69 @@ function App:_RenderDiscover()
 			end)
 		end
 	end)
+
+	local filters = Factory.New("ScrollingFrame", {
+		Position = UDim2.new(0.025, 0, 0, if self.compact then 200 else 150),
+		Size = UDim2.new(0.95, 0, 0, 34),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 0,
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(),
+		ScrollingDirection = Enum.ScrollingDirection.X,
+		Parent = self.content,
+	})
+	Factory.List(filters, Enum.FillDirection.Horizontal, 7)
+	for _, mode in { { Id = "NAME", Label = "By name" }, { Id = "CREATOR", Label = "By creator" } } do
+		local selected = self.marketplaceSearchBy == mode.Id
+		local chip =
+			Factory.Button(filters, mode.Label, UDim2.fromOffset(96, 30), nil, if selected then "primary" else nil)
+		self:_BindButton(chip)
+		chip.Activated:Connect(function()
+			self.marketplaceSearchBy = mode.Id
+			self:_RefreshMarketplace(search.Text)
+			self:_RenderActivePage()
+		end)
+	end
+	Factory.New("Frame", {
+		Size = UDim2.fromOffset(1, 22),
+		BackgroundColor3 = Colors.Line,
+		BackgroundTransparency = 0.4,
+		BorderSizePixel = 0,
+		Parent = filters,
+	})
+	for _, sort in
+		{
+			{ Id = "TRENDING", Label = "Trending" },
+			{ Id = "NEWEST", Label = "Newest" },
+			{ Id = "PRICE_LOW", Label = "Price ↑" },
+			{ Id = "MOST_LIKED", Label = "Most liked" },
+		}
+	do
+		local selected = self.marketplaceSortBy == sort.Id
+		local chip =
+			Factory.Button(filters, sort.Label, UDim2.fromOffset(94, 30), nil, if selected then "primary" else nil)
+		self:_BindButton(chip)
+		chip.Activated:Connect(function()
+			self.marketplaceSortBy = sort.Id
+			self:_RefreshMarketplace(search.Text)
+			self:_RenderActivePage()
+		end)
+	end
+
 	if self.marketplaceItems == nil then
 		Factory.Label(self.content, "Loading trending creations…", UDim2.new(1, -52, 0, 60), {
-			Position = UDim2.fromOffset(26, if self.compact then 230 else 180),
+			Position = UDim2.fromOffset(26, if self.compact then 280 else 230),
 			AlignX = Enum.TextXAlignment.Center,
 			Color = Colors.TextMuted,
 			Font = Theme.Fonts.Bold,
 		})
-		self:_RefreshMarketplace("")
+		self:_RefreshMarketplace(self.marketplaceQuery)
 		return
 	end
 	local grid = Factory.New("ScrollingFrame", {
-		Position = UDim2.new(0.02, 0, 0, if self.compact then 208 else 158),
-		Size = UDim2.new(0.96, 0, 1, if self.compact then -224 else -174),
+		Position = UDim2.new(0.02, 0, 0, if self.compact then 258 else 208),
+		Size = UDim2.new(0.96, 0, 1, if self.compact then -274 else -224),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -2703,6 +2954,222 @@ function App:_RenderAvatarLab()
 	end
 end
 
+function App:_UpdateSetting(key: string, value: any)
+	task.spawn(function()
+		local success, data = self:_Invoke(Network.Actions.UpdateSettings, { [key] = value })
+		if success then
+			self.state.profile.settings = data.settings
+		end
+		self:_RenderActivePage()
+	end)
+end
+
+function App:_RenderSettings()
+	self:_PageHeader("Settings", "Accessibility, audio, and a quick look at what's equipped right now.")
+	local page = Factory.New("ScrollingFrame", {
+		Name = "SettingsScroll",
+		Position = UDim2.new(0.02, 0, 0, 96),
+		Size = UDim2.new(0.96, 0, 1, -112),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = Colors.Violet,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		Parent = self.content,
+	})
+	Factory.ScalePadding(page, 0.006, 0.006)
+	local stack = Factory.New("Frame", {
+		Size = UDim2.new(1, -8, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		Parent = page,
+	})
+	Factory.List(stack, Enum.FillDirection.Vertical, 14)
+
+	local settings = self.state.profile.settings
+
+	-- ACCESSIBILITY -----------------------------------------------------
+	local accessibility =
+		Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 396 else 320), nil, "Accessibility")
+	accessibility.LayoutOrder = 1
+	Factory.Pill(accessibility, "ACCESSIBILITY", Colors.Cyan, 140).Position = UDim2.fromOffset(16, 14)
+	Factory.Label(accessibility, "Interface size", UDim2.new(1, -32, 0, 22), {
+		Position = UDim2.fromOffset(16, 52),
+		Font = Theme.Fonts.Bold,
+		TextSize = 13,
+	})
+	local scaleRow = Factory.New("Frame", {
+		Position = UDim2.fromOffset(16, 78),
+		Size = UDim2.new(1, -32, 0, 36),
+		BackgroundTransparency = 1,
+		Parent = accessibility,
+	})
+	Factory.List(scaleRow, Enum.FillDirection.Horizontal, 8)
+	local currentScale = tonumber(settings.uiScale) or 1
+	for _, option in
+		{
+			{ Label = "Small", Value = 0.9 },
+			{ Label = "Default", Value = 1 },
+			{ Label = "Large", Value = 1.15 },
+			{ Label = "Extra large", Value = 1.3 },
+		}
+	do
+		local isSelected = math.abs(currentScale - option.Value) < 0.01
+		local chip = Factory.Button(
+			scaleRow,
+			option.Label,
+			UDim2.fromOffset(if self.compact then 84 else 108, 34),
+			nil,
+			if isSelected then "primary" else nil
+		)
+		self:_BindButton(chip)
+		chip.Activated:Connect(function()
+			self.uiScaleInstance.Scale = option.Value
+			self:_UpdateSetting("uiScale", option.Value)
+		end)
+	end
+	Factory.Label(
+		accessibility,
+		"Scales every control and label together, including touch and click targets.",
+		UDim2.new(1, -32, 0, 20),
+		{ Position = UDim2.fromOffset(16, 120), Color = Colors.TextMuted, TextSize = 11 }
+	)
+
+	local highContrastButton = Factory.Button(
+		accessibility,
+		if settings.highContrast then "High contrast · ON" else "High contrast · OFF",
+		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.new(0.5, -22, 0, 40),
+		UDim2.fromOffset(16, 156),
+		if settings.highContrast then "mint" else nil
+	)
+	self:_BindButton(highContrastButton)
+	highContrastButton.Activated:Connect(function()
+		local enabled = not settings.highContrast
+		self:_SetHighContrast(enabled)
+		self:_UpdateSetting("highContrast", enabled)
+	end)
+
+	local reduceMotionButton = Factory.Button(
+		accessibility,
+		if settings.reduceMotion then "Reduce motion · ON" else "Reduce motion · OFF",
+		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.new(0.5, -22, 0, 40),
+		if self.compact then UDim2.fromOffset(16, 202) else UDim2.new(0.5, 6, 0, 156),
+		if settings.reduceMotion then "mint" else nil
+	)
+	self:_BindButton(reduceMotionButton)
+	reduceMotionButton.Activated:Connect(function()
+		self:_UpdateSetting("reduceMotion", not settings.reduceMotion)
+	end)
+
+	Factory.Label(
+		accessibility,
+		"Brighter borders and text for low-vision contrast · fewer sliding/fading animations for motion sensitivity.",
+		UDim2.new(1, -32, 0, 34),
+		{
+			Position = UDim2.fromOffset(16, if self.compact then 250 else 204),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Wrapped = true,
+		}
+	)
+	Factory.Label(
+		accessibility,
+		"Keyboard & gamepad: press Tab, or a gamepad's Y button, any time to jump into the navigation rail and move through the studio with arrows or the D-pad.",
+		UDim2.new(1, -32, 0, if self.compact then 60 else 44),
+		{
+			Position = UDim2.fromOffset(16, if self.compact then 292 else 246),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
+		}
+	)
+
+	-- AUDIO ---------------------------------------------------------------
+	local audio = Factory.Card(stack, UDim2.new(1, 0, 0, 108), nil, "Audio")
+	audio.LayoutOrder = 2
+	Factory.Pill(audio, "AUDIO", Colors.Violet, 90).Position = UDim2.fromOffset(16, 14)
+	self:_BuildSoundButton(audio, UDim2.new(1, -32, 0, 42), UDim2.fromOffset(16, 52))
+
+	-- EQUIPPED NOW ----------------------------------------------------------
+	local profile = self.state.profile
+	local equippedIds = profile.equippedItemIds or {}
+	local loadout =
+		Factory.Card(stack, UDim2.new(1, 0, 0, math.max(140, 70 + math.max(1, #equippedIds) * 66)), nil, "Loadout")
+	loadout.LayoutOrder = 3
+	Factory.Pill(loadout, string.format("EQUIPPED · %d", #equippedIds), Colors.Mint, 130).Position =
+		UDim2.fromOffset(16, 14)
+	if #equippedIds == 0 then
+		Factory.Label(loadout, "Nothing equipped yet. Equip an item from My Studio.", UDim2.new(1, -32, 0, 40), {
+			Position = UDim2.fromOffset(16, 52),
+			Color = Colors.TextMuted,
+			TextSize = 12,
+			Wrapped = true,
+		})
+	else
+		local y = 54
+		for _, itemId in equippedIds do
+			local item = profile.items[itemId]
+			if item then
+				local row = Factory.New("Frame", {
+					Position = UDim2.fromOffset(16, y),
+					Size = UDim2.new(1, -32, 0, 56),
+					BackgroundColor3 = Color3.fromRGB(12, 17, 34),
+					BackgroundTransparency = 0.22,
+					BorderSizePixel = 0,
+					Parent = loadout,
+				})
+				Factory.Corner(row, 10)
+				local image = Factory.New("ImageLabel", {
+					Size = UDim2.fromOffset(44, 44),
+					Position = UDim2.fromOffset(6, 6),
+					BackgroundColor3 = Colors.Panel,
+					BorderSizePixel = 0,
+					Image = thumbnail(item.thumbnailAssetId, 120),
+					ScaleType = Enum.ScaleType.Crop,
+					Parent = row,
+				})
+				Factory.Corner(image, 8)
+				Factory.Label(row, item.name, UDim2.new(1, -204, 0, 24), {
+					Position = UDim2.fromOffset(58, 8),
+					Font = Theme.Fonts.Bold,
+					TextSize = 13,
+					Truncate = Enum.TextTruncate.AtEnd,
+				})
+				Factory.Label(row, ACCESSORY_LABELS[item.fit.accessoryType] or "Accessory", UDim2.new(1, -204, 0, 20), {
+					Position = UDim2.fromOffset(58, 30),
+					Color = Colors.TextMuted,
+					TextSize = 11,
+				})
+				local unequip = Factory.Button(row, "Unequip", UDim2.fromOffset(120, 38), UDim2.new(1, -128, 0, 9), nil)
+				self:_BindButton(unequip)
+				unequip.Activated:Connect(function()
+					unequip.Active = false
+					unequip.Text = "Removing…"
+					task.spawn(function()
+						local success = self:_Invoke(Network.Actions.UnequipItem, { itemId = itemId })
+						if success then
+							local index = table.find(self.state.profile.equippedItemIds, itemId)
+							if index then
+								table.remove(self.state.profile.equippedItemIds, index)
+							end
+							self:_Toast("success", "Unequipped.")
+							self:_RenderActivePage()
+							return
+						end
+						if unequip.Parent then
+							unequip.Active = true
+							unequip.Text = "Unequip"
+						end
+					end)
+				end)
+				y += 62
+			end
+		end
+	end
+end
+
 function App:_ShowOnboarding()
 	local overlay = Factory.New("Frame", {
 		Name = "Onboarding",
@@ -2900,6 +3367,9 @@ function App:_Toast(tone: string, message: string)
 	})
 	Factory.Corner(toast, 13)
 	local color = if tone == "error" then Colors.Danger elseif tone == "ready" then Colors.Cyan else Colors.Mint
+	-- A glyph, not just the accent color, marks the tone so the toast still
+	-- reads correctly for colorblind players and in high-contrast mode.
+	local icon = if tone == "error" then "✕" elseif tone == "ready" then "◆" else "✓"
 	Factory.Stroke(toast, color, 0.2, 1.2)
 	local bar = Factory.New("Frame", {
 		Size = UDim2.fromOffset(5, 48),
@@ -2910,15 +3380,23 @@ function App:_Toast(tone: string, message: string)
 		Parent = toast,
 	})
 	Factory.Corner(bar, 99)
-	Factory.Label(toast, message, UDim2.new(1, -42, 1, -18), {
-		Position = UDim2.fromOffset(28, 9),
+	Factory.Label(toast, icon, UDim2.fromOffset(20, 20), {
+		Position = UDim2.fromOffset(26, 9),
+		Color = color,
+		Font = Theme.Fonts.Black,
+		TextSize = 15,
+		AlignX = Enum.TextXAlignment.Center,
+		ZIndex = 52,
+	})
+	Factory.Label(toast, message, UDim2.new(1, -62, 1, -18), {
+		Position = UDim2.fromOffset(48, 9),
 		Color = Colors.Text,
 		TextSize = 12,
 		Wrapped = true,
 		ZIndex = 52,
 	})
 	toast.Position = UDim2.fromOffset(40, 0)
-	TweenService:Create(toast, TweenInfo.new(0.25, Enum.EasingStyle.Quint), { Position = UDim2.new() }):Play()
+	self:_Animate(toast, TweenInfo.new(0.25, Enum.EasingStyle.Quint), { Position = UDim2.new() })
 	if tone == "error" then
 		self.sounds:Play("Error")
 	elseif tone == "ready" then
@@ -2926,9 +3404,10 @@ function App:_Toast(tone: string, message: string)
 	end
 	task.delay(5, function()
 		if toast.Parent then
-			local tween = TweenService:Create(toast, TweenInfo.new(0.2), { BackgroundTransparency = 1 })
-			tween:Play()
-			tween.Completed:Wait()
+			local tween = self:_Animate(toast, TweenInfo.new(0.2), { BackgroundTransparency = 1 })
+			if tween then
+				tween.Completed:Wait()
+			end
 			toast:Destroy()
 		end
 	end)

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 import type { AppConfig } from "./config.js";
-import type { CreateJobInput, Job, JobError, JobOutput, JobPatch, JobStatus } from "./types.js";
+import type { CreateJobInput, ImageQuality, Job, JobError, JobOutput, JobPatch, JobStatus } from "./types.js";
 
 const { Pool } = pg;
 
@@ -40,6 +40,7 @@ export class MemoryJobRepository implements JobRepository {
       accessoryType: input.accessoryType,
       stylePreset: input.stylePreset,
       detailLevel: input.detailLevel,
+      ...(input.imageQuality ? { imageQuality: input.imageQuality } : {}),
       ...(input.sourceJobId ? { sourceJobId: input.sourceJobId } : {}),
       ...(input.sourceImageAssetId ? { sourceImageAssetId: input.sourceImageAssetId } : {}),
       priority: input.priority,
@@ -92,6 +93,7 @@ type JobRow = {
   accessory_type: Job["accessoryType"];
   style_preset: Job["stylePreset"];
   detail_level: Job["detailLevel"];
+  image_quality: string | null;
   source_job_id: string | null;
   source_image_asset_id: string | null;
   priority: boolean;
@@ -130,9 +132,9 @@ export class PostgresJobRepository implements JobRepository {
     const result = await this.#pool.query<JobRow>(
       `INSERT INTO forge_jobs (
          id, request_id, player_user_id, kind, status, stage, progress,
-         filtered_prompt, accessory_type, style_preset, detail_level,
+         filtered_prompt, accessory_type, style_preset, detail_level, image_quality,
          source_job_id, source_image_asset_id, priority, context
-       ) VALUES ($1, $2, $3, $4, 'QUEUED', 'Waiting for a worker', 0, $5, $6, $7, $8, $9, $10, $11, $12)
+       ) VALUES ($1, $2, $3, $4, 'QUEUED', 'Waiting for a worker', 0, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        ON CONFLICT (request_id) DO UPDATE SET request_id = EXCLUDED.request_id
        RETURNING *`,
       [
@@ -144,6 +146,7 @@ export class PostgresJobRepository implements JobRepository {
         input.accessoryType,
         input.stylePreset,
         input.detailLevel,
+        input.imageQuality ?? null,
         input.sourceJobId ?? null,
         input.sourceImageAssetId ?? null,
         input.priority,
@@ -219,6 +222,7 @@ function rowToJob(row: JobRow): Job {
     accessoryType: row.accessory_type,
     stylePreset: row.style_preset,
     detailLevel: row.detail_level,
+    ...(row.image_quality ? { imageQuality: row.image_quality as ImageQuality } : {}),
     ...(row.source_job_id ? { sourceJobId: row.source_job_id } : {}),
     ...(row.source_image_asset_id ? { sourceImageAssetId: Number(row.source_image_asset_id) } : {}),
     priority: row.priority,

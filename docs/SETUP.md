@@ -11,11 +11,15 @@ No secret should be pasted into chat or committed to this repository.
 1. Set the experience's maximum player count to **15**.
 2. Enable HTTP requests and Studio API access for the experience.
 3. Add a Creator Hub secret named `FORGE_BACKEND_SECRET`; use the same cryptographically random value of at least 32 characters for Railway's `ROBLOX_SHARED_SECRET`.
-4. Create developer products at the suggested prices and enter their IDs in `src/Shared/Config.luau`:
-   - Direct Text → 3D: 159 R$
-   - Reference Image: 29 R$
-   - Image → 3D Conversion: 159 R$
-   - Priority Queue Pass: 29 R$
+4. Create developer products at the suggested prices and enter their IDs in `src/Shared/Config.luau` (`Config.Products`):
+   - Direct Text → 3D: 159 R$ (`DirectGeneration`)
+   - Reference Image — Low quality: 29 R$ (`ImagePreviewLow`; already configured)
+   - Reference Image — Medium quality: 49 R$ (`ImagePreviewMedium`; `Id` is still `0`)
+   - Reference Image — High quality: 129 R$ (`ImagePreviewHigh`; `Id` is still `0`)
+   - Image → 3D Conversion: 159 R$ (`ImageConversion`)
+   - Priority Queue Pass: 29 R$ (`PriorityPass`)
+
+   The medium/high reference-image prices are estimates pending measured OpenAI cost per tier; see `docs/PRICING.md` before treating them as final.
 5. Create a **Custom Image Upload** game pass for **249 R$**, enable it for sale, and enter its ID in `Config.Passes.CustomImageUpload.Id`. This is permanent access; it is not a developer product.
 6. Enter the Roblox group ID in `Config.Group.Id` to enable 10% faster queue polling, one extra queued job, and group-owned custom reference images.
 7. Create Avatar Creation Tokens for each accessory type you will permit. Enter those public token IDs in `Config.AvatarCreationTokens`.
@@ -52,4 +56,4 @@ Finally, put the Railway HTTPS origin in `Config.Backend.BaseUrl`. Do not includ
 
 ## Studio smoke test
 
-With the IDs still set to `0`, Studio uses mock purchases and placeholder model results. The Custom Image Upload pass can be mock-unlocked for that Studio session; use any positive numeric image ID while the mock backend is active. Verify onboarding, all three creation paths, every style/detail choice, fitting-control state, visibility/listing controls, discovery, catalog try-on, sound preferences, and reconnect persistence before enabling live products. Placeholder asset IDs do not render a mesh; test the full viewport/equip/publish path with a privately owned test model or the live backend. Never put a provider key in a Luau file.
+With the IDs still set to `0`, Studio uses mock purchases and placeholder model results. The Custom Image Upload pass can be mock-unlocked for that Studio session; use any positive numeric image ID while the mock backend is active. Verify onboarding, all three creation paths, every style/detail choice and every reference image quality tier, fitting-control state, equip and unequip, visibility/listing controls, discovery search (by name and by creator) and every sort mode, catalog try-on, the Settings page (interface scale, high contrast, reduce motion, sound), and reconnect persistence before enabling live products. Placeholder asset IDs do not render a mesh; test the full viewport/equip/publish path with a privately owned test model or the live backend. Never put a provider key in a Luau file.

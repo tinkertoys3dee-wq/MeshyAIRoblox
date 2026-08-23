@@ -16,6 +16,7 @@ Network.Actions = table.freeze({
 	GetGeneration = "GetGeneration",
 	SaveFit = "SaveFit",
 	EquipItem = "EquipItem",
+	UnequipItem = "UnequipItem",
 	PublishItem = "PublishItem",
 	SetVisibility = "SetVisibility",
 	SetListing = "SetListing",
