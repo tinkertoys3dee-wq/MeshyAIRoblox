@@ -7,6 +7,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SocialService = game:GetService("SocialService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -286,6 +287,18 @@ function App.new()
 				self:_RenderActivePage()
 			end
 		end
+	end)
+	-- Fires once the local player closes Roblox's native invite dialog.
+	-- recipientIds only tells us invites were sent, never accepted (Roblox
+	-- exposes no accepted-invite signal), so the small token reward is for
+	-- taking the action, reported once to the server here.
+	SocialService.GameInvitePromptClosed:Connect(function(promptedPlayer: Player, recipientIds: { any })
+		if promptedPlayer ~= player or #recipientIds == 0 then
+			return
+		end
+		task.spawn(function()
+			self:_Invoke(Network.Actions.ReportInviteSent, { recipientCount = #recipientIds })
+		end)
 	end)
 	ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt, triggeringPlayer: Player?)
 		if triggeringPlayer and triggeringPlayer ~= player then
@@ -3610,12 +3623,53 @@ function App:_RenderSettings()
 	Factory.Pill(audio, "AUDIO", Colors.Violet, 90).Position = UDim2.fromOffset(16, 14)
 	self:_BuildSoundButton(audio, UDim2.new(1, -32, 0, 42), UDim2.fromOffset(16, 52))
 
+	-- INVITE FRIENDS --------------------------------------------------------
+	local invite = Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 158 else 108), nil, "InviteFriends")
+	invite.LayoutOrder = 3
+	Factory.Pill(invite, "GROW THE STUDIO", Colors.Rose, 150).Position = UDim2.fromOffset(16, 14)
+	Factory.Label(
+		invite,
+		"Send a Roblox invite to a friend for a small one-time Forge Token reward.",
+		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.new(1, -260, 0, 40),
+		{
+			Position = UDim2.fromOffset(16, 48),
+			Color = Colors.TextMuted,
+			TextSize = 12,
+			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
+		}
+	)
+	local inviteButton = Factory.Button(
+		invite,
+		"Invite a friend",
+		if self.compact then UDim2.new(1, -32, 0, 42) else UDim2.fromOffset(200, 42),
+		if self.compact then UDim2.fromOffset(16, 100) else UDim2.new(1, -216, 0, 33),
+		"mint"
+	)
+	self:_BindButton(inviteButton)
+	inviteButton.Activated:Connect(function()
+		local checkSuccess, allowed = pcall(function()
+			return SocialService:CanSendGameInviteAsync(player)
+		end)
+		if not checkSuccess or allowed ~= true then
+			self:_Toast("error", "Invites aren't available for your account or platform right now.")
+			return
+		end
+		local promptSuccess, promptProblem = pcall(function()
+			SocialService:PromptGameInvite(player)
+		end)
+		if not promptSuccess then
+			warn(string.format("[App] Game invite prompt failed: %s", tostring(promptProblem)))
+			self:_Toast("error", "Roblox could not open the invite prompt.")
+		end
+	end)
+
 	-- EQUIPPED NOW ----------------------------------------------------------
 	local profile = self.state.profile
 	local equippedIds = profile.equippedItemIds or {}
 	local loadout =
 		Factory.Card(stack, UDim2.new(1, 0, 0, math.max(140, 70 + math.max(1, #equippedIds) * 66)), nil, "Loadout")
-	loadout.LayoutOrder = 3
+	loadout.LayoutOrder = 4
 	Factory.Pill(loadout, string.format("EQUIPPED · %d", #equippedIds), Colors.Mint, 130).Position =
 		UDim2.fromOffset(16, 14)
 	if #equippedIds == 0 then
@@ -3698,7 +3752,7 @@ function App:_RenderSettings()
 	local achievementTileHeight = 74
 	local achievements =
 		Factory.Card(stack, UDim2.new(1, 0, 0, 58 + achievementRows * (achievementTileHeight + 8)), nil, "Achievements")
-	achievements.LayoutOrder = 4
+	achievements.LayoutOrder = 5
 	Factory.Pill(
 		achievements,
 		string.format("ACHIEVEMENTS · %d/%d", unlockedCount, #Achievements.List),

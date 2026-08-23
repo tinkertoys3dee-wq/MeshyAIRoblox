@@ -37,6 +37,7 @@ Network.Actions = table.freeze({
 	Track = "Track",
 	RequestRewardedAd = "RequestRewardedAd",
 	BuyTokens = "BuyTokens",
+	ReportInviteSent = "ReportInviteSent",
 })
 
 Network.PushEvents = table.freeze({

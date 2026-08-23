@@ -18,6 +18,7 @@ Review these by new/returning player, device class, creation method, group membe
 | Catalog search quality | filter adoption (sort/creator/price); zero-result rate by filter combination | `CatalogSearch` (`sortType`, `hasCreatorFilter`, `hasPriceFilter`, `resultCount`) |
 | Accessibility adoption | high-contrast/reduce-motion/UI-scale opt-in rate; page reach including Settings | `SettingsChanged`, `AppOpenedTab` (`page = "Settings"`) |
 | Forge Tokens / ad engagement | rewarded-ad completion rate; tokens earned vs. spent; token-vs-Robux purchase mix; ARPDAU contribution from ad revenue | `AdRewardGranted`, `TokenPurchase` (`product`), economy events for `AdRewardTokens` |
+| Feature reach / virality | achievement completion rate per milestone; daily-bonus claim rate; invite-sent rate | `AchievementUnlocked` (`achievement`), `DailyStudioCheckIn` (`tokensGranted`), `GameInviteSent` |
 | Community health | discovery visits; try-on rate; likes/favorites per view; leaderboard engagement | marketplace funnel, reaction and view counters, `CommunityLikeToggled` |
 | Monetization | payer conversion; ARPDAU; revenue per completed model; priority-pass attach rate | economy events by SKU plus completion events |
 | Marketplace liquidity | listed originals; try-on-to-transfer rate; transfer completion | marketplace funnel steps 1–4 |

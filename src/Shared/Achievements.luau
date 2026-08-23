@@ -65,6 +65,12 @@ local Achievements = {
 			description = "Reach a seven-day studio streak.",
 			tokens = 15,
 		},
+		{
+			id = "FIRST_INVITE_SENT",
+			name = "Bring a Friend",
+			description = "Send a Roblox game invite to a friend.",
+			tokens = 3,
+		},
 	} :: { AchievementDefinition },
 }
 

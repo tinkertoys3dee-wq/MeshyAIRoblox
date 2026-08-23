@@ -190,6 +190,20 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	[Network.Actions.RequestRewardedAd] = function(player)
 		return adRewards:RequestAd(player)
 	end,
+	-- Roblox's SocialService.GameInvitePromptClosed only reports the local
+	-- player sent invites to at least one recipient, never whether anyone
+	-- accepted — there is no accepted-invite signal in the public API. The
+	-- reward is therefore for taking the (real, Roblox-verified-by-its-own-
+	-- native-UI) action of sending an invite, not for a friend joining.
+	[Network.Actions.ReportInviteSent] = function(player, payload)
+		local recipientCount = type(payload) == "table" and tonumber(payload.recipientCount) or nil
+		if not recipientCount or recipientCount < 1 then
+			return false, "INVALID_REQUEST"
+		end
+		achievements:Unlock(player, "FIRST_INVITE_SENT")
+		analytics:Custom(player, "GameInviteSent", math.min(math.floor(recipientCount), 20), {})
+		return true, {}
+	end,
 	-- Roblox requires a rewarded-ad reward product to also be normally
 	-- purchasable with Robux (see AdRewardService), so this is both a real
 	-- purchase path and the way to test token spending in Studio without a
