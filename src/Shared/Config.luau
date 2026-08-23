@@ -67,8 +67,8 @@ return table.freeze({
 		-- price; Medium/High are new products awaiting Creator Hub IDs (0 = not
 		-- configured yet, same convention as every other placeholder below).
 		ImagePreviewLow = { Id = 3709322158, SuggestedPrice = 29 },
-		ImagePreviewMedium = { Id = 0, SuggestedPrice = 49 },
-		ImagePreviewHigh = { Id = 0, SuggestedPrice = 129 },
+		ImagePreviewMedium = { Id = 3709537948, SuggestedPrice = 49 },
+		ImagePreviewHigh = { Id = 3709538054, SuggestedPrice = 129 },
 		ImageConversion = { Id = 3709322228, SuggestedPrice = 159 },
 		PriorityPass = { Id = 3709322304, SuggestedPrice = 29 },
 	},
