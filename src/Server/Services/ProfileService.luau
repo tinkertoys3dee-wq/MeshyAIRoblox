@@ -35,6 +35,8 @@ local function defaultProfile(userId: number): { [string]: any }
 		grantedIntents = {},
 		retryCredits = {},
 		equippedItemIds = {},
+		fitPresets = {},
+		fitPresetOrder = {},
 		settings = { soundsEnabled = true, reduceMotion = false, highContrast = false, uiScale = 1 },
 		stats = {
 			sessions = 0,

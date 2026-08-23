@@ -59,7 +59,7 @@ Developer-product intent data is saved before Roblox is prompted. Receipt grants
 - original and purchased item records;
 - generation jobs and preview state;
 - style/detail selections and custom Roblox reference IDs;
-- fit transforms and equipped item IDs;
+- fit transforms, equipped item IDs, and named fit presets;
 - liked/favorited item references;
 - pending generation purchases and Plus transfers;
 - processed developer-product receipt IDs;
@@ -79,6 +79,10 @@ The raw GLB/PNG bytes are never placed in a DataStore. Roblox DataStores are met
 6. Final platform-wide creation uses `AvatarCreationService:PromptCreateAvatarAssetAsync()` and an Avatar Creation Token matching the selected accessory type.
 
 Equipping and unequipping are both server-authoritative (`ItemService:Equip`/`Unequip`). The player's `equippedItemIds` list is the durable record; the live `Accessory` instance is tagged with a `ForgeItemId` attribute so the server can find and remove the exact accessory on unequip, or skip re-adding one `RestoreEquipped` already finds present after a respawn.
+
+`AccessoryFit.FindAvatarAttachment` (used only by the client-side fitting preview) resolves the target attachment by scanning the avatar model's own direct-child `BasePart`s, not a recursive `FindFirstChild(name, true)`. Every worn Accessory's Handle carries an attachment with the same name as the body attachment it welds to — that is how `Humanoid:AddAccessory` matches them — so a recursive search over the whole avatar tree can return a currently-equipped accessory's attachment instead of the body's, misplacing the item being fitted.
+
+A player may save the fit currently being dialed in (position/rotation/scale) as a named preset under `profile.fitPresets`/`fitPresetOrder`, independent of any item's in-progress `fitDrafts` entry on the client, so applying a preset never discards whatever fit is being worked on for a different item.
 
 ## Marketplace license model
 
