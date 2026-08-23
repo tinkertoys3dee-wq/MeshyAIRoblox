@@ -257,13 +257,8 @@ function App:_BuildChrome()
 	})
 	self.shell = shell
 
-	local launcher = Factory.Button(
-		gui,
-		"✦  Open Forge Studio",
-		UDim2.fromOffset(220, 48),
-		UDim2.new(0, 18, 1, -66),
-		"primary"
-	)
+	local launcher =
+		Factory.Button(gui, "✦  Open Forge Studio", UDim2.fromOffset(220, 48), UDim2.new(0, 18, 1, -66), "primary")
 	launcher.Name = "StudioLauncher"
 	launcher.Visible = false
 	launcher.ZIndex = 30
@@ -1760,14 +1755,7 @@ function App:_RenderStudio()
 		TextSize = 10,
 	})
 
-	local function sliderRow(
-		field: string,
-		axis: string,
-		y: number,
-		minimum: number,
-		maximum: number,
-		step: number
-	)
+	local function sliderRow(field: string, axis: string, y: number, minimum: number, maximum: number, step: number)
 		Factory.Label(controls, string.upper(axis), UDim2.new(0.06, 0, 0, 28), {
 			Position = UDim2.new(0.015, 0, 0, y),
 			AlignX = Enum.TextXAlignment.Center,
@@ -1849,23 +1837,32 @@ function App:_RenderStudio()
 		local dragging = false
 		local dragTouch = nil :: InputObject?
 		track.InputBegan:Connect(function(input: InputObject)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			if
+				input.UserInputType == Enum.UserInputType.MouseButton1
+				or input.UserInputType == Enum.UserInputType.Touch
+			then
 				dragging = true
 				dragTouch = if input.UserInputType == Enum.UserInputType.Touch then input else nil
 				setFromPointer(input.Position.X)
 			end
 		end)
-		table.insert(self.pageConnections, UserInputService.InputChanged:Connect(function(input: InputObject)
-			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input == dragTouch) then
-				setFromPointer(input.Position.X)
-			end
-		end))
-		table.insert(self.pageConnections, UserInputService.InputEnded:Connect(function(input: InputObject)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 or input == dragTouch then
-				dragging = false
-				dragTouch = nil
-			end
-		end))
+		table.insert(
+			self.pageConnections,
+			UserInputService.InputChanged:Connect(function(input: InputObject)
+				if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input == dragTouch) then
+					setFromPointer(input.Position.X)
+				end
+			end)
+		)
+		table.insert(
+			self.pageConnections,
+			UserInputService.InputEnded:Connect(function(input: InputObject)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input == dragTouch then
+					dragging = false
+					dragTouch = nil
+				end
+			end)
+		)
 		minus.Activated:Connect(function()
 			setValue(fit[field][axis] - step)
 		end)
@@ -1878,11 +1875,13 @@ function App:_RenderStudio()
 	end
 
 	local dialY = 64
-	for _, group in {
-		{ title = "POSITION", field = "position", minimum = -4, maximum = 4, step = 0.05 },
-		{ title = "ROTATION", field = "rotation", minimum = -180, maximum = 180, step = 5 },
-		{ title = "SCALE", field = "scale", minimum = 0.25, maximum = 3, step = 0.05 },
-	} do
+	for _, group in
+		{
+			{ title = "POSITION", field = "position", minimum = -4, maximum = 4, step = 0.05 },
+			{ title = "ROTATION", field = "rotation", minimum = -180, maximum = 180, step = 5 },
+			{ title = "SCALE", field = "scale", minimum = 0.25, maximum = 3, step = 0.05 },
+		}
+	do
 		Factory.Label(controls, group.title, UDim2.new(1, -28, 0, 20), {
 			Position = UDim2.fromOffset(14, dialY - 22),
 			Font = Theme.Fonts.Bold,
@@ -2345,7 +2344,8 @@ function App:_RequestCatalogAccess()
 		if not success then
 			self.catalogAccessPrompting = false
 			self.catalogAccess = false
-			self.catalogError = "Roblox could not request catalog access. Try again or check the experience's Avatar Asset Read capability."
+			self.catalogError =
+				"Roblox could not request catalog access. Try again or check the experience's Avatar Asset Read capability."
 			warn(string.format("[App] Inventory access prompt failed: %s", tostring(problem)))
 			self:_Toast("error", self.catalogError)
 			if self.activePage == "Avatar Lab" then
@@ -2384,7 +2384,8 @@ function App:_SearchCatalog(query: string)
 			})
 		else
 			self.catalogResults = {}
-			self.catalogError = "Roblox catalog search failed. Retry after checking inventory access and the experience's Asset Read capability."
+			self.catalogError =
+				"Roblox catalog search failed. Retry after checking inventory access and the experience's Asset Read capability."
 			warn(string.format("[App] Catalog search failed: %s", tostring(resultsOrProblem)))
 			self:_Toast("error", self.catalogError)
 		end
@@ -2634,17 +2635,12 @@ function App:_RenderAvatarLab()
 		end
 	end
 	if #(self.catalogResults or {}) == 0 then
-		Factory.Label(
-			grid,
-			self.catalogError or "No catalog items matched this search.",
-			UDim2.new(1, -8, 0, 100),
-			{
-				AlignX = Enum.TextXAlignment.Center,
-				Color = Colors.TextMuted,
-				Wrapped = true,
-				TextSize = 13,
-			}
-		)
+		Factory.Label(grid, self.catalogError or "No catalog items matched this search.", UDim2.new(1, -8, 0, 100), {
+			AlignX = Enum.TextXAlignment.Center,
+			Color = Colors.TextMuted,
+			Wrapped = true,
+			TextSize = 13,
+		})
 	end
 end
 

@@ -64,7 +64,10 @@ function ViewportController.new(viewport: ViewportFrame)
 	end
 
 	connect(viewport.InputBegan, function(input: InputObject)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
 			self.dragging = true
 			self.dragTouch = if input.UserInputType == Enum.UserInputType.Touch then input else nil
 			self.lastPointer = Vector2.new(input.Position.X, input.Position.Y)
