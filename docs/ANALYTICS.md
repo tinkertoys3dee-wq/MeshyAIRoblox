@@ -1,6 +1,6 @@
 # Analytics and growth instrumentation
 
-Analytics are implemented as a privacy-conscious product feedback loop, not as a guarantee of Roblox discovery placement. The server logs Roblox onboarding, funnel, economy, and custom events; the client may send only an allowlisted event name with enumerated fields. AI prompts, item names, free-form searches, secrets, and other personally identifying text are never sent as analytics fields.
+Analytics are implemented as a privacy-conscious product feedback loop, not as a guarantee of Roblox discovery placement. The server logs Roblox onboarding, funnel, economy, and custom events; the client may send only an allowlisted event name with enumerated fields. AI prompts, item names, free-form searches, secrets, and other personally identifying text are never sent as analytics fields
 
 ## Launch scorecard
 
