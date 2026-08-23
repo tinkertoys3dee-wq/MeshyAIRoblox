@@ -4,18 +4,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
-local RateLimiter = require(script.Parent.Util.RateLimiter)
-local ProfileService = require(script.Parent.Services.ProfileService)
-local PlayerStateService = require(script.Parent.Services.PlayerStateService)
-local BackendService = require(script.Parent.Services.BackendService)
-local CommerceService = require(script.Parent.Services.CommerceService)
-local GenerationService = require(script.Parent.Services.GenerationService)
-local ItemService = require(script.Parent.Services.ItemService)
-local CommunityService = require(script.Parent.Services.CommunityService)
-local CatalogService = require(script.Parent.Services.CatalogService)
-local AnalyticsService = require(script.Parent.Services.AnalyticsService)
-local RetentionService = require(script.Parent.Services.RetentionService)
 
+-- Publish the transport before loading feature services. If a service ever
+-- fails during development, clients receive a bounded network error instead
+-- of waiting forever for a folder that was never created.
 local remoteFolder = ReplicatedStorage:FindFirstChild(Network.FolderName)
 if not remoteFolder then
 	remoteFolder = Instance.new("Folder")
@@ -29,6 +21,10 @@ if not requestRemote then
 	requestRemote.Name = Network.RequestName
 	requestRemote.Parent = remoteFolder
 end
+local typedRequestRemote = requestRemote :: RemoteFunction
+typedRequestRemote.OnServerInvoke = function()
+	return { ok = false, error = "SERVER_STARTING" }
+end
 
 local pushRemote = remoteFolder:FindFirstChild(Network.PushName) :: RemoteEvent?
 if not pushRemote then
@@ -36,6 +32,18 @@ if not pushRemote then
 	pushRemote.Name = Network.PushName
 	pushRemote.Parent = remoteFolder
 end
+
+local RateLimiter = require(script.Parent.Util.RateLimiter)
+local ProfileService = require(script.Parent.Services.ProfileService)
+local PlayerStateService = require(script.Parent.Services.PlayerStateService)
+local BackendService = require(script.Parent.Services.BackendService)
+local CommerceService = require(script.Parent.Services.CommerceService)
+local GenerationService = require(script.Parent.Services.GenerationService)
+local ItemService = require(script.Parent.Services.ItemService)
+local CommunityService = require(script.Parent.Services.CommunityService)
+local CatalogService = require(script.Parent.Services.CatalogService)
+local AnalyticsService = require(script.Parent.Services.AnalyticsService)
+local RetentionService = require(script.Parent.Services.RetentionService)
 
 local function push(player: Player, eventName: string, payload: any)
 	if player.Parent == Players then
@@ -293,7 +301,6 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	end,
 }
 
-local typedRequestRemote = requestRemote :: RemoteFunction
 typedRequestRemote.OnServerInvoke = function(player: Player, action: any, payload: any)
 	if not remoteLimiter:consume(player.UserId) then
 		return { ok = false, error = "RATE_LIMITED" }

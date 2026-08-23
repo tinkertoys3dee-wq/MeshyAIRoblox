@@ -18,12 +18,38 @@ local ViewportController = require(script.Parent.ViewportController)
 
 local Colors = Theme.Colors
 local player = Players.LocalPlayer
+local REMOTE_WAIT_SECONDS = 15
 
 local App = {}
 App.__index = App
 
+local function waitForRemoteFolder(): Folder?
+	local instance = ReplicatedStorage:WaitForChild(Network.FolderName, REMOTE_WAIT_SECONDS)
+	if instance and instance:IsA("Folder") then
+		return instance
+	end
+	return nil
+end
+
+local function waitForRequestRemote(folder: Folder): RemoteFunction?
+	local instance = folder:WaitForChild(Network.RequestName, REMOTE_WAIT_SECONDS)
+	if instance and instance:IsA("RemoteFunction") then
+		return instance
+	end
+	return nil
+end
+
+local function waitForPushRemote(folder: Folder): RemoteEvent?
+	local instance = folder:WaitForChild(Network.PushName, REMOTE_WAIT_SECONDS)
+	if instance and instance:IsA("RemoteEvent") then
+		return instance
+	end
+	return nil
+end
+
 local ERROR_MESSAGES = {
 	SERVER_ERROR = "The Roblox server hit an unexpected error. Check Server Output for the logged cause, then retry.",
+	SERVER_STARTING = "The Forge server is still starting. Wait a moment and try again.",
 	PROFILE_UNAVAILABLE = "Your creator profile is still loading. Try again in a moment.",
 	PROFILE_MUTATION_FAILED = "Roblox could not update your saved profile safely.",
 	INVALID_TRANSFORM = "That fit is outside the supported position, rotation, or scale range.",
@@ -568,8 +594,13 @@ function App:_BindButton(button: GuiButton)
 end
 
 function App:_Invoke(action: string, payload: any?): (boolean, any)
-	local folder = ReplicatedStorage:WaitForChild(Network.FolderName)
-	local remote = folder:WaitForChild(Network.RequestName) :: RemoteFunction
+	local folder = waitForRemoteFolder()
+	local remote = if folder then waitForRequestRemote(folder) else nil
+	if not remote then
+		warn(string.format("[App] Forge network transport was unavailable for %s", action))
+		self:_Toast("error", "The Forge server is still starting. Rejoin and try again.")
+		return false, "NETWORK_UNAVAILABLE"
+	end
 	local success, response = pcall(function()
 		return remote:InvokeServer(action, payload or {})
 	end)
@@ -591,8 +622,11 @@ end
 
 function App:_Track(payload: { [string]: any })
 	task.spawn(function()
-		local folder = ReplicatedStorage:WaitForChild(Network.FolderName)
-		local remote = folder:WaitForChild(Network.RequestName) :: RemoteFunction
+		local folder = waitForRemoteFolder()
+		local remote = if folder then waitForRequestRemote(folder) else nil
+		if not remote then
+			return
+		end
 		pcall(function()
 			remote:InvokeServer(Network.Actions.Track, payload)
 		end)
@@ -687,8 +721,13 @@ function App:_RefreshBootstrap()
 end
 
 function App:_ConnectPush()
-	local folder = ReplicatedStorage:WaitForChild(Network.FolderName)
-	local push = folder:WaitForChild(Network.PushName) :: RemoteEvent
+	local folder = waitForRemoteFolder()
+	local push = if folder then waitForPushRemote(folder) else nil
+	if not push then
+		warn("[App] Forge push transport was unavailable")
+		self:_Toast("error", "Live Forge updates are unavailable. Rejoin to reconnect.")
+		return
+	end
 	push.OnClientEvent:Connect(function(eventName: string, payload: any)
 		if eventName == Network.PushEvents.Toast then
 			self:_Toast(payload.tone or "success", payload.message or "Updated")
