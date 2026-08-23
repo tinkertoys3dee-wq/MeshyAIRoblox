@@ -39,6 +39,7 @@ local function defaultProfile(userId: number): { [string]: any }
 		fitPresetOrder = {},
 		tokens = 0,
 		adWatch = { day = 0, count = 0 },
+		achievements = {},
 		settings = { soundsEnabled = true, reduceMotion = false, highContrast = false, uiScale = 1 },
 		stats = {
 			sessions = 0,

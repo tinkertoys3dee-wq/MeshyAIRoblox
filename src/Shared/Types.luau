@@ -112,6 +112,7 @@ export type PlayerProfile = {
 	fitPresetOrder: { string },
 	tokens: number,
 	adWatch: { day: number, count: number },
+	achievements: { [string]: number },
 	settings: { soundsEnabled: boolean, reduceMotion: boolean, highContrast: boolean, uiScale: number },
 	stats: { [string]: number },
 	daily: { lastDay: number, streak: number, best: number },

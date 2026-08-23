@@ -118,6 +118,12 @@ return table.freeze({
 		MaxAdWatchesPerDay = 20,
 	},
 
+	Retention = {
+		-- Granted every day RetentionService:CheckIn sees a new UTC day,
+		-- independent of the existing every-3rd-day Priority Pass reward.
+		DailyCheckInTokens = 2,
+	},
+
 	Marketplace = {
 		MinimumTransferRobux = 10,
 		MaximumTransferRobux = 500,

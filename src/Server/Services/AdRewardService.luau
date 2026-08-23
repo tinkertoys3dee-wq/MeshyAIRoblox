@@ -32,7 +32,8 @@ function AdRewardService.new(
 	playerStateService: any,
 	commerceService: any,
 	push: (Player, string, any) -> (),
-	analyticsService: any
+	analyticsService: any,
+	achievementService: any
 )
 	local self = setmetatable({
 		profiles = profileService,
@@ -40,6 +41,7 @@ function AdRewardService.new(
 		commerce = commerceService,
 		push = push,
 		analytics = analyticsService,
+		achievements = achievementService,
 	}, AdRewardService)
 
 	-- Roblox requires the ad reward to be a developer product that is also
@@ -145,6 +147,11 @@ function AdRewardService:RequestAd(player: Player): (boolean, any)
 		-- ShowInterrupted/InternalError/InsufficientMemory all land here.
 		return false, "AD_NOT_COMPLETED"
 	end
+	-- Unlocked here rather than in the shared AdRewardTokens grant handler:
+	-- that handler also fires for a plain Robux purchase of the same
+	-- product, which shouldn't count as "watched an ad". ShowCompleted is
+	-- specific to this path.
+	self.achievements:Unlock(player, "FIRST_AD_WATCHED")
 
 	-- The actual token grant is asynchronous: Roblox fires the same
 	-- MarketplaceService.ProcessReceipt callback CommerceService already

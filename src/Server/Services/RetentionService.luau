@@ -1,5 +1,9 @@
 --!strict
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Config"))
+
 local THEMES = {
 	"Celestial streetwear",
 	"Bio-luminescent garden",
@@ -13,10 +17,11 @@ local THEMES = {
 local RetentionService = {}
 RetentionService.__index = RetentionService
 
-function RetentionService.new(profileService: any, analyticsService: any)
+function RetentionService.new(profileService: any, analyticsService: any, achievementService: any)
 	return setmetatable({
 		profiles = profileService,
 		analytics = analyticsService,
+		achievements = achievementService,
 		briefs = {} :: { [Player]: { [string]: any } },
 	}, RetentionService)
 end
@@ -25,6 +30,7 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 	local day = math.floor(os.time() / 86400)
 	local rewardGranted = false
 	local changed = false
+	local tokensGranted = 0
 	self.profiles:Mutate(player, function(profile)
 		if profile.daily.lastDay ~= day then
 			changed = true
@@ -35,6 +41,8 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 			end
 			profile.daily.lastDay = day
 			profile.daily.best = math.max(profile.daily.best, profile.daily.streak)
+			tokensGranted = Config.Retention.DailyCheckInTokens
+			profile.tokens = (profile.tokens or 0) + tokensGranted
 			if profile.daily.streak % 3 == 0 then
 				profile.retryCredits.PriorityPass = (profile.retryCredits.PriorityPass or 0) + 1
 				rewardGranted = true
@@ -45,11 +53,16 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 		self.profiles:Save(player)
 	end
 	local profile = self.profiles:Get(player)
-	self.analytics:Custom(player, "DailyStudioCheckIn", profile.daily.streak, { reward = rewardGranted })
+	self.analytics:Custom(player, "DailyStudioCheckIn", profile.daily.streak, {
+		reward = rewardGranted,
+		tokensGranted = tokensGranted,
+	})
+	self.achievements:CheckCount(player, "STREAK_SEVEN", profile.daily.streak, 7)
 	local brief = {
 		streak = profile.daily.streak,
 		best = profile.daily.best,
 		rewardGranted = rewardGranted,
+		tokensGranted = tokensGranted,
 		theme = THEMES[(day % #THEMES) + 1],
 		nextRewardIn = 3 - (profile.daily.streak % 3),
 	}

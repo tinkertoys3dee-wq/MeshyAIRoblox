@@ -45,6 +45,7 @@ local CatalogService = require(script.Parent.Services.CatalogService)
 local AnalyticsService = require(script.Parent.Services.AnalyticsService)
 local RetentionService = require(script.Parent.Services.RetentionService)
 local AdRewardService = require(script.Parent.Services.AdRewardService)
+local AchievementService = require(script.Parent.Services.AchievementService)
 
 local function push(player: Player, eventName: string, payload: any)
 	if player.Parent == Players then
@@ -55,13 +56,14 @@ end
 local profiles = ProfileService.new()
 local playerStates = PlayerStateService.new()
 local analytics = AnalyticsService.new()
-local retention = RetentionService.new(profiles, analytics)
+local achievements = AchievementService.new(profiles, push, analytics)
+local retention = RetentionService.new(profiles, analytics, achievements)
 local backend = BackendService.new()
 local commerce = CommerceService.new(profiles, playerStates, analytics, push)
-local adRewards = AdRewardService.new(profiles, playerStates, commerce, push, analytics)
+local adRewards = AdRewardService.new(profiles, playerStates, commerce, push, analytics, achievements)
 local items = ItemService.new(profiles, playerStates, push)
-local generations = GenerationService.new(profiles, playerStates, backend, commerce, push, analytics)
-local community = CommunityService.new(profiles, playerStates, push, analytics)
+local generations = GenerationService.new(profiles, playerStates, backend, commerce, push, analytics, achievements)
+local community = CommunityService.new(profiles, playerStates, push, analytics, achievements)
 local catalog = CatalogService.new(profiles, playerStates, analytics)
 local remoteLimiter = RateLimiter.new(50, 10)
 local reactionLimiter = RateLimiter.new(8, 10)
@@ -210,6 +212,7 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		local success, result = items:SaveFitPreset(player, payload)
 		if success then
 			analytics:Custom(player, "FitPresetSaved", 1, {})
+			achievements:Unlock(player, "FIRST_FIT_PRESET")
 		end
 		return success, result
 	end,
@@ -230,6 +233,7 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		local success, result = items:Equip(player, payload.itemId)
 		if success then
 			analytics:Custom(player, "GeneratedItemEquipped", 1, {})
+			achievements:Unlock(player, "FIRST_EQUIP")
 		end
 		return success, result
 	end,
@@ -249,9 +253,11 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		local success, result = items:Publish(player, payload.itemId)
 		if success then
-			analytics:Custom(player, "GeneratedItemPublished", 1, {
-				alreadyPublished = type(result) == "table" and result.alreadyPublished == true,
-			})
+			local alreadyPublished = type(result) == "table" and result.alreadyPublished == true
+			analytics:Custom(player, "GeneratedItemPublished", 1, { alreadyPublished = alreadyPublished })
+			if not alreadyPublished then
+				achievements:Unlock(player, "FIRST_PUBLISH")
+			end
 		end
 		return success, result
 	end,
@@ -304,7 +310,11 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		return community:PromptPlus(player)
 	end,
 	[Network.Actions.TryCatalogAsset] = function(player, payload)
-		return catalog:TryOn(player, payload)
+		local success, result = catalog:TryOn(player, payload)
+		if success then
+			achievements:Unlock(player, "FIRST_TRY_ON")
+		end
+		return success, result
 	end,
 	[Network.Actions.ResetAvatar] = function(player)
 		return catalog:Reset(player)

@@ -65,13 +65,15 @@ function CommunityService.new(
 	profileService: any,
 	playerStateService: any,
 	push: (Player, string, any) -> (),
-	analyticsService: any
+	analyticsService: any,
+	achievementService: any
 )
 	local self = setmetatable({
 		profiles = profileService,
 		playerStates = playerStateService,
 		push = push,
 		analytics = analyticsService,
+		achievements = achievementService,
 		indexStore = DataStoreService:GetDataStore(Config.DataStores.ItemIndex),
 		claimStore = DataStoreService:GetDataStore(Config.DataStores.ReceiptClaims),
 		indexCache = nil :: { [string]: any }?,
@@ -349,6 +351,9 @@ function CommunityService:SetListing(player: Player, payload: any): (boolean, an
 		isListed = payload.isListed,
 		price = if payload.isListed then price else 0,
 	})
+	if payload.isListed then
+		self.achievements:Unlock(player, "FIRST_LISTING")
+	end
 	return true, { item = item }
 end
 
@@ -396,7 +401,11 @@ function CommunityService:ToggleLike(player: Player, payload: any): (boolean, an
 	if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
 		return false, "INVALID_REQUEST"
 	end
-	return self:_ToggleReaction(player, payload.itemId, "likedItems", "likes")
+	local success, result = self:_ToggleReaction(player, payload.itemId, "likedItems", "likes")
+	if success and type(result) == "table" and result.enabled then
+		self.achievements:Unlock(player, "FIRST_LIKE_GIVEN")
+	end
+	return success, result
 end
 
 function CommunityService:ToggleFavorite(player: Player, payload: any): (boolean, any)
@@ -627,6 +636,7 @@ function CommunityService:_GrantCopy(player: Player, transferId: string): (boole
 		message = "Purchase verified. Your personal, non-resellable copy is ready to fit.",
 	})
 	self.analytics:Funnel(player, "marketplace", 4, "Personal copy granted", { price = pending.amount })
+	self.achievements:Unlock(player, "FIRST_MARKETPLACE_PURCHASE")
 	return true, copy
 end
 

@@ -11,6 +11,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
+local Achievements = require(ReplicatedStorage:WaitForChild("Achievements"))
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
@@ -837,12 +838,19 @@ function App:_Bootstrap()
 		self:_RefreshLocalizedPrices()
 		if not data.profile.onboarding.completed then
 			self:_ShowOnboarding()
-		elseif data.dailyBrief and data.dailyBrief.rewardGranted then
+		elseif data.dailyBrief and (data.dailyBrief.rewardGranted or (data.dailyBrief.tokensGranted or 0) > 0) then
 			self.sounds:Play("Success")
-			self:_Toast(
-				"success",
-				string.format("%d-day streak reward: one free Priority Pass added.", data.dailyBrief.streak)
-			)
+			local parts = {}
+			if (data.dailyBrief.tokensGranted or 0) > 0 then
+				table.insert(parts, string.format("+%d Forge Tokens for returning", data.dailyBrief.tokensGranted))
+			end
+			if data.dailyBrief.rewardGranted then
+				table.insert(
+					parts,
+					string.format("%d-day streak reward: one free Priority Pass", data.dailyBrief.streak)
+				)
+			end
+			self:_Toast("success", table.concat(parts, " · "))
 		elseif data.dailyBrief and data.dailyBrief.streak > 0 then
 			self:_Toast(
 				"success",
@@ -3470,7 +3478,7 @@ function App:_UpdateSetting(key: string, value: any)
 end
 
 function App:_RenderSettings()
-	self:_PageHeader("Settings", "Accessibility, audio, and a quick look at what's equipped right now.")
+	self:_PageHeader("Settings", "Accessibility, audio, what's equipped right now, and your achievements.")
 	local page = Factory.New("ScrollingFrame", {
 		Name = "SettingsScroll",
 		Position = UDim2.new(0.02, 0, 0, 96),
@@ -3672,6 +3680,83 @@ function App:_RenderSettings()
 				y += 62
 			end
 		end
+	end
+
+	-- ACHIEVEMENTS ---------------------------------------------------------
+	local unlockedAchievements = profile.achievements or {}
+	local unlockedCount = 0
+	for _ in unlockedAchievements do
+		unlockedCount += 1
+	end
+	local achievementColumns = if self.compact then 1 else 2
+	local achievementRows = math.ceil(#Achievements.List / achievementColumns)
+	local achievementTileHeight = 74
+	local achievements =
+		Factory.Card(stack, UDim2.new(1, 0, 0, 58 + achievementRows * (achievementTileHeight + 8)), nil, "Achievements")
+	achievements.LayoutOrder = 4
+	Factory.Pill(
+		achievements,
+		string.format("ACHIEVEMENTS · %d/%d", unlockedCount, #Achievements.List),
+		Colors.Gold,
+		170
+	).Position =
+		UDim2.fromOffset(16, 14)
+	local achievementGrid = Factory.New("Frame", {
+		Position = UDim2.fromOffset(16, 50),
+		Size = UDim2.new(1, -32, 0, achievementRows * (achievementTileHeight + 8)),
+		BackgroundTransparency = 1,
+		Parent = achievements,
+	})
+	Factory.New("UIGridLayout", {
+		CellSize = UDim2.new(
+			1 / achievementColumns,
+			-8 * (achievementColumns - 1) / achievementColumns,
+			0,
+			achievementTileHeight
+		),
+		CellPadding = UDim2.fromOffset(8, 8),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = achievementGrid,
+	})
+	for index, definition in Achievements.List do
+		local unlocked = unlockedAchievements[definition.id] ~= nil
+		local tile = Factory.New("Frame", {
+			BackgroundColor3 = if unlocked then Colors.Ink else Colors.Panel,
+			BorderSizePixel = 0,
+			LayoutOrder = index,
+			Parent = achievementGrid,
+		})
+		Factory.Corner(tile, 11)
+		Factory.Stroke(tile, if unlocked then Colors.Gold else Colors.Line, if unlocked then 0.3 else 0.6)
+		Factory.Label(tile, if unlocked then "✓" else "○", UDim2.fromOffset(24, 24), {
+			Position = UDim2.fromOffset(10, 8),
+			Font = Theme.Fonts.Black,
+			TextSize = 15,
+			AlignX = Enum.TextXAlignment.Center,
+			Color = if unlocked then Colors.Gold else Colors.TextMuted,
+		})
+		Factory.Label(tile, definition.name, UDim2.new(1, -80, 0, 20), {
+			Position = UDim2.fromOffset(36, 8),
+			Font = Theme.Fonts.Bold,
+			TextSize = 13,
+			Color = if unlocked then Colors.Text else Colors.TextMuted,
+			Truncate = Enum.TextTruncate.AtEnd,
+		})
+		Factory.Label(tile, string.format("+%d", definition.tokens), UDim2.fromOffset(44, 20), {
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -10, 0, 8),
+			AlignX = Enum.TextXAlignment.Right,
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = if unlocked then Colors.Gold else Colors.TextMuted,
+		})
+		Factory.Label(tile, definition.description, UDim2.new(1, -48, 0, 38), {
+			Position = UDim2.fromOffset(36, 30),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
+		})
 	end
 end
 

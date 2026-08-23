@@ -111,7 +111,8 @@ function GenerationService.new(
 	backendService: any,
 	commerceService: any,
 	push: (Player, string, any) -> (),
-	analyticsService: any
+	analyticsService: any,
+	achievementService: any
 )
 	local self = setmetatable({
 		profiles = profileService,
@@ -119,6 +120,7 @@ function GenerationService.new(
 		backend = backendService,
 		commerce = commerceService,
 		analytics = analyticsService,
+		achievements = achievementService,
 		push = push,
 		polling = {} :: { [string]: boolean },
 		launching = {} :: { [string]: boolean },
@@ -756,6 +758,9 @@ function GenerationService:_CompleteModel(player: Player, generationId: string, 
 			productKey = existingGeneration.productKey,
 			method = existingGeneration.method,
 		})
+		self.achievements:Unlock(player, "FIRST_CREATION")
+		local completedCount = self.profiles:Get(player).stats.generationsCompleted
+		self.achievements:CheckCount(player, "FIVE_CREATIONS", completedCount, 5)
 	end
 end
 
