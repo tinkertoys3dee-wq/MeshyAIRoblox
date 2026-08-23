@@ -124,6 +124,53 @@ return table.freeze({
 		DailyCheckInTokens = 2,
 	},
 
+	-- Each achievement in src/Shared/Achievements.luau also awards a Roblox
+	-- badge on unlock (BadgeService:AwardBadgeAsync). Create one Badge asset
+	-- per id below in Creator Hub and paste its numeric ID in; 0 means "not
+	-- configured yet" (AchievementService silently skips awarding until then,
+	-- same convention as every other placeholder ID in this file) — token
+	-- rewards still work without a badge ID. Keys must match
+	-- Achievements.luau's `id` fields exactly, including "COMPLETIONIST", the
+	-- bonus achievement AchievementService grants automatically once every
+	-- other achievement is unlocked.
+	Achievements = {
+		BadgeIds = {
+			FIRST_CREATION = 0,
+			FIVE_CREATIONS = 0,
+			FIRST_EQUIP = 0,
+			FIRST_FIT_PRESET = 0,
+			FIRST_PUBLISH = 0,
+			FIRST_LISTING = 0,
+			FIRST_LIKE_GIVEN = 0,
+			FIRST_TRY_ON = 0,
+			FIRST_AD_WATCHED = 0,
+			FIRST_MARKETPLACE_PURCHASE = 0,
+			STREAK_SEVEN = 0,
+			FIRST_INVITE_SENT = 0,
+			COMPLETIONIST = 0,
+		},
+		-- Hard cap on the combined token value of every achievement plus the
+		-- completionist bonus (AchievementService errors at startup if
+		-- Achievements.luau's totals exceed this — see that file for the
+		-- current sum). None of these tokens are backed by ad revenue or a
+		-- Robux payment, unlike a rewarded-ad watch or a direct Forge Tokens
+		-- purchase, so their total must stay inside the margin the 20% token
+		-- markup already earns Forge, not stack on top of it.
+		--
+		-- Budget derivation: if a player funded one purchase of every
+		-- purchasable product (DirectGeneration 159 + ImagePreviewLow 29 +
+		-- ImagePreviewMedium 49 + ImagePreviewHigh 129 + ImageConversion 159 +
+		-- PriorityPass 29 = 554 R$) entirely with ad-earned tokens, Forge
+		-- earns (Ads.TokenPurchaseMarkup - 1) * 554 ≈ 111 tokens' worth of
+		-- margin from that one pass. This budget spends well under that
+		-- (currently ~86 of 110), so the one-time achievement pool never
+		-- outruns what a single engaged, ad-watching player's markup alone
+		-- already covers — before counting any of their other ad activity or
+		-- direct Robux spend. Recompute 110 if product prices or the markup
+		-- change materially.
+		NonEarningTokenBudget = 110,
+	},
+
 	Marketplace = {
 		MinimumTransferRobux = 10,
 		MaximumTransferRobux = 500,
