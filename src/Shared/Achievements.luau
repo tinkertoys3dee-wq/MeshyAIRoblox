@@ -13,6 +13,8 @@ export type AchievementDefinition = {
 }
 
 local Achievements = {
+	-- The id AchievementService grants automatically, not from a call site.
+	CompletionistId = "COMPLETIONIST",
 	List = {
 		{ id = "FIRST_CREATION", name = "First Spark", description = "Complete your first accessory.", tokens = 5 },
 		{ id = "FIVE_CREATIONS", name = "Prolific", description = "Complete five accessories.", tokens = 10 },
@@ -70,6 +72,15 @@ local Achievements = {
 			name = "Bring a Friend",
 			description = "Send a Roblox game invite to a friend.",
 			tokens = 3,
+		},
+		-- Granted automatically by AchievementService once every achievement
+		-- above is unlocked; never call Unlock/CheckCount with this id
+		-- directly. Kept last in the list so it reads as the finale.
+		{
+			id = "COMPLETIONIST",
+			name = "Forge Legend",
+			description = "Unlock every other achievement.",
+			tokens = 20,
 		},
 	} :: { AchievementDefinition },
 }
