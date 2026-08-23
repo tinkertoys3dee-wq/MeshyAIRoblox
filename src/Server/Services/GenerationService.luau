@@ -38,6 +38,11 @@ for _, option in Config.Generation.DetailLevels do
 	DETAIL_LEVELS[option.Id] = true
 end
 
+local IMAGE_QUALITY_TIERS: { [string]: { ProductKey: string, OpenAIQuality: string } } = {}
+for _, tier in Config.Generation.ImageQualityTiers do
+	IMAGE_QUALITY_TIERS[tier.Id] = { ProductKey = tier.ProductKey, OpenAIQuality = tier.OpenAIQuality }
+end
+
 local IMAGE_ASSET_TYPES = {
 	[1] = true, -- Image
 	[13] = true, -- Decal
@@ -66,7 +71,7 @@ end
 
 local function productKeyFor(method: string): string
 	if method == "IMAGE_PREVIEW" then
-		return "ImagePreview"
+		return "ImagePreviewLow"
 	elseif method == "IMAGE_TO_3D" then
 		return "ImageConversion"
 	elseif method == "IMAGE_UPLOAD" then
@@ -122,9 +127,11 @@ function GenerationService.new(
 	commerceService:Register("DirectGeneration", function(player, payload, intentId)
 		return self:_Grant(player, "DirectGeneration", payload, intentId)
 	end)
-	commerceService:Register("ImagePreview", function(player, payload, intentId)
-		return self:_Grant(player, "ImagePreview", payload, intentId)
-	end)
+	for _, tier in IMAGE_QUALITY_TIERS do
+		commerceService:Register(tier.ProductKey, function(player, payload, intentId)
+			return self:_Grant(player, tier.ProductKey, payload, intentId)
+		end)
+	end
 	commerceService:Register("ImageConversion", function(player, payload, intentId)
 		return self:_Grant(player, "ImageConversion", payload, intentId)
 	end)
@@ -176,6 +183,15 @@ function GenerationService:Create(player: Player, payload: any): (boolean, any)
 		return false, stylePreset
 	end
 
+	local imageQualityTier = nil :: string?
+	if kind == "IMAGE_PREVIEW" then
+		local requestedTier = if type(payload.imageQuality) == "string" then payload.imageQuality else "LOW"
+		if not IMAGE_QUALITY_TIERS[requestedTier] then
+			return false, "INVALID_IMAGE_QUALITY"
+		end
+		imageQualityTier = requestedTier
+	end
+
 	local filterSuccess, filteredPrompt, filterError = ModerationService.FilterPrompt(player, payload.prompt)
 	if not filterSuccess then
 		return false, filterError
@@ -191,13 +207,16 @@ function GenerationService:Create(player: Player, payload: any): (boolean, any)
 		return false, "QUEUE_FULL"
 	end
 
-	local productKey = if kind == "TEXT_TO_3D" then "DirectGeneration" else "ImagePreview"
+	local productKey = if kind == "TEXT_TO_3D"
+		then "DirectGeneration"
+		else IMAGE_QUALITY_TIERS[imageQualityTier :: string].ProductKey
 	local intentPayload = {
 		kind = kind,
 		filteredPrompt = filteredPrompt,
 		accessoryType = accessoryType,
 		stylePreset = stylePreset,
 		detailLevel = detailLevel,
+		imageQuality = imageQualityTier,
 		usePriority = payload.usePriority == true,
 	}
 	return self:_UseCreditOrPrompt(player, productKey, intentPayload)
@@ -488,6 +507,7 @@ function GenerationService:_Prepare(
 			accessoryType = payload.accessoryType,
 			stylePreset = payload.stylePreset or "AUTO",
 			detailLevel = payload.detailLevel or "BALANCED",
+			imageQuality = payload.imageQuality,
 			sourceImageAssetId = payload.sourceImageAssetId,
 			createdAt = now,
 			updatedAt = now,
@@ -556,6 +576,10 @@ function GenerationService:_Launch(player: Player, generationId: string)
 	end
 	if generation.sourceImageAssetId then
 		requestPayload.sourceImageAssetId = generation.sourceImageAssetId
+	end
+	if generation.method == "IMAGE_PREVIEW" and type(generation.imageQuality) == "string" then
+		local tier = IMAGE_QUALITY_TIERS[generation.imageQuality]
+		requestPayload.imageQuality = if tier then tier.OpenAIQuality else "low"
 	end
 	local success, response = self.backend:CreateJob(player, requestPayload)
 	if not success then

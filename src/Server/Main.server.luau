@@ -201,6 +201,16 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		return success, result
 	end,
+	[Network.Actions.UnequipItem] = function(player, payload)
+		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
+			return false, "INVALID_REQUEST"
+		end
+		local success, result = items:Unequip(player, payload.itemId)
+		if success then
+			analytics:Custom(player, "GeneratedItemUnequipped", 1, {})
+		end
+		return success, result
+	end,
 	[Network.Actions.PublishItem] = function(player, payload)
 		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
 			return false, "INVALID_REQUEST"
@@ -268,11 +278,42 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		return catalog:Reset(player)
 	end,
 	[Network.Actions.UpdateSettings] = function(player, payload)
-		if type(payload) ~= "table" or type(payload.soundsEnabled) ~= "boolean" then
+		if type(payload) ~= "table" then
+			return false, "INVALID_REQUEST"
+		end
+		local updates: { [string]: any } = {}
+		if payload.soundsEnabled ~= nil then
+			if type(payload.soundsEnabled) ~= "boolean" then
+				return false, "INVALID_REQUEST"
+			end
+			updates.soundsEnabled = payload.soundsEnabled
+		end
+		if payload.reduceMotion ~= nil then
+			if type(payload.reduceMotion) ~= "boolean" then
+				return false, "INVALID_REQUEST"
+			end
+			updates.reduceMotion = payload.reduceMotion
+		end
+		if payload.highContrast ~= nil then
+			if type(payload.highContrast) ~= "boolean" then
+				return false, "INVALID_REQUEST"
+			end
+			updates.highContrast = payload.highContrast
+		end
+		if payload.uiScale ~= nil then
+			local scale = tonumber(payload.uiScale)
+			if not scale or scale < 0.8 or scale > 1.4 then
+				return false, "INVALID_REQUEST"
+			end
+			updates.uiScale = scale
+		end
+		if next(updates) == nil then
 			return false, "INVALID_REQUEST"
 		end
 		local success, problem = profiles:Mutate(player, function(profile)
-			profile.settings.soundsEnabled = payload.soundsEnabled
+			for key, value in updates do
+				profile.settings[key] = value
+			end
 		end)
 		if not success then
 			return false, problem

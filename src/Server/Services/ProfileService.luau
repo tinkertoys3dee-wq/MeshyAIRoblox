@@ -35,7 +35,7 @@ local function defaultProfile(userId: number): { [string]: any }
 		grantedIntents = {},
 		retryCredits = {},
 		equippedItemIds = {},
-		settings = { soundsEnabled = true, reduceMotion = false },
+		settings = { soundsEnabled = true, reduceMotion = false, highContrast = false, uiScale = 1 },
 		stats = {
 			sessions = 0,
 			generationsStarted = 0,
@@ -129,6 +129,15 @@ function ProfileService:Load(player: Player): (boolean, string?)
 
 	local profile = if type(stored) == "table" then stored :: { [string]: any } else defaultProfile(player.UserId)
 	reconcile(profile, defaultProfile(player.UserId))
+	-- The single "ImagePreview" reference-image product split into three
+	-- quality tiers ("ImagePreviewLow/Medium/High"). Low kept the original
+	-- product ID and price, so fold forward any unspent credit a player
+	-- already earned under the retired key rather than stranding it.
+	if profile.retryCredits and profile.retryCredits.ImagePreview then
+		profile.retryCredits.ImagePreviewLow = (profile.retryCredits.ImagePreviewLow or 0)
+			+ profile.retryCredits.ImagePreview
+		profile.retryCredits.ImagePreview = nil
+	end
 	profile.schemaVersion = 2
 	profile.userId = player.UserId
 	profile.updatedAt = os.time()

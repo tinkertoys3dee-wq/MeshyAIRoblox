@@ -222,13 +222,33 @@ function CommunityService:GetMarketplace(player: Player, payload: any): (boolean
 	if type(payload) == "table" and type(payload.query) == "string" then
 		query = string.lower(string.sub(payload.query, 1, 60))
 	end
+	local searchByCreator = type(payload) == "table" and payload.searchBy == "CREATOR"
+	local sortMode = if type(payload) == "table" and type(payload.sortBy) == "string"
+		then payload.sortBy
+		else "TRENDING"
 	local references = {}
 	for _, entry in self:_ReadIndex().entries do
 		table.insert(references, entry)
 	end
-	table.sort(references, function(left, right)
-		return score(left) > score(right)
-	end)
+	if sortMode == "NEWEST" then
+		table.sort(references, function(left, right)
+			return (left.updatedAt or 0) > (right.updatedAt or 0)
+		end)
+	elseif sortMode == "PRICE_LOW" then
+		table.sort(references, function(left, right)
+			local leftPrice = if left.isListed then (left.listingPriceRobux or math.huge) else math.huge
+			local rightPrice = if right.isListed then (right.listingPriceRobux or math.huge) else math.huge
+			return leftPrice < rightPrice
+		end)
+	elseif sortMode == "MOST_LIKED" then
+		table.sort(references, function(left, right)
+			return (left.likes or 0) > (right.likes or 0)
+		end)
+	else
+		table.sort(references, function(left, right)
+			return score(left) > score(right)
+		end)
+	end
 
 	local items = {}
 	for _, reference in references do
@@ -236,8 +256,16 @@ function CommunityService:GetMarketplace(player: Player, payload: any): (boolean
 			break
 		end
 		local item, ownerName = self:_ResolvePublic(reference.itemId)
-		if item and (query == "" or string.find(string.lower(item.name), query, 1, true)) then
-			table.insert(items, publicItem(item, ownerName or "Creator", viewerProfile))
+		if item then
+			local matches = query == ""
+			if not matches and searchByCreator then
+				matches = string.find(string.lower(ownerName or "creator"), query, 1, true) ~= nil
+			elseif not matches then
+				matches = string.find(string.lower(item.name), query, 1, true) ~= nil
+			end
+			if matches then
+				table.insert(items, publicItem(item, ownerName or "Creator", viewerProfile))
+			end
 		end
 	end
 	return true, { items = items, refreshedAt = os.time() }
