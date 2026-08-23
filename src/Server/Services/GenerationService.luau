@@ -748,6 +748,8 @@ function GenerationService:_CompleteModel(player: Player, generationId: string, 
 		})
 		self.analytics:Custom(player, "GenerationCompleted", 1, {
 			durationSeconds = math.max(0, os.time() - existingGeneration.createdAt),
+			productKey = existingGeneration.productKey,
+			method = existingGeneration.method,
 		})
 	end
 end
@@ -787,6 +789,7 @@ function GenerationService:_Fail(
 		code = errorCode,
 		retryable = retryable,
 		creditGranted = productKey ~= "CustomImageUpload",
+		productKey = productKey,
 	})
 end
 

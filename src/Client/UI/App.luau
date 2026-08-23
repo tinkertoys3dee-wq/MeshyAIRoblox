@@ -2255,6 +2255,7 @@ function App:_RenderStudio()
 					fit.position = deepCopy(preset.fit.position)
 					fit.rotation = deepCopy(preset.fit.rotation)
 					fit.scale = deepCopy(preset.fit.scale)
+					self:_Track({ event = "FitPresetApplied", fields = {} })
 					self:_RenderActivePage()
 				end)
 				local remove =
@@ -2888,7 +2889,13 @@ function App:_SearchCatalog(query: string)
 			self.catalogResults = resultsOrProblem
 			self:_Track({
 				event = "CatalogSearch",
-				fields = { assetType = self.catalogType, resultCount = #self.catalogResults },
+				fields = {
+					assetType = self.catalogType,
+					resultCount = #self.catalogResults,
+					sortType = self.catalogSortType,
+					hasCreatorFilter = creatorName ~= "",
+					hasPriceFilter = minPrice ~= nil or maxPrice ~= nil,
+				},
 			})
 		else
 			self.catalogResults = {}

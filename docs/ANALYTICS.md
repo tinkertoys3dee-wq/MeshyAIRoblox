@@ -9,11 +9,14 @@ Review these by new/returning player, device class, creation method, group membe
 | Goal | Primary metrics | Diagnostic events |
 |---|---|---|
 | Activation | onboarding completion; first creation attempt; first fit saved | `OnboardingStep`, generation funnel steps 1–4, `AccessoryFitSaved` |
-| Reliability | paid-to-ready completion; median generation duration; retry rate | `GenerationCompleted`, `GenerationFailed` |
+| Reliability | paid-to-ready completion; median generation duration; retry rate; completion/failure rate per reference-image quality tier | `GenerationCompleted`, `GenerationFailed` (both carry `productKey`, e.g. `ImagePreviewLow`/`Medium`/`High`) |
 | Retention | D1/D7 retention; sessions per user; median session length; streak return rate | `ForgeSessionStarted`, `ForgeSessionEnded`, `DailyStudioCheckIn` |
 | Creation demand | direct/guided mix; image approval-to-conversion; generations per creator | generation funnel method field and profile counters |
 | Upload feature | pass prompt-to-purchase; unlock-to-first-upload; moderation success; upload-to-conversion | `CustomImagePassPrompted`, `GamePassPurchased`, `customImagesSubmitted`, reference funnel |
 | Avatar engagement | catalog try-ons per session; generated-item fits; publishes | `CatalogSearch`, `CatalogItemTried`, `AccessoryFitSaved`, publish counters |
+| Fit preset adoption | save-to-reuse rate; presets saved per player; deletion rate | `FitPresetSaved`, `FitPresetApplied`, `FitPresetDeleted` |
+| Catalog search quality | filter adoption (sort/creator/price); zero-result rate by filter combination | `CatalogSearch` (`sortType`, `hasCreatorFilter`, `hasPriceFilter`, `resultCount`) |
+| Accessibility adoption | high-contrast/reduce-motion/UI-scale opt-in rate; page reach including Settings | `SettingsChanged`, `AppOpenedTab` (`page = "Settings"`) |
 | Community health | discovery visits; try-on rate; likes/favorites per view | marketplace funnel, reaction and view counters |
 | Monetization | payer conversion; ARPDAU; revenue per completed model; priority-pass attach rate | economy events by SKU plus completion events |
 | Marketplace liquidity | listed originals; try-on-to-transfer rate; transfer completion | marketplace funnel steps 1–4 |

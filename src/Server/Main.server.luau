@@ -202,7 +202,11 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		if type(payload) ~= "table" or type(payload.presetId) ~= "string" then
 			return false, "INVALID_REQUEST"
 		end
-		return items:DeleteFitPreset(player, payload.presetId)
+		local success, result = items:DeleteFitPreset(player, payload.presetId)
+		if success then
+			analytics:Custom(player, "FitPresetDeleted", 1, {})
+		end
+		return success, result
 	end,
 	[Network.Actions.EquipItem] = function(player, payload)
 		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
@@ -334,6 +338,10 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		if not profiles:Save(player) then
 			return false, "SAVE_FAILED"
 		end
+		-- Booleans/numbers only (the exact values a toggle or slider can take),
+		-- never free text, so this is safe under the no-prompt-text rule while
+		-- still surfacing accessibility-feature adoption.
+		analytics:Custom(player, "SettingsChanged", 1, updates)
 		return true, { settings = profiles:Get(player).settings }
 	end,
 	[Network.Actions.CompleteOnboarding] = function(player)
