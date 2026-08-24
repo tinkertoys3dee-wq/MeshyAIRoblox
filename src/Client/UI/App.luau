@@ -123,7 +123,8 @@ local ERROR_MESSAGES = {
 	FIT_PRESET_LIMIT_REACHED = "You have saved the maximum number of fit presets. Delete one to save another.",
 	FIT_PRESET_NOT_FOUND = "That saved fit preset no longer exists.",
 	INSUFFICIENT_TOKENS = "You don't have enough Forge Tokens for that yet. Watch a rewarded ad to earn more.",
-	TOKENS_NOT_ACCEPTED = "Forge Tokens only pay for the Priority Pass. Generations always use Robux.",
+	INSUFFICIENT_AD_TOKENS = "Generations need ad-earned tokens specifically — free tokens (achievements, streaks) only cover the Priority Pass. Watch a rewarded ad to earn more.",
+	TOKENS_NOT_ACCEPTED = "Forge Tokens can't pay for that.",
 	AD_UNAVAILABLE = "No rewarded ad is available right now. Try again in a few minutes.",
 	AD_NOT_COMPLETED = "The ad was closed before it finished, so no tokens were earned.",
 	AD_WATCH_LIMIT_REACHED = "You've reached today's rewarded-ad limit. Come back tomorrow for more Forge Tokens.",
@@ -210,10 +211,24 @@ local function formatNumber(value: number): string
 	return text
 end
 
+-- Products with a real per-use provider cost, priced steeply enough in
+-- tokens that even the worst measured ad still leaves Forge ahead — see
+-- CommerceService.tokenPriceFor, the source of truth this mirrors.
+local GENERATION_TOKEN_PRODUCTS = {
+	DirectGeneration = true,
+	ImagePreviewLow = true,
+	ImagePreviewMedium = true,
+	ImagePreviewHigh = true,
+	ImageConversion = true,
+}
+
 -- Display-only mirror of CommerceService:BeginIntentWithTokens's math; the
 -- server always recomputes and enforces this, this is purely so the button
 -- can show the right token price before the click round-trips.
-local function tokenPrice(robuxPrice: number): number
+local function tokenPrice(robuxPrice: number, productKey: string?): number
+	if productKey and GENERATION_TOKEN_PRODUCTS[productKey] then
+		return math.ceil(robuxPrice * Config.Ads.TokenPurchaseMarkup / Config.Ads.WorstCaseAdRevenuePerAd)
+	end
 	return math.ceil(robuxPrice * Config.Ads.TokenPurchaseMarkup)
 end
 
@@ -1123,10 +1138,17 @@ function App:_RenderCreate()
 	if self.adAvailable == nil and not self.adAvailabilityChecking then
 		self:_RefreshAdAvailability()
 	end
-	local tokens = self.state.profile.tokens or 0
+	-- Two pools shown as one combined balance (see ProfileService.
+	-- defaultProfile): ad-earned/purchased tokens can fund a generation or
+	-- the Priority Pass, free tokens (achievements, streaks, invites) only
+	-- ever fund the Pass. CommerceService enforces which pool an actual
+	-- purchase draws from; this display total is just tokens + bonusTokens.
+	local adTokens = self.state.profile.tokens or 0
+	local bonusTokens = self.state.profile.bonusTokens or 0
+	local totalTokens = adTokens + bonusTokens
 	local watchesRemaining = self.adWatchesRemaining or 0
-	local tokensDescriptionText =
-		"Earn tokens by watching ads. Tokens buy the Priority Pass (20% markup) — generations always use Robux."
+	local tokensDescriptionText = "Earn tokens by watching ads. Ad tokens fund generations or the Pass; "
+		.. "free tokens (achievements, streaks) fund the Pass only."
 	-- Right-hand controls: on compact layouts this column collapses to full
 	-- width BELOW the balance/description, so its start (payLabelY) has to
 	-- clear however tall that description wraps to, not a number guessed
@@ -1139,12 +1161,13 @@ function App:_RenderCreate()
 	local inset = if self.compact then 16 else 0
 	local gap = 8
 	local tokensDescriptionY = 70
-	-- Scaled up from the previous copy's proven-good 32/50 at a proportional
-	-- length increase (97 -> 106 chars) rather than re-guessed from scratch —
-	-- there is no layout pass to measure the actual wrapped height against
-	-- here, so anchoring to a dimension that already shipped correctly beats
-	-- a fresh pixel estimate for text this codebase can't measure at render time.
-	local tokensDescriptionHeight = if self.compact then 44 else 56
+	-- Scaled from the previous copy's proven-good 32/50 at a proportional
+	-- length increase (97 -> ~130 chars) rather than re-guessed from
+	-- scratch — there is no layout pass to measure the actual wrapped height
+	-- against here, so anchoring to a dimension that already shipped
+	-- correctly beats a fresh pixel estimate for text this codebase can't
+	-- measure at render time.
+	local tokensDescriptionHeight = if self.compact then 46 else 68
 	local payLabelY = if self.compact then tokensDescriptionY + tokensDescriptionHeight + 12 else 12
 	local toggleY = payLabelY + 20
 	local watchAdY = toggleY + 38
@@ -1158,7 +1181,7 @@ function App:_RenderCreate()
 		TextSize = 11,
 		Color = Colors.Gold,
 	})
-	Factory.Label(tokensCard, formatNumber(tokens), UDim2.new(0.42, -16, 0, 36), {
+	Factory.Label(tokensCard, formatNumber(totalTokens), UDim2.new(0.42, -16, 0, 36), {
 		Position = UDim2.fromOffset(16, 30),
 		Font = Theme.Fonts.Black,
 		TextSize = 28,
@@ -1175,11 +1198,11 @@ function App:_RenderCreate()
 			AlignY = Enum.TextYAlignment.Top,
 		}
 	)
-	-- Scoped to the Priority Pass specifically: it is the only product Forge
-	-- Tokens can buy (see CommerceService:BeginIntentWithTokens), so an
-	-- unqualified "PAY WITH" would wrongly imply this also covers Direct
-	-- Forge / reference images / conversion below, which always charge Robux.
-	Factory.Label(tokensCard, "PRIORITY PASS: PAY WITH", UDim2.new(rightWidth, -2 * inset, 0, 16), {
+	-- Applies to every purchase button below (generation, conversion, and
+	-- the Priority Pass) — CommerceService silently draws from whichever
+	-- pool a given purchase is actually allowed to use, per the comment
+	-- above the balance.
+	Factory.Label(tokensCard, "PAY WITH", UDim2.new(rightWidth, -2 * inset, 0, 16), {
 		Position = UDim2.new(rightX, inset, 0, payLabelY),
 		Font = Theme.Fonts.Bold,
 		TextSize = 10,
@@ -1218,8 +1241,9 @@ function App:_RenderCreate()
 			elseif self.adAvailable == false then "No ad available right now"
 			elseif watchesRemaining <= 0 then "Ad limit reached for today"
 			else string.format(
-				"Watch ad · +%d tokens (%d left today)",
+				"Watch ad · +%d token%s (%d left today)",
 				Config.Ads.TokenGrantPerPurchase,
+				if Config.Ads.TokenGrantPerPurchase == 1 then "" else "s",
 				watchesRemaining
 			),
 		UDim2.new(rightWidth, -2 * inset, 0, 34),
@@ -1242,7 +1266,12 @@ function App:_RenderCreate()
 	end)
 	local buyTokens = Factory.Button(
 		tokensCard,
-		string.format("Buy %d tokens · R$ %d", Config.Ads.TokenGrantPerPurchase, self.state.prices.AdRewardTokens),
+		string.format(
+			"Buy %d token%s · R$ %d",
+			Config.Ads.TokenGrantPerPurchase,
+			if Config.Ads.TokenGrantPerPurchase == 1 then "" else "s",
+			self.state.prices.AdRewardTokens
+		),
 		UDim2.new(rightWidth, -2 * inset, 0, 30),
 		UDim2.new(rightX, inset, 0, buyTokensY),
 		nil
@@ -1654,15 +1683,18 @@ function App:_RenderCreate()
 				break
 			end
 		end
-		local price = if self.selectedMethod == "TEXT_TO_3D"
-			then self.state.prices.DirectGeneration
-			elseif selectedQualityTier then self.state.prices[selectedQualityTier.ProductKey]
-			else self.state.prices.ImagePreviewLow
-		-- Generation always costs real Robux — Forge Tokens only ever pay for
-		-- the Priority Pass (see CommerceService:BeginIntentWithTokens), so
-		-- the PAY WITH toggle above does not apply here even when set to
-		-- Tokens.
-		local priceText = string.format("R$ %d", price)
+		local generationProductKey = if self.selectedMethod == "TEXT_TO_3D"
+			then "DirectGeneration"
+			elseif selectedQualityTier then selectedQualityTier.ProductKey
+			else "ImagePreviewLow"
+		local price = self.state.prices[generationProductKey]
+		-- Tokens spent here draw only from the ad-earned balance (see
+		-- CommerceService:BeginIntentWithTokens) — free/bonus tokens can
+		-- never fund this, no matter how large that balance looks.
+		local payWithTokens = self.paymentMethod == "TOKENS" and self.selectedMethod ~= "IMAGE_UPLOAD"
+		local priceText = if payWithTokens
+			then string.format("%d ad tokens", tokenPrice(price, generationProductKey))
+			else string.format("R$ %d", price)
 		local actionText = if self.selectedMethod == "TEXT_TO_3D"
 			then string.format("Forge 3D · %s", priceText)
 			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · %s", priceText)
@@ -1705,6 +1737,7 @@ function App:_RenderCreate()
 						self:_Invoke(Network.Actions.BuyPriorityPass, { paymentMethod = self.paymentMethod })
 					if success and result.tokensSpent then
 						self.state.profile.tokens = result.tokens
+						self.state.profile.bonusTokens = result.bonusTokens
 						self.sounds:Play("Success")
 						self:_Toast("success", string.format("%d tokens spent on a priority pass.", result.tokensSpent))
 						self:_RenderActivePage()
@@ -1727,7 +1760,7 @@ function App:_RenderCreate()
 					stylePreset = self.selectedStylePreset,
 					detailLevel = self.selectedDetailLevel,
 					usePriority = self.usePriority,
-					paymentMethod = "ROBUX",
+					paymentMethod = self.paymentMethod,
 				}
 				if self.selectedMethod == "IMAGE_PREVIEW" then
 					request.imageQuality = self.selectedImageQuality
@@ -1749,6 +1782,7 @@ function App:_RenderCreate()
 						self:_Toast("success", "Studio mock purchase confirmed. Your generation is entering the queue.")
 					elseif result.tokensSpent then
 						self.state.profile.tokens = result.tokens
+						self.state.profile.bonusTokens = result.bonusTokens
 						self.sounds:Play("Success")
 						self:_Toast(
 							"success",
@@ -1834,8 +1868,11 @@ function App:_RenderCreate()
 				AlignY = Enum.TextYAlignment.Top,
 			}
 		)
-		-- Robux only — see the matching comment above the generate button.
-		local conversionPriceText = string.format("R$ %d", self.state.prices.ImageConversion)
+		-- See the matching comment above the generate button — same
+		-- ad-earned-only rule applies here.
+		local conversionPriceText = if self.paymentMethod == "TOKENS"
+			then string.format("%d ad tokens", tokenPrice(self.state.prices.ImageConversion, "ImageConversion"))
+			else string.format("R$ %d", self.state.prices.ImageConversion)
 		local approve = Factory.Button(
 			reference,
 			if self.compact
@@ -1851,7 +1888,7 @@ function App:_RenderCreate()
 				local success, result = self:_Invoke(Network.Actions.ConvertImage, {
 					generationId = readyImage.id,
 					usePriority = self.usePriority,
-					paymentMethod = "ROBUX",
+					paymentMethod = self.paymentMethod,
 				})
 				if success then
 					if result.usedRetryCredit then
@@ -1860,6 +1897,7 @@ function App:_RenderCreate()
 						self:_Toast("success", "Studio mock conversion confirmed.")
 					elseif result.tokensSpent then
 						self.state.profile.tokens = result.tokens
+						self.state.profile.bonusTokens = result.bonusTokens
 						self.sounds:Play("Success")
 						self:_Toast(
 							"success",

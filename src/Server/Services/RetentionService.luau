@@ -42,7 +42,10 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 			profile.daily.lastDay = day
 			profile.daily.best = math.max(profile.daily.best, profile.daily.streak)
 			tokensGranted = Config.Retention.DailyCheckInTokens
-			profile.tokens = (profile.tokens or 0) + tokensGranted
+			-- bonusTokens, not tokens: this reward has no ad revenue or Robux
+			-- payment behind it, so it may only ever buy the Priority Pass —
+			-- see the matching comment on ProfileService.defaultProfile.
+			profile.bonusTokens = (profile.bonusTokens or 0) + tokensGranted
 			if profile.daily.streak % 3 == 0 then
 				profile.retryCredits.PriorityPass = (profile.retryCredits.PriorityPass or 0) + 1
 				rewardGranted = true

@@ -71,7 +71,11 @@ function AdRewardService.new(
 			self.push(player, Network.PushEvents.Profile, { tokens = profile.tokens })
 			self.push(player, Network.PushEvents.Toast, {
 				tone = "success",
-				message = string.format("+%d Forge Tokens", Config.Ads.TokenGrantPerPurchase),
+				message = string.format(
+					"+%d Forge Token%s",
+					Config.Ads.TokenGrantPerPurchase,
+					if Config.Ads.TokenGrantPerPurchase == 1 then "" else "s"
+				),
 			})
 			self.analytics:Custom(player, "AdRewardGranted", Config.Ads.TokenGrantPerPurchase, {})
 		end

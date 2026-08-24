@@ -110,7 +110,13 @@ export type PlayerProfile = {
 	equippedItemIds: { string },
 	fitPresets: { [string]: FitPreset },
 	fitPresetOrder: { string },
+	-- Real-money-backed (ads, direct Robux purchase) — may fund generation
+	-- products. See ProfileService.defaultProfile for why this stays apart
+	-- from bonusTokens.
 	tokens: number,
+	-- Free grants (achievements, daily check-in, invites, group join) — may
+	-- only ever buy the Priority Pass.
+	bonusTokens: number,
 	adWatch: { day: number, count: number },
 	achievements: { [string]: number },
 	settings: { soundsEnabled: boolean, reduceMotion: boolean, highContrast: boolean, uiScale: number },
