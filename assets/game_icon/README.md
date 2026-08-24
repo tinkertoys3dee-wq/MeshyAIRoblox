@@ -35,11 +35,15 @@ Three elements do the work of pulling players in:
 - **A gold crown** floating opposite the avatar, so the item variety reads
   as a wardrobe rather than a single trinket.
 
-The look is deliberately loud: a saturated magenta→violet radial with
-sunburst rays behind the hero, screen-blended glows, and a chunky
-gold-gradient wordmark with stacked keylines. All of it is tuned so the
-silhouette, color contrast, and title still read at 150×150 and smaller —
-Roblox's own guidance point for icon legibility — not just at full size.
+The look is deliberately loud: a forge-ember radial that runs white-hot at
+the centre, through vivid orange and red, and falls off into deep violet at
+the edges, with sunburst rays behind the hero and a chunky gold-gradient
+wordmark. The falloff is doing real work — the lower third has to stay dark
+enough for the gold title to hold its contrast, and the corner rim-glows are
+kept low because a cool screen-blend over orange desaturates to grey rather
+than reading as a second hue. All of it is tuned so the silhouette, colour
+contrast, and title still read at 150×150 and smaller — Roblox's own
+guidance point for icon legibility — not just at full size.
 
 ### A note on the wordmark
 
