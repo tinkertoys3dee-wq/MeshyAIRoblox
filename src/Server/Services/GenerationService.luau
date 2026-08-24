@@ -106,6 +106,44 @@ local function defaultFit(accessoryType: string): { [string]: any }
 	}
 end
 
+local MODEL_PRODUCING_METHODS = {
+	TEXT_TO_3D = true,
+	IMAGE_TO_3D = true,
+}
+
+-- See Config.Generation.ModelQueueSeconds for why this exists. Returns nil
+-- for methods that don't produce a model (IMAGE_PREVIEW/IMAGE_UPLOAD reach
+-- their terminal IMAGE_READY status through a different _Poll branch that
+-- never consults this).
+local function computeMinReadyAt(now: number, method: string, priority: boolean): number?
+	if not MODEL_PRODUCING_METHODS[method] then
+		return nil
+	end
+	local range = if priority then Config.Generation.PriorityModelQueueSeconds else Config.Generation.ModelQueueSeconds
+	return now + math.random(range.Minimum, range.Maximum)
+end
+
+-- Cosmetic-only stage text shown once the pipeline has actually finished but
+-- this generation hasn't cleared its queue time yet (see computeMinReadyAt).
+-- Progress climbs from wherever the real backend progress last was up to 99
+-- -- never backward, and never 100 until the item is actually handed over --
+-- so the bar keeps moving forward instead of stalling or visibly rewinding.
+local FINISHING_STAGE_TEXTS = {
+	"Finishing touches",
+	"Polishing the details",
+	"Preparing your item",
+	"Almost ready",
+}
+
+local function finishingStageFor(startedAt: number, readyAt: number, startProgress: number): (string, number)
+	local total = math.max(1, readyAt - startedAt)
+	local elapsed = math.clamp(os.time() - startedAt, 0, total)
+	local span = math.max(1, 99 - startProgress)
+	local progress = math.clamp(startProgress + math.floor((elapsed / total) * span), startProgress, 99)
+	local stageIndex = 1 + (math.floor(elapsed / 18) % #FINISHING_STAGE_TEXTS)
+	return FINISHING_STAGE_TEXTS[stageIndex], progress
+end
+
 function GenerationService.new(
 	profileService: any,
 	playerStateService: any,
@@ -531,6 +569,7 @@ function GenerationService:_Prepare(
 			updatedAt = now,
 			purchaseIntentId = intentId,
 			sourceBackendJobId = payload.sourceBackendJobId,
+			minReadyAt = computeMinReadyAt(now, payload.kind, priority),
 		}
 		table.insert(profile.generationOrder, 1, generationId)
 		profile.stats.generationsStarted += 1
@@ -628,25 +667,40 @@ function GenerationService:_Poll(player: Player, generationId: string, backendJo
 	end
 	self.polling[generationId] = true
 	task.spawn(function()
+		-- Mutates + pushes one generation-progress update. Kept as a single
+		-- path so every caller below (real backend stages, the immediate
+		-- "SUCCEEDED and ready" case, and the paced FINISHING case) produces
+		-- exactly one push per poll cycle -- never two competing ones in the
+		-- same tick, which would otherwise flash the bar to 100% and back
+		-- down every ~4 seconds while a generation waits out its queue time.
+		local function pushGenerationUpdate(stage: string, stageText: string, progress: number)
+			self.profiles:Mutate(player, function(profile)
+				local generation = profile.generations[generationId]
+				if generation then
+					generation.stage = stage
+					generation.stageText = stageText
+					generation.progress = progress
+					generation.updatedAt = os.time()
+				end
+			end)
+			self.push(player, Network.PushEvents.Generation, {
+				generationId = generationId,
+				stage = stage,
+				stageText = stageText,
+				progress = progress,
+			})
+		end
+
 		while self.polling[generationId] and player.Parent do
 			local success, response = self.backend:GetJob(player, backendJobId)
 			if success and type(response.job) == "table" then
 				local job = response.job
-				self.profiles:Mutate(player, function(profile)
-					local generation = profile.generations[generationId]
-					if generation then
-						generation.stage = job.status
-						generation.stageText = job.stage
-						generation.progress = job.progress
-						generation.updatedAt = os.time()
-					end
-				end)
-				self.push(player, Network.PushEvents.Generation, {
-					generationId = generationId,
-					stage = job.status,
-					stageText = job.stage,
-					progress = job.progress,
-				})
+				-- SUCCEEDED is deliberately not pushed here: the branch below
+				-- owns that push, either as a real completion or as a paced
+				-- FINISHING update, so there's exactly one push for it.
+				if job.status ~= "SUCCEEDED" then
+					pushGenerationUpdate(job.status, job.stage, job.progress)
+				end
 
 				if job.status == "IMAGE_READY" then
 					self.polling[generationId] = nil
@@ -676,17 +730,60 @@ function GenerationService:_Poll(player: Player, generationId: string, backendJo
 					self.analytics:Funnel(player, "reference", 4, "Reference image ready", {})
 					return
 				elseif job.status == "SUCCEEDED" then
-					self.polling[generationId] = nil
 					local output = if type(job.output) == "table" then job.output else {}
 					if
 						not RunService:IsStudio()
 						and (type(output.modelAssetId) ~= "number" or output.modelAssetId <= 0)
 					then
+						self.polling[generationId] = nil
 						self:_Fail(player, generationId, "BACKEND_MODEL_MISSING", true, productKey)
 						return
 					end
-					self:_CompleteModel(player, generationId, output)
-					return
+					local currentProfile = self.profiles:Get(player)
+					local currentGeneration = currentProfile and currentProfile.generations[generationId]
+					local minReadyAt = currentGeneration and currentGeneration.minReadyAt
+					if type(minReadyAt) ~= "number" or os.time() >= minReadyAt then
+						self.polling[generationId] = nil
+						pushGenerationUpdate(job.status, job.stage, job.progress)
+						self:_CompleteModel(player, generationId, output)
+						return
+					end
+					-- The pipeline is done, but this generation hasn't cleared
+					-- its queue time yet (see Config.Generation.ModelQueueSeconds).
+					-- Keep this same poll loop alive -- backend:GetJob on an
+					-- already-finished job is cheap and idempotent -- and pace a
+					-- plausible finishing stage instead of handing the item over
+					-- early.
+					local finishingStartedAt = currentGeneration.finishingStartedAt
+					local finishingStartProgress = currentGeneration.finishingStartProgress
+					if type(finishingStartedAt) ~= "number" or type(finishingStartProgress) ~= "number" then
+						finishingStartedAt = os.time()
+						-- Seeded from the last real backend progress value
+						-- (still sitting in the profile since the SUCCEEDED
+						-- branch above deliberately skips the generic push),
+						-- capped with a little headroom so there's always
+						-- room to visibly keep climbing.
+						finishingStartProgress = math.clamp(math.floor(currentGeneration.progress or 90), 0, 97)
+					end
+					local stageText, progress =
+						finishingStageFor(finishingStartedAt, minReadyAt, finishingStartProgress)
+					self.profiles:Mutate(player, function(profile)
+						local generation = profile.generations[generationId]
+						if generation then
+							generation.stage = "FINISHING"
+							generation.stageText = stageText
+							generation.progress = progress
+							generation.finishingStartedAt = finishingStartedAt
+							generation.finishingStartProgress = finishingStartProgress
+							generation.updatedAt = os.time()
+						end
+					end)
+					self.push(player, Network.PushEvents.Generation, {
+						generationId = generationId,
+						stage = "FINISHING",
+						stageText = stageText,
+						progress = progress,
+					})
 				elseif job.status == "FAILED" then
 					self.polling[generationId] = nil
 					local errorCode = if job.error then job.error.code else "GENERATION_FAILED"

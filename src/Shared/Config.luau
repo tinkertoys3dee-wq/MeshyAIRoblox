@@ -51,6 +51,23 @@ return table.freeze({
 		TextureResolution = 2048,
 		StatusPollSeconds = 4,
 		IntentLifetimeSeconds = 15 * 60,
+		-- A completed model isn't handed to the player the moment the
+		-- pipeline finishes; it clears a standard queue first, randomized
+		-- within this range each time so it doesn't read as a fixed
+		-- timer. This is what Products.PriorityPass and its free grants
+		-- (RetentionService's streak reward, AdRewardService-funded
+		-- retries) actually buy relief from -- see
+		-- PriorityModelQueueSeconds below. Only applies to the two
+		-- methods that produce a model (TEXT_TO_3D, IMAGE_TO_3D); the
+		-- reference-image step is unaffected.
+		ModelQueueSeconds = { Minimum = 130, Maximum = 220 },
+		-- Group members and anyone who has spent a Priority Pass on this
+		-- generation (GenerationService._Prepare's `priority` flag) clear
+		-- the same queue in this much shorter range instead of skipping
+		-- it outright -- a real, felt improvement rather than an instant
+		-- finish, which would look exploitable and undercut why anyone
+		-- would buy it again next time.
+		PriorityModelQueueSeconds = { Minimum = 20, Maximum = 45 },
 	},
 
 	-- Shared by the fitting UI and the authoritative server validator so the
