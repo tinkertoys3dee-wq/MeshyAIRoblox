@@ -34,8 +34,6 @@ Three elements do the work of pulling players in:
   you," not "here is an object."
 - **A gold crown** floating opposite the avatar, so the item variety reads
   as a wardrobe rather than a single trinket.
-- **An `AI` starburst callout**, because AI-generated gear is the actual
-  hook and nothing else in the frame communicates it.
 
 The look is deliberately loud: a saturated magenta→violet radial with
 sunburst rays behind the hero, screen-blended glows, and a chunky
