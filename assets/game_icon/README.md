@@ -59,6 +59,17 @@ the light that was added. And ember particles must not be blurred directly —
 that dissolves them against a bright field. Each is a crisp core with a
 separate blurred halo underneath.
 
+The scene is lit as one space rather than as separate stickers. Everything
+solid casts a contact shadow, there's a warm pool of light on the floor
+around the anvil, and the avatar, crown and hammer each carry a warm rim on
+the edge that faces the forge. That rim is what stops a character reading as
+artwork pasted over a background. Hanging chains at the top edge are pure
+scenery — deliberately faint and perfectly vertical, since a tilted chain
+reads as wrong immediately and a long dark one over the hot field just looks
+like a squiggle. The impact ring is likewise held inside the anvil's own
+width; any wider and it stops being a shockwave and becomes a hoop lassoed
+around the avatar.
+
 ### A note on the wordmark
 
 The title is live `<text>` in the SVG set in **DejaVu Sans Bold**, faked up
