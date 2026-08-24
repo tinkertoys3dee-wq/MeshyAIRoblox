@@ -34,6 +34,7 @@ No secret should be pasted into chat or committed to this repository.
    - Restrict the key by IP if Railway provides a stable egress IP.
 11. Complete the experience's Maturity & Compliance questionnaire, disclose paid item trading and player-supplied image references, and confirm that the experience enforces `IsPaidItemTradingAllowed` and `IsContentSharingAllowed` per player.
 12. Create one Badge asset per achievement in Creator Hub (Create → Badges) and paste each numeric badge ID into the matching key of `Config.Achievements.BadgeIds` in `src/Shared/Config.luau` — the achievement id, name, and description text live in `src/Shared/Achievements.luau`, not the badge asset itself, so the badge's own Creator Hub title/description can be whatever you like. Token rewards work immediately without this step; a badge ID left at `0` just means `AchievementService` skips awarding that badge until you fill it in. Don't change any achievement's `tokens` value without checking it against `Config.Achievements.NonEarningTokenBudget` — the server refuses to start if the total goes over budget (see that constant's comment for why).
+13. `assets/icons/` has a ready-made circular icon for every badge, developer product, and game pass (512×512 PNG, transparent corners, matching the in-game palette) — upload the matching file when you create/configure each one in Creator Hub. `assets/icons/README.md` maps every filename to its `Config.luau` key.
 
 ## Player image upload flow
 

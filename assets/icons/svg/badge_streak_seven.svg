@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="34%" cy="28%" r="80%">
+      <stop offset="0%" stop-color="#FFE29B"/>
+      <stop offset="62%" stop-color="#D69A22"/>
+      <stop offset="100%" stop-color="#D69A22"/>
+    </radialGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="circleClip">
+      <circle cx="256" cy="256" r="246"/>
+    </clipPath>
+  </defs>
+  <circle cx="256" cy="256" r="252" fill="#D69A22" opacity="0.9"/>
+  <circle cx="256" cy="256" r="246" fill="url(#bg)"/>
+  <g clip-path="url(#circleClip)">
+    <ellipse cx="196" cy="136" rx="210" ry="130" fill="url(#gloss)"/>
+    <circle cx="256" cy="256" r="246" fill="none" stroke="#0A0E20" stroke-opacity="0.18" stroke-width="10"/>
+    <path d="M256 118 C 220 176 176 200 176 262 C 176 322 214 362 256 362 C 298 362 336 322 336 262 C 336 234 320 214 302 198 C 308 226 296 246 278 246 C 292 206 268 152 256 118 Z" fill="#F7F9FF" />
+    <path d="M256 246 C 238 274 228 292 228 314 C 228 336 240 352 256 352 C 272 352 284 336 284 314 C 284 300 276 288 266 278 C 268 292 262 302 254 302 C 262 280 264 262 256 246 Z" fill="#D6720F" opacity="0.85" />
+  </g>
+</svg>

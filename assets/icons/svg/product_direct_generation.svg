@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="34%" cy="28%" r="80%">
+      <stop offset="0%" stop-color="#8CEBFF"/>
+      <stop offset="62%" stop-color="#1CA9C9"/>
+      <stop offset="100%" stop-color="#1CA9C9"/>
+    </radialGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="circleClip">
+      <circle cx="256" cy="256" r="246"/>
+    </clipPath>
+  </defs>
+  <circle cx="256" cy="256" r="252" fill="#1CA9C9" opacity="0.9"/>
+  <circle cx="256" cy="256" r="246" fill="url(#bg)"/>
+  <g clip-path="url(#circleClip)">
+    <ellipse cx="196" cy="136" rx="210" ry="130" fill="url(#gloss)"/>
+    <circle cx="256" cy="256" r="246" fill="none" stroke="#0A0E20" stroke-opacity="0.18" stroke-width="10"/>
+    <path d="M180 200 L332 200 L392 260 L256 400 L120 260 Z" fill="none" stroke="#F7F9FF" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M180 200 L256 260 L120 260 Z M332 200 L256 260 L392 260 Z M180 200 L332 200 L256 260 Z M256 260 L256 400" fill="none" stroke="#F7F9FF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.75" />
+  </g>
+</svg>
