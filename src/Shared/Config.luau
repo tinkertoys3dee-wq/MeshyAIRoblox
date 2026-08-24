@@ -82,7 +82,7 @@ return table.freeze({
 		-- Robux of real revenue (see Ads.TokenGrantPerPurchase below), nowhere
 		-- close to what an 8 Robux anchor implied, so there is no case for
 		-- pricing this above the minimum.
-		AdRewardTokens = { Id = 0, SuggestedPrice = 3 },
+		AdRewardTokens = { Id = 3709706813, SuggestedPrice = 3 },
 	},
 
 	Passes = {
@@ -176,20 +176,20 @@ return table.freeze({
 	-- other achievement is unlocked.
 	Achievements = {
 		BadgeIds = {
-			FIRST_CREATION = 0,
-			FIVE_CREATIONS = 0,
-			FIRST_EQUIP = 0,
-			FIRST_FIT_PRESET = 0,
-			FIRST_PUBLISH = 0,
-			FIRST_LISTING = 0,
-			FIRST_LIKE_GIVEN = 0,
-			FIRST_TRY_ON = 0,
-			FIRST_AD_WATCHED = 0,
-			FIRST_MARKETPLACE_PURCHASE = 0,
-			STREAK_SEVEN = 0,
-			FIRST_INVITE_SENT = 0,
-			GROUP_JOINED = 0,
-			COMPLETIONIST = 0,
+			FIRST_CREATION = 1988483841053665,
+			FIVE_CREATIONS = 1247423063402341,
+			FIRST_EQUIP = 4167969644689488,
+			FIRST_FIT_PRESET = 2277407725453843,
+			FIRST_PUBLISH = 3504089854919994,
+			FIRST_LISTING = 99594973192757,
+			FIRST_LIKE_GIVEN = 3461971222499396,
+			FIRST_TRY_ON = 181312400705376,
+			FIRST_AD_WATCHED = 88267055892597,
+			FIRST_MARKETPLACE_PURCHASE = 537031408819152,
+			STREAK_SEVEN = 1187463061094437,
+			FIRST_INVITE_SENT = 950632947701447,
+			GROUP_JOINED = 1311980823175385,
+			COMPLETIONIST = 22321998004466,
 		},
 		-- Soft cap on the combined token value of every achievement plus the
 		-- completionist bonus (AchievementService errors at startup if
