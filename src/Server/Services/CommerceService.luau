@@ -338,6 +338,22 @@ function CommerceService:BeginIntent(
 	return true, { intentId = intentId, prompted = true }
 end
 
+-- Products a rewarded ad can ultimately pay for. A completed rewarded video
+-- ad nets Forge roughly 0.12-0.44 Robux (measured, not the old ~8 Robux
+-- assumption this used to run on — see docs/PRICING.md "Forge Tokens").
+-- Every other purchasable product costs real provider money per use (as
+-- little as $0.006, as much as $0.30 — see the pricing table in that same
+-- doc), two to three orders of magnitude more than a single ad view earns,
+-- so no realistic token price could let tokens fund one without running
+-- Forge at a loss. Priority Pass is the one product with a negligible
+-- variable cost, so it is the only one tokens (from any source — ads,
+-- achievements, daily check-in, invites) may ever buy. Widening this list
+-- requires the product to be genuinely near-zero-marginal-cost, not just
+-- cheap in Robux.
+local TOKEN_PAYABLE_PRODUCTS = {
+	PriorityPass = true,
+}
+
 -- Pays for a product with Forge Tokens (earned by watching rewarded ads —
 -- see AdRewardService) instead of prompting a Robux purchase. Mirrors
 -- BeginIntent's studio-mock-purchase shape: mutate first, call the same
@@ -348,6 +364,9 @@ function CommerceService:BeginIntentWithTokens(
 	productKey: string,
 	payload: { [string]: any }
 ): (boolean, any)
+	if not TOKEN_PAYABLE_PRODUCTS[productKey] then
+		return false, "TOKENS_NOT_ACCEPTED"
+	end
 	local handler = self.handlers[productKey]
 	if not handler then
 		return false, "UNKNOWN_PRODUCT"

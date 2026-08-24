@@ -220,7 +220,12 @@ function GenerationService:Create(player: Player, payload: any): (boolean, any)
 		detailLevel = detailLevel,
 		imageQuality = imageQualityTier,
 		usePriority = payload.usePriority == true,
-		paymentMethod = if payload.paymentMethod == "TOKENS" then "TOKENS" else "ROBUX",
+		-- Forge Tokens never pay for generation: a rewarded ad nets Forge
+		-- roughly 0.12-0.44 Robux, while the cheapest of these products still
+		-- costs real provider money per use (see docs/PRICING.md). Tokens are
+		-- only accepted for the near-zero-marginal-cost Priority Pass — see
+		-- CommerceService:BeginIntentWithTokens.
+		paymentMethod = "ROBUX",
 	}
 	return self:_UseCreditOrPrompt(player, productKey, intentPayload)
 end
@@ -349,7 +354,8 @@ function GenerationService:ConvertImage(player: Player, payload: any): (boolean,
 		sourceBackendJobId = source.backendJobId,
 		sourceImageAssetId = if sourceImageAssetId and sourceImageAssetId > 0 then sourceImageAssetId else nil,
 		usePriority = payload.usePriority == true,
-		paymentMethod = if payload.paymentMethod == "TOKENS" then "TOKENS" else "ROBUX",
+		-- Robux only — see the matching comment in Create() above.
+		paymentMethod = "ROBUX",
 	})
 end
 

@@ -77,8 +77,12 @@ return table.freeze({
 		-- reward to be "a developer product which would normally be available
 		-- to purchase with Robux" worth 3-10 Robux, and forbids rewarding
 		-- Robux directly — see docs/PRICING.md "Forge Tokens" section before
-		-- changing this price or Ads.TokenGrantPerPurchase.
-		AdRewardTokens = { Id = 0, SuggestedPrice = 8 },
+		-- changing this price or Ads.TokenGrantPerPurchase. Priced at Roblox's
+		-- allowed floor: a completed rewarded ad measures at only ~0.12-0.44
+		-- Robux of real revenue (see Ads.TokenGrantPerPurchase below), nowhere
+		-- close to what an 8 Robux anchor implied, so there is no case for
+		-- pricing this above the minimum.
+		AdRewardTokens = { Id = 0, SuggestedPrice = 3 },
 	},
 
 	Passes = {
@@ -97,19 +101,40 @@ return table.freeze({
 		WaistAccessory = "",
 	},
 
-	-- Forge Tokens: an ad-earned alternative to Robux for the same purchasable
-	-- products (see docs/PRICING.md). Roblox does not expose live per-view ad
-	-- revenue to a running experience (only a 1-day-delayed Analytics
-	-- dashboard), so this whole section is a creator-tuned estimate, not a
-	-- measured value — revisit it against Monetization > Ads > Analytics >
-	-- Rewarded Video after launch.
+	-- Forge Tokens: an ad-earned alternative to Robux, but ONLY for the
+	-- Priority Pass — see the CommerceService:BeginIntentWithTokens whitelist
+	-- before assuming this covers anything else. It used to cover Direct
+	-- Forge, every reference-image tier, and Image → 3D Conversion too; that
+	-- was a real money-losing bug, not just an aggressive design choice, and
+	-- is why it no longer does (see below).
+	--
+	-- Roblox does not expose live per-view ad revenue to a running
+	-- experience (only a 1-day-delayed Analytics dashboard), so this section
+	-- originally shipped on a guess: "1 token == 1 Robux of value, matching
+	-- AdRewardTokens.SuggestedPrice." Measured Analytics > Rewarded Video
+	-- data puts one completed ad at only ~0.12-0.44 Robux of real revenue —
+	-- 18x-66x less than that guess. Under the old 8-tokens-per-ad grant, a
+	-- player could fund a 159 Robux generation (needing ceil(159 * 1.2) =
+	-- 191 tokens, ~24 ad watches) using ad revenue worth only ~2.9-10.6
+	-- Robux, while the generation itself burns real OpenAI/Meshy provider
+	-- cost regardless of how it was paid for (as much as $0.30 — see
+	-- docs/PRICING.md). That is a guaranteed loss on every such redemption,
+	-- not a break-even trade, so token payment for every real-provider-cost
+	-- product was removed rather than merely re-priced: no token count fixes
+	-- a currency worth fractions of a Robux being spent against a cost
+	-- measured in tens of cents. Priority Pass is the one purchasable item
+	-- with negligible variable cost, so it is the only one tokens may ever
+	-- buy, regardless of source (ad, achievement, daily check-in, invite,
+	-- group join).
 	Ads = {
 		-- Tokens granted both when a player buys AdRewardTokens directly with
 		-- Robux and when they complete a rewarded video ad for it (Roblox
-		-- requires both paths grant the identical benefit). 1 token == 1 Robux
-		-- of value at that baseline, matching AdRewardTokens.SuggestedPrice.
-		TokenGrantPerPurchase = 8,
-		-- Buying any other product with tokens costs ceil(robuxPrice * this)
+		-- requires both paths grant the identical benefit). Kept at
+		-- 1 token == 1 Robux of AdRewardTokens.SuggestedPrice, just at that
+		-- product's new, much lower floor price — see the note above for why
+		-- the token grant itself was never the real fix.
+		TokenGrantPerPurchase = 3,
+		-- Buying Priority Pass with tokens costs ceil(robuxPrice * this)
 		-- tokens instead of Robux, so the token path is deliberately worth
 		-- more to Forge than the matching Robux price, not merely equal to it.
 		TokenPurchaseMarkup = 1.2,
@@ -150,25 +175,27 @@ return table.freeze({
 			GROUP_JOINED = 0,
 			COMPLETIONIST = 0,
 		},
-		-- Hard cap on the combined token value of every achievement plus the
+		-- Soft cap on the combined token value of every achievement plus the
 		-- completionist bonus (AchievementService errors at startup if
 		-- Achievements.luau's totals exceed this — see that file for the
 		-- current sum). None of these tokens are backed by ad revenue or a
 		-- Robux payment, unlike a rewarded-ad watch or a direct Forge Tokens
-		-- purchase, so their total must stay inside the margin the 20% token
-		-- markup already earns Forge, not stack on top of it.
+		-- purchase.
 		--
-		-- Budget derivation: if a player funded one purchase of every
-		-- purchasable product (DirectGeneration 159 + ImagePreviewLow 29 +
-		-- ImagePreviewMedium 49 + ImagePreviewHigh 129 + ImageConversion 159 +
-		-- PriorityPass 29 = 554 R$) entirely with ad-earned tokens, Forge
-		-- earns (Ads.TokenPurchaseMarkup - 1) * 554 ≈ 111 tokens' worth of
-		-- margin from that one pass. This budget spends well under that
-		-- (currently ~91 of 110), so the one-time achievement pool never
-		-- outruns what a single engaged, ad-watching player's markup alone
-		-- already covers — before counting any of their other ad activity or
-		-- direct Robux spend. Recompute 110 if product prices or the markup
-		-- change materially.
+		-- This budget is no longer what keeps that safe to hand out for free.
+		-- It used to be sized against a basket of every purchasable product,
+		-- on the theory that the 20% token markup's "extra" tokens covered
+		-- the free ones — a real-money guarantee that only held if tokens
+		-- were worth what that basket assumed, which measured ad revenue
+		-- (~0.12-0.44 Robux per ad, see Ads above) showed was never true.
+		-- Achievement tokens, like every other Forge Token, can now only buy
+		-- the near-zero-marginal-cost Priority Pass (see
+		-- CommerceService:BeginIntentWithTokens), so handing them out for
+		-- free costs Forge no real provider spend regardless of this number.
+		-- 110 is kept as a game-balance ceiling — stopping the achievement
+		-- pool from trivializing Priority Pass access, not a revenue
+		-- calculation — so raising an achievement's reward still needs this
+		-- reviewed, just for pacing rather than solvency.
 		NonEarningTokenBudget = 110,
 	},
 

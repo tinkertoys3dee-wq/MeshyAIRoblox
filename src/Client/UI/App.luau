@@ -123,6 +123,7 @@ local ERROR_MESSAGES = {
 	FIT_PRESET_LIMIT_REACHED = "You have saved the maximum number of fit presets. Delete one to save another.",
 	FIT_PRESET_NOT_FOUND = "That saved fit preset no longer exists.",
 	INSUFFICIENT_TOKENS = "You don't have enough Forge Tokens for that yet. Watch a rewarded ad to earn more.",
+	TOKENS_NOT_ACCEPTED = "Forge Tokens only pay for the Priority Pass. Generations always use Robux.",
 	AD_UNAVAILABLE = "No rewarded ad is available right now. Try again in a few minutes.",
 	AD_NOT_COMPLETED = "The ad was closed before it finished, so no tokens were earned.",
 	AD_WATCH_LIMIT_REACHED = "You've reached today's rewarded-ad limit. Come back tomorrow for more Forge Tokens.",
@@ -262,6 +263,7 @@ function App.new()
 		catalogCreatorName = "",
 		catalogMinPrice = "",
 		catalogMaxPrice = "",
+		catalogFiltersExpanded = false,
 		usePriority = false,
 		paymentMethod = "ROBUX",
 		adAvailable = nil :: boolean?,
@@ -1123,7 +1125,31 @@ function App:_RenderCreate()
 	end
 	local tokens = self.state.profile.tokens or 0
 	local watchesRemaining = self.adWatchesRemaining or 0
-	local tokensCardHeight = if self.compact then 260 else 156
+	local tokensDescriptionText =
+		"Earn tokens by watching ads. Tokens buy the Priority Pass (20% markup) — generations always use Robux."
+	-- Right-hand controls: on compact layouts this column collapses to full
+	-- width BELOW the balance/description, so its start (payLabelY) has to
+	-- clear however tall that description wraps to, not a number guessed
+	-- once and left to drift the next time the copy changes — that mismatch
+	-- is exactly how the description text overlapping "PAY WITH" would
+	-- happen. On wide layouts the column sits beside the description
+	-- instead, so its position is independent of the description's height.
+	local rightX = if self.compact then 0 else 0.46
+	local rightWidth = if self.compact then 1 else 0.54
+	local inset = if self.compact then 16 else 0
+	local gap = 8
+	local tokensDescriptionY = 70
+	-- Scaled up from the previous copy's proven-good 32/50 at a proportional
+	-- length increase (97 -> 106 chars) rather than re-guessed from scratch —
+	-- there is no layout pass to measure the actual wrapped height against
+	-- here, so anchoring to a dimension that already shipped correctly beats
+	-- a fresh pixel estimate for text this codebase can't measure at render time.
+	local tokensDescriptionHeight = if self.compact then 44 else 56
+	local payLabelY = if self.compact then tokensDescriptionY + tokensDescriptionHeight + 12 else 12
+	local toggleY = payLabelY + 20
+	local watchAdY = toggleY + 38
+	local buyTokensY = watchAdY + 42
+	local tokensCardHeight = if self.compact then buyTokensY + 30 + 16 else 156
 	local tokensCard = Factory.Card(stack, UDim2.new(1, 0, 0, tokensCardHeight), nil, "TokensCard")
 	tokensCard.LayoutOrder = 0
 	Factory.Label(tokensCard, "FORGE TOKENS", UDim2.new(0.42, -16, 0, 18), {
@@ -1139,37 +1165,26 @@ function App:_RenderCreate()
 	})
 	Factory.Label(
 		tokensCard,
-		"Earn tokens by watching a rewarded ad. Paying with tokens costs 20% more than the Robux price.",
-		UDim2.new(0.42, -16, 0, if self.compact then 32 else 50),
+		tokensDescriptionText,
+		UDim2.new(0.42, -16, 0, tokensDescriptionHeight),
 		{
-			Position = UDim2.fromOffset(16, 70),
+			Position = UDim2.fromOffset(16, tokensDescriptionY),
 			Color = Colors.TextMuted,
 			TextSize = 11,
 			Wrapped = true,
 			AlignY = Enum.TextYAlignment.Top,
 		}
 	)
-	-- Right-hand controls: on compact layouts this column collapses to full
-	-- width below the balance (see the Y offsets below); on wide layouts it
-	-- sits beside it, always sized/positioned in Scale so it can never
-	-- overlap the left column regardless of the card's actual pixel width.
-	-- inset is a pixel margin applied inside the band on both sides; gap is
-	-- the pixel gap between the two toggle buttons. Both toggle buttons use
-	-- the identical width formula below so their edges land exactly at
-	-- band-start+inset, gap/2 either side of the midpoint, and
-	-- band-end-inset — verified algebraically, not just visually guessed.
-	local rightX = if self.compact then 0 else 0.46
-	local rightWidth = if self.compact then 1 else 0.54
-	local inset = if self.compact then 16 else 0
-	local gap = 8
-	local payLabelY = if self.compact then 112 else 12
-	Factory.Label(tokensCard, "PAY WITH", UDim2.new(rightWidth, -2 * inset, 0, 16), {
+	-- Scoped to the Priority Pass specifically: it is the only product Forge
+	-- Tokens can buy (see CommerceService:BeginIntentWithTokens), so an
+	-- unqualified "PAY WITH" would wrongly imply this also covers Direct
+	-- Forge / reference images / conversion below, which always charge Robux.
+	Factory.Label(tokensCard, "PRIORITY PASS: PAY WITH", UDim2.new(rightWidth, -2 * inset, 0, 16), {
 		Position = UDim2.new(rightX, inset, 0, payLabelY),
 		Font = Theme.Fonts.Bold,
 		TextSize = 10,
 		Color = Colors.TextMuted,
 	})
-	local toggleY = payLabelY + 20
 	local toggleWidth = UDim2.new(rightWidth / 2, -(inset + gap / 2), 0, 30)
 	local payRobux = Factory.Button(
 		tokensCard,
@@ -1196,7 +1211,6 @@ function App:_RenderCreate()
 		self:_RenderActivePage()
 	end)
 	local watchAdActive = self.adAvailable == true and watchesRemaining > 0
-	local watchAdY = toggleY + 38
 	local watchAd = Factory.Button(
 		tokensCard,
 		if self.adAvailabilityChecking
@@ -1226,7 +1240,6 @@ function App:_RenderCreate()
 			self:_RenderActivePage()
 		end)
 	end)
-	local buyTokensY = watchAdY + 42
 	local buyTokens = Factory.Button(
 		tokensCard,
 		string.format("Buy %d tokens · R$ %d", Config.Ads.TokenGrantPerPurchase, self.state.prices.AdRewardTokens),
@@ -1645,10 +1658,11 @@ function App:_RenderCreate()
 			then self.state.prices.DirectGeneration
 			elseif selectedQualityTier then self.state.prices[selectedQualityTier.ProductKey]
 			else self.state.prices.ImagePreviewLow
-		local payWithTokens = self.paymentMethod == "TOKENS" and self.selectedMethod ~= "IMAGE_UPLOAD"
-		local priceText = if payWithTokens
-			then string.format("%d tokens", tokenPrice(price))
-			else string.format("R$ %d", price)
+		-- Generation always costs real Robux — Forge Tokens only ever pay for
+		-- the Priority Pass (see CommerceService:BeginIntentWithTokens), so
+		-- the PAY WITH toggle above does not apply here even when set to
+		-- Tokens.
+		local priceText = string.format("R$ %d", price)
 		local actionText = if self.selectedMethod == "TEXT_TO_3D"
 			then string.format("Forge 3D · %s", priceText)
 			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · %s", priceText)
@@ -1713,7 +1727,7 @@ function App:_RenderCreate()
 					stylePreset = self.selectedStylePreset,
 					detailLevel = self.selectedDetailLevel,
 					usePriority = self.usePriority,
-					paymentMethod = self.paymentMethod,
+					paymentMethod = "ROBUX",
 				}
 				if self.selectedMethod == "IMAGE_PREVIEW" then
 					request.imageQuality = self.selectedImageQuality
@@ -1820,9 +1834,8 @@ function App:_RenderCreate()
 				AlignY = Enum.TextYAlignment.Top,
 			}
 		)
-		local conversionPriceText = if self.paymentMethod == "TOKENS"
-			then string.format("%d tokens", tokenPrice(self.state.prices.ImageConversion))
-			else string.format("R$ %d", self.state.prices.ImageConversion)
+		-- Robux only — see the matching comment above the generate button.
+		local conversionPriceText = string.format("R$ %d", self.state.prices.ImageConversion)
 		local approve = Factory.Button(
 			reference,
 			if self.compact
@@ -1838,7 +1851,7 @@ function App:_RenderCreate()
 				local success, result = self:_Invoke(Network.Actions.ConvertImage, {
 					generationId = readyImage.id,
 					usePriority = self.usePriority,
-					paymentMethod = self.paymentMethod,
+					paymentMethod = "ROBUX",
 				})
 				if success then
 					if result.usedRetryCredit then
@@ -3169,7 +3182,18 @@ function App:_RenderAvatarLab()
 		"Avatar Lab",
 		"Mix Roblox Marketplace accessories with your Forge creations and stay longer in the look."
 	)
-	local controlsHeight = if self.compact then 276 else 200
+	-- The creator-name/price-range row is the single biggest thing in this
+	-- card, and most searches never touch it — collapsed by default, it only
+	-- renders (and only counts toward controlsHeight) once a player asks for
+	-- it, so the catalog grid below gets that space back instead of always
+	-- reserving it for filters most sessions never open.
+	local filtersExpanded = self.catalogFiltersExpanded == true
+	local filtersActive = self.catalogCreatorName ~= ""
+		or self.catalogMinPrice ~= ""
+		or self.catalogMaxPrice ~= ""
+	local controlsHeight = if filtersExpanded
+		then (if self.compact then 276 else 200)
+		else (if self.compact then 194 else 151)
 	local controls =
 		Factory.Card(self.content, UDim2.new(0.95, 0, 0, controlsHeight), UDim2.new(0.025, 0, 0, 94), "CatalogControls")
 	local search = self:_TextBox(
@@ -3252,6 +3276,18 @@ function App:_RenderAvatarLab()
 			self:_RenderActivePage()
 		end)
 	end
+	local filtersToggle = Factory.Button(
+		chips,
+		if filtersExpanded then "Filters ▲" elseif filtersActive then "Filters ✓" else "Filters ▾",
+		UDim2.fromOffset(if filtersActive and not filtersExpanded then 92 else 78, 30),
+		nil,
+		if filtersExpanded or filtersActive then "primary" else nil
+	)
+	self:_BindButton(filtersToggle)
+	filtersToggle.Activated:Connect(function()
+		self.catalogFiltersExpanded = not filtersExpanded
+		self:_RenderActivePage()
+	end)
 
 	-- Real Roblox Marketplace search options: sort order, then creator name
 	-- and price range. A visible Label precedes every input here (rather than
@@ -3293,49 +3329,65 @@ function App:_RenderAvatarLab()
 		end)
 	end
 
-	local filterY = sortY + 40
-	local filterFieldHeight = 34
-	local creatorField = self:_TextBox(
-		controls,
-		"Search by creator",
-		if self.compact then UDim2.new(1, -28, 0, filterFieldHeight) else UDim2.new(0, 220, 0, filterFieldHeight),
-		UDim2.fromOffset(14, filterY),
-		false
-	)
-	creatorField.Text = self.catalogCreatorName
-	local priceRowY = if self.compact then filterY + filterFieldHeight + 8 else filterY
-	local minField = self:_TextBox(
-		controls,
-		"Min R$",
-		if self.compact then UDim2.new(0.5, -18, 0, filterFieldHeight) else UDim2.fromOffset(90, filterFieldHeight),
-		if self.compact then UDim2.fromOffset(14, priceRowY) else UDim2.fromOffset(242, filterY),
-		false
-	)
-	minField.Text = self.catalogMinPrice
-	minField.TextXAlignment = Enum.TextXAlignment.Center
-	local maxField = self:_TextBox(
-		controls,
-		"Max R$",
-		if self.compact then UDim2.new(0.5, -18, 0, filterFieldHeight) else UDim2.fromOffset(90, filterFieldHeight),
-		if self.compact then UDim2.new(0.5, 4, 0, priceRowY) else UDim2.fromOffset(340, filterY),
-		false
-	)
-	maxField.Text = self.catalogMaxPrice
-	maxField.TextXAlignment = Enum.TextXAlignment.Center
 	self.catalogSearchBox = search
-	self.catalogCreatorBox = creatorField
-	self.catalogMinBox = minField
-	self.catalogMaxBox = maxField
+	if filtersExpanded then
+		local filterY = sortY + 40
+		local filterFieldHeight = 34
+		local creatorField = self:_TextBox(
+			controls,
+			"Search by creator",
+			if self.compact then UDim2.new(1, -28, 0, filterFieldHeight) else UDim2.new(0, 220, 0, filterFieldHeight),
+			UDim2.fromOffset(14, filterY),
+			false
+		)
+		creatorField.Text = self.catalogCreatorName
+		local priceRowY = if self.compact then filterY + filterFieldHeight + 8 else filterY
+		local minField = self:_TextBox(
+			controls,
+			"Min R$",
+			if self.compact then UDim2.new(0.5, -18, 0, filterFieldHeight) else UDim2.fromOffset(90, filterFieldHeight),
+			if self.compact then UDim2.fromOffset(14, priceRowY) else UDim2.fromOffset(242, filterY),
+			false
+		)
+		minField.Text = self.catalogMinPrice
+		minField.TextXAlignment = Enum.TextXAlignment.Center
+		local maxField = self:_TextBox(
+			controls,
+			"Max R$",
+			if self.compact then UDim2.new(0.5, -18, 0, filterFieldHeight) else UDim2.fromOffset(90, filterFieldHeight),
+			if self.compact then UDim2.new(0.5, 4, 0, priceRowY) else UDim2.fromOffset(340, filterY),
+			false
+		)
+		maxField.Text = self.catalogMaxPrice
+		maxField.TextXAlignment = Enum.TextXAlignment.Center
+		self.catalogCreatorBox = creatorField
+		self.catalogMinBox = minField
+		self.catalogMaxBox = maxField
+		for _, field in { creatorField, minField, maxField } do
+			field.FocusLost:Connect(function(enterPressed)
+				if enterPressed then
+					self:_ApplyCatalogFilters()
+				end
+			end)
+		end
+	else
+		-- _ApplyCatalogFilters nil-guards every box before reading it, so
+		-- clearing these is enough to stop it re-reading stale, unparented
+		-- TextBoxes from the last time the filter row was open; the values
+		-- already copied into catalogCreatorName/catalogMinPrice/
+		-- catalogMaxPrice stay in effect either way.
+		self.catalogCreatorBox = nil
+		self.catalogMinBox = nil
+		self.catalogMaxBox = nil
+	end
 	searchButton.Activated:Connect(function()
 		self:_ApplyCatalogFilters()
 	end)
-	for _, field in { search, creatorField, minField, maxField } do
-		field.FocusLost:Connect(function(enterPressed)
-			if enterPressed then
-				self:_ApplyCatalogFilters()
-			end
-		end)
-	end
+	search.FocusLost:Connect(function(enterPressed)
+		if enterPressed then
+			self:_ApplyCatalogFilters()
+		end
+	end)
 
 	if self.catalogAccess ~= true then
 		if self.catalogAccess == nil and not self.catalogAccessPrompting then
