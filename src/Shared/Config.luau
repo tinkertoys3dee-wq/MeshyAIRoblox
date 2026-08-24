@@ -147,6 +147,7 @@ return table.freeze({
 			FIRST_MARKETPLACE_PURCHASE = 0,
 			STREAK_SEVEN = 0,
 			FIRST_INVITE_SENT = 0,
+			GROUP_JOINED = 0,
 			COMPLETIONIST = 0,
 		},
 		-- Hard cap on the combined token value of every achievement plus the
@@ -163,7 +164,7 @@ return table.freeze({
 		-- PriorityPass 29 = 554 R$) entirely with ad-earned tokens, Forge
 		-- earns (Ads.TokenPurchaseMarkup - 1) * 554 ≈ 111 tokens' worth of
 		-- margin from that one pass. This budget spends well under that
-		-- (currently ~86 of 110), so the one-time achievement pool never
+		-- (currently ~91 of 110), so the one-time achievement pool never
 		-- outruns what a single engaged, ad-watching player's markup alone
 		-- already covers — before counting any of their other ad activity or
 		-- direct Robux spend. Recompute 110 if product prices or the markup

@@ -113,6 +113,9 @@ local function initializePlayer(player: Player)
 		plusSubscriber = playerStates:Get(player).plusSubscriber,
 		contentSharingAllowed = playerStates:Get(player).contentSharingAllowed,
 	})
+	if playerStates:Get(player).groupMember then
+		achievements:Unlock(player, "GROUP_JOINED")
+	end
 	retention:CheckIn(player)
 	generations:Resume(player)
 end
