@@ -22,11 +22,20 @@ visible on the platform.
 
 A hammer strikes an anvil and the impact erupts into a forge-burst — warm
 sparks fused with violet/cyan magic ribbons — out of which a large faceted
-gem is rising, with a floating top hat and crown alongside it so the
-listing reads as "avatar accessories get made here" rather than just
-"gems". The `FORGE` / `UGC` wordmark carries the name, since a storefront
-icon has to sell what the experience is before anyone reads the label next
-to it.
+gem is rising. The `FORGE` / `UGC` wordmark carries the name, since a
+storefront icon has to sell what the experience is before anyone reads the
+label next to it.
+
+Three elements do the work of pulling players in:
+
+- **A blocky avatar wearing the forged top hat.** Players respond to seeing
+  an avatar far more than to props alone, and putting the hat *on* a
+  character rather than floating it next to one says "this is gear for
+  you," not "here is an object."
+- **A gold crown** floating opposite the avatar, so the item variety reads
+  as a wardrobe rather than a single trinket.
+- **An `AI` starburst callout**, because AI-generated gear is the actual
+  hook and nothing else in the frame communicates it.
 
 The look is deliberately loud: a saturated magenta→violet radial with
 sunburst rays behind the hero, screen-blended glows, and a chunky
