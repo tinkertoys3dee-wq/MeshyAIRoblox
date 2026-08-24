@@ -45,6 +45,20 @@ than reading as a second hue. All of it is tuned so the silhouette, colour
 contrast, and title still read at 150×150 and smaller — Roblox's own
 guidance point for icon legibility — not just at full size.
 
+The field is layered rather than a single gradient: out-of-focus bokeh orbs
+weighted to the dark outer corners, soft blurred light shafts under the hard
+sunburst wedges, warm heat-haze curls rising off the forge, drifting ember
+particles, and a faint monochrome grain. The grain is load-bearing — a large
+smooth radial across 1024px bands visibly, and a little noise breaks it up.
+
+Two things worth knowing if you touch these layers: they are all
+screen-blended, so they add light. Piling them near the already-hot centre
+washes it out and costs the wordmark its contrast, which is why the bokeh
+sits outboard and the base gradient's outer stops were deepened to pay for
+the light that was added. And ember particles must not be blurred directly —
+that dissolves them against a bright field. Each is a crisp core with a
+separate blurred halo underneath.
+
 ### A note on the wordmark
 
 The title is live `<text>` in the SVG set in **DejaVu Sans Bold**, faked up
