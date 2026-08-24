@@ -22,19 +22,27 @@ visible on the platform.
 
 A hammer strikes an anvil and the impact erupts into a forge-burst — warm
 sparks fused with violet/cyan magic ribbons — out of which a large faceted
-gem is rising, standing in for any AI-generated wearable. It's meant to read
-at a glance as "things get forged here" while the magic-energy half of the
-burst signals the AI-generation angle, and it's deliberately no flatter than
-it needs to be: layered gradients, screen-blended glows, a beveled metal rim
-on the anvil/hammer, and drop shadows for depth, tuned specifically so the
-silhouette and color contrast still read at 150px and smaller (Roblox's own
-guidance point for icon legibility), not just at full size.
+gem is rising, with a floating top hat and crown alongside it so the
+listing reads as "avatar accessories get made here" rather than just
+"gems". The `FORGE` / `UGC` wordmark carries the name, since a storefront
+icon has to sell what the experience is before anyone reads the label next
+to it.
 
-No wordmark/text — Roblox displays the experience's name as a separate
-label next to the icon in essentially every placement, so baking text into
-the icon itself would be redundant and (at 150px) illegible anyway.
+The look is deliberately loud: a saturated magenta→violet radial with
+sunburst rays behind the hero, screen-blended glows, and a chunky
+gold-gradient wordmark with stacked keylines. All of it is tuned so the
+silhouette, color contrast, and title still read at 150×150 and smaller —
+Roblox's own guidance point for icon legibility — not just at full size.
 
-To tweak: hand-edit `svg/forge_ugc_icon.svg` (plain, readable SVG — see
-`build.py` in the icon's generation script if regenerating from scratch) and
+### A note on the wordmark
+
+The title is live `<text>` in the SVG set in **DejaVu Sans Bold**, faked up
+to a heavier weight with stacked `paint-order="stroke"` keylines (a wide
+dark outline, a warm inner outline, then the gradient fill). If you
+re-render the SVG on a machine without DejaVu installed, the wordmark will
+fall back to another face and the spacing will shift — the shipped PNGs
+already have it baked in, so this only matters if you regenerate.
+
+To tweak: hand-edit `svg/forge_ugc_icon.svg` (plain, readable SVG) and
 re-export to PNG at 512×512, keeping it fully opaque (no transparency —
 Roblox composites icons on their own tile background, not on the page).
