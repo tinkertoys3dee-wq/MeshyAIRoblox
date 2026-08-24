@@ -1957,11 +1957,27 @@ function App:_RenderCreate()
 				Parent = activity,
 			})
 			Factory.Corner(row, 9)
-			Factory.Label(row, string.sub(generation.filteredPrompt or "Creation", 1, 46), UDim2.new(0.55, -12, 1, 0), {
+			Factory.Label(row, string.sub(generation.filteredPrompt or "Creation", 1, 40), UDim2.new(0.4, -12, 1, 0), {
 				Position = UDim2.fromOffset(12, 0),
 				Font = Theme.Fonts.Medium,
 				TextSize = 12,
 				Truncate = Enum.TextTruncate.AtEnd,
+			})
+			local isModel = generation.method == "TEXT_TO_3D" or generation.method == "IMAGE_TO_3D"
+			local typeTag = Factory.New("Frame", {
+				Position = UDim2.new(0.4, 4, 0.5, -9),
+				Size = UDim2.new(0.15, -4, 0, 18),
+				BackgroundColor3 = if isModel then Colors.Violet else Colors.Cyan,
+				BackgroundTransparency = 0.78,
+				BorderSizePixel = 0,
+				Parent = row,
+			})
+			Factory.Corner(typeTag, 5)
+			Factory.Label(typeTag, if isModel then "MODEL" else "IMAGE", UDim2.new(1, 0, 1, 0), {
+				Font = Theme.Fonts.Bold,
+				TextSize = 10,
+				Color = if isModel then Colors.Violet else Colors.Cyan,
+				AlignX = Enum.TextXAlignment.Center,
 			})
 			Factory.Label(row, generation.stageText or generation.stage, UDim2.new(0.3, 0, 1, 0), {
 				Position = UDim2.new(0.56, 0, 0, 0),
