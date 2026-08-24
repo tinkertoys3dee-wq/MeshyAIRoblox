@@ -338,16 +338,56 @@ function CommerceService:BeginIntent(
 	return true, { intentId = intentId, prompted = true }
 end
 
+-- Which pool a token-funded product draws from, and at what price, is a
+-- direct consequence of what backs each pool:
+--
+-- profile.tokens is real-money-backed (a rewarded ad or a direct Robux
+-- purchase of AdRewardTokens); profile.bonusTokens (achievements, daily
+-- check-in, invites, group join) has no revenue behind it at all. A
+-- completed rewarded ad measures at only ~0.12-0.44 Robux of real revenue —
+-- see docs/PRICING.md "Forge Tokens" for the full derivation, including why
+-- an earlier version of this system priced tokens against an ~8 Robux
+-- assumption that was never true. Priority Pass has negligible variable
+-- cost, so both pools may buy it, at the same friendly markup Robux
+-- purchases get discounted against. Every generation product costs real
+-- provider money per use regardless of who pays (as little as $0.006, as
+-- much as $0.30), so it may draw ONLY from profile.tokens, and only at a
+-- price steep enough that even the worst measured ad — 0.12 Robux — still
+-- leaves Forge ahead: ceil(robuxPrice * markup / worstCaseAdRevenue) tokens,
+-- which for the 159 Robux Direct Forge generation is 1590 tokens (with
+-- TokenGrantPerPurchase at 1 token per ad, 1590 completed ad watches).
+-- bonusTokens can never reach this branch: no free grant, no matter how
+-- large, is allowed to fund a real-cost product.
+local GENERATION_TOKEN_PRODUCTS = {
+	DirectGeneration = true,
+	ImagePreviewLow = true,
+	ImagePreviewMedium = true,
+	ImagePreviewHigh = true,
+	ImageConversion = true,
+}
+
+local function tokenPriceFor(productKey: string, robuxPrice: number): number
+	if GENERATION_TOKEN_PRODUCTS[productKey] then
+		return math.ceil(robuxPrice * Config.Ads.TokenPurchaseMarkup / Config.Ads.WorstCaseAdRevenuePerAd)
+	end
+	return math.ceil(robuxPrice * Config.Ads.TokenPurchaseMarkup)
+end
+
 -- Pays for a product with Forge Tokens (earned by watching rewarded ads —
--- see AdRewardService) instead of prompting a Robux purchase. Mirrors
--- BeginIntent's studio-mock-purchase shape: mutate first, call the same
--- registered grant handler every Robux/receipt path uses, then only commit
--- the side effect once the mutation is durably saved.
+-- see AdRewardService — or granted for free, see ProfileService.
+-- defaultProfile) instead of prompting a Robux purchase. Mirrors BeginIntent's
+-- studio-mock-purchase shape: mutate first, call the same registered grant
+-- handler every Robux/receipt path uses, then only commit the side effect
+-- once the mutation is durably saved.
 function CommerceService:BeginIntentWithTokens(
 	player: Player,
 	productKey: string,
 	payload: { [string]: any }
 ): (boolean, any)
+	local usesGenerationPricing = GENERATION_TOKEN_PRODUCTS[productKey] == true
+	if not usesGenerationPricing and productKey ~= "PriorityPass" then
+		return false, "TOKENS_NOT_ACCEPTED"
+	end
 	local handler = self.handlers[productKey]
 	if not handler then
 		return false, "UNKNOWN_PRODUCT"
@@ -359,18 +399,33 @@ function CommerceService:BeginIntentWithTokens(
 	if type(robuxPrice) ~= "number" or robuxPrice <= 0 then
 		return false, "UNKNOWN_PRODUCT"
 	end
-	local tokenPrice = math.ceil(robuxPrice * Config.Ads.TokenPurchaseMarkup)
+	local tokenPrice = tokenPriceFor(productKey, robuxPrice)
 	local profile = self.profiles:Get(player)
 	if not profile then
 		return false, "PROFILE_UNAVAILABLE"
 	end
-	if (profile.tokens or 0) < tokenPrice then
-		return false, "INSUFFICIENT_TOKENS"
+	-- Generation products spend only the real-money-backed pool. Priority
+	-- Pass is safe from either, so it spends the free pool first — saving
+	-- ad-backed tokens for the one thing only they may buy.
+	local fromBonus, fromTokens
+	if usesGenerationPricing then
+		if (profile.tokens or 0) < tokenPrice then
+			return false, "INSUFFICIENT_AD_TOKENS"
+		end
+		fromBonus, fromTokens = 0, tokenPrice
+	else
+		local bonus = math.min(profile.bonusTokens or 0, tokenPrice)
+		local remainder = tokenPrice - bonus
+		if remainder > (profile.tokens or 0) then
+			return false, "INSUFFICIENT_TOKENS"
+		end
+		fromBonus, fromTokens = bonus, remainder
 	end
 
 	local intentId = self.profiles:GenerateId("tokenpurchase")
 	local mutateSuccess = self.profiles:Mutate(player, function(mutableProfile)
-		mutableProfile.tokens -= tokenPrice
+		mutableProfile.bonusTokens -= fromBonus
+		mutableProfile.tokens -= fromTokens
 	end)
 	if not mutateSuccess then
 		return false, "PROFILE_UNAVAILABLE"
@@ -379,7 +434,8 @@ function CommerceService:BeginIntentWithTokens(
 	if not grantSuccess then
 		warn(string.format("[CommerceService] Token-funded grant failed for %s: %s", productKey, tostring(postCommit)))
 		self.profiles:Mutate(player, function(mutableProfile)
-			mutableProfile.tokens += tokenPrice
+			mutableProfile.bonusTokens += fromBonus
+			mutableProfile.tokens += fromTokens
 		end)
 		return false, "GRANT_FAILED"
 	end
@@ -390,7 +446,14 @@ function CommerceService:BeginIntentWithTokens(
 		task.spawn(postCommit)
 	end
 	self.analytics:Custom(player, "TokenPurchase", tokenPrice, { product = productKey })
-	return true, { intentId = intentId, tokensSpent = tokenPrice, tokens = self.profiles:Get(player).tokens }
+	local savedProfile = self.profiles:Get(player)
+	return true,
+		{
+			intentId = intentId,
+			tokensSpent = tokenPrice,
+			tokens = savedProfile.tokens,
+			bonusTokens = savedProfile.bonusTokens,
+		}
 end
 
 function CommerceService:_ProductKey(productId: number): string?

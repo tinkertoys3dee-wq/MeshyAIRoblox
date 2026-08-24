@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="sphereBadgeFiveCreations" cx="36%" cy="30%" r="78%">
+      <stop offset="0%" stop-color="#C9B8FF"/>
+      <stop offset="38%" stop-color="#7C56E8"/>
+      <stop offset="78%" stop-color="#4B2FA8"/>
+      <stop offset="100%" stop-color="#4B2FA8"/>
+    </radialGradient>
+    <radialGradient id="hotspotBadgeFiveCreations" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glossBadgeFiveCreations" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.85"/>
+      <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="aoBadgeFiveCreations" cx="50%" cy="100%" r="65%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ringOuterBadgeFiveCreations" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#A48EF0"/>
+      <stop offset="45%" stop-color="#2E1C70"/>
+      <stop offset="55%" stop-color="#2E1C70"/>
+      <stop offset="100%" stop-color="#A48EF0"/>
+    </linearGradient>
+    <linearGradient id="ringInnerBadgeFiveCreations" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#2E1C70"/>
+      <stop offset="50%" stop-color="#A48EF0"/>
+      <stop offset="100%" stop-color="#2E1C70"/>
+    </linearGradient>
+    <linearGradient id="enamelBadgeFiveCreations" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#DCE3F5"/>
+    </linearGradient>
+    <clipPath id="clipBadgeFiveCreations"><circle cx="512.0" cy="512.0" r="462"/></clipPath>
+    <filter id="softShadowBadgeFiveCreations" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#0B0E1E" flood-opacity="0.42"/>
+    </filter>
+    <filter id="tinyShadowBadgeFiveCreations" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0B0E1E" flood-opacity="0.35"/>
+    </filter>
+    <filter id="innerGlowBadgeFiveCreations" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <!-- outer bevel ring: two concentric strokes read as a rounded metal edge -->
+  <circle cx="512.0" cy="512.0" r="492" fill="url(#ringOuterBadgeFiveCreations)"/>
+  <circle cx="512.0" cy="512.0" r="478" fill="url(#ringInnerBadgeFiveCreations)"/>
+  <circle cx="512.0" cy="512.0" r="462" fill="url(#sphereBadgeFiveCreations)"/>
+  <g clip-path="url(#clipBadgeFiveCreations)">
+    <circle cx="512.0" cy="512.0" r="462" fill="url(#aoBadgeFiveCreations)" style="mix-blend-mode:multiply"/>
+    <ellipse cx="362.0" cy="302.0" rx="330" ry="230" fill="url(#glossBadgeFiveCreations)"/>
+    <ellipse cx="302.0" cy="252.0" rx="90" ry="60" fill="url(#hotspotBadgeFiveCreations)"/>
+    <circle cx="512.0" cy="512.0" r="458" fill="none" stroke="#000000" stroke-opacity="0.14" stroke-width="10"/>
+<g filter="url(#tinyShadowBadgeFiveCreations)"><path d="M404 482.0 L404 531.4 L328 569.4 Z" fill="#FFFFFF"/><path d="M404 482.0 L480 569.4 L404 531.4 Z" fill="#E4E9FF"/><path d="M328 569.4 L404 531.4 L404 637.8 Z" fill="#B9C6FF"/><path d="M480 569.4 L404 531.4 L404 637.8 Z" fill="#E4E9FF" opacity="0.75"/><path d="M404 482.0 L328 569.4 M404 482.0 L404 531.4 M404 482.0 L480 569.4 M328 569.4 L404 637.8 M404 531.4 L404 637.8 M480 569.4 L404 637.8" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-opacity="0.75" stroke-linejoin="round"/></g><g filter="url(#tinyShadowBadgeFiveCreations)"><path d="M620 482.0 L620 531.4 L544 569.4 Z" fill="#FFFFFF"/><path d="M620 482.0 L696 569.4 L620 531.4 Z" fill="#E4E9FF"/><path d="M544 569.4 L620 531.4 L620 637.8 Z" fill="#B9C6FF"/><path d="M696 569.4 L620 531.4 L620 637.8 Z" fill="#E4E9FF" opacity="0.75"/><path d="M620 482.0 L544 569.4 M620 482.0 L620 531.4 M620 482.0 L696 569.4 M544 569.4 L620 637.8 M620 531.4 L620 637.8 M696 569.4 L620 637.8" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-opacity="0.75" stroke-linejoin="round"/></g><g filter="url(#softShadowBadgeFiveCreations)"><path d="M512 350.0 L512 412.4 L416 460.4 Z" fill="#FFFFFF"/><path d="M512 350.0 L608 460.4 L512 412.4 Z" fill="#EAF0FF"/><path d="M416 460.4 L512 412.4 L512 546.8 Z" fill="#C9D6FF"/><path d="M608 460.4 L512 412.4 L512 546.8 Z" fill="#EAF0FF" opacity="0.75"/><path d="M512 350.0 L416 460.4 M512 350.0 L512 412.4 M512 350.0 L608 460.4 M416 460.4 L512 546.8 M512 412.4 L512 546.8 M608 460.4 L512 546.8" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-opacity="0.75" stroke-linejoin="round"/></g>  </g>
+</svg>

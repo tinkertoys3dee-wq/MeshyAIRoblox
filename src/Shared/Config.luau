@@ -77,8 +77,12 @@ return table.freeze({
 		-- reward to be "a developer product which would normally be available
 		-- to purchase with Robux" worth 3-10 Robux, and forbids rewarding
 		-- Robux directly — see docs/PRICING.md "Forge Tokens" section before
-		-- changing this price or Ads.TokenGrantPerPurchase.
-		AdRewardTokens = { Id = 0, SuggestedPrice = 8 },
+		-- changing this price or Ads.TokenGrantPerPurchase. Priced at Roblox's
+		-- allowed floor: a completed rewarded ad measures at only ~0.12-0.44
+		-- Robux of real revenue (see Ads.TokenGrantPerPurchase below), nowhere
+		-- close to what an 8 Robux anchor implied, so there is no case for
+		-- pricing this above the minimum.
+		AdRewardTokens = { Id = 0, SuggestedPrice = 3 },
 	},
 
 	Passes = {
@@ -97,21 +101,58 @@ return table.freeze({
 		WaistAccessory = "",
 	},
 
-	-- Forge Tokens: an ad-earned alternative to Robux for the same purchasable
-	-- products (see docs/PRICING.md). Roblox does not expose live per-view ad
-	-- revenue to a running experience (only a 1-day-delayed Analytics
-	-- dashboard), so this whole section is a creator-tuned estimate, not a
-	-- measured value — revisit it against Monetization > Ads > Analytics >
-	-- Rewarded Video after launch.
+	-- Forge Tokens: an ad-earned (or directly Robux-purchased) alternative to
+	-- Robux. Split across two profile fields that must never be merged — see
+	-- ProfileService.defaultProfile — because they carry different real-money
+	-- guarantees: profile.tokens (this section) is backed by an actual ad
+	-- view or Robux payment and may fund generation products; profile.
+	-- bonusTokens (free grants — achievements, daily check-in, invites,
+	-- group join) has no revenue behind it and may only ever buy the
+	-- near-zero-cost Priority Pass. See
+	-- CommerceService:BeginIntentWithTokens for the enforcement.
+	--
+	-- Roblox does not expose live per-view ad revenue to a running
+	-- experience (only a 1-day-delayed Analytics dashboard), so this section
+	-- originally shipped on a guess: "1 token == 1 Robux of value, matching
+	-- AdRewardTokens.SuggestedPrice," and let tokens fund every purchasable
+	-- product at that rate. Measured Analytics > Rewarded Video data puts one
+	-- completed ad at only ~0.12-0.44 Robux of real revenue — 18x-66x less
+	-- than that guess — while a generation product costs real OpenAI/Meshy
+	-- provider money per use regardless of how it's paid for (as much as
+	-- $0.30, see docs/PRICING.md). At the old rate, a 159 Robux generation
+	-- (needing ceil(159 * 1.2) = 191 tokens, ~24 ad watches under the old
+	-- 8-tokens-per-ad grant) could be funded with ad revenue worth only
+	-- ~2.9-10.6 Robux: a guaranteed loss on every such redemption.
+	--
+	-- Generation products are priced steeply enough to close that gap
+	-- outright rather than merely narrow it: WorstCaseAdRevenuePerAd anchors
+	-- the token price to the *worst* measured ad, not the average, so Forge
+	-- stays ahead even in the least profitable case. See docs/PRICING.md
+	-- "Forge Tokens" for the full derivation.
 	Ads = {
 		-- Tokens granted both when a player buys AdRewardTokens directly with
 		-- Robux and when they complete a rewarded video ad for it (Roblox
-		-- requires both paths grant the identical benefit). 1 token == 1 Robux
-		-- of value at that baseline, matching AdRewardTokens.SuggestedPrice.
-		TokenGrantPerPurchase = 8,
-		-- Buying any other product with tokens costs ceil(robuxPrice * this)
+		-- requires both paths grant the identical benefit). 1 token per ad —
+		-- see WorstCaseAdRevenuePerAd below for why this needs to be a small,
+		-- clean unit rather than a larger batch: each token stands in for one
+		-- ad's worth of real revenue, and CommerceService's generation-token
+		-- price is derived directly from that equivalence.
+		TokenGrantPerPurchase = 1,
+		-- The conservative floor of the measured ~0.12-0.44 Robux-per-ad
+		-- range (see the note above) — deliberately the *worst* case, not the
+		-- average, so generation-token pricing stays safe even on the least
+		-- profitable ads. Revisit this only when new measured data justifies
+		-- moving the floor, never to make token pricing more generous on
+		-- optimism alone.
+		WorstCaseAdRevenuePerAd = 0.12,
+		-- Buying Priority Pass with tokens costs ceil(robuxPrice * this)
 		-- tokens instead of Robux, so the token path is deliberately worth
-		-- more to Forge than the matching Robux price, not merely equal to it.
+		-- more to Forge than the matching Robux price, not merely equal to
+		-- it. Generation products use this same markup but divided by
+		-- WorstCaseAdRevenuePerAd instead of applied directly — see
+		-- CommerceService.tokenPriceFor — since their real provider cost
+		-- means a friendly 1.2x markup on face value alone is nowhere near
+		-- enough to stay safe.
 		TokenPurchaseMarkup = 1.2,
 		-- Anti-grind / anti-abuse cap on rewarded-ad requests per player per
 		-- UTC day. Resets at UTC midnight.
@@ -147,27 +188,32 @@ return table.freeze({
 			FIRST_MARKETPLACE_PURCHASE = 0,
 			STREAK_SEVEN = 0,
 			FIRST_INVITE_SENT = 0,
+			GROUP_JOINED = 0,
 			COMPLETIONIST = 0,
 		},
-		-- Hard cap on the combined token value of every achievement plus the
+		-- Soft cap on the combined token value of every achievement plus the
 		-- completionist bonus (AchievementService errors at startup if
 		-- Achievements.luau's totals exceed this — see that file for the
 		-- current sum). None of these tokens are backed by ad revenue or a
 		-- Robux payment, unlike a rewarded-ad watch or a direct Forge Tokens
-		-- purchase, so their total must stay inside the margin the 20% token
-		-- markup already earns Forge, not stack on top of it.
+		-- purchase.
 		--
-		-- Budget derivation: if a player funded one purchase of every
-		-- purchasable product (DirectGeneration 159 + ImagePreviewLow 29 +
-		-- ImagePreviewMedium 49 + ImagePreviewHigh 129 + ImageConversion 159 +
-		-- PriorityPass 29 = 554 R$) entirely with ad-earned tokens, Forge
-		-- earns (Ads.TokenPurchaseMarkup - 1) * 554 ≈ 111 tokens' worth of
-		-- margin from that one pass. This budget spends well under that
-		-- (currently ~86 of 110), so the one-time achievement pool never
-		-- outruns what a single engaged, ad-watching player's markup alone
-		-- already covers — before counting any of their other ad activity or
-		-- direct Robux spend. Recompute 110 if product prices or the markup
-		-- change materially.
+		-- This budget is no longer what keeps that safe to hand out for free.
+		-- It used to be sized against a basket of every purchasable product,
+		-- on the theory that the 20% token markup's "extra" tokens covered
+		-- the free ones — a real-money guarantee that only held if tokens
+		-- were worth what that basket assumed, which measured ad revenue
+		-- (~0.12-0.44 Robux per ad, see Ads above) showed was never true.
+		-- Achievement tokens land in profile.bonusTokens, not profile.tokens
+		-- (see ProfileService.defaultProfile), which can only ever buy the
+		-- near-zero-marginal-cost Priority Pass (see
+		-- CommerceService:BeginIntentWithTokens) — never a generation
+		-- product, no matter this number — so handing them out for free
+		-- costs Forge no real provider spend regardless of its size. 110 is
+		-- kept as a game-balance ceiling — stopping the achievement pool from
+		-- trivializing Priority Pass access, not a revenue calculation — so
+		-- raising an achievement's reward still needs this reviewed, just
+		-- for pacing rather than solvency.
 		NonEarningTokenBudget = 110,
 	},
 

@@ -63,7 +63,8 @@ local backend = BackendService.new()
 local commerce = CommerceService.new(profiles, playerStates, analytics, push)
 local adRewards = AdRewardService.new(profiles, playerStates, commerce, push, analytics, achievements)
 local items = ItemService.new(profiles, playerStates, push)
-local generations = GenerationService.new(profiles, playerStates, backend, commerce, push, analytics, achievements)
+local generations =
+	GenerationService.new(profiles, playerStates, backend, commerce, push, analytics, achievements, items)
 local leaderboard = LeaderboardService.new()
 local community = CommunityService.new(profiles, playerStates, push, analytics, achievements, leaderboard)
 local catalog = CatalogService.new(profiles, playerStates, analytics)
@@ -113,6 +114,9 @@ local function initializePlayer(player: Player)
 		plusSubscriber = playerStates:Get(player).plusSubscriber,
 		contentSharingAllowed = playerStates:Get(player).contentSharingAllowed,
 	})
+	if playerStates:Get(player).groupMember then
+		achievements:Unlock(player, "GROUP_JOINED")
+	end
 	retention:CheckIn(player)
 	generations:Resume(player)
 end

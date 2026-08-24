@@ -73,6 +73,12 @@ local Achievements = {
 			description = "Send a Roblox game invite to a friend.",
 			tokens = 3,
 		},
+		{
+			id = "GROUP_JOINED",
+			name = "One Of Us",
+			description = "Join the creator group.",
+			tokens = 5,
+		},
 		-- Granted automatically by AchievementService once every achievement
 		-- above is unlocked; never call Unlock/CheckCount with this id
 		-- directly. Kept last in the list so it reads as the finale.

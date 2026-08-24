@@ -4,6 +4,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local AccessoryFit = require(ReplicatedStorage:WaitForChild("AccessoryFit"))
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local ModerationService = require(script.Parent.ModerationService)
@@ -112,7 +113,8 @@ function GenerationService.new(
 	commerceService: any,
 	push: (Player, string, any) -> (),
 	analyticsService: any,
-	achievementService: any
+	achievementService: any,
+	itemService: any
 )
 	local self = setmetatable({
 		profiles = profileService,
@@ -121,6 +123,7 @@ function GenerationService.new(
 		commerce = commerceService,
 		analytics = analyticsService,
 		achievements = achievementService,
+		items = itemService,
 		push = push,
 		polling = {} :: { [string]: boolean },
 		launching = {} :: { [string]: boolean },
@@ -220,6 +223,13 @@ function GenerationService:Create(player: Player, payload: any): (boolean, any)
 		detailLevel = detailLevel,
 		imageQuality = imageQualityTier,
 		usePriority = payload.usePriority == true,
+		-- Forge Tokens may fund generation, but only from profile.tokens (the
+		-- real-money-backed pool: a rewarded ad or a direct Robux purchase),
+		-- and only at a steep enough price that even the worst measured ad
+		-- (~0.12 Robux) still leaves Forge ahead of the real provider cost —
+		-- see CommerceService.tokenPriceFor and docs/PRICING.md "Forge
+		-- Tokens". profile.bonusTokens (free grants) can never reach this
+		-- path regardless of what the client sends here.
 		paymentMethod = if payload.paymentMethod == "TOKENS" then "TOKENS" else "ROBUX",
 	}
 	return self:_UseCreditOrPrompt(player, productKey, intentPayload)
@@ -349,6 +359,7 @@ function GenerationService:ConvertImage(player: Player, payload: any): (boolean,
 		sourceBackendJobId = source.backendJobId,
 		sourceImageAssetId = if sourceImageAssetId and sourceImageAssetId > 0 then sourceImageAssetId else nil,
 		usePriority = payload.usePriority == true,
+		-- See the matching comment in Create() above.
 		paymentMethod = if payload.paymentMethod == "TOKENS" then "TOKENS" else "ROBUX",
 	})
 end
@@ -690,6 +701,36 @@ function GenerationService:_Poll(player: Player, generationId: string, backendJo
 	end)
 end
 
+-- Meshy's exported mesh origin is inconsistent between generations (see
+-- AccessoryFit.ComputeDefaultPosition), so the all-zero defaultFit() alone
+-- reads as a randomly offset item the first time it's previewed. Loading the
+-- model once here, right when it's known to exist, lets the item start out
+-- correctly seated instead of requiring every player to manually re-center
+-- every generation. This never blocks item creation: any failure (asset not
+-- yet propagated, no MeshPart found, placeholder id 0 in Studio) just falls
+-- back to the previous all-zero position, same as before this existed.
+function GenerationService:_ComputeInitialFit(accessoryType: string, modelAssetId: any): { [string]: any }
+	local fit = defaultFit(accessoryType)
+	if type(modelAssetId) ~= "number" or modelAssetId <= 0 then
+		return fit
+	end
+	local ok, result = pcall(function()
+		local loaded, modelOrProblem = self.items:LoadModelForInspection(modelAssetId)
+		if not loaded then
+			return nil
+		end
+		local model = modelOrProblem :: Model
+		local mesh = model:FindFirstChildWhichIsA("MeshPart", true)
+		local position = if mesh then AccessoryFit.ComputeDefaultPosition(mesh, accessoryType) else nil
+		model:Destroy()
+		return position
+	end)
+	if ok and result then
+		fit.position = result
+	end
+	return fit
+end
+
 function GenerationService:_CompleteModel(player: Player, generationId: string, output: { [string]: any })
 	local profile = self.profiles:Get(player)
 	local existingGeneration = profile and profile.generations[generationId]
@@ -697,6 +738,13 @@ function GenerationService:_CompleteModel(player: Player, generationId: string, 
 		return
 	end
 	local itemId = existingGeneration.itemId or deterministicId("item", generationId)
+	-- Only compute this when it will actually be used: _CompleteModel is
+	-- re-entrant-safe (see the profile.items[itemId] check below), and a
+	-- repeat call for an already-created item has no use for another mesh
+	-- load.
+	local initialFit = if not (profile and profile.items[itemId])
+		then self:_ComputeInitialFit(existingGeneration.accessoryType, output.modelAssetId)
+		else nil
 	local created = false
 	self.profiles:Mutate(player, function(profile)
 		local generation = profile.generations[generationId]
@@ -730,7 +778,7 @@ function GenerationService:_CompleteModel(player: Player, generationId: string, 
 			backendJobId = generation.backendJobId,
 			modelAssetId = output.modelAssetId,
 			thumbnailAssetId = output.thumbnailAssetId,
-			fit = defaultFit(generation.accessoryType),
+			fit = initialFit,
 			visibility = "PRIVATE",
 			isListed = false,
 			likes = 0,

@@ -29,9 +29,13 @@ for _, definition in Achievements.List do
 end
 
 -- None of these tokens are backed by ad revenue or a Robux payment (unlike a
--- rewarded-ad watch or a direct Forge Tokens purchase), so their combined
--- total must stay inside the budget the token markup already earns Forge —
--- see Config.Achievements.NonEarningTokenBudget for the derivation. This is
+-- rewarded-ad watch or a direct Forge Tokens purchase), which is why they
+-- land in profile.bonusTokens rather than profile.tokens: bonusTokens can
+-- only ever buy the near-zero-cost Priority Pass (see
+-- CommerceService:BeginIntentWithTokens), so this total doesn't need to earn
+-- out against real provider cost the way ad-backed tokens do. Config.
+-- Achievements.NonEarningTokenBudget is still enforced below as a
+-- game-balance ceiling, not a revenue calculation — see its comment. This is
 -- the same fail-closed-at-startup pattern CommerceService uses for product
 -- ID conflicts: a misconfigured economy should never silently go live.
 local function validateTokenBudget()
@@ -76,7 +80,7 @@ function AchievementService:Unlock(player: Player, achievementId: string)
 	local mutateSuccess = self.profiles:Mutate(player, function(profile)
 		if not profile.achievements[achievementId] then
 			profile.achievements[achievementId] = os.time()
-			profile.tokens = (profile.tokens or 0) + definition.tokens
+			profile.bonusTokens = (profile.bonusTokens or 0) + definition.tokens
 			unlocked = true
 		end
 	end)
@@ -88,7 +92,11 @@ function AchievementService:Unlock(player: Player, achievementId: string)
 	if not profile or player.Parent == nil then
 		return
 	end
-	self.push(player, Network.PushEvents.Profile, { tokens = profile.tokens, achievements = profile.achievements })
+	self.push(
+		player,
+		Network.PushEvents.Profile,
+		{ tokens = profile.tokens, bonusTokens = profile.bonusTokens, achievements = profile.achievements }
+	)
 	self.push(player, Network.PushEvents.Toast, {
 		tone = "success",
 		message = string.format("Achievement unlocked: %s (+%d tokens)", definition.name, definition.tokens),

@@ -468,6 +468,15 @@ function ItemService:_LoadModel(assetId: number): (boolean, Model | string)
 	return false, "ASSET_STILL_PROCESSING"
 end
 
+-- Exposed for GenerationService: it needs a freshly generated model's real
+-- mesh geometry once, at generation-completion time, to seat the item's
+-- default fit (see AccessoryFit.ComputeDefaultPosition). Reusing this loader
+-- means that lookup shares the same asset cache and Open Cloud propagation
+-- retry as every other model load instead of duplicating that logic.
+function ItemService:LoadModelForInspection(assetId: number): (boolean, Model | string)
+	return self:_LoadModel(assetId)
+end
+
 function ItemService:_CreateAccessory(item: { [string]: any }, editable: boolean): (boolean, Accessory | string)
 	local callSuccess, creationSuccess, accessoryOrProblem = pcall(function()
 		return self:_BuildAccessory(item, editable)

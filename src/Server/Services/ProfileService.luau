@@ -37,7 +37,18 @@ local function defaultProfile(userId: number): { [string]: any }
 		equippedItemIds = {},
 		fitPresets = {},
 		fitPresetOrder = {},
+		-- Two separate Forge Tokens pools, deliberately never merged into one
+		-- balance: `tokens` is backed by real money (a rewarded ad or a
+		-- direct Robux purchase of AdRewardTokens) and may fund generation
+		-- products at their steep, revenue-safe token price; `bonusTokens`
+		-- (achievements, daily check-in, invites, group join) has no revenue
+		-- behind it at all and may only ever buy the near-zero-cost Priority
+		-- Pass — see CommerceService:BeginIntentWithTokens. Keeping them
+		-- apart is what makes "tokens can safely buy generations" and "free
+		-- tokens are safe to hand out" both true at once; a single shared
+		-- balance would let a free token silently fund a real-cost purchase.
 		tokens = 0,
+		bonusTokens = 0,
 		adWatch = { day = 0, count = 0 },
 		achievements = {},
 		settings = { soundsEnabled = true, reduceMotion = false, highContrast = false, uiScale = 1 },
