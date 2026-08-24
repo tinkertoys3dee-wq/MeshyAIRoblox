@@ -1,24 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
-    <radialGradient id="bg" cx="34%" cy="28%" r="80%">
-      <stop offset="0%" stop-color="#FFE29B"/>
-      <stop offset="62%" stop-color="#D69A22"/>
-      <stop offset="100%" stop-color="#D69A22"/>
+    <radialGradient id="sphereBadgeStreakSeven" cx="36%" cy="30%" r="78%">
+      <stop offset="0%" stop-color="#FFE7B0"/>
+      <stop offset="38%" stop-color="#E8A526"/>
+      <stop offset="78%" stop-color="#A66A0E"/>
+      <stop offset="100%" stop-color="#A66A0E"/>
     </radialGradient>
-    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+    <radialGradient id="hotspotBadgeStreakSeven" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.35"/>
       <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glossBadgeStreakSeven" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.85"/>
+      <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="aoBadgeStreakSeven" cx="50%" cy="100%" r="65%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ringOuterBadgeStreakSeven" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#F0C866"/>
+      <stop offset="45%" stop-color="#6B4408"/>
+      <stop offset="55%" stop-color="#6B4408"/>
+      <stop offset="100%" stop-color="#F0C866"/>
     </linearGradient>
-    <clipPath id="circleClip">
-      <circle cx="256" cy="256" r="246"/>
-    </clipPath>
+    <linearGradient id="ringInnerBadgeStreakSeven" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#6B4408"/>
+      <stop offset="50%" stop-color="#F0C866"/>
+      <stop offset="100%" stop-color="#6B4408"/>
+    </linearGradient>
+    <linearGradient id="enamelBadgeStreakSeven" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#DCE3F5"/>
+    </linearGradient>
+    <clipPath id="clipBadgeStreakSeven"><circle cx="512.0" cy="512.0" r="462"/></clipPath>
+    <filter id="softShadowBadgeStreakSeven" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#0B0E1E" flood-opacity="0.42"/>
+    </filter>
+    <filter id="tinyShadowBadgeStreakSeven" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0B0E1E" flood-opacity="0.35"/>
+    </filter>
+    <filter id="innerGlowBadgeStreakSeven" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
   </defs>
-  <circle cx="256" cy="256" r="252" fill="#D69A22" opacity="0.9"/>
-  <circle cx="256" cy="256" r="246" fill="url(#bg)"/>
-  <g clip-path="url(#circleClip)">
-    <ellipse cx="196" cy="136" rx="210" ry="130" fill="url(#gloss)"/>
-    <circle cx="256" cy="256" r="246" fill="none" stroke="#0A0E20" stroke-opacity="0.18" stroke-width="10"/>
-    <path d="M256 118 C 220 176 176 200 176 262 C 176 322 214 362 256 362 C 298 362 336 322 336 262 C 336 234 320 214 302 198 C 308 226 296 246 278 246 C 292 206 268 152 256 118 Z" fill="#F7F9FF" />
-    <path d="M256 246 C 238 274 228 292 228 314 C 228 336 240 352 256 352 C 272 352 284 336 284 314 C 284 300 276 288 266 278 C 268 292 262 302 254 302 C 262 280 264 262 256 246 Z" fill="#D6720F" opacity="0.85" />
-  </g>
+  <!-- outer bevel ring: two concentric strokes read as a rounded metal edge -->
+  <circle cx="512.0" cy="512.0" r="492" fill="url(#ringOuterBadgeStreakSeven)"/>
+  <circle cx="512.0" cy="512.0" r="478" fill="url(#ringInnerBadgeStreakSeven)"/>
+  <circle cx="512.0" cy="512.0" r="462" fill="url(#sphereBadgeStreakSeven)"/>
+  <g clip-path="url(#clipBadgeStreakSeven)">
+    <circle cx="512.0" cy="512.0" r="462" fill="url(#aoBadgeStreakSeven)" style="mix-blend-mode:multiply"/>
+    <ellipse cx="362.0" cy="302.0" rx="330" ry="230" fill="url(#glossBadgeStreakSeven)"/>
+    <ellipse cx="302.0" cy="252.0" rx="90" ry="60" fill="url(#hotspotBadgeStreakSeven)"/>
+    <circle cx="512.0" cy="512.0" r="458" fill="none" stroke="#000000" stroke-opacity="0.14" stroke-width="10"/>
+<circle cx="512" cy="512" r="200" fill="#FFB03C" opacity="0.4" style="filter:blur(22px)"/><g filter="url(#softShadowBadgeStreakSeven)"><path d="M512 306 C 432 396 360 442 360 552 C 360 652 434 718 512 718 C 590 718 664 652 664 552 C 664 506 624 466 582 434 C 594 482 568 514 534 514 C 568 422 532 352 512 306 Z" fill="#FF8A2E"/><path d="M512 392 C 466 456 428 498 428 568 C 428 636 470 680 512 680 C 554 680 596 636 596 568 C 596 530 570 508 546 488 C 554 516 538 534 520 534 C 538 482 524 432 512 392 Z" fill="#FFC247"/><path d="M512 482 C 488 514 474 542 474 574 C 474 608 492 634 512 634 C 532 634 550 608 550 574 C 550 554 538 540 526 528 C 530 542 522 552 512 552 C 520 528 518 506 512 482 Z" fill="#FFF3D2"/></g>  </g>
 </svg>

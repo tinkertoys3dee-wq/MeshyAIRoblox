@@ -1,24 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
-    <radialGradient id="bg" cx="34%" cy="28%" r="80%">
-      <stop offset="0%" stop-color="#FFE29B"/>
-      <stop offset="62%" stop-color="#D69A22"/>
-      <stop offset="100%" stop-color="#D69A22"/>
+    <radialGradient id="sphereBadgeCompletionist" cx="36%" cy="30%" r="78%">
+      <stop offset="0%" stop-color="#FFE7B0"/>
+      <stop offset="38%" stop-color="#E8A526"/>
+      <stop offset="78%" stop-color="#A66A0E"/>
+      <stop offset="100%" stop-color="#A66A0E"/>
     </radialGradient>
-    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+    <radialGradient id="hotspotBadgeCompletionist" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.35"/>
       <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glossBadgeCompletionist" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.85"/>
+      <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="aoBadgeCompletionist" cx="50%" cy="100%" r="65%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ringOuterBadgeCompletionist" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#F0C866"/>
+      <stop offset="45%" stop-color="#6B4408"/>
+      <stop offset="55%" stop-color="#6B4408"/>
+      <stop offset="100%" stop-color="#F0C866"/>
     </linearGradient>
-    <clipPath id="circleClip">
-      <circle cx="256" cy="256" r="246"/>
-    </clipPath>
+    <linearGradient id="ringInnerBadgeCompletionist" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#6B4408"/>
+      <stop offset="50%" stop-color="#F0C866"/>
+      <stop offset="100%" stop-color="#6B4408"/>
+    </linearGradient>
+    <linearGradient id="enamelBadgeCompletionist" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#DCE3F5"/>
+    </linearGradient>
+    <clipPath id="clipBadgeCompletionist"><circle cx="512.0" cy="512.0" r="462"/></clipPath>
+    <filter id="softShadowBadgeCompletionist" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#0B0E1E" flood-opacity="0.42"/>
+    </filter>
+    <filter id="tinyShadowBadgeCompletionist" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0B0E1E" flood-opacity="0.35"/>
+    </filter>
+    <filter id="innerGlowBadgeCompletionist" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
   </defs>
-  <circle cx="256" cy="256" r="252" fill="#FFE29B" opacity="0.9"/>
-  <circle cx="256" cy="256" r="246" fill="url(#bg)"/>
-  <g clip-path="url(#circleClip)">
-    <ellipse cx="196" cy="136" rx="210" ry="130" fill="url(#gloss)"/>
-    <circle cx="256" cy="256" r="246" fill="none" stroke="#0A0E20" stroke-opacity="0.18" stroke-width="10"/>
-    <path d="M140 240 L200 300 L256 190 L312 300 L372 240 L352 356 a14 14 0 0 1 -14 12 h-164 a14 14 0 0 1 -14 -12 Z" fill="#F7F9FF" />
-    <path d="M180 372 h152 a10 10 0 0 1 10 10 v10 a10 10 0 0 1 -10 10 h-152 a10 10 0 0 1 -10 -10 v-10 a10 10 0 0 1 10 -10 Z" fill="#F7F9FF" />
-  </g>
+  <!-- outer bevel ring: two concentric strokes read as a rounded metal edge -->
+  <circle cx="512.0" cy="512.0" r="492" fill="url(#ringOuterBadgeCompletionist)"/>
+  <circle cx="512.0" cy="512.0" r="478" fill="url(#ringInnerBadgeCompletionist)"/>
+  <circle cx="512.0" cy="512.0" r="462" fill="url(#sphereBadgeCompletionist)"/>
+  <g clip-path="url(#clipBadgeCompletionist)">
+    <circle cx="512.0" cy="512.0" r="462" fill="url(#aoBadgeCompletionist)" style="mix-blend-mode:multiply"/>
+    <ellipse cx="362.0" cy="302.0" rx="330" ry="230" fill="url(#glossBadgeCompletionist)"/>
+    <ellipse cx="302.0" cy="252.0" rx="90" ry="60" fill="url(#hotspotBadgeCompletionist)"/>
+    <circle cx="512.0" cy="512.0" r="458" fill="none" stroke="#000000" stroke-opacity="0.14" stroke-width="10"/>
+<path d="M722.0 512.0 L752.0 512.0" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.55"/><path d="M693.9 617.0 L707.7 625.0" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.55"/><path d="M617.0 693.9 L632.0 719.8" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.55"/><path d="M512.0 722.0 L512.0 738.0" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.55"/><path d="M407.0 693.9 L392.0 719.8" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.55"/><path d="M330.1 617.0 L316.3 625.0" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.55"/><path d="M302.0 512.0 L272.0 512.0" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.55"/><path d="M330.1 407.0 L316.3 399.0" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.55"/><path d="M407.0 330.1 L392.0 304.2" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.55"/><path d="M512.0 302.0 L512.0 286.0" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.55"/><path d="M617.0 330.1 L632.0 304.2" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.55"/><path d="M693.9 407.0 L707.7 399.0" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.55"/><circle cx="512" cy="512" r="220" fill="#FFD97A" opacity="0.35" style="filter:blur(22px)"/><g filter="url(#softShadowBadgeCompletionist)"><path d="M322 502 L412 602 L472 452 L512 562 L552 452 L612 602 L702 502 L668 662 a20 20 0 0 1 -20 16 h-232 a20 20 0 0 1 -20 -16 Z" fill="#FFFFFF"/><path d="M702 502 L668 662 a20 20 0 0 1 -20 16 h-40 L572 502 Z" fill="#FFE7B0" opacity="0.7"/><rect x="346" y="690" width="332" height="46" rx="12" fill="#FFFFFF"/></g><circle cx="322" cy="502" r="16" fill="#FF5B97"/><circle cx="317" cy="497" r="5" fill="#FFFFFF" opacity="0.9"/><circle cx="512" cy="502" r="16" fill="#FF5B97"/><circle cx="507" cy="497" r="5" fill="#FFFFFF" opacity="0.9"/><circle cx="702" cy="502" r="16" fill="#FF5B97"/><circle cx="697" cy="497" r="5" fill="#FFFFFF" opacity="0.9"/>  </g>
 </svg>

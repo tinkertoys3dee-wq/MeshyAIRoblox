@@ -1,25 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
-    <radialGradient id="bg" cx="34%" cy="28%" r="80%">
-      <stop offset="0%" stop-color="#FFE29B"/>
-      <stop offset="62%" stop-color="#D69A22"/>
-      <stop offset="100%" stop-color="#D69A22"/>
+    <radialGradient id="sphereProductAdRewardTokens" cx="36%" cy="30%" r="78%">
+      <stop offset="0%" stop-color="#FFE7B0"/>
+      <stop offset="38%" stop-color="#E8A526"/>
+      <stop offset="78%" stop-color="#A66A0E"/>
+      <stop offset="100%" stop-color="#A66A0E"/>
     </radialGradient>
-    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+    <radialGradient id="hotspotProductAdRewardTokens" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.35"/>
       <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glossProductAdRewardTokens" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.85"/>
+      <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="aoProductAdRewardTokens" cx="50%" cy="100%" r="65%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ringOuterProductAdRewardTokens" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#F0C866"/>
+      <stop offset="45%" stop-color="#6B4408"/>
+      <stop offset="55%" stop-color="#6B4408"/>
+      <stop offset="100%" stop-color="#F0C866"/>
     </linearGradient>
-    <clipPath id="circleClip">
-      <circle cx="256" cy="256" r="246"/>
-    </clipPath>
+    <linearGradient id="ringInnerProductAdRewardTokens" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#6B4408"/>
+      <stop offset="50%" stop-color="#F0C866"/>
+      <stop offset="100%" stop-color="#6B4408"/>
+    </linearGradient>
+    <linearGradient id="enamelProductAdRewardTokens" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#DCE3F5"/>
+    </linearGradient>
+    <clipPath id="clipProductAdRewardTokens"><circle cx="512.0" cy="512.0" r="462"/></clipPath>
+    <filter id="softShadowProductAdRewardTokens" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#0B0E1E" flood-opacity="0.42"/>
+    </filter>
+    <filter id="tinyShadowProductAdRewardTokens" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0B0E1E" flood-opacity="0.35"/>
+    </filter>
+    <filter id="innerGlowProductAdRewardTokens" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
   </defs>
-  <circle cx="256" cy="256" r="252" fill="#D69A22" opacity="0.9"/>
-  <circle cx="256" cy="256" r="246" fill="url(#bg)"/>
-  <g clip-path="url(#circleClip)">
-    <ellipse cx="196" cy="136" rx="210" ry="130" fill="url(#gloss)"/>
-    <circle cx="256" cy="256" r="246" fill="none" stroke="#0A0E20" stroke-opacity="0.18" stroke-width="10"/>
-    <path d="M256 256 m-104 0 a104 104 0 1 0 208 0 a104 104 0 1 0 -208 0" fill="none" stroke="#F7F9FF" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
-    <path d="M256 256 m-58 0 a58 58 0 1 0 116 0 a58 58 0 1 0 -116 0" fill="none" stroke="#F7F9FF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" opacity="0.7" />
-    <path d="M228 224 L296 256 L228 288 Z" fill="#F7F9FF" opacity="0.9" />
-  </g>
+  <!-- outer bevel ring: two concentric strokes read as a rounded metal edge -->
+  <circle cx="512.0" cy="512.0" r="492" fill="url(#ringOuterProductAdRewardTokens)"/>
+  <circle cx="512.0" cy="512.0" r="478" fill="url(#ringInnerProductAdRewardTokens)"/>
+  <circle cx="512.0" cy="512.0" r="462" fill="url(#sphereProductAdRewardTokens)"/>
+  <g clip-path="url(#clipProductAdRewardTokens)">
+    <circle cx="512.0" cy="512.0" r="462" fill="url(#aoProductAdRewardTokens)" style="mix-blend-mode:multiply"/>
+    <ellipse cx="362.0" cy="302.0" rx="330" ry="230" fill="url(#glossProductAdRewardTokens)"/>
+    <ellipse cx="302.0" cy="252.0" rx="90" ry="60" fill="url(#hotspotProductAdRewardTokens)"/>
+    <circle cx="512.0" cy="512.0" r="458" fill="none" stroke="#000000" stroke-opacity="0.14" stroke-width="10"/>
+<g filter="url(#softShadowProductAdRewardTokens)"><circle cx="512" cy="512" r="210" fill="none" stroke="#FFFFFF" stroke-width="30"/><circle cx="512" cy="512" r="210" fill="none" stroke="#000000" stroke-opacity="0.15" stroke-width="6"/><circle cx="512" cy="512" r="176" fill="url(#hotspotProductAdRewardTokens)"/><circle cx="512" cy="512" r="176" fill="#FFFFFF" opacity="0.1"/><circle cx="512" cy="512" r="150" fill="none" stroke="#FFFFFF" stroke-width="8" opacity="0.55"/><path d="M512 442 L533.0 491.0 L582 512 L533.0 533.0 L512 582 L491.0 533.0 L442 512 L491.0 491.0 Z" fill="#FFFFFF" opacity="0.95"/></g><path d="M362 372 A210 210 0 0 1 652 362" fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" opacity="0.55"/>  </g>
 </svg>

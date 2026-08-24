@@ -1,26 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
-    <radialGradient id="bg" cx="34%" cy="28%" r="80%">
-      <stop offset="0%" stop-color="#8CEBFF"/>
-      <stop offset="62%" stop-color="#1CA9C9"/>
-      <stop offset="100%" stop-color="#1CA9C9"/>
+    <radialGradient id="sphereBadgeFirstEquip" cx="36%" cy="30%" r="78%">
+      <stop offset="0%" stop-color="#A8ECFF"/>
+      <stop offset="38%" stop-color="#29B8E0"/>
+      <stop offset="78%" stop-color="#146E8C"/>
+      <stop offset="100%" stop-color="#146E8C"/>
     </radialGradient>
-    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+    <radialGradient id="hotspotBadgeFirstEquip" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.35"/>
       <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glossBadgeFirstEquip" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.85"/>
+      <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="aoBadgeFirstEquip" cx="50%" cy="100%" r="65%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ringOuterBadgeFirstEquip" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#6ED4EE"/>
+      <stop offset="45%" stop-color="#0B4658"/>
+      <stop offset="55%" stop-color="#0B4658"/>
+      <stop offset="100%" stop-color="#6ED4EE"/>
     </linearGradient>
-    <clipPath id="circleClip">
-      <circle cx="256" cy="256" r="246"/>
-    </clipPath>
+    <linearGradient id="ringInnerBadgeFirstEquip" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#0B4658"/>
+      <stop offset="50%" stop-color="#6ED4EE"/>
+      <stop offset="100%" stop-color="#0B4658"/>
+    </linearGradient>
+    <linearGradient id="enamelBadgeFirstEquip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#DCE3F5"/>
+    </linearGradient>
+    <clipPath id="clipBadgeFirstEquip"><circle cx="512.0" cy="512.0" r="462"/></clipPath>
+    <filter id="softShadowBadgeFirstEquip" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#0B0E1E" flood-opacity="0.42"/>
+    </filter>
+    <filter id="tinyShadowBadgeFirstEquip" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0B0E1E" flood-opacity="0.35"/>
+    </filter>
+    <filter id="innerGlowBadgeFirstEquip" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
   </defs>
-  <circle cx="256" cy="256" r="252" fill="#1CA9C9" opacity="0.9"/>
-  <circle cx="256" cy="256" r="246" fill="url(#bg)"/>
-  <g clip-path="url(#circleClip)">
-    <ellipse cx="196" cy="136" rx="210" ry="130" fill="url(#gloss)"/>
-    <circle cx="256" cy="256" r="246" fill="none" stroke="#0A0E20" stroke-opacity="0.18" stroke-width="10"/>
-    <path d="M256 116 m-20 0 a20 20 0 1 0 40 0 a20 20 0 1 0 -40 0" fill="none" stroke="#F7F9FF" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
-    <path d="M256 136 L256 160" fill="none" stroke="#F7F9FF" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
-    <path d="M256 160 C 256 160 168 214 122 258 C 100 280 112 306 140 306 L372 306 C 400 306 412 280 390 258 C 344 214 256 160 256 160 Z" fill="none" stroke="#F7F9FF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
-    <path d="M180 296 L332 296" fill="none" stroke="#F7F9FF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity="0.8" />
-  </g>
+  <!-- outer bevel ring: two concentric strokes read as a rounded metal edge -->
+  <circle cx="512.0" cy="512.0" r="492" fill="url(#ringOuterBadgeFirstEquip)"/>
+  <circle cx="512.0" cy="512.0" r="478" fill="url(#ringInnerBadgeFirstEquip)"/>
+  <circle cx="512.0" cy="512.0" r="462" fill="url(#sphereBadgeFirstEquip)"/>
+  <g clip-path="url(#clipBadgeFirstEquip)">
+    <circle cx="512.0" cy="512.0" r="462" fill="url(#aoBadgeFirstEquip)" style="mix-blend-mode:multiply"/>
+    <ellipse cx="362.0" cy="302.0" rx="330" ry="230" fill="url(#glossBadgeFirstEquip)"/>
+    <ellipse cx="302.0" cy="252.0" rx="90" ry="60" fill="url(#hotspotBadgeFirstEquip)"/>
+    <circle cx="512.0" cy="512.0" r="458" fill="none" stroke="#000000" stroke-opacity="0.14" stroke-width="10"/>
+<path d="M362 652 q150 60 300 0 l-10 40 q-140 46 -280 0 Z" fill="#FFFFFF" opacity="0.18"/><g filter="url(#softShadowBadgeFirstEquip)"><path d="M512 326 q0 -34 34 -34 q34 0 34 34 q0 30 -34 40" fill="none" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round"/><path d="M512 402 C 512 402 322 512 268 572 C 244 598 260 636 298 636 L726 636 C 764 636 780 598 756 572 C 702 512 512 402 512 402 Z" fill="none" stroke="#FFFFFF" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/><path d="M392 654 L632 654" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" opacity="0.85"/><path d="M504 406 C 504 406 392 492 332 552" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" opacity="0.55"/></g>  </g>
 </svg>

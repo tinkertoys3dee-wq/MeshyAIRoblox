@@ -2,11 +2,17 @@
 
 Circular medallion icons for every achievement badge, developer product, and
 game pass, generated to match Forge UGC's in-game palette
-(`src/Shared/Theme.luau`). Each is a 512×512 PNG (`png/`) with transparent
+(`src/Shared/Theme.luau`). Each is a 1024×1024 PNG (`png/`) with transparent
 corners around an inscribed circle — Roblox crops icons to a circle in most
 badge/product UI, and shipping pre-circularized art with margin means that
 crop can never cut into the design. Editable source is in `svg/` (same
 filenames, `.svg`).
+
+Every icon shares one rendering treatment: a bevelled two-tone metal rim, a
+multi-stop sphere gradient, a soft broad gloss plus a small sharp specular
+hotspot, a bottom ambient-occlusion falloff, and a drop-shadowed, faceted
+center glyph — the goal is something closer to a real mobile-game badge than
+a flat colored circle.
 
 These are upload assets for Roblox Creator Hub. Nothing in `src/` reads
 these files directly or needs them at runtime — only a **badge's numeric ID**
@@ -71,5 +77,5 @@ repo) that composes a shared circular-medallion template with a per-icon
 glyph — same background gradient/gloss/ring treatment throughout, only the
 accent color (from `Theme.luau`'s palette) and center glyph change. To tweak
 one, hand-edit its `svg/*.svg` file directly (they're plain, readable SVG)
-and re-export to PNG at 512×512 with any SVG-to-PNG tool, keeping the
+and re-export to PNG at 1024×1024 with any SVG-to-PNG tool, keeping the
 transparent margin around the circle.

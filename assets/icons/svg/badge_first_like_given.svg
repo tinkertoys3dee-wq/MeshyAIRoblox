@@ -1,23 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
-    <radialGradient id="bg" cx="34%" cy="28%" r="80%">
-      <stop offset="0%" stop-color="#FFB0CE"/>
-      <stop offset="62%" stop-color="#D63D74"/>
-      <stop offset="100%" stop-color="#D63D74"/>
+    <radialGradient id="sphereBadgeFirstLikeGiven" cx="36%" cy="30%" r="78%">
+      <stop offset="0%" stop-color="#FFC0D6"/>
+      <stop offset="38%" stop-color="#E8437F"/>
+      <stop offset="78%" stop-color="#A0224E"/>
+      <stop offset="100%" stop-color="#A0224E"/>
     </radialGradient>
-    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+    <radialGradient id="hotspotBadgeFirstLikeGiven" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.35"/>
       <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glossBadgeFirstLikeGiven" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.85"/>
+      <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="aoBadgeFirstLikeGiven" cx="50%" cy="100%" r="65%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ringOuterBadgeFirstLikeGiven" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#F088AC"/>
+      <stop offset="45%" stop-color="#6B1636"/>
+      <stop offset="55%" stop-color="#6B1636"/>
+      <stop offset="100%" stop-color="#F088AC"/>
     </linearGradient>
-    <clipPath id="circleClip">
-      <circle cx="256" cy="256" r="246"/>
-    </clipPath>
+    <linearGradient id="ringInnerBadgeFirstLikeGiven" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#6B1636"/>
+      <stop offset="50%" stop-color="#F088AC"/>
+      <stop offset="100%" stop-color="#6B1636"/>
+    </linearGradient>
+    <linearGradient id="enamelBadgeFirstLikeGiven" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#DCE3F5"/>
+    </linearGradient>
+    <clipPath id="clipBadgeFirstLikeGiven"><circle cx="512.0" cy="512.0" r="462"/></clipPath>
+    <filter id="softShadowBadgeFirstLikeGiven" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#0B0E1E" flood-opacity="0.42"/>
+    </filter>
+    <filter id="tinyShadowBadgeFirstLikeGiven" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0B0E1E" flood-opacity="0.35"/>
+    </filter>
+    <filter id="innerGlowBadgeFirstLikeGiven" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
   </defs>
-  <circle cx="256" cy="256" r="252" fill="#D63D74" opacity="0.9"/>
-  <circle cx="256" cy="256" r="246" fill="url(#bg)"/>
-  <g clip-path="url(#circleClip)">
-    <ellipse cx="196" cy="136" rx="210" ry="130" fill="url(#gloss)"/>
-    <circle cx="256" cy="256" r="246" fill="none" stroke="#0A0E20" stroke-opacity="0.18" stroke-width="10"/>
-    <path d="M256 358 C 140 288 108 224 128 178 C 146 136 206 128 256 176 C 306 128 366 136 384 178 C 404 224 372 288 256 358 Z" fill="#F7F9FF" />
-  </g>
+  <!-- outer bevel ring: two concentric strokes read as a rounded metal edge -->
+  <circle cx="512.0" cy="512.0" r="492" fill="url(#ringOuterBadgeFirstLikeGiven)"/>
+  <circle cx="512.0" cy="512.0" r="478" fill="url(#ringInnerBadgeFirstLikeGiven)"/>
+  <circle cx="512.0" cy="512.0" r="462" fill="url(#sphereBadgeFirstLikeGiven)"/>
+  <g clip-path="url(#clipBadgeFirstLikeGiven)">
+    <circle cx="512.0" cy="512.0" r="462" fill="url(#aoBadgeFirstLikeGiven)" style="mix-blend-mode:multiply"/>
+    <ellipse cx="362.0" cy="302.0" rx="330" ry="230" fill="url(#glossBadgeFirstLikeGiven)"/>
+    <ellipse cx="302.0" cy="252.0" rx="90" ry="60" fill="url(#hotspotBadgeFirstLikeGiven)"/>
+    <circle cx="512.0" cy="512.0" r="458" fill="none" stroke="#000000" stroke-opacity="0.14" stroke-width="10"/>
+<g filter="url(#softShadowBadgeFirstLikeGiven)"><path d="M512 672 C 282 532 322 332 472 372 C 502 380 512 402 512 422 C 512 402 522 380 552 372 C 702 332 742 532 512 672 Z" fill="#FFFFFF"/><path d="M512 672 C 632 592 702 462 632 372 C 582 350 522 392 512 422 C 502 482 502 582 512 672 Z" fill="#FFE0EA" opacity="0.6"/><path d="M372 432 C 402 382 452 362 492 372" fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" opacity="0.7"/></g><path d="M662 374 L667.4 386.6 L680 392 L667.4 397.4 L662 410 L656.6 397.4 L644 392 L656.6 386.6 Z" fill="#FFFFFF" opacity="0.8"/>  </g>
 </svg>
