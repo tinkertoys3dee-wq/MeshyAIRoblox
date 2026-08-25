@@ -171,9 +171,12 @@ return table.freeze({
 		-- means a friendly 1.2x markup on face value alone is nowhere near
 		-- enough to stay safe.
 		TokenPurchaseMarkup = 1.2,
-		-- Anti-grind / anti-abuse cap on rewarded-ad requests per player per
-		-- UTC day. Resets at UTC midnight.
-		MaxAdWatchesPerDay = 20,
+		-- Deliberately no daily cap on rewarded-ad requests: every completed
+		-- ad is real, positive revenue for Forge at even the worst measured
+		-- rate (WorstCaseAdRevenuePerAd above), so there's no financial
+		-- reason to ever stop a player from watching more. AdRewardService
+		-- still tracks a per-UTC-day watch count (profile.adWatch), but only
+		-- as a "watched N today" stat, never to gate the button.
 	},
 
 	Retention = {

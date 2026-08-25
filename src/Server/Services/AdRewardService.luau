@@ -84,17 +84,18 @@ function AdRewardService.new(
 	return self
 end
 
--- Returns how many rewarded-ad requests this player has left today without
--- mutating anything, for the client to show ("14/20 today") and to disable
--- the button once exhausted.
-function AdRewardService:WatchesRemainingToday(player: Player): number
+-- Returns how many rewarded ads this player has watched today, without
+-- mutating anything -- purely a "nice, you've watched N today" stat for the
+-- client. No cap backs this: every completed ad is real, positive ad
+-- revenue for Forge (see Config.Ads.WorstCaseAdRevenuePerAd), so there is no
+-- financial reason to ever stop a player from watching more.
+function AdRewardService:WatchesToday(player: Player): number
 	local profile = self.profiles:Get(player)
 	if not profile then
 		return 0
 	end
 	local watch = profile.adWatch or { day = 0, count = 0 }
-	local count = if watch.day == currentDay() then watch.count else 0
-	return math.max(0, Config.Ads.MaxAdWatchesPerDay - count)
+	return if watch.day == currentDay() then watch.count else 0
 end
 
 function AdRewardService:RequestAd(player: Player): (boolean, any)
@@ -106,27 +107,15 @@ function AdRewardService:RequestAd(player: Player): (boolean, any)
 		return false, "PRODUCT_ID_NOT_CONFIGURED"
 	end
 	local today = currentDay()
-	local mutateSuccess, limitReached = pcall(function()
-		local reached = false
-		local ok = self.profiles:Mutate(player, function(profile)
-			local watch = profile.adWatch or { day = 0, count = 0 }
-			local count = if watch.day == today then watch.count else 0
-			if count >= Config.Ads.MaxAdWatchesPerDay then
-				reached = true
-				return
-			end
-			profile.adWatch = { day = today, count = count + 1 }
-		end)
-		if not ok then
-			error("PROFILE_MUTATION_FAILED")
-		end
-		return reached
+	-- Tracked for the WatchesToday stat above, not to gate anything -- see
+	-- its comment for why there's deliberately no daily cap here.
+	local mutateSuccess = self.profiles:Mutate(player, function(profile)
+		local watch = profile.adWatch or { day = 0, count = 0 }
+		local count = if watch.day == today then watch.count else 0
+		profile.adWatch = { day = today, count = count + 1 }
 	end)
 	if not mutateSuccess then
 		return false, "PROFILE_UNAVAILABLE"
-	end
-	if limitReached then
-		return false, "AD_WATCH_LIMIT_REACHED"
 	end
 	self.profiles:Save(player)
 
@@ -163,7 +152,7 @@ function AdRewardService:RequestAd(player: Player): (boolean, any)
 	-- developer product purchase (receipt.ProductPurchaseChannel is
 	-- Enum.ProductPurchaseChannel.AdReward for these). ShowCompleted here only
 	-- confirms playback finished, not that the grant has landed yet.
-	return true, { watchesRemainingToday = self:WatchesRemainingToday(player) }
+	return true, { watchesToday = self:WatchesToday(player) }
 end
 
 return AdRewardService
