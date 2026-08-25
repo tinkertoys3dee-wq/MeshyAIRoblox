@@ -115,6 +115,58 @@ function ItemService:SaveFit(player: Player, payload: any): (boolean, any)
 	return true, { item = self.profiles:Get(player).items[payload.itemId] }
 end
 
+-- The bounding-box-derived default position (see AccessoryFit.ComputeDefaultPosition)
+-- only ever runs once, automatically, at generation-completion time
+-- (GenerationService:_ComputeInitialFit). Any item that already existed
+-- before that fix shipped is stuck with the old all-zero position forever
+-- unless something re-runs the same computation for it later -- this is
+-- that "later": on-demand, from the fitting UI, against the item's real
+-- mesh right now, not a guess about what it should have gotten originally.
+function ItemService:ResetFitToSuggested(player: Player, itemId: any): (boolean, any)
+	if type(itemId) ~= "string" then
+		return false, "INVALID_REQUEST"
+	end
+	local profile = self.profiles:Get(player)
+	local item = profile and profile.items[itemId]
+	if not item then
+		return false, "ITEM_NOT_FOUND"
+	end
+	local accessoryType = item.fit.accessoryType
+	local suggested = { x = 0, y = 0, z = 0 }
+	if type(item.modelAssetId) == "number" and item.modelAssetId > 0 then
+		local loaded, modelOrProblem = self:_LoadModel(item.modelAssetId)
+		if loaded then
+			local model = modelOrProblem :: Model
+			local mesh = model:FindFirstChildWhichIsA("MeshPart", true)
+			if mesh then
+				local ok, position = pcall(AccessoryFit.ComputeDefaultPosition, mesh, accessoryType)
+				if ok and position then
+					suggested = position
+				end
+			end
+			model:Destroy()
+		end
+	end
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(mutableProfile)
+		local mutableItem = mutableProfile.items[itemId]
+		mutableItem.fit = {
+			position = suggested,
+			rotation = { x = 0, y = 0, z = 0 },
+			scale = { x = 1, y = 1, z = 1 },
+			accessoryType = accessoryType,
+		}
+		mutableItem.updatedAt = os.time()
+	end)
+	if not mutateSuccess then
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	self.push(player, Network.PushEvents.Toast, { tone = "success", message = "Fit reset to the suggested position." })
+	return true, { item = self.profiles:Get(player).items[itemId] }
+end
+
 local MAX_FIT_PRESETS = 20
 local MAX_PRESET_NAME_LENGTH = 24
 

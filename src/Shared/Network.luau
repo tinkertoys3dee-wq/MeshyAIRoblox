@@ -15,6 +15,7 @@ Network.Actions = table.freeze({
 	BuyPriorityPass = "BuyPriorityPass",
 	GetGeneration = "GetGeneration",
 	SaveFit = "SaveFit",
+	ResetFitToSuggested = "ResetFitToSuggested",
 	SaveFitPreset = "SaveFitPreset",
 	DeleteFitPreset = "DeleteFitPreset",
 	EquipItem = "EquipItem",

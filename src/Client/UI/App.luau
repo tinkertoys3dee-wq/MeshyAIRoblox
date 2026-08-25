@@ -2760,22 +2760,25 @@ function App:_RenderStudio()
 
 	local actionsY = presetsY + presetsHeight + 16
 	local isEquipped = table.find(profile.equippedItemIds or {}, selected.id) ~= nil
-	local save = Factory.Button(body, "Save fit", UDim2.new(0.31, -6, 0, 42), UDim2.fromOffset(16, actionsY), "primary")
+	local save =
+		Factory.Button(body, "Save fit", UDim2.new(0.25, -22, 0, 42), UDim2.fromOffset(16, actionsY), "primary")
 	local equip = Factory.Button(
 		body,
 		if isEquipped then "Unequip" else "Equip in game",
-		UDim2.new(0.34, -6, 0, 42),
-		UDim2.new(0.32, 6, 0, actionsY),
+		UDim2.new(0.25, -12, 0, 42),
+		UDim2.new(0.25, 6, 0, actionsY),
 		if isEquipped then "danger" else "mint"
 	)
 	local publish = Factory.Button(
 		body,
 		if selected.publishedAssetId then "Published ✓" else "Publish wearable",
-		UDim2.new(0.34, -22, 0, 42),
-		UDim2.new(0.66, 6, 0, actionsY),
+		UDim2.new(0.25, -12, 0, 42),
+		UDim2.new(0.5, 6, 0, actionsY),
 		nil
 	)
-	for _, button in { save, equip, publish } do
+	local resetFit =
+		Factory.Button(body, "↺ Reset fit", UDim2.new(0.25, -22, 0, 42), UDim2.new(0.75, 6, 0, actionsY), nil)
+	for _, button in { save, equip, publish, resetFit } do
 		self:_BindButton(button)
 	end
 	publish.Active = not selected.publishedAssetId
@@ -2857,6 +2860,27 @@ function App:_RenderStudio()
 			if publish.Parent then
 				publish.Active = true
 				publish.Text = "Publish wearable"
+			end
+		end)
+	end)
+	resetFit.Activated:Connect(function()
+		resetFit.Active = false
+		resetFit.Text = "Resetting…"
+		task.spawn(function()
+			local success, data = self:_Invoke(Network.Actions.ResetFitToSuggested, { itemId = selected.id })
+			if success then
+				self.state.profile.items[selected.id] = data.item
+				self.fitDrafts[selected.id] = deepCopy(data.item.fit)
+				if self.activeViewport then
+					self.activeViewport:ApplyFit(self.fitDrafts[selected.id])
+				end
+				self.sounds:Play("Success")
+				self:_RenderActivePage()
+				return
+			end
+			if resetFit.Parent then
+				resetFit.Active = true
+				resetFit.Text = "↺ Reset fit"
 			end
 		end)
 	end)

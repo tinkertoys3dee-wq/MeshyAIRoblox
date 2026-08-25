@@ -230,6 +230,14 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		return success, result
 	end,
+	[Network.Actions.ResetFitToSuggested] = function(player, payload)
+		local itemId = type(payload) == "table" and payload.itemId or nil
+		local success, result = items:ResetFitToSuggested(player, itemId)
+		if success then
+			analytics:Custom(player, "AccessoryFitResetToSuggested", 1, {})
+		end
+		return success, result
+	end,
 	[Network.Actions.SaveFitPreset] = function(player, payload)
 		local success, result = items:SaveFitPreset(player, payload)
 		if success then
