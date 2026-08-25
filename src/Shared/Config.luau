@@ -194,6 +194,19 @@ return table.freeze({
 		-- retention grant) top-up for a returning lapsed player. Kept modest
 		-- and one-shot per return -- this is a welcome, not a subsidy.
 		WinBackBonusTokens = 6,
+		-- Three short daily objectives, each touching a different part of
+		-- the app in one sitting (see RetentionService:MarkQuest) rather
+		-- than rewarding just one of them -- session depth, not just
+		-- session count, is the point. bonusTokens, same Priority-Pass-only
+		-- restriction as every other grant in this table.
+		Quests = {
+			{ key = "GENERATE", label = "Forge or convert something new", icon = "🧊", tokens = 3 },
+			{ key = "FIT", label = "Save a fit on any item", icon = "🪄", tokens = 3 },
+			{ key = "ARCADE", label = "Post a score in the Arcade", icon = "🎮", tokens = 3 },
+		},
+		-- Extra one-shot bonus for clearing all Quests the same UTC day, on
+		-- top of the per-quest tokens above.
+		QuestClearBonusTokens = 6,
 		-- Escalating bonus on top of the every-3rd-day Priority Pass credit,
 		-- keyed by streak day. Deliberately lands on 7/14/30 -- the exact
 		-- D7/D30 windows Roblox's own retention analytics (and, by

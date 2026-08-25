@@ -51,6 +51,7 @@ Network.PushEvents = table.freeze({
 	Toast = "Toast",
 	Transfer = "Transfer",
 	Entitlements = "Entitlements",
+	Quests = "Quests",
 })
 
 return table.freeze(Network)
