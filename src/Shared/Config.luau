@@ -180,6 +180,17 @@ return table.freeze({
 		-- Granted every day RetentionService:CheckIn sees a new UTC day,
 		-- independent of the existing every-3rd-day Priority Pass reward.
 		DailyCheckInTokens = 2,
+		-- A lapsed player's streak already resets to 1 on any gap (see
+		-- RetentionService:CheckIn), but that alone doesn't distinguish
+		-- "away one day" from "away a month" -- the second player is the one
+		-- actually at risk of not coming back, and is worth a specifically
+		-- warmer welcome. A gap of at least this many UTC days on top of the
+		-- normal DailyCheckInTokens reward grants WinBackBonusTokens once.
+		WinBackGapDays = 3,
+		-- Free (bonusTokens, no revenue behind it, same as every other
+		-- retention grant) top-up for a returning lapsed player. Kept modest
+		-- and one-shot per return -- this is a welcome, not a subsidy.
+		WinBackBonusTokens = 6,
 	},
 
 	-- Each achievement in src/Shared/Achievements.luau also awards a Roblox

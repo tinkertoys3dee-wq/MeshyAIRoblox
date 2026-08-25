@@ -31,9 +31,18 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 	local rewardGranted = false
 	local changed = false
 	local tokensGranted = 0
+	local winBackTokensGranted = 0
+	local daysAway = 0
 	self.profiles:Mutate(player, function(profile)
 		if profile.daily.lastDay ~= day then
 			changed = true
+			-- lastDay == 0 means this player has never checked in before
+			-- (ProfileService.defaultProfile's default) -- a brand new
+			-- player is not "returning", so daysAway only gets computed once
+			-- there is a real previous visit to measure the gap against.
+			if profile.daily.lastDay > 0 then
+				daysAway = day - profile.daily.lastDay
+			end
 			if profile.daily.lastDay == day - 1 then
 				profile.daily.streak += 1
 			else
@@ -50,6 +59,14 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 				profile.retryCredits.PriorityPass = (profile.retryCredits.PriorityPass or 0) + 1
 				rewardGranted = true
 			end
+			-- A gap resets the streak either way, but a player who was
+			-- genuinely at risk of not returning (not just someone who
+			-- missed yesterday) gets an extra, distinctly-messaged welcome
+			-- on top of the normal daily reward above.
+			if daysAway >= Config.Retention.WinBackGapDays then
+				winBackTokensGranted = Config.Retention.WinBackBonusTokens
+				profile.bonusTokens = (profile.bonusTokens or 0) + winBackTokensGranted
+			end
 		end
 	end)
 	if changed then
@@ -59,6 +76,8 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 	self.analytics:Custom(player, "DailyStudioCheckIn", profile.daily.streak, {
 		reward = rewardGranted,
 		tokensGranted = tokensGranted,
+		winBackTokensGranted = winBackTokensGranted,
+		daysAway = daysAway,
 	})
 	self.achievements:CheckCount(player, "STREAK_SEVEN", profile.daily.streak, 7)
 	local brief = {
@@ -66,6 +85,8 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 		best = profile.daily.best,
 		rewardGranted = rewardGranted,
 		tokensGranted = tokensGranted,
+		winBackTokensGranted = winBackTokensGranted,
+		daysAway = daysAway,
 		theme = THEMES[(day % #THEMES) + 1],
 		nextRewardIn = 3 - (profile.daily.streak % 3),
 	}
