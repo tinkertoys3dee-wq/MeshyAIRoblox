@@ -569,14 +569,14 @@ function GameShell:_GameOver(score: number)
 
 	if isNewBest then
 		self.titleLabel.Text = "NEW BEST!"
-		self.titleLabel.Color = Colors.Gold
+		self.titleLabel.TextColor3 = Colors.Gold
 		self.badge.BackgroundColor3 = Colors.Gold
 		self.badgeGlyph.Text = "🏆"
 		self.sounds:Play("Success")
 		GameShell.Confetti(self.card, 252, -10, self.reduceMotion)
 	else
 		self.titleLabel.Text = "GAME OVER"
-		self.titleLabel.Color = Colors.Rose
+		self.titleLabel.TextColor3 = Colors.Rose
 		self.badge.BackgroundColor3 = Colors.Rose
 		self.badgeGlyph.Text = "💥"
 	end
