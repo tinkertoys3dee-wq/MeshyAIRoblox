@@ -248,6 +248,33 @@ return table.freeze({
 		NonEarningTokenBudget = 110,
 	},
 
+	-- Client-side arcade minigames (Flappy Bird, Dino Runner, Color Switch) —
+	-- purely for session time and fun, not part of the Forge Tokens economy.
+	-- Their scores are simulated entirely on the client with no server
+	-- authority over gameplay, unlike everything else with a token reward in
+	-- this file, so ArcadeService:SubmitScore treats every submission as
+	-- unverified input: sanity-clamped, never trusted as truth the way a
+	-- purchase receipt or an ad-completion callback is.
+	Arcade = {
+		Games = { "FlappyBird", "DinoRunner", "ColorSwitch" },
+		-- Weekly reward for each game's top 3 players by that game's best
+		-- score of the week. Index = placement: [1] = 1st, [2] = 2nd,
+		-- [3] = 3rd. Unlike every other free grant in this file, ArcadeService
+		-- credits these to `tokens`, not `bonusTokens` — fully spendable,
+		-- generations included. That's a deliberate, bounded exception to the
+		-- "only gain money" guarantee (approved for the engagement value):
+		-- worst case is 800/game * #Games = 2400 tokens/week, worth ~2
+		-- generations (~$0.60) at the pricing in Config.Generation. See
+		-- ArcadeService's module header and docs/PRICING.md for the full
+		-- reasoning; raising these numbers meaningfully needs that math
+		-- re-checked, not just a game-balance judgment call.
+		WeeklyRewards = { 450, 250, 100 },
+		-- Sanity ceiling against an obviously spoofed score reaching the
+		-- leaderboard store. Can't stop a determined cheater on a
+		-- client-simulated game, only bound the damage one can do.
+		MaxSubmittableScore = 100000,
+	},
+
 	Marketplace = {
 		MinimumTransferRobux = 10,
 		MaximumTransferRobux = 500,
@@ -261,6 +288,12 @@ return table.freeze({
 		ItemIndex = "ForgeUGC_ItemIndex_v1",
 		ReceiptClaims = "ForgeUGC_ReceiptClaims_v1",
 		LikesLeaderboard = "ForgeUGC_LikesLeaderboard_v1",
+		-- Single-key store: which week's arcade payout has already been
+		-- processed. Per-game-per-week score stores are named
+		-- programmatically by ArcadeService (they need a fresh key every
+		-- week, so a fixed list here wouldn't fit the pattern the other
+		-- stores use).
+		ArcadeMeta = "ForgeUGC_ArcadeMeta_v1",
 	},
 
 	Leaderboard = {

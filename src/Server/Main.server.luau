@@ -47,6 +47,7 @@ local RetentionService = require(script.Parent.Services.RetentionService)
 local AdRewardService = require(script.Parent.Services.AdRewardService)
 local AchievementService = require(script.Parent.Services.AchievementService)
 local LeaderboardService = require(script.Parent.Services.LeaderboardService)
+local ArcadeService = require(script.Parent.Services.ArcadeService)
 
 local function push(player: Player, eventName: string, payload: any)
 	if player.Parent == Players then
@@ -66,6 +67,7 @@ local items = ItemService.new(profiles, playerStates, push)
 local generations =
 	GenerationService.new(profiles, playerStates, backend, commerce, push, analytics, achievements, items)
 local leaderboard = LeaderboardService.new()
+local arcade = ArcadeService.new(profiles, playerStates, push, analytics)
 local community = CommunityService.new(profiles, playerStates, push, analytics, achievements, leaderboard)
 local catalog = CatalogService.new(profiles, playerStates, analytics)
 local remoteLimiter = RateLimiter.new(50, 10)
@@ -225,6 +227,14 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		local success, result = items:SaveFit(player, payload)
 		if success then
 			analytics:Custom(player, "AccessoryFitSaved", 1, {})
+		end
+		return success, result
+	end,
+	[Network.Actions.ResetFitToSuggested] = function(player, payload)
+		local itemId = type(payload) == "table" and payload.itemId or nil
+		local success, result = items:ResetFitToSuggested(player, itemId)
+		if success then
+			analytics:Custom(player, "AccessoryFitResetToSuggested", 1, {})
 		end
 		return success, result
 	end,
@@ -408,6 +418,18 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	end,
 	[Network.Actions.Track] = function(player, payload)
 		return analytics:TrackClient(player, payload)
+	end,
+	[Network.Actions.SubmitArcadeScore] = function(player, payload)
+		if type(payload) ~= "table" then
+			return false, "INVALID_REQUEST"
+		end
+		return arcade:SubmitScore(player, payload.game, payload.score)
+	end,
+	[Network.Actions.GetArcadeLeaderboard] = function(player, payload)
+		if type(payload) ~= "table" then
+			return false, "INVALID_REQUEST"
+		end
+		return arcade:GetWeeklyTop(payload.game)
 	end,
 }
 

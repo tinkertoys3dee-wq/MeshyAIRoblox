@@ -17,6 +17,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Factory)
+local GamesHub = require(script.Parent.GamesHub)
 local SoundController = require(script.Parent.SoundController)
 local ViewportController = require(script.Parent.ViewportController)
 
@@ -298,6 +299,10 @@ function App.new()
 		ambientMotionEnabled = false,
 		ambientBlobs = {} :: { { instance: Frame, restPosition: UDim2 } },
 		ambientEmbers = {} :: { Frame },
+		-- Set by GamesHub while the Arcade modal is open (nil otherwise) so
+		-- the Settings page's UIScale chips can keep it live-scaled too --
+		-- see the "Make Arcade modal inherit UIScale" fix in GamesHub.luau.
+		arcadeUiScale = nil :: UIScale?,
 	}, App)
 	self:_BuildChrome()
 	AvatarEditorService.PromptAllowInventoryReadAccessCompleted:Connect(function(result)
@@ -423,6 +428,22 @@ function App:_BuildChrome()
 		self:_SetStudioOpen(true)
 	end)
 	self.launcher = launcher
+
+	-- A separate entry point from the Forge Studio launcher above, not a
+	-- variant of it: this opens the Arcade (see GamesHub), which has nothing
+	-- to do with creation/fitting/marketplace. Same visibility rule as the
+	-- Forge launcher (only shown on the closed/idle base view) since it's a
+	-- peer of it, not something nested inside the studio.
+	local arcadeLauncher =
+		Factory.Button(gui, "🎮  Arcade", UDim2.fromOffset(220, 48), UDim2.new(0, 18, 1, -122), "mint")
+	arcadeLauncher.Name = "ArcadeLauncher"
+	arcadeLauncher.Visible = false
+	arcadeLauncher.ZIndex = 30
+	self:_BindButton(arcadeLauncher)
+	arcadeLauncher.Activated:Connect(function()
+		GamesHub.Show(self)
+	end)
+	self.arcadeLauncher = arcadeLauncher
 
 	local topbar = Factory.New("Frame", {
 		Name = "Topbar",
@@ -744,6 +765,7 @@ function App:_SetStudioOpen(open: boolean)
 	local changed = self.shell.Visible ~= open
 	self.shell.Visible = open
 	self.launcher.Visible = not open
+	self.arcadeLauncher.Visible = not open
 	if changed and open then
 		self.sounds:Play("PanelOpen")
 	elseif changed then
@@ -2742,22 +2764,25 @@ function App:_RenderStudio()
 
 	local actionsY = presetsY + presetsHeight + 16
 	local isEquipped = table.find(profile.equippedItemIds or {}, selected.id) ~= nil
-	local save = Factory.Button(body, "Save fit", UDim2.new(0.31, -6, 0, 42), UDim2.fromOffset(16, actionsY), "primary")
+	local save =
+		Factory.Button(body, "Save fit", UDim2.new(0.25, -22, 0, 42), UDim2.fromOffset(16, actionsY), "primary")
 	local equip = Factory.Button(
 		body,
 		if isEquipped then "Unequip" else "Equip in game",
-		UDim2.new(0.34, -6, 0, 42),
-		UDim2.new(0.32, 6, 0, actionsY),
+		UDim2.new(0.25, -12, 0, 42),
+		UDim2.new(0.25, 6, 0, actionsY),
 		if isEquipped then "danger" else "mint"
 	)
 	local publish = Factory.Button(
 		body,
 		if selected.publishedAssetId then "Published ✓" else "Publish wearable",
-		UDim2.new(0.34, -22, 0, 42),
-		UDim2.new(0.66, 6, 0, actionsY),
+		UDim2.new(0.25, -12, 0, 42),
+		UDim2.new(0.5, 6, 0, actionsY),
 		nil
 	)
-	for _, button in { save, equip, publish } do
+	local resetFit =
+		Factory.Button(body, "↺ Reset fit", UDim2.new(0.25, -22, 0, 42), UDim2.new(0.75, 6, 0, actionsY), nil)
+	for _, button in { save, equip, publish, resetFit } do
 		self:_BindButton(button)
 	end
 	publish.Active = not selected.publishedAssetId
@@ -2839,6 +2864,27 @@ function App:_RenderStudio()
 			if publish.Parent then
 				publish.Active = true
 				publish.Text = "Publish wearable"
+			end
+		end)
+	end)
+	resetFit.Activated:Connect(function()
+		resetFit.Active = false
+		resetFit.Text = "Resetting…"
+		task.spawn(function()
+			local success, data = self:_Invoke(Network.Actions.ResetFitToSuggested, { itemId = selected.id })
+			if success then
+				self.state.profile.items[selected.id] = data.item
+				self.fitDrafts[selected.id] = deepCopy(data.item.fit)
+				if self.activeViewport then
+					self.activeViewport:ApplyFit(self.fitDrafts[selected.id])
+				end
+				self.sounds:Play("Success")
+				self:_RenderActivePage()
+				return
+			end
+			if resetFit.Parent then
+				resetFit.Active = true
+				resetFit.Text = "↺ Reset fit"
 			end
 		end)
 	end)
@@ -3811,6 +3857,9 @@ function App:_RenderSettings()
 		self:_BindButton(chip)
 		chip.Activated:Connect(function()
 			self.uiScaleInstance.Scale = option.Value
+			if self.arcadeUiScale then
+				self.arcadeUiScale.Scale = option.Value
+			end
 			self:_UpdateSetting("uiScale", option.Value)
 		end)
 	end
