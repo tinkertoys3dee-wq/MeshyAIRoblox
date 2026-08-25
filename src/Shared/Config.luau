@@ -194,6 +194,22 @@ return table.freeze({
 		-- retention grant) top-up for a returning lapsed player. Kept modest
 		-- and one-shot per return -- this is a welcome, not a subsidy.
 		WinBackBonusTokens = 6,
+		-- Escalating bonus on top of the every-3rd-day Priority Pass credit,
+		-- keyed by streak day. Deliberately lands on 7/14/30 -- the exact
+		-- D7/D30 windows Roblox's own retention analytics (and, by
+		-- extension, discovery/recommendation weighting) are most sensitive
+		-- to, so these are the days most worth making feel like a genuine
+		-- occasion rather than another routine check-in. bonusTokens, same
+		-- restriction as every other grant here (Priority Pass only).
+		StreakMilestones = {
+			[7] = { tokens = 10, priorityPasses = 1 },
+			[14] = { tokens = 18, priorityPasses = 1 },
+			[30] = { tokens = 40, priorityPasses = 2 },
+		},
+		-- Once a streak passes the highest configured milestone, that same
+		-- tier repeats every this-many days instead of the table needing an
+		-- entry for every future day forever.
+		StreakMilestoneRepeatDay = 30,
 	},
 
 	-- Each achievement in src/Shared/Achievements.luau also awards a Roblox

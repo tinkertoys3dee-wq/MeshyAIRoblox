@@ -14,6 +14,22 @@ local THEMES = {
 	"Ancient tech artifact",
 }
 
+-- The next streak day (7, 14, 30, then every StreakMilestoneRepeatDay after
+-- that) that a check-in will trigger a StreakMilestones bonus -- shared by
+-- CheckIn's brief and GetBrief so the streak-calendar UI can always show how
+-- far away the next milestone is, not just whether one just fired.
+local function nextMilestoneDay(streak: number): number
+	if streak < 7 then
+		return 7
+	elseif streak < 14 then
+		return 14
+	elseif streak < 30 then
+		return 30
+	end
+	local repeatDay = Config.Retention.StreakMilestoneRepeatDay
+	return (math.floor(streak / repeatDay) + 1) * repeatDay
+end
+
 local RetentionService = {}
 RetentionService.__index = RetentionService
 
@@ -33,6 +49,7 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 	local tokensGranted = 0
 	local winBackTokensGranted = 0
 	local daysAway = 0
+	local milestoneReward = nil :: { day: number, tokens: number, priorityPasses: number }?
 	self.profiles:Mutate(player, function(profile)
 		if profile.daily.lastDay ~= day then
 			changed = true
@@ -59,6 +76,20 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 				profile.retryCredits.PriorityPass = (profile.retryCredits.PriorityPass or 0) + 1
 				rewardGranted = true
 			end
+			local milestone = Config.Retention.StreakMilestones[profile.daily.streak]
+			if
+				not milestone
+				and profile.daily.streak > Config.Retention.StreakMilestoneRepeatDay
+				and profile.daily.streak % Config.Retention.StreakMilestoneRepeatDay == 0
+			then
+				milestone = Config.Retention.StreakMilestones[Config.Retention.StreakMilestoneRepeatDay]
+			end
+			if milestone then
+				profile.bonusTokens = (profile.bonusTokens or 0) + milestone.tokens
+				profile.retryCredits.PriorityPass = (profile.retryCredits.PriorityPass or 0) + milestone.priorityPasses
+				milestoneReward =
+					{ day = profile.daily.streak, tokens = milestone.tokens, priorityPasses = milestone.priorityPasses }
+			end
 			-- A gap resets the streak either way, but a player who was
 			-- genuinely at risk of not returning (not just someone who
 			-- missed yesterday) gets an extra, distinctly-messaged welcome
@@ -78,7 +109,14 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 		tokensGranted = tokensGranted,
 		winBackTokensGranted = winBackTokensGranted,
 		daysAway = daysAway,
+		milestoneDay = if milestoneReward then milestoneReward.day else nil,
 	})
+	if milestoneReward then
+		self.analytics:Custom(player, "StreakMilestoneReached", milestoneReward.day, {
+			tokens = milestoneReward.tokens,
+			priorityPasses = milestoneReward.priorityPasses,
+		})
+	end
 	self.achievements:CheckCount(player, "STREAK_SEVEN", profile.daily.streak, 7)
 	local brief = {
 		streak = profile.daily.streak,
@@ -89,6 +127,8 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 		daysAway = daysAway,
 		theme = THEMES[(day % #THEMES) + 1],
 		nextRewardIn = 3 - (profile.daily.streak % 3),
+		milestoneReward = milestoneReward,
+		nextMilestoneDay = nextMilestoneDay(profile.daily.streak),
 	}
 	self.briefs[player] = brief
 	return brief
@@ -105,6 +145,7 @@ function RetentionService:GetBrief(player: Player): { [string]: any }
 		best = profile.daily.best,
 		theme = THEMES[(day % #THEMES) + 1],
 		nextRewardIn = 3 - (profile.daily.streak % 3),
+		nextMilestoneDay = nextMilestoneDay(profile.daily.streak),
 	}
 end
 
