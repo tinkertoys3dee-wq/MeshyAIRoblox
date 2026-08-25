@@ -580,6 +580,7 @@ function GenerationService:_Prepare(
 			purchaseIntentId = intentId,
 			sourceBackendJobId = payload.sourceBackendJobId,
 			minReadyAt = computeMinReadyAt(now, payload.kind, priority),
+			isFirstModelBoost = isFirstModel,
 		}
 		table.insert(profile.generationOrder, 1, generationId)
 		profile.stats.generationsStarted += 1
@@ -618,6 +619,12 @@ function GenerationService:_Launch(player: Player, generationId: string)
 	self.launching[generationId] = true
 	self.push(player, Network.PushEvents.Profile, { retryCredits = profile.retryCredits })
 	self.push(player, Network.PushEvents.Generation, { generationId = generationId, stage = "QUEUED", progress = 0 })
+	if generation.isFirstModelBoost then
+		self.push(player, Network.PushEvents.Toast, {
+			tone = "success",
+			message = "🚀 Your first model is fast-tracked -- it'll be ready sooner than usual!",
+		})
+	end
 	local funnel = if generation.method == "IMAGE_PREVIEW" or generation.method == "IMAGE_UPLOAD"
 		then "reference"
 		else "generation"
