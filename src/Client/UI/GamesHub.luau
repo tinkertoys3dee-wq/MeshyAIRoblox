@@ -589,7 +589,8 @@ function GamesHub.Show(app: any)
 		icon: string,
 		title: string,
 		blurb: string,
-		onActivated: () -> ()
+		onActivated: () -> (),
+		statsGameKey: string?
 	)
 		-- Compact (mobile-stacked) tiles are much shorter than wide-mode
 		-- ones, so every internal metric below scales off the tile's own
@@ -602,6 +603,34 @@ function GamesHub.Show(app: any)
 		local badgeIconSize = if roomy then 24 else 15
 		local scrimHeight = if roomy then 76 else 48
 
+		-- A soft colored glow behind the tile, echoing its own accent color
+		-- -- a "spotlight" sitting behind the shadow, the same depth trick
+		-- the header's own glow uses.
+		local glow = Factory.New("Frame", {
+			Name = "Glow",
+			Size = size + UDim2.fromOffset(70, 70),
+			Position = position - UDim2.fromOffset(35, 35),
+			BackgroundColor3 = color,
+			BackgroundTransparency = 0.86,
+			BorderSizePixel = 0,
+			ZIndex = 211,
+			Parent = hubView,
+		})
+		Factory.Corner(glow, 34)
+
+		-- Two shadow layers at different offsets/softness read as more
+		-- elevation than one flat one.
+		local farShadow = Factory.New("Frame", {
+			Name = "FarShadow",
+			Size = size + UDim2.fromOffset(6, 6),
+			Position = position + UDim2.fromOffset(-3, 9),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 0.72,
+			BorderSizePixel = 0,
+			ZIndex = 211,
+			Parent = hubView,
+		})
+		Factory.Corner(farShadow, 22)
 		local shadow = Factory.New("Frame", {
 			Name = "Shadow",
 			Size = size,
@@ -639,7 +668,51 @@ function GamesHub.Show(app: any)
 			Parent = button,
 		})
 		Factory.Corner(gloss, 19)
+
+		-- A diagonal light streak that sweeps across on a loop, paused
+		-- between passes -- purely decorative, so it's the first thing off
+		-- under reduceMotion. UDim2's scale component (not a raw pixel
+		-- target) is what lets one tween work correctly whether this tile
+		-- is a fixed wide-mode width or a scale-based full-width compact
+		-- one.
+		if not reduceMotion then
+			local shine = Factory.New("Frame", {
+				Name = "Shine",
+				Size = UDim2.fromOffset(34, tileHeight * 1.6),
+				Position = UDim2.new(0, -60, 0, -tileHeight * 0.3),
+				Rotation = 22,
+				BackgroundColor3 = Color3.new(1, 1, 1),
+				BackgroundTransparency = 0.78,
+				BorderSizePixel = 0,
+				ZIndex = 214,
+				Parent = button,
+			})
+			TweenService:Create(
+				shine,
+				TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 2.6),
+				{ Position = UDim2.new(1, 60, 0, -tileHeight * 0.3) }
+			):Play()
+		end
+
 		local tileScale = Factory.New("UIScale", { Scale = 1, Parent = button })
+		-- Desktop hover feedback: a light grow, distinct from (and gentler
+		-- than) the click-punch below. Never fires on touch, which has no
+		-- concept of hover -- fine, since the tap itself already answers
+		-- "did something respond".
+		button.MouseEnter:Connect(function()
+			if not reduceMotion then
+				TweenService:Create(
+					tileScale,
+					TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{ Scale = 1.03 }
+				):Play()
+			end
+		end)
+		button.MouseLeave:Connect(function()
+			TweenService
+				:Create(tileScale, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 })
+				:Play()
+		end)
 
 		local iconBadge = Factory.New("Frame", {
 			Name = "IconBadge",
@@ -663,6 +736,48 @@ function GamesHub.Show(app: any)
 			AlignY = Enum.TextYAlignment.Center,
 			ZIndex = 216,
 		})
+
+		-- A real personal-best-this-week chip, not a fabricated stat --
+		-- fetched lazily after the tile is already visible so it never
+		-- blocks the picker screen from showing up, and only revealed once
+		-- (if) an actual score comes back. Wide-mode tiles only: there's no
+		-- clean spot for it on compact's much shorter ones.
+		local statsChip: Frame? = nil
+		local statsLabel: TextLabel? = nil
+		if roomy and statsGameKey then
+			statsChip = Factory.New("Frame", {
+				Name = "StatsChip",
+				Size = UDim2.fromOffset(108, 22),
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -10, 0, 14),
+				BackgroundColor3 = Colors.Ink,
+				BackgroundTransparency = 0.35,
+				BorderSizePixel = 0,
+				Visible = false,
+				ZIndex = 215,
+				Parent = button,
+			})
+			Factory.Corner(statsChip, 11)
+			Factory.Stroke(statsChip, Color3.new(1, 1, 1), 0.85, 1)
+			statsLabel = Factory.Label(statsChip, "", UDim2.new(1, -16, 1, 0), {
+				Position = UDim2.fromOffset(8, 0),
+				Font = Theme.Fonts.Bold,
+				TextSize = 10,
+				Color = Colors.Text,
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+				Truncate = Enum.TextTruncate.AtEnd,
+				ZIndex = 216,
+			})
+			task.spawn(function()
+				local result = fetchWeeklyTop(statsGameKey)
+				local chip, label = statsChip, statsLabel
+				if result and result.self and chip and chip.Parent and label then
+					label.Text = string.format("⚡ This week: %d", result.self.score)
+					chip.Visible = true
+				end
+			end)
+		end
 
 		-- A bottom scrim so the title/blurb stay legible in light text no
 		-- matter how bright the tile's own accent color is, the same trick a
@@ -761,7 +876,8 @@ function GamesHub.Show(app: any)
 				tile.blurb,
 				function()
 					playGame(tile.game)
-				end
+				end,
+				tile.game.Key
 			)
 		end
 		buildTile(
@@ -777,7 +893,7 @@ function GamesHub.Show(app: any)
 		for index, tile in GAMES do
 			buildTile(TILE_SIZE, TILE_POSITIONS[index], tile.color, tile.icon, tile.game.Name, tile.blurb, function()
 				playGame(tile.game)
-			end)
+			end, tile.game.Key)
 		end
 		buildTile(
 			TILE_SIZE,
