@@ -107,11 +107,9 @@ return table.freeze({
 		-- Same Meshy image → Smart Topology model operation and provider
 		-- cost as ImageConversion above -- only the image source differs
 		-- (the player's own Roblox avatar render, resolved to a real
-		-- fetchable URL by the external backend from the avatarView and
+		-- fetchable URL by the backend from the avatarView and
 		-- playerUserId GenerationService sends it, instead of an
-		-- uploaded/generated reference) -- so it's priced identically. New
-		-- product awaiting a Creator Hub ID (0 = not configured yet, same
-		-- convention as every other placeholder in this file).
+		-- uploaded/generated reference) -- so it's priced identically.
 		AvatarConversion = { Id = 3709863858, SuggestedPrice = 159 },
 		PriorityPass = { Id = 3709322304, SuggestedPrice = 29 },
 		-- The Forge Tokens pack: a normal Robux-purchasable product AND the

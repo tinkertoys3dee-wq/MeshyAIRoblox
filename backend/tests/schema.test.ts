@@ -50,6 +50,15 @@ describe("createJobSchema", () => {
     expect(createJobSchema.safeParse({ ...base, kind: "TEXT_TO_3D", accessoryType: "Weapon" }).success).toBe(false);
   });
 
+  it("accepts an avatar view only for AVATAR_TO_3D", () => {
+    expect(createJobSchema.safeParse({ ...base, kind: "AVATAR_TO_3D", avatarView: "HEADSHOT" }).success).toBe(true);
+    expect(createJobSchema.safeParse({ ...base, kind: "AVATAR_TO_3D", avatarView: "BUST" }).success).toBe(true);
+    expect(createJobSchema.safeParse({ ...base, kind: "AVATAR_TO_3D", avatarView: "FULL_BODY" }).success).toBe(true);
+    expect(createJobSchema.safeParse({ ...base, kind: "AVATAR_TO_3D" }).success).toBe(false);
+    expect(createJobSchema.safeParse({ ...base, kind: "TEXT_TO_3D", avatarView: "HEADSHOT" }).success).toBe(false);
+    expect(createJobSchema.safeParse({ ...base, kind: "AVATAR_TO_3D", avatarView: "PROFILE" }).success).toBe(false);
+  });
+
   it("accepts an image quality tier only for IMAGE_PREVIEW", () => {
     expect(createJobSchema.safeParse({ ...base, kind: "IMAGE_PREVIEW", imageQuality: "medium" }).success).toBe(true);
     expect(createJobSchema.safeParse({ ...base, kind: "IMAGE_PREVIEW", imageQuality: "high" }).success).toBe(true);

@@ -1,8 +1,18 @@
 import sharp from "sharp";
-import { PipelineError } from "../types.js";
+import { PipelineError, type AvatarView } from "../types.js";
 
 const MAX_DOWNLOAD_BYTES = 8 * 1024 * 1024;
 const MAX_INPUT_PIXELS = 16_777_216;
+
+// Matches Config.Generation.AvatarViews' Endpoint values in the Roblox game
+// (src/Shared/Config.luau) -- the two must stay in sync, since the Roblox
+// server sends only the view id, and this backend is the one that resolves
+// it into the actual Thumbnails API path.
+const AVATAR_THUMBNAIL_ENDPOINT: Readonly<Record<AvatarView, string>> = Object.freeze({
+  HEADSHOT: "avatar-headshot",
+  BUST: "avatar-bust",
+  FULL_BODY: "avatar",
+});
 
 type ThumbnailResponse = {
   data?: Array<{
@@ -20,7 +30,25 @@ export class RobloxReferenceClient {
     metadataUrl.searchParams.set("size", "420x420");
     metadataUrl.searchParams.set("format", "Png");
     metadataUrl.searchParams.set("isCircular", "false");
+    return this.#resolveAndDownload(metadataUrl, assetId);
+  }
 
+  // The Roblox server cannot resolve this itself: HttpService is blocked
+  // from reaching Roblox-owned domains (thumbnails.roblox.com included),
+  // so it sends only the player's userId (already on every job, see
+  // BackendService:CreateJob) and their chosen avatarView, and this
+  // backend -- outside Roblox's sandbox -- does the lookup instead.
+  async downloadAvatarImage(userId: number, avatarView: AvatarView): Promise<Buffer> {
+    const endpoint = AVATAR_THUMBNAIL_ENDPOINT[avatarView];
+    const metadataUrl = new URL(`https://thumbnails.roblox.com/v1/users/${endpoint}`);
+    metadataUrl.searchParams.set("userIds", String(userId));
+    metadataUrl.searchParams.set("size", "420x420");
+    metadataUrl.searchParams.set("format", "Png");
+    metadataUrl.searchParams.set("isCircular", "false");
+    return this.#resolveAndDownload(metadataUrl, userId);
+  }
+
+  async #resolveAndDownload(metadataUrl: URL, targetId: number): Promise<Buffer> {
     const metadataResponse = await fetchWithTimeout(metadataUrl, { redirect: "error" }, 15_000);
     if (!metadataResponse.ok) {
       throw new PipelineError(
@@ -30,7 +58,7 @@ export class RobloxReferenceClient {
       );
     }
     const payload = (await metadataResponse.json()) as ThumbnailResponse;
-    const thumbnail = payload.data?.find((entry) => entry.targetId === assetId) ?? payload.data?.[0];
+    const thumbnail = payload.data?.find((entry) => entry.targetId === targetId) ?? payload.data?.[0];
     if (!thumbnail || thumbnail.state !== "Completed" || !thumbnail.imageUrl) {
       throw new PipelineError(
         "ROBLOX_IMAGE_NOT_READY",
