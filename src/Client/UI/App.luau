@@ -133,7 +133,6 @@ local ERROR_MESSAGES = {
 	TOKENS_NOT_ACCEPTED = "Forge Tokens can't pay for that.",
 	AD_UNAVAILABLE = "No rewarded ad is available right now. Try again in a few minutes.",
 	AD_NOT_COMPLETED = "The ad was closed before it finished, so no tokens were earned.",
-	AD_WATCH_LIMIT_REACHED = "You've reached today's rewarded-ad limit. Come back tomorrow for more Forge Tokens.",
 }
 
 local CATALOG_TYPES = {
@@ -239,13 +238,14 @@ local function tokenPrice(robuxPrice: number, productKey: string?): number
 end
 
 -- Display-only mirror of AdRewardService's daily-reset math, used only to
--- seed the watches-remaining counter from the bootstrapped profile; the
--- server response after each watch is the value actually trusted afterward.
-local function watchesRemainingFromProfile(profile: { [string]: any }): number
+-- seed the "watched today" stat from the bootstrapped profile; the server
+-- response after each watch is the value actually trusted afterward. This is
+-- a running count, not a countdown -- there is no daily cap (every completed
+-- ad is real, positive revenue, see Config.Ads.WorstCaseAdRevenuePerAd).
+local function watchesTodayFromProfile(profile: { [string]: any }): number
 	local watch = profile.adWatch or { day = 0, count = 0 }
 	local today = math.floor(os.time() / 86400)
-	local count = if watch.day == today then watch.count else 0
-	return math.max(0, Config.Ads.MaxAdWatchesPerDay - count)
+	return if watch.day == today then watch.count else 0
 end
 
 local function clear(parent: Instance)
@@ -289,7 +289,7 @@ function App.new()
 		paymentMethod = "ROBUX",
 		adAvailable = nil :: boolean?,
 		adAvailabilityChecking = false,
-		adWatchesRemaining = nil :: number?,
+		adWatchesToday = nil :: number?,
 		pageVersion = 0,
 		toastVersion = 0,
 		queuedSoundIds = {} :: { [string]: boolean },
@@ -983,7 +983,7 @@ function App:_Bootstrap()
 			return
 		end
 		self.state = data
-		self.adWatchesRemaining = watchesRemainingFromProfile(data.profile)
+		self.adWatchesToday = watchesTodayFromProfile(data.profile)
 		self.sounds:SetEnabled(data.profile.settings.soundsEnabled ~= false)
 		if data.profile.settings.highContrast == true then
 			Theme.SetHighContrast(true)
@@ -1048,7 +1048,7 @@ function App:_RefreshBootstrap()
 		local success, data = self:_Invoke(Network.Actions.Bootstrap, {})
 		if success then
 			self.state = data
-			self.adWatchesRemaining = watchesRemainingFromProfile(data.profile)
+			self.adWatchesToday = watchesTodayFromProfile(data.profile)
 			self:_RenderStatus()
 			self:_RenderActivePage()
 			self:_RefreshLocalizedPrices()
@@ -1294,7 +1294,10 @@ function App:_RenderCreate()
 	local adTokens = self.state.profile.tokens or 0
 	local bonusTokens = self.state.profile.bonusTokens or 0
 	local totalTokens = adTokens + bonusTokens
-	local watchesRemaining = self.adWatchesRemaining or 0
+	-- No daily cap: every completed ad is real, positive revenue for Forge
+	-- (see Config.Ads.WorstCaseAdRevenuePerAd), so this is purely a "you've
+	-- watched N today" stat, never a limiter on the button below.
+	local watchesToday = self.adWatchesToday or 0
 	local tokensDescriptionText = "Earn tokens by watching ads. Ad tokens fund generations or the Pass; "
 		.. "free tokens (achievements, streaks) fund the Pass only."
 	-- Right-hand controls: on compact layouts this column collapses to full
@@ -1381,18 +1384,17 @@ function App:_RenderCreate()
 		self.paymentMethod = "TOKENS"
 		self:_RenderActivePage()
 	end)
-	local watchAdActive = self.adAvailable == true and watchesRemaining > 0
+	local watchAdActive = self.adAvailable == true
 	local watchAd = Factory.Button(
 		tokensCard,
 		if self.adAvailabilityChecking
 			then "Checking for an ad…"
 			elseif self.adAvailable == false then "No ad available right now"
-			elseif watchesRemaining <= 0 then "Ad limit reached for today"
 			else string.format(
-				"Watch ad · +%d token%s (%d left today)",
+				"Watch ad · +%d token%s%s",
 				Config.Ads.TokenGrantPerPurchase,
 				if Config.Ads.TokenGrantPerPurchase == 1 then "" else "s",
-				watchesRemaining
+				if watchesToday > 0 then string.format(" (%d today)", watchesToday) else ""
 			),
 		UDim2.new(rightWidth, -2 * inset, 0, 34),
 		UDim2.new(rightX, inset, 0, watchAdY),
@@ -1406,7 +1408,7 @@ function App:_RenderCreate()
 		task.spawn(function()
 			local success, result = self:_Invoke(Network.Actions.RequestRewardedAd, {})
 			if success then
-				self.adWatchesRemaining = result.watchesRemainingToday
+				self.adWatchesToday = result.watchesToday
 				self:_Toast("ready", "Thanks for watching! Your tokens are on the way.")
 			end
 			self:_RenderActivePage()
