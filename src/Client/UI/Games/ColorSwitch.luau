@@ -7,15 +7,23 @@
 -- falls indefinitely until it hits the bottom of the canvas (a loss, same as
 -- FlappyBird's ground).
 --
--- Rings scroll down from the top like FlappyBird's pipes. Each is a
--- spinning 4-color wheel; a small non-rotating badge on every ring always
--- shows which of the 4 colors currently counts as "safe" -- reading the spin
--- itself is flavor, not a requirement, since the badge is the actual signal
--- and stays legible at a glance regardless of spin speed or eyesight.
--- Passing a ring while the ball's own color matches the badge scores a
--- point; a mismatch ends the run. Colored orbs drift down the same line and
--- change the ball's current color on contact -- the only way to prepare for
--- an upcoming ring that doesn't already match.
+-- Rings do NOT scroll on their own -- in the real game they only rotate in
+-- place, and the world only moves when the player actually climbs. Modeled
+-- here as a "ceiling": once the ball's physics would carry it above
+-- `ceiling()`, the excess is converted into a world shift instead (the ball
+-- gets pinned at the ceiling, every ring/orb moves down by that same
+-- amount) -- so a ring sits dead still, spinning, for as long as the ball
+-- is below the ceiling or simply falling, exactly like the idle/start
+-- screen of the real game where nothing scrolls until you tap.
+--
+-- Each ring is a spinning 4-color wheel with a hollow, non-rotating center
+-- hub; the hub always shows which of the 4 colors currently counts as
+-- "safe" -- reading the spin itself is flavor, not a requirement, since the
+-- hub is the actual signal and stays legible at a glance regardless of spin
+-- speed or eyesight. Passing a ring while the ball's own color matches the
+-- hub scores a point; a mismatch ends the run. Colored orbs drift down the
+-- same line and change the ball's current color on contact -- the only way
+-- to prepare for an upcoming ring that doesn't already match.
 
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -29,8 +37,8 @@ local GameShell = require(script.Parent.GameShell)
 local Colors = Theme.Colors
 local PALETTE_COLORS = { Colors.Rose, Colors.Gold, Colors.Cyan, Colors.Mint }
 -- Paired index-for-index with PALETTE_COLORS so every color carries a
--- non-color signal too -- the ball's glyph and every ring's facing badge
--- both show shape, not just hue.
+-- non-color signal too -- the ball's glyph and every ring's hub both show
+-- shape, not just hue.
 local PALETTE_SHAPES = { "●", "▲", "■", "★" }
 local PALETTE_COUNT = #PALETTE_COLORS
 
@@ -38,24 +46,23 @@ local GRAVITY = 1000
 local BOUNCE_VELOCITY = -380
 local BALL_SIZE = 24
 local RING_SIZE = 84
-local RING_SPEED_BASE = 150
-local RING_SPEED_PER_SCORE = 5
-local RING_SPEED_MAX = 300
-local RING_INTERVAL_BASE = 1.8
-local RING_INTERVAL_MIN = 1.0
+local RING_HUB_SIZE = 40
+local RING_SPACING_BASE = 230 -- world px climbed between ring spawns
+local RING_SPACING_MIN = 150
+local RING_SPACING_PER_SCORE = 3
 local RING_SPIN_MIN = 70 -- deg/sec
 local RING_SPIN_MAX = 160
 local ORB_SIZE = 22
-local ORB_SPEED = 150
-local ORB_INTERVAL_MIN = 2.4
-local ORB_INTERVAL_MAX = 4.2
+local ORB_SPACING_MIN = 320 -- world px climbed between orb spawns
+local ORB_SPACING_MAX = 520
 local TRAIL_INTERVAL = 0.045
+local CEILING_FRACTION = 0.32 -- how far down the canvas the ball is pinned
 
 type Ring = {
 	backing: Frame,
 	spinner: Frame,
-	badgeFill: Frame,
-	badgeGlyph: TextLabel,
+	hub: Frame,
+	hubGlyph: TextLabel,
 	quadrantColors: { number },
 	rotation: number,
 	spinSpeed: number,
@@ -87,10 +94,9 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local velocityY = 0
 	local rings: { Ring } = {}
 	local orbs: { Orb } = {}
-	local timeSinceRing = 0
-	local nextRingInterval = RING_INTERVAL_BASE
-	local timeSinceOrb = 0
-	local nextOrbInterval = ORB_INTERVAL_MIN + math.random() * (ORB_INTERVAL_MAX - ORB_INTERVAL_MIN)
+	local distanceSinceRing = 0
+	local distanceSinceOrb = 0
+	local nextOrbSpacing = ORB_SPACING_MIN + math.random() * (ORB_SPACING_MAX - ORB_SPACING_MIN)
 	local trailTimer = 0
 
 	local function width(): number
@@ -103,6 +109,9 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	end
 	local function centerX(): number
 		return width() / 2
+	end
+	local function ceiling(): number
+		return height() * CEILING_FRACTION
 	end
 
 	local sky = Factory.New("Frame", {
@@ -145,7 +154,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		AlignY = Enum.TextYAlignment.Center,
 		ZIndex = 7,
 	})
-	local ballY = height() * 0.5
+	local ballY = height() * 0.55
 	ball.Position = UDim2.fromOffset(centerX() - BALL_SIZE / 2, ballY)
 
 	local function setBallColor(colorIndex: number)
@@ -196,11 +205,15 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		end
 	end)
 
-	local function spawnRing()
+	-- `initialY` lets the very first ring spawn already visible near the
+	-- ceiling (matching the real game's idle screen) instead of starting
+	-- off-canvas and waiting for a climb that hasn't happened yet.
+	local function spawnRing(initialY: number?)
+		local y = initialY or -RING_SIZE
 		local backing = Factory.New("Frame", {
 			Name = "Ring",
 			Size = UDim2.fromOffset(RING_SIZE, RING_SIZE),
-			Position = UDim2.fromOffset(centerX() - RING_SIZE / 2, -RING_SIZE),
+			Position = UDim2.fromOffset(centerX() - RING_SIZE / 2, y),
 			BackgroundColor3 = Colors.Ink,
 			BackgroundTransparency = 0.25,
 			BorderSizePixel = 0,
@@ -243,21 +256,25 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		local spinSpeed = (RING_SPIN_MIN + math.random() * (RING_SPIN_MAX - RING_SPIN_MIN))
 			* (if math.random() < 0.5 then -1 else 1)
 
-		local badgeFill = Factory.New("Frame", {
-			Name = "Badge",
-			Size = UDim2.fromOffset(28, 28),
-			Position = UDim2.fromOffset(RING_SIZE - 12, -8),
+		-- A hollow, non-rotating hub punched through the middle of the
+		-- spinning petals -- reads as a ring/donut instead of a solid pie,
+		-- and doubles as the always-legible "safe color" readout.
+		local hub = Factory.New("Frame", {
+			Name = "Hub",
+			Size = UDim2.fromOffset(RING_HUB_SIZE, RING_HUB_SIZE),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
 			BackgroundColor3 = Colors.Ink,
 			BorderSizePixel = 0,
 			ZIndex = 4,
 			Parent = backing,
 		})
-		Factory.Corner(badgeFill, 14)
-		Factory.Stroke(badgeFill, Colors.Ink, 0.3, 2)
-		local badgeGlyph = Factory.Label(badgeFill, "", UDim2.fromScale(1, 1), {
+		Factory.Corner(hub, RING_HUB_SIZE / 2)
+		Factory.Stroke(hub, Colors.Ink, 0.3, 2)
+		local hubGlyph = Factory.Label(hub, "", UDim2.fromScale(1, 1), {
 			Color = Colors.Ink,
-			Font = Theme.Fonts.Bold,
-			TextSize = 13,
+			Font = Theme.Fonts.Black,
+			TextSize = 16,
 			AlignX = Enum.TextXAlignment.Center,
 			AlignY = Enum.TextYAlignment.Center,
 			ZIndex = 5,
@@ -266,12 +283,12 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		table.insert(rings, {
 			backing = backing,
 			spinner = spinner,
-			badgeFill = badgeFill,
-			badgeGlyph = badgeGlyph,
+			hub = hub,
+			hubGlyph = hubGlyph,
 			quadrantColors = quadrantColors,
 			rotation = rotation,
 			spinSpeed = spinSpeed,
-			y = -RING_SIZE,
+			y = y,
 			checked = false,
 		})
 	end
@@ -299,12 +316,34 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			AlignY = Enum.TextYAlignment.Center,
 			ZIndex = 5,
 		})
+		-- A soft pulsing glow ring around the orb -- purely decorative, so
+		-- it's skipped under reduceMotion.
+		if not api.reduceMotion then
+			local glow = Factory.New("Frame", {
+				Name = "Glow",
+				Size = UDim2.fromOffset(ORB_SIZE, ORB_SIZE),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				BackgroundColor3 = PALETTE_COLORS[colorIndex],
+				BackgroundTransparency = 0.55,
+				BorderSizePixel = 0,
+				ZIndex = 3,
+				Parent = frame,
+			})
+			Factory.Corner(glow, ORB_SIZE / 2)
+			local glowTween = TweenService:Create(
+				glow,
+				TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+				{ Size = UDim2.fromOffset(ORB_SIZE * 1.6, ORB_SIZE * 1.6), BackgroundTransparency = 1 }
+			)
+			glowTween:Play()
+		end
 		table.insert(orbs, { frame = frame, colorIndex = colorIndex, y = -ORB_SIZE, collected = false })
 	end
 
 	-- A ring within this many pixels of the top already claimed the spawn
 	-- slot this tick -- skipped so an orb never spawns stacked on top of a
-	-- ring the instant both timers land together.
+	-- ring the instant both counters cross their threshold together.
 	local function orbSlotFree(): boolean
 		for _, ring in rings do
 			if math.abs(ring.y + RING_SIZE) < RING_SIZE + 40 then
@@ -329,6 +368,10 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		api.gameOver(score)
 	end
 
+	-- The very first ring is already on screen and spinning before any
+	-- input, same as the real game's idle/start state.
+	spawnRing(ceiling() - RING_SIZE * 0.65)
+
 	local heartbeatConn: RBXScriptConnection
 	heartbeatConn = RunService.Heartbeat:Connect(function(dt)
 		if not running then
@@ -338,10 +381,20 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 
 		velocityY += GRAVITY * dt
 		ballY += velocityY * dt
-		if ballY < 0 then
-			ballY = 0
-			velocityY = 0
+
+		-- The ball never actually rises past the ceiling -- any climb past
+		-- it is converted into a world shift instead, applied to every ring
+		-- and orb below. Purely falling (or sitting below the ceiling)
+		-- produces zero shift, so nothing moves but the ball itself, which
+		-- is exactly the "gates only rotate, they don't scroll" behavior of
+		-- the real game.
+		local ceilingY = ceiling()
+		local shift = 0
+		if ballY < ceilingY then
+			shift = ceilingY - ballY
+			ballY = ceilingY
 		end
+
 		if ballY > height() - BALL_SIZE then
 			ball.Position = UDim2.fromOffset(centerX() - BALL_SIZE / 2, height() - BALL_SIZE)
 			endGame()
@@ -376,19 +429,20 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			end
 		end
 
-		local speed = math.min(RING_SPEED_MAX, RING_SPEED_BASE + score * RING_SPEED_PER_SCORE)
-		timeSinceRing += dt
-		if timeSinceRing >= nextRingInterval then
-			timeSinceRing = 0
-			nextRingInterval = math.max(RING_INTERVAL_MIN, RING_INTERVAL_BASE - score * 0.03)
-			spawnRing()
-		end
-		timeSinceOrb += dt
-		if timeSinceOrb >= nextOrbInterval then
-			timeSinceOrb = 0
-			nextOrbInterval = ORB_INTERVAL_MIN + math.random() * (ORB_INTERVAL_MAX - ORB_INTERVAL_MIN)
-			if orbSlotFree() then
-				spawnOrb()
+		if shift > 0 then
+			distanceSinceRing += shift
+			distanceSinceOrb += shift
+			local ringSpacing = math.max(RING_SPACING_MIN, RING_SPACING_BASE - score * RING_SPACING_PER_SCORE)
+			if distanceSinceRing >= ringSpacing then
+				distanceSinceRing -= ringSpacing
+				spawnRing()
+			end
+			if distanceSinceOrb >= nextOrbSpacing then
+				distanceSinceOrb = 0
+				nextOrbSpacing = ORB_SPACING_MIN + math.random() * (ORB_SPACING_MAX - ORB_SPACING_MIN)
+				if orbSlotFree() then
+					spawnOrb()
+				end
 			end
 		end
 
@@ -396,15 +450,17 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 
 		for i = #rings, 1, -1 do
 			local ring = rings[i]
-			ring.y += speed * dt
+			ring.y += shift
+			-- Rotation always advances, shift or not -- this is the part of
+			-- the ring that's never supposed to stop.
 			ring.rotation = (ring.rotation + ring.spinSpeed * dt) % 360
 			ring.backing.Position = UDim2.fromOffset(centerX() - RING_SIZE / 2, ring.y)
 			ring.spinner.Rotation = ring.rotation
 
 			local facingQuadrant = math.floor(ring.rotation / 90) + 1
 			local facingColorIndex = ring.quadrantColors[facingQuadrant]
-			ring.badgeFill.BackgroundColor3 = PALETTE_COLORS[facingColorIndex]
-			ring.badgeGlyph.Text = PALETTE_SHAPES[facingColorIndex]
+			ring.hub.BackgroundColor3 = PALETTE_COLORS[facingColorIndex]
+			ring.hubGlyph.Text = PALETTE_SHAPES[facingColorIndex]
 
 			if not ring.checked and ring.y + RING_SIZE >= ballTop and ring.y <= ballBottom then
 				ring.checked = true
@@ -431,7 +487,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 
 		for i = #orbs, 1, -1 do
 			local orb = orbs[i]
-			orb.y += ORB_SPEED * dt
+			orb.y += shift
 			orb.frame.Position = UDim2.fromOffset(centerX() - ORB_SIZE / 2, orb.y)
 
 			if not orb.collected and orb.y + ORB_SIZE >= ballTop and orb.y <= ballBottom then

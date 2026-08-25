@@ -89,6 +89,18 @@ function GamesHub.Show(app: any)
 		MaxSize = Vector2.new(560, 520),
 		Parent = modal,
 	})
+	-- A console-style accent strip along the very top edge -- a small frame
+	-- detail that reads as "this modal has a top", the same idea a game
+	-- cabinet's marquee light gives it.
+	local topAccent = Factory.New("Frame", {
+		Name = "TopAccent",
+		Size = UDim2.new(1, 0, 0, 4),
+		BackgroundColor3 = Colors.Rose,
+		BorderSizePixel = 0,
+		ZIndex = 212,
+		Parent = modal,
+	})
+	Factory.Gradient(topAccent, { Colors.Rose, Colors.Gold, Colors.Cyan, Colors.Mint }, 0)
 
 	-- A quick fade-and-rise entrance -- skipped under reduceMotion, where
 	-- both the overlay and modal are simply created at their final resting
@@ -193,8 +205,23 @@ function GamesHub.Show(app: any)
 		}
 	)
 
-	local closeButton = Factory.Button(modal, "×", UDim2.fromOffset(34, 34), UDim2.new(1, -50, 0, 14), nil)
-	closeButton.ZIndex = 214
+	local closeButton = Factory.New("TextButton", {
+		Name = "CloseButton",
+		Size = UDim2.fromOffset(34, 34),
+		Position = UDim2.new(1, -50, 0, 14),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.35,
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		Text = "×",
+		TextColor3 = Colors.Text,
+		Font = Theme.Fonts.Black,
+		TextSize = 20,
+		ZIndex = 214,
+		Parent = modal,
+	})
+	Factory.Corner(closeButton, 17)
+	Factory.Stroke(closeButton, Colors.Line, 0.5, 1.5)
 	app:_BindButton(closeButton)
 
 	-- The hub view (tile picker) and the game view (GameShell) share the
@@ -224,10 +251,10 @@ function GamesHub.Show(app: any)
 		end)
 	end
 
-	local function fetchWeeklyTop(gameKey: string): { GameShell.WeeklyStanding }?
+	local function fetchWeeklyTop(gameKey: string): GameShell.WeeklyResult?
 		local success, result = app:_Invoke(Network.Actions.GetArcadeLeaderboard, { game = gameKey })
 		if success and type(result) == "table" and type(result.standings) == "table" then
-			return result.standings
+			return { standings = result.standings, self = result.self }
 		end
 		return nil
 	end
