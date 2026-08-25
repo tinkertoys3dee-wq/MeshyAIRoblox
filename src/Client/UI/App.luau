@@ -1019,6 +1019,26 @@ function App:_AnimateModalIn(overlay: Frame, modal: Frame)
 	self:_Animate(scale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
 end
 
+-- Shared by the Create page's own Priority Pass button and the contextual
+-- upsell chip on a queued generation row -- both buy a pass the same way,
+-- for use on whatever gets submitted next (see the upsell chip's own
+-- comment for why it can't speed up a job already queued).
+function App:_BuyPriorityPass()
+	task.spawn(function()
+		local success, result = self:_Invoke(Network.Actions.BuyPriorityPass, { paymentMethod = self.paymentMethod })
+		if success and result.tokensSpent then
+			self.state.profile.tokens = result.tokens
+			self.state.profile.bonusTokens = result.bonusTokens
+			self.sounds:Play("Success")
+			self:_Toast("success", string.format("%d tokens spent on a priority pass.", result.tokensSpent))
+			self:_RenderActivePage()
+		elseif success and not result.mocked then
+			self.sounds:Play("PurchasePrompt")
+			self:_Toast("success", "Confirm the priority pass purchase in Roblox.")
+		end
+	end)
+end
+
 function App:_BindButton(button: GuiButton)
 	self.sounds:Bind(button)
 	button.Selectable = true
@@ -2080,20 +2100,7 @@ function App:_RenderCreate()
 				self.usePriority = not self.usePriority
 				self:_RenderActivePage()
 			else
-				task.spawn(function()
-					local success, result =
-						self:_Invoke(Network.Actions.BuyPriorityPass, { paymentMethod = self.paymentMethod })
-					if success and result.tokensSpent then
-						self.state.profile.tokens = result.tokens
-						self.state.profile.bonusTokens = result.bonusTokens
-						self.sounds:Play("Success")
-						self:_Toast("success", string.format("%d tokens spent on a priority pass.", result.tokensSpent))
-						self:_RenderActivePage()
-					elseif success and not result.mocked then
-						self.sounds:Play("PurchasePrompt")
-						self:_Toast("success", "Confirm the priority pass purchase in Roblox.")
-					end
-				end)
+				self:_BuyPriorityPass()
 			end
 		end)
 		generate.Activated:Connect(function()
@@ -2280,7 +2287,24 @@ function App:_RenderCreate()
 		end)
 	end
 
-	local activity = Factory.Card(stack, UDim2.new(1, 0, 0, 188), nil, "Activity")
+	local availablePasses = self.state.profile.retryCredits.PriorityPass or 0
+	local hasQueuedRow = false
+	local rowCount = 0
+	for _, generationId in self.state.profile.generationOrder do
+		if rowCount >= 3 then
+			break
+		end
+		local generation = self.state.profile.generations[generationId]
+		if generation then
+			rowCount += 1
+			if generation.stage == "QUEUED" then
+				hasQueuedRow = true
+			end
+		end
+	end
+	local showUpsell = hasQueuedRow and availablePasses <= 0
+	local activityHeight = (if rowCount == 0 then 140 else 45 + rowCount * 50 + 14) + (if showUpsell then 46 else 0)
+	local activity = Factory.Card(stack, UDim2.new(1, 0, 0, activityHeight), nil, "Activity")
 	activity.LayoutOrder = 4
 	Factory.Label(activity, "LIVE CREATION ACTIVITY", UDim2.new(1, -32, 0, 24), {
 		Position = UDim2.fromOffset(16, 13),
@@ -2298,56 +2322,139 @@ function App:_RenderCreate()
 		if generation then
 			local row = Factory.New("Frame", {
 				Position = UDim2.fromOffset(16, y),
-				Size = UDim2.new(1, -32, 0, 36),
+				Size = UDim2.new(1, -32, 0, 44),
 				BackgroundColor3 = Colors.Ink,
 				BackgroundTransparency = 0.22,
 				BorderSizePixel = 0,
 				Parent = activity,
 			})
-			Factory.Corner(row, 9)
-			Factory.Label(row, string.sub(generation.filteredPrompt or "Creation", 1, 40), UDim2.new(0.4, -12, 1, 0), {
-				Position = UDim2.fromOffset(12, 0),
+			Factory.Corner(row, 10)
+			Factory.Stroke(row, Colors.Line, 0.75, 1)
+
+			local isModel = generation.method == "TEXT_TO_3D" or generation.method == "IMAGE_TO_3D"
+			local stageColor = if generation.stage == "FAILED"
+				then Colors.Danger
+				elseif generation.stage == "SUCCEEDED" or generation.stage == "IMAGE_READY" then Colors.Mint
+				else Colors.Cyan
+
+			-- Icon badge replaces the old flat MODEL/IMAGE tag -- same
+			-- gradient-circle-plus-glyph treatment used for badges
+			-- everywhere else this pass (toasts, leaderboard ranks, the
+			-- daily-brief flame).
+			local badge = Factory.New("Frame", {
+				Size = UDim2.fromOffset(30, 30),
+				Position = UDim2.fromOffset(7, 7),
+				BackgroundColor3 = if isModel then Colors.Violet else Colors.Cyan,
+				BorderSizePixel = 0,
+				Parent = row,
+			})
+			Factory.Corner(badge, 15)
+			Factory.Gradient(
+				badge,
+				if isModel
+					then { Colors.Violet, Color3.fromRGB(91, 94, 255) }
+					else { Colors.Cyan, Color3.fromRGB(70, 170, 220) },
+				135
+			)
+			Factory.Label(badge, if isModel then "🧊" else "🖼", UDim2.fromScale(1, 1), {
+				TextSize = 14,
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+			})
+
+			Factory.Label(row, string.sub(generation.filteredPrompt or "Creation", 1, 40), UDim2.new(1, -108, 0, 16), {
+				Position = UDim2.fromOffset(46, 4),
 				Font = Theme.Fonts.Medium,
 				TextSize = 12,
 				Truncate = Enum.TextTruncate.AtEnd,
 			})
-			local isModel = generation.method == "TEXT_TO_3D" or generation.method == "IMAGE_TO_3D"
-			local typeTag = Factory.New("Frame", {
-				Position = UDim2.new(0.4, 4, 0.5, -9),
-				Size = UDim2.new(0.15, -4, 0, 18),
-				BackgroundColor3 = if isModel then Colors.Violet else Colors.Cyan,
-				BackgroundTransparency = 0.78,
+			Factory.Label(row, string.format("%d%%", math.floor(generation.progress or 0)), UDim2.fromOffset(46, 16), {
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -8, 0, 4),
+				AlignX = Enum.TextXAlignment.Right,
+				Font = Theme.Fonts.Black,
+				Color = stageColor,
+				TextSize = 12,
+			})
+			Factory.Label(row, generation.stageText or generation.stage, UDim2.new(1, -58, 0, 14), {
+				Position = UDim2.fromOffset(46, 22),
+				Color = Colors.TextMuted,
+				TextSize = 10,
+				Truncate = Enum.TextTruncate.AtEnd,
+			})
+
+			-- A slim progress bar reads at a glance far better than the bare
+			-- percent text alone did.
+			local track = Factory.New("Frame", {
+				Position = UDim2.fromOffset(46, 39),
+				Size = UDim2.new(1, -58, 0, 3),
+				BackgroundColor3 = Colors.PanelSoft,
+				BackgroundTransparency = 0.3,
 				BorderSizePixel = 0,
 				Parent = row,
 			})
-			Factory.Corner(typeTag, 5)
-			Factory.Label(typeTag, if isModel then "MODEL" else "IMAGE", UDim2.new(1, 0, 1, 0), {
-				Font = Theme.Fonts.Bold,
-				TextSize = 10,
-				Color = if isModel then Colors.Violet else Colors.Cyan,
-				AlignX = Enum.TextXAlignment.Center,
+			Factory.Corner(track, 2)
+			local fill = Factory.New("Frame", {
+				Size = UDim2.new(math.clamp((generation.progress or 0) / 100, 0, 1), 0, 1, 0),
+				BackgroundColor3 = stageColor,
+				BorderSizePixel = 0,
+				Parent = track,
 			})
-			Factory.Label(row, generation.stageText or generation.stage, UDim2.new(0.3, 0, 1, 0), {
-				Position = UDim2.new(0.56, 0, 0, 0),
-				Color = Colors.TextMuted,
-				TextSize = 11,
-				Truncate = Enum.TextTruncate.AtEnd,
-			})
-			Factory.Label(
-				row,
-				string.format("%d%%", math.floor(generation.progress or 0)),
-				UDim2.new(0.13, -12, 1, 0),
-				{
-					Position = UDim2.new(0.87, 0, 0, 0),
-					AlignX = Enum.TextXAlignment.Right,
-					Font = Theme.Fonts.Bold,
-					Color = if generation.stage == "FAILED" then Colors.Danger else Colors.Cyan,
-					TextSize = 12,
-				}
-			)
-			y += 42
+			Factory.Corner(fill, 2)
+
+			y += 50
 			shown += 1
 		end
+	end
+	if showUpsell then
+		-- Contextual Priority Pass pitch, shown only while a generation is
+		-- actually sitting in the queue and the player has no pass banked --
+		-- the real moment of friction, not a generic pitch buried in
+		-- Settings. Framed around the NEXT submission (a pass here can't
+		-- retroactively speed up a job already queued -- queue time is
+		-- fixed at submission, see GenerationService._Prepare), which is
+		-- both the honest framing and the one that matches what buying a
+		-- pass from this exact button actually does.
+		local upsell = Factory.New("Frame", {
+			Position = UDim2.fromOffset(16, y),
+			Size = UDim2.new(1, -32, 0, 38),
+			BackgroundColor3 = Colors.Gold,
+			BackgroundTransparency = 0.85,
+			BorderSizePixel = 0,
+			Parent = activity,
+		})
+		Factory.Corner(upsell, 10)
+		Factory.Stroke(upsell, Colors.Gold, 0.5, 1)
+		Factory.Label(
+			upsell,
+			"⚡ Tired of the wait? Stock a Priority Pass for your next one.",
+			UDim2.new(1, -140, 1, 0),
+			{
+				Position = UDim2.fromOffset(12, 0),
+				Color = Colors.Gold,
+				Font = Theme.Fonts.Medium,
+				TextSize = 11,
+				Wrapped = true,
+			}
+		)
+		local upsellButton = Factory.New("TextButton", {
+			Size = UDim2.fromOffset(112, 26),
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -8, 0.5, 0),
+			BackgroundColor3 = Colors.Gold,
+			BorderSizePixel = 0,
+			AutoButtonColor = false,
+			Text = "Get a pass",
+			TextColor3 = Colors.Ink,
+			Font = Theme.Fonts.Bold,
+			TextSize = 11,
+			Parent = upsell,
+		})
+		Factory.Corner(upsellButton, 13)
+		self:_BindButton(upsellButton)
+		upsellButton.Activated:Connect(function()
+			self:_BuyPriorityPass()
+		end)
 	end
 	if shown == 0 then
 		Factory.Label(
