@@ -1330,6 +1330,13 @@ function App:_ConnectPush()
 			end
 			self:_RenderStatus()
 			self:_RenderActivePage()
+		elseif eventName == Network.PushEvents.Quests then
+			self.state.questState = { questsDone = payload.questsDone }
+			self.questJustCompleted = payload.justCompleted
+			if not self.state.profile.settings.reduceMotion then
+				self.sounds:Play("Success")
+			end
+			self:_RenderActivePage()
 		end
 	end)
 end
@@ -2616,6 +2623,124 @@ function App:_RenderCreate()
 			}
 		)
 	end
+
+	local questState = self.state.questState
+	if questState then
+		local quests = Config.Retention.Quests
+		local questsDone = questState.questsDone or {}
+		local doneCount = 0
+		for _, quest in quests do
+			if questsDone[quest.key] then
+				doneCount += 1
+			end
+		end
+		local allDone = doneCount >= #quests
+		local cardHeight = #quests * 46 + (if allDone then 82 else 46)
+		local questCard = Factory.Card(stack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyQuests")
+		questCard.LayoutOrder = 6
+		Factory.Label(questCard, "DAILY QUESTS", UDim2.new(1, -100, 0, 20), {
+			Position = UDim2.fromOffset(16, 13),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = Colors.Mint,
+		})
+		Factory.Label(questCard, string.format("%d / %d", doneCount, #quests), UDim2.fromOffset(70, 20), {
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -16, 0, 13),
+			AlignX = Enum.TextXAlignment.Right,
+			Font = Theme.Fonts.Black,
+			Color = if allDone then Colors.Gold else Colors.TextMuted,
+			TextSize = 12,
+		})
+
+		local qy = 40
+		for _, quest in quests do
+			local done = questsDone[quest.key] == true
+			local row = Factory.New("Frame", {
+				Position = UDim2.fromOffset(16, qy),
+				Size = UDim2.new(1, -32, 0, 38),
+				BackgroundColor3 = if done then Colors.Mint else Colors.Ink,
+				BackgroundTransparency = if done then 0.85 else 0.25,
+				BorderSizePixel = 0,
+				Parent = questCard,
+			})
+			Factory.Corner(row, 10)
+			if done then
+				Factory.Stroke(row, Colors.Mint, 0.5, 1)
+			end
+
+			local badge = Factory.New("Frame", {
+				Size = UDim2.fromOffset(28, 28),
+				Position = UDim2.fromOffset(5, 5),
+				BackgroundColor3 = if done then Colors.Mint else Colors.PanelSoft,
+				BorderSizePixel = 0,
+				Parent = row,
+			})
+			Factory.Corner(badge, 14)
+			Factory.Label(badge, if done then "✓" else quest.icon, UDim2.fromScale(1, 1), {
+				TextSize = if done then 14 else 13,
+				Color = if done then Colors.Ink else Colors.Text,
+				Font = Theme.Fonts.Black,
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+			})
+
+			Factory.Label(row, quest.label, UDim2.new(1, -110, 1, 0), {
+				Position = UDim2.fromOffset(42, 0),
+				Font = if done then Theme.Fonts.Medium else Theme.Fonts.Regular,
+				Color = if done then Colors.Text else Colors.TextMuted,
+				TextSize = 12,
+				Truncate = Enum.TextTruncate.AtEnd,
+			})
+			Factory.Label(row, string.format("+%d", quest.tokens), UDim2.fromOffset(50, 38), {
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -10, 0, 0),
+				AlignX = Enum.TextXAlignment.Right,
+				AlignY = Enum.TextYAlignment.Center,
+				Font = Theme.Fonts.Bold,
+				Color = if done then Colors.Mint else Colors.TextMuted,
+				TextSize = 12,
+			})
+
+			if
+				self.questJustCompleted == quest.key
+				and not (self.state.profile.settings and self.state.profile.settings.reduceMotion)
+			then
+				local pop = Factory.New("UIScale", { Scale = 0.9, Parent = row })
+				TweenService
+					:Create(pop, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+					:Play()
+			end
+
+			qy += 46
+		end
+
+		if allDone then
+			local banner = Factory.New("Frame", {
+				Position = UDim2.fromOffset(16, qy),
+				Size = UDim2.new(1, -32, 0, 28),
+				BackgroundColor3 = Colors.Gold,
+				BackgroundTransparency = 0.82,
+				BorderSizePixel = 0,
+				Parent = questCard,
+			})
+			Factory.Corner(banner, 8)
+			Factory.Stroke(banner, Colors.Gold, 0.4, 1)
+			Factory.Label(
+				banner,
+				string.format("🏆 All quests cleared! +%d bonus tokens", Config.Retention.QuestClearBonusTokens),
+				UDim2.new(1, -20, 1, 0),
+				{
+					Position = UDim2.fromOffset(10, 0),
+					Font = Theme.Fonts.Bold,
+					Color = Colors.Gold,
+					TextSize = 12,
+					AlignX = Enum.TextXAlignment.Center,
+				}
+			)
+		end
+	end
+	self.questJustCompleted = nil
 end
 
 function App:_RenderStudio()
