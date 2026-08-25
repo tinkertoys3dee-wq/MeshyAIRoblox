@@ -13,6 +13,22 @@ return table.freeze({
 		SecretName = "FORGE_BACKEND_SECRET",
 	},
 
+	-- Roblox's own public Thumbnails web API (see AvatarThumbnailService) --
+	-- deliberately NOT `Players:GetUserThumbnailAsync`, which only ever
+	-- returns an opaque rbxthumb:// Content reference the Roblox ENGINE
+	-- resolves internally for on-screen display, never a real fetchable URL
+	-- an external service (Forge's own backend, in turn calling Meshy) could
+	-- download. This is a plain HTTPS GET to a different host, the same way
+	-- BackendService already talks to Forge's own backend -- no special
+	-- permission beyond the HttpService access this game already has for
+	-- that call.
+	AvatarThumbnails = {
+		BaseUrl = "https://thumbnails.roblox.com/v1/users",
+		-- Valid for all three AvatarViews endpoints (headshot/bust/full
+		-- body) per Roblox's documented allowed size set for each.
+		Size = "420x420",
+	},
+
 	Group = {
 		Id = 15575113, -- Your Roblox group ID
 		GenerationSpeedMultiplier = 0.90,
@@ -44,6 +60,18 @@ return table.freeze({
 			{ Id = "LOW", Label = "Low", ProductKey = "ImagePreviewLow", OpenAIQuality = "low" },
 			{ Id = "MEDIUM", Label = "Medium", ProductKey = "ImagePreviewMedium", OpenAIQuality = "medium" },
 			{ Id = "HIGH", Label = "High", ProductKey = "ImagePreviewHigh", OpenAIQuality = "high" },
+		},
+		-- Which render of the player's own current Roblox avatar seeds an
+		-- AVATAR_TO_3D generation (see AvatarThumbnailService). `ThumbType`
+		-- is the matching rbxthumb:// content type for the client-side live
+		-- preview; `Endpoint` is the matching Roblox Thumbnails web API path
+		-- AvatarThumbnailService calls server-side for a real fetchable URL
+		-- -- the two are deliberately kept next to each other since they
+		-- must always refer to the same render.
+		AvatarViews = {
+			{ Id = "HEADSHOT", Label = "Headshot", ThumbType = "AvatarHeadShot", Endpoint = "avatar-headshot" },
+			{ Id = "BUST", Label = "Bust", ThumbType = "AvatarBust", Endpoint = "avatar-bust" },
+			{ Id = "FULL_BODY", Label = "Full body", ThumbType = "Avatar", Endpoint = "avatar" },
 		},
 		TargetTriangles = 3600,
 		HardTriangleLimit = 3999,
@@ -87,6 +115,14 @@ return table.freeze({
 		ImagePreviewMedium = { Id = 3709537948, SuggestedPrice = 49 },
 		ImagePreviewHigh = { Id = 3709538054, SuggestedPrice = 129 },
 		ImageConversion = { Id = 3709322228, SuggestedPrice = 159 },
+		-- Same Meshy image → Smart Topology model operation and provider
+		-- cost as ImageConversion above -- only the image source differs
+		-- (the player's own Roblox avatar render, fetched server-side by
+		-- AvatarThumbnailService, instead of an uploaded/generated
+		-- reference) -- so it's priced identically. New product awaiting a
+		-- Creator Hub ID (0 = not configured yet, same convention as every
+		-- other placeholder in this file).
+		AvatarConversion = { Id = 0, SuggestedPrice = 159 },
 		PriorityPass = { Id = 3709322304, SuggestedPrice = 29 },
 		-- The Forge Tokens pack: a normal Robux-purchasable product AND the
 		-- product Roblox's rewarded-video-ad reward is created from

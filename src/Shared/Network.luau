@@ -10,6 +10,7 @@ Network.Actions = table.freeze({
 	Bootstrap = "Bootstrap",
 	CreateGeneration = "CreateGeneration",
 	CreateUploadedImage = "CreateUploadedImage",
+	CreateFromAvatar = "CreateFromAvatar",
 	ConvertImage = "ConvertImage",
 	PromptCustomImagePass = "PromptCustomImagePass",
 	BuyPriorityPass = "BuyPriorityPass",

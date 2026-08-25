@@ -11,7 +11,7 @@ export type FitTransform = {
 
 export type ItemLicense = "ORIGINAL" | "PERSONAL_COPY"
 export type Visibility = "PRIVATE" | "PUBLIC"
-export type GenerationMethod = "TEXT_TO_3D" | "IMAGE_PREVIEW" | "IMAGE_UPLOAD" | "IMAGE_TO_3D"
+export type GenerationMethod = "TEXT_TO_3D" | "IMAGE_PREVIEW" | "IMAGE_UPLOAD" | "IMAGE_TO_3D" | "AVATAR_TO_3D"
 
 export type ItemRecord = {
 	id: string,
@@ -57,6 +57,8 @@ export type GenerationRecord = {
 	detailLevel: string,
 	imageQuality: string?,
 	sourceImageAssetId: number?,
+	sourceImageUrl: string?,
+	avatarView: string?,
 	backendJobId: string?,
 	sourceBackendJobId: string?,
 	previewAssetId: number?,
