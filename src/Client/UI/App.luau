@@ -194,6 +194,16 @@ local function thumbnail(assetId: any, size: number?): string
 	return string.format("rbxthumb://type=Asset&id=%d&w=%d&h=%d", id, pixels, pixels)
 end
 
+-- Cheap, instant client-side avatar preview. `thumbType` is one of
+-- Config.Generation.AvatarViews' ThumbType values (AvatarHeadShot/
+-- AvatarBust/Avatar) -- the engine resolves this locally, no HTTP call.
+-- The server-side fetch for the generation job itself is a different,
+-- real URL; see AvatarThumbnailService for why.
+local function avatarThumbnail(userId: number, thumbType: string, size: number?): string
+	local pixels = size or 420
+	return string.format("rbxthumb://type=%s&id=%d&w=%d&h=%d", thumbType, userId, pixels, pixels)
+end
+
 local function deepCopy<T>(value: T): T
 	if type(value) ~= "table" then
 		return value
@@ -265,6 +275,7 @@ function App.new()
 		selectedStylePreset = "AUTO",
 		selectedDetailLevel = "BALANCED",
 		selectedImageQuality = "LOW",
+		selectedAvatarView = "HEADSHOT",
 		customImageAssetId = "",
 		draftPrompt = "",
 		selectedItemId = nil :: string?,
@@ -1694,7 +1705,7 @@ function App:_RenderCreate()
 
 	local customUploadOwned = self.state.benefits.customImageUpload == true
 	local methodRow = Factory.New("Frame", {
-		Size = UDim2.new(1, 0, 0, if self.compact then 456 else 156),
+		Size = UDim2.new(1, 0, 0, if self.compact then 612 else 320),
 		BackgroundTransparency = 1,
 		LayoutOrder = 1,
 		Parent = stack,
@@ -1727,15 +1738,25 @@ function App:_RenderCreate()
 					else string.format("R$ %d ONCE", self.state.prices.CustomImageUpload),
 				color = Colors.Gold,
 			},
+			{
+				id = "AVATAR_TO_3D",
+				title = "My Avatar",
+				kicker = "INSTANT SOURCE",
+				body = "Your current Roblox avatar → 3D. Nothing to upload -- we fetch your look automatically.",
+				price = self.state.prices.AvatarConversion,
+				color = Colors.Mint,
+			},
 		}
 	do
+		-- 2x2 grid in wide mode (156px cards, 12px column gap, 8px row gap --
+		-- see the compact-mode stack below for the matching vertical rhythm),
+		-- 4-tall stack in compact mode. methodRow.Size above is derived from
+		-- these same constants, not eyeballed.
+		local col = (index - 1) % 2
+		local row = math.floor((index - 1) / 2)
 		local card = if self.compact
 			then Factory.Card(methodRow, UDim2.new(1, 0, 0, 144), UDim2.fromOffset(0, (index - 1) * 156))
-			else Factory.Card(
-				methodRow,
-				UDim2.new(1 / 3, -8, 1, 0),
-				UDim2.new((index - 1) / 3, (index - 1) * 4, 0, 0)
-			)
+			else Factory.Card(methodRow, UDim2.new(0.5, -6, 0, 156), UDim2.new(col * 0.5, col * 6, 0, row * 164))
 		local selected = self.selectedMethod == method.id
 		local stroke = card:FindFirstChildOfClass("UIStroke")
 		if stroke then
@@ -1780,6 +1801,7 @@ function App:_RenderCreate()
 	end
 
 	local isUpload = self.selectedMethod == "IMAGE_UPLOAD"
+	local isAvatar = self.selectedMethod == "AVATAR_TO_3D"
 	if isUpload and not customUploadOwned then
 		local unlock = Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 246 else 196), nil, "UploadUnlock")
 		unlock.LayoutOrder = 2
@@ -1868,6 +1890,44 @@ function App:_RenderCreate()
 		end)
 		cursorY += 108
 
+		local function choiceRow(
+			options: { any },
+			selectedValue: string,
+			positionY: number,
+			color: Color3,
+			onChoose: (string) -> ()
+		)
+			local row = Factory.New("ScrollingFrame", {
+				Position = UDim2.fromOffset(16, positionY),
+				Size = UDim2.new(1, -32, 0, 38),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				ScrollBarThickness = 0,
+				AutomaticCanvasSize = Enum.AutomaticSize.X,
+				CanvasSize = UDim2.new(),
+				ScrollingDirection = Enum.ScrollingDirection.X,
+				Parent = promptCard,
+			})
+			Factory.List(row, Enum.FillDirection.Horizontal, 8)
+			for _, option in options do
+				local selected = selectedValue == option.Id
+				local chip = Factory.Button(
+					row,
+					option.Label,
+					UDim2.fromOffset(98, 34),
+					nil,
+					if selected then "primary" else nil
+				)
+				if selected then
+					chip.BackgroundColor3 = color
+				end
+				self:_BindButton(chip)
+				chip.Activated:Connect(function()
+					onChoose(option.Id)
+				end)
+			end
+		end
+
 		local step = 2
 		local imageAssetBox = nil :: TextBox?
 		if isUpload then
@@ -1907,44 +1967,50 @@ function App:_RenderCreate()
 			)
 			cursorY += 38
 			step = 3
-		end
-
-		local function choiceRow(
-			options: { any },
-			selectedValue: string,
-			positionY: number,
-			color: Color3,
-			onChoose: (string) -> ()
-		)
-			local row = Factory.New("ScrollingFrame", {
-				Position = UDim2.fromOffset(16, positionY),
-				Size = UDim2.new(1, -32, 0, 38),
-				BackgroundTransparency = 1,
+		elseif isAvatar then
+			Factory.Label(promptCard, "2  CHOOSE YOUR AVATAR VIEW", UDim2.new(1, -32, 0, 22), {
+				Position = UDim2.fromOffset(16, cursorY),
+				Font = Theme.Fonts.Bold,
+				TextSize = 12,
+				Color = Colors.Mint,
+			})
+			cursorY += 27
+			choiceRow(Config.Generation.AvatarViews, self.selectedAvatarView, cursorY, Colors.Mint, function(value)
+				self.selectedAvatarView = value
+				self:_RenderActivePage()
+			end)
+			cursorY += 46
+			local previewThumbType = "AvatarHeadShot"
+			for _, view in Config.Generation.AvatarViews do
+				if view.Id == self.selectedAvatarView then
+					previewThumbType = view.ThumbType
+					break
+				end
+			end
+			local avatarPreview = Factory.New("ImageLabel", {
+				Size = UDim2.fromOffset(64, 64),
+				Position = UDim2.fromOffset(16, cursorY),
+				BackgroundColor3 = Colors.Ink,
 				BorderSizePixel = 0,
-				ScrollBarThickness = 0,
-				AutomaticCanvasSize = Enum.AutomaticSize.X,
-				CanvasSize = UDim2.new(),
-				ScrollingDirection = Enum.ScrollingDirection.X,
+				Image = avatarThumbnail(player.UserId, previewThumbType, 128),
+				ScaleType = Enum.ScaleType.Crop,
 				Parent = promptCard,
 			})
-			Factory.List(row, Enum.FillDirection.Horizontal, 8)
-			for _, option in options do
-				local selected = selectedValue == option.Id
-				local chip = Factory.Button(
-					row,
-					option.Label,
-					UDim2.fromOffset(98, 34),
-					nil,
-					if selected then "primary" else nil
-				)
-				if selected then
-					chip.BackgroundColor3 = color
-				end
-				self:_BindButton(chip)
-				chip.Activated:Connect(function()
-					onChoose(option.Id)
-				end)
-			end
+			Factory.Corner(avatarPreview, 12)
+			Factory.Label(
+				promptCard,
+				"Fetched automatically from your current Roblox avatar -- nothing to upload",
+				UDim2.new(1, -32 - 76, 0, 64),
+				{
+					Position = UDim2.fromOffset(16 + 64 + 12, cursorY),
+					Color = Colors.TextMuted,
+					TextSize = 11,
+					Wrapped = true,
+					AlignY = Enum.TextYAlignment.Center,
+				}
+			)
+			cursorY += 74
+			step = 3
 		end
 
 		Factory.Label(promptCard, string.format("%d  CHOOSE A VISUAL STYLE", step), UDim2.new(1, -32, 0, 22), {
@@ -2062,6 +2128,7 @@ function App:_RenderCreate()
 			promptCard,
 			if isUpload
 				then "Roblox asset moderation + ownership verification · no duplicate OpenAI image check"
+				elseif isAvatar then "Your avatar is fetched automatically · Roblox TextService + provider moderation"
 				else "Roblox TextService + provider moderation · 3,600 triangle target · 2K texture",
 			if self.compact then UDim2.new(1, -32, 0, 34) else UDim2.new(1, -462, 0, 42),
 			{
@@ -2081,6 +2148,7 @@ function App:_RenderCreate()
 		end
 		local generationProductKey = if self.selectedMethod == "TEXT_TO_3D"
 			then "DirectGeneration"
+			elseif self.selectedMethod == "AVATAR_TO_3D" then "AvatarConversion"
 			elseif selectedQualityTier then selectedQualityTier.ProductKey
 			else "ImagePreviewLow"
 		local price = self.state.prices[generationProductKey]
@@ -2094,6 +2162,10 @@ function App:_RenderCreate()
 		local actionText = if self.selectedMethod == "TEXT_TO_3D"
 			then string.format("Forge 3D · %s", priceText)
 			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · %s", priceText)
+			elseif self.selectedMethod == "AVATAR_TO_3D" then string.format(
+				"Forge from my avatar · %s",
+				priceText
+			)
 			else "Moderate my reference · Included"
 		local generate = Factory.Button(
 			promptCard,
@@ -2134,7 +2206,10 @@ function App:_RenderCreate()
 		generate.Activated:Connect(function()
 			self.draftPrompt = prompt.Text
 			generate.Active = false
-			generate.Text = if isUpload then "Moderating image…" else "Checking prompt…"
+			generate.Text = if isUpload
+				then "Moderating image…"
+				elseif isAvatar then "Fetching your avatar…"
+				else "Checking prompt…"
 			task.spawn(function()
 				local request = {
 					kind = self.selectedMethod,
@@ -2151,8 +2226,12 @@ function App:_RenderCreate()
 				if imageAssetBox then
 					request.sourceImageAssetId = tonumber(imageAssetBox.Text)
 				end
+				if isAvatar then
+					request.avatarView = self.selectedAvatarView
+				end
 				local success, result = if isUpload
 					then self:_Invoke(Network.Actions.CreateUploadedImage, request)
+					elseif isAvatar then self:_Invoke(Network.Actions.CreateFromAvatar, request)
 					else self:_Invoke(Network.Actions.CreateGeneration, request)
 				generate.Active = true
 				generate.Text = actionText
@@ -2359,7 +2438,9 @@ function App:_RenderCreate()
 			Factory.Corner(row, 10)
 			Factory.Stroke(row, Colors.Line, 0.75, 1)
 
-			local isModel = generation.method == "TEXT_TO_3D" or generation.method == "IMAGE_TO_3D"
+			local isModel = generation.method == "TEXT_TO_3D"
+				or generation.method == "IMAGE_TO_3D"
+				or generation.method == "AVATAR_TO_3D"
 			local stageColor = if generation.stage == "FAILED"
 				then Colors.Danger
 				elseif generation.stage == "SUCCEEDED" or generation.stage == "IMAGE_READY" then Colors.Mint
