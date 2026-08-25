@@ -418,11 +418,116 @@ function App:_BuildChrome()
 		Parent = shell,
 	})
 
-	local launcher =
-		Factory.Button(gui, "✦  Open Forge Studio", UDim2.fromOffset(220, 48), UDim2.new(0, 18, 1, -66), "primary")
+	-- Both base-view launchers (Studio and Arcade) share this shape: a
+	-- shadow for lift, a gradient-filled pill with a gloss highlight, an
+	-- icon badge, and a title/subtitle pair -- the same detailed language
+	-- the Arcade's own tiles and buttons use, so the entry points into the
+	-- Studio don't look noticeably plainer than what's inside it.
+	local function buildLauncher(
+		icon: string,
+		title: string,
+		subtitle: string,
+		bottomOffset: number,
+		accentColor: Color3,
+		lightColor: Color3,
+		darkColor: Color3,
+		foreground: Color3
+	): TextButton
+		local shadow = Factory.New("Frame", {
+			Name = "Shadow",
+			Size = UDim2.fromOffset(240, 60),
+			Position = UDim2.new(0, 18, 1, bottomOffset + 5),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 0.5,
+			BorderSizePixel = 0,
+			Visible = false,
+			ZIndex = 29,
+			Parent = gui,
+		})
+		Factory.Corner(shadow, 18)
+		local button = Factory.New("TextButton", {
+			Size = UDim2.fromOffset(240, 60),
+			Position = UDim2.new(0, 18, 1, bottomOffset),
+			BackgroundColor3 = accentColor,
+			BorderSizePixel = 0,
+			AutoButtonColor = false,
+			Text = "",
+			Visible = false,
+			ZIndex = 30,
+			Parent = gui,
+		})
+		Factory.Corner(button, 18)
+		Factory.Stroke(button, Colors.Ink, 0.4, 1.5)
+		Factory.Gradient(button, { lightColor, darkColor }, 130)
+		local gloss = Factory.New("Frame", {
+			Name = "Gloss",
+			Size = UDim2.new(1, -2, 0, 20),
+			Position = UDim2.fromOffset(1, 1),
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundTransparency = 0.86,
+			BorderSizePixel = 0,
+			ZIndex = 31,
+			Parent = button,
+		})
+		Factory.Corner(gloss, 17)
+		local badge = Factory.New("Frame", {
+			Name = "IconBadge",
+			Size = UDim2.fromOffset(40, 40),
+			Position = UDim2.fromOffset(10, 10),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 0.3,
+			BorderSizePixel = 0,
+			ZIndex = 31,
+			Parent = button,
+		})
+		Factory.Corner(badge, 13)
+		Factory.Label(badge, icon, UDim2.fromScale(1, 1), {
+			TextSize = 20,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			ZIndex = 32,
+		})
+		Factory.Label(button, title, UDim2.new(1, -64, 0, 22), {
+			Position = UDim2.fromOffset(58, 8),
+			Font = Theme.Fonts.Black,
+			TextSize = 15,
+			Color = foreground,
+			AlignX = Enum.TextXAlignment.Left,
+			Truncate = Enum.TextTruncate.AtEnd,
+			ZIndex = 31,
+		})
+		Factory.Label(button, subtitle, UDim2.new(1, -64, 0, 16), {
+			Position = UDim2.fromOffset(58, 30),
+			Font = Theme.Fonts.Medium,
+			TextSize = 10,
+			Color = foreground,
+			Transparency = 0.25,
+			AlignX = Enum.TextXAlignment.Left,
+			Truncate = Enum.TextTruncate.AtEnd,
+			ZIndex = 31,
+		})
+		-- The shadow is a sibling, not a child (a child would render on top
+		-- of the button, not behind it), so it has no automatic link to the
+		-- button's own Visible toggling elsewhere (_SetStudioOpen) -- this
+		-- keeps the two in sync without that code needing to know the
+		-- shadow exists.
+		button:GetPropertyChangedSignal("Visible"):Connect(function()
+			shadow.Visible = button.Visible
+		end)
+		return button
+	end
+
+	local launcher = buildLauncher(
+		"✦",
+		"Open Forge Studio",
+		"Create & customize",
+		-78,
+		Colors.Violet,
+		Color3.fromRGB(150, 120, 255),
+		Color3.fromRGB(96, 64, 220),
+		Colors.Text
+	)
 	launcher.Name = "StudioLauncher"
-	launcher.Visible = false
-	launcher.ZIndex = 30
 	self:_BindButton(launcher)
 	launcher.Activated:Connect(function()
 		self:_SetStudioOpen(true)
@@ -434,11 +539,17 @@ function App:_BuildChrome()
 	-- to do with creation/fitting/marketplace. Same visibility rule as the
 	-- Forge launcher (only shown on the closed/idle base view) since it's a
 	-- peer of it, not something nested inside the studio.
-	local arcadeLauncher =
-		Factory.Button(gui, "🎮  Arcade", UDim2.fromOffset(220, 48), UDim2.new(0, 18, 1, -122), "mint")
+	local arcadeLauncher = buildLauncher(
+		"🎮",
+		"Arcade",
+		"3 mini-games · weekly prizes",
+		-146,
+		Colors.Mint,
+		Color3.fromRGB(160, 255, 215),
+		Color3.fromRGB(46, 196, 143),
+		Colors.Ink
+	)
 	arcadeLauncher.Name = "ArcadeLauncher"
-	arcadeLauncher.Visible = false
-	arcadeLauncher.ZIndex = 30
 	self:_BindButton(arcadeLauncher)
 	arcadeLauncher.Activated:Connect(function()
 		GamesHub.Show(self)

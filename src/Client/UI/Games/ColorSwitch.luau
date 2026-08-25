@@ -17,13 +17,20 @@
 -- screen of the real game where nothing scrolls until you tap.
 --
 -- Each ring is a spinning 4-color wheel with a hollow, non-rotating center
--- hub; the hub always shows which of the 4 colors currently counts as
--- "safe" -- reading the spin itself is flavor, not a requirement, since the
--- hub is the actual signal and stays legible at a glance regardless of spin
--- speed or eyesight. Passing a ring while the ball's own color matches the
--- hub scores a point; a mismatch ends the run. Colored orbs drift down the
--- same line and change the ball's current color on contact -- the only way
--- to prepare for an upcoming ring that doesn't already match.
+-- hub. The ball must pass through whichever of the 4 colored sections is
+-- currently facing its approach side (the bottom, since the ball rises into
+-- the ring from below) -- the hub mirrors that same color as an
+-- always-legible readout, so reading the spin itself is a convenience, not
+-- a requirement. Which section currently faces the ball is read directly
+-- off Roblox's own rendered layout (AbsolutePosition/AbsoluteSize of the
+-- actual spinning pieces) rather than computed by hand from the rotation
+-- angle -- deriving "which of 4 squares rotated by R degrees is now at the
+-- bottom" via trigonometry is exactly the kind of math that's easy to get
+-- subtly wrong with no way to see the result, so instead this just asks the
+-- engine where it actually put things. Passing a ring while the ball's own
+-- color matches scores a point; a mismatch ends the run. Colored orbs drift
+-- down the same line and change the ball's current color on contact -- the
+-- only way to prepare for an upcoming ring that doesn't already match.
 
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -61,6 +68,7 @@ local CEILING_FRACTION = 0.32 -- how far down the canvas the ball is pinned
 type Ring = {
 	backing: Frame,
 	spinner: Frame,
+	petals: { Frame },
 	hub: Frame,
 	hubGlyph: TextLabel,
 	quadrantColors: { number },
@@ -220,12 +228,25 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			ZIndex = 3,
 			Parent = canvas,
 		})
+		-- Rectangular clipping (Roblox clips to the object's own bounds, not
+		-- its rounded corners) still keeps the spinning petals from
+		-- overflowing past the ring at 45-degree-ish angles, when a square
+		-- petal's rotated corner would otherwise reach further from center
+		-- than the ring's own radius.
+		backing.ClipsDescendants = true
 		Factory.Corner(backing, RING_SIZE / 2)
 		Factory.Stroke(backing, Colors.Line, 0.5, 1.5)
 
+		-- AnchorPoint (0.5, 0.5) is load-bearing: Roblox rotates a GuiObject
+		-- around its AnchorPoint, which defaults to the top-left corner. Left
+		-- at the default, the petals swing in a wide arc around that corner
+		-- instead of spinning in place around the ring's own center -- which
+		-- is exactly why the ring looked stuck/broken before this fix.
 		local spinner = Factory.New("Frame", {
 			Name = "Spinner",
 			Size = UDim2.fromScale(1, 1),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
 			BackgroundTransparency = 1,
 			ZIndex = 3,
 			Parent = backing,
@@ -238,6 +259,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			{ 3, RING_SIZE / 2 + 1 },
 			{ RING_SIZE / 2 + 1, RING_SIZE / 2 + 1 },
 		}
+		local petals = {}
 		for i, offset in petalOffsets do
 			local petal = Factory.New("Frame", {
 				Name = "Petal",
@@ -249,6 +271,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 				Parent = spinner,
 			})
 			Factory.Corner(petal, 8)
+			petals[i] = petal
 		end
 
 		local rotation = math.random(0, 359)
@@ -283,6 +306,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		table.insert(rings, {
 			backing = backing,
 			spinner = spinner,
+			petals = petals,
 			hub = hub,
 			hubGlyph = hubGlyph,
 			quadrantColors = quadrantColors,
@@ -457,8 +481,20 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			ring.backing.Position = UDim2.fromOffset(centerX() - RING_SIZE / 2, ring.y)
 			ring.spinner.Rotation = ring.rotation
 
-			local facingQuadrant = math.floor(ring.rotation / 90) + 1
-			local facingColorIndex = ring.quadrantColors[facingQuadrant]
+			-- Whichever petal Roblox actually rendered lowest (largest
+			-- AbsolutePosition.Y) is the one currently facing the ball's
+			-- approach side -- read straight from the engine's own layout
+			-- rather than re-derived from the rotation angle by hand.
+			local facingIndex = 1
+			local lowestY = -math.huge
+			for petalIndex, petal in ring.petals do
+				local petalCenterY = petal.AbsolutePosition.Y + petal.AbsoluteSize.Y / 2
+				if petalCenterY > lowestY then
+					lowestY = petalCenterY
+					facingIndex = petalIndex
+				end
+			end
+			local facingColorIndex = ring.quadrantColors[facingIndex]
 			ring.hub.BackgroundColor3 = PALETTE_COLORS[facingColorIndex]
 			ring.hubGlyph.Text = PALETTE_SHAPES[facingColorIndex]
 
