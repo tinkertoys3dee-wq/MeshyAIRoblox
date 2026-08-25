@@ -17,6 +17,7 @@ No secret should be pasted into chat or committed to this repository.
    - Reference Image — Medium quality: 49 R$ (`ImagePreviewMedium`; `Id` is still `0`)
    - Reference Image — High quality: 129 R$ (`ImagePreviewHigh`; `Id` is still `0`)
    - Image → 3D Conversion: 159 R$ (`ImageConversion`)
+   - Avatar → 3D Conversion: 159 R$ (`AvatarConversion`)
    - Priority Queue Pass: 29 R$ (`PriorityPass`)
    - Forge Tokens pack: 3 R$ (`AdRewardTokens`, Roblox's allowed floor) — see step 4a before creating this one.
 

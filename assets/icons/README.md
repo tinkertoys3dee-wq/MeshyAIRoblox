@@ -61,6 +61,7 @@ ID already lives in `Config.Products`.
 | `product_image_preview_medium.png` | `ImagePreviewMedium` |
 | `product_image_preview_high.png` | `ImagePreviewHigh` |
 | `product_image_conversion.png` | `ImageConversion` |
+| `product_avatar_conversion.png` | `AvatarConversion` |
 | `product_priority_pass.png` | `PriorityPass` |
 | `product_ad_reward_tokens.png` | `AdRewardTokens` |
 

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="sphereProductAvatarConversion" cx="36%" cy="30%" r="78%">
+      <stop offset="0%" stop-color="#C8FFEA"/>
+      <stop offset="38%" stop-color="#2FE0A0"/>
+      <stop offset="78%" stop-color="#147A56"/>
+      <stop offset="100%" stop-color="#147A56"/>
+    </radialGradient>
+    <radialGradient id="hotspotProductAvatarConversion" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glossProductAvatarConversion" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.85"/>
+      <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="aoProductAvatarConversion" cx="50%" cy="100%" r="65%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ringOuterProductAvatarConversion" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#7FF0C8"/>
+      <stop offset="45%" stop-color="#0A4A34"/>
+      <stop offset="55%" stop-color="#0A4A34"/>
+      <stop offset="100%" stop-color="#7FF0C8"/>
+    </linearGradient>
+    <linearGradient id="ringInnerProductAvatarConversion" x1="18%" y1="10%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#0A4A34"/>
+      <stop offset="50%" stop-color="#7FF0C8"/>
+      <stop offset="100%" stop-color="#0A4A34"/>
+    </linearGradient>
+    <linearGradient id="enamelProductAvatarConversion" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#DCE3F5"/>
+    </linearGradient>
+    <clipPath id="clipProductAvatarConversion"><circle cx="512.0" cy="512.0" r="462"/></clipPath>
+    <filter id="softShadowProductAvatarConversion" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#0B0E1E" flood-opacity="0.42"/>
+    </filter>
+    <filter id="tinyShadowProductAvatarConversion" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0B0E1E" flood-opacity="0.35"/>
+    </filter>
+    <filter id="innerGlowProductAvatarConversion" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <!-- outer bevel ring: two concentric strokes read as a rounded metal edge -->
+  <circle cx="512.0" cy="512.0" r="492" fill="url(#ringOuterProductAvatarConversion)"/>
+  <circle cx="512.0" cy="512.0" r="478" fill="url(#ringInnerProductAvatarConversion)"/>
+  <circle cx="512.0" cy="512.0" r="462" fill="url(#sphereProductAvatarConversion)"/>
+  <g clip-path="url(#clipProductAvatarConversion)">
+    <circle cx="512.0" cy="512.0" r="462" fill="url(#aoProductAvatarConversion)" style="mix-blend-mode:multiply"/>
+    <ellipse cx="362.0" cy="302.0" rx="330" ry="230" fill="url(#glossProductAvatarConversion)"/>
+    <ellipse cx="302.0" cy="252.0" rx="90" ry="60" fill="url(#hotspotProductAvatarConversion)"/>
+    <circle cx="512.0" cy="512.0" r="458" fill="none" stroke="#000000" stroke-opacity="0.14" stroke-width="10"/>
+    <g filter="url(#softShadowProductAvatarConversion)">
+      <circle cx="362" cy="446" r="34" fill="#FFFFFF"/>
+      <path d="M300 570 A62 62 0 0 1 424 570 Z" fill="#FFFFFF"/>
+    </g>
+    <g filter="url(#tinyShadowProductAvatarConversion)"><path d="M462 492 L542 492 M520 466 L546 492 L520 518" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g filter="url(#softShadowProductAvatarConversion)"><path d="M642 392 L729.0 442.0 L642 492 L555.0 442.0 Z" fill="#FFFFFF"/><path d="M555.0 442.0 L642 492 L642 592 L555.0 542.0 Z" fill="#C9D6FF" opacity="0.75"/><path d="M729.0 442.0 L642 492 L642 592 L729.0 542.0 Z" fill="#8FA3E8" opacity="0.7"/><path d="M642 392 L729.0 442.0 M642 392 L555.0 442.0 M642 492 L642 592 M555.0 442.0 L555.0 542.0 M729.0 442.0 L729.0 542.0 M555.0 542.0 L642 592 L729.0 542.0" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-opacity="0.85"/></g>
+  </g>
+</svg>
