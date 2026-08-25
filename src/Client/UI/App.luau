@@ -24,6 +24,12 @@ local Colors = Theme.Colors
 local player = Players.LocalPlayer
 local REMOTE_WAIT_SECONDS = 15
 
+-- Warm-to-cool spread for the ambient ember background (see
+-- App:_SetAmbientMotion) so it reads as forge sparks rather than a single
+-- flat color drifting upward.
+local EMBER_COLORS = { Colors.Gold, Colors.Rose, Colors.Cyan }
+local EMBER_COUNT = 10
+
 local App = {}
 App.__index = App
 
@@ -289,6 +295,9 @@ function App.new()
 		queuedSoundIds = {} :: { [string]: boolean },
 		navButtons = {} :: { [string]: TextButton },
 		activeViewport = nil :: any,
+		ambientMotionEnabled = false,
+		ambientBlobs = {} :: { { instance: Frame, restPosition: UDim2 } },
+		ambientEmbers = {} :: { Frame },
 	}, App)
 	self:_BuildChrome()
 	AvatarEditorService.PromptAllowInventoryReadAccessCompleted:Connect(function(result)
@@ -551,6 +560,33 @@ function App:_BuildChrome()
 	})
 	self.content = content
 
+	-- A persistent home for ambient background decoration -- a sibling of
+	-- Content rather than a child of it, so `clear(self.content)` inside
+	-- _RenderActivePage (called on every page swap, and every ~4s of
+	-- generation progress while "Create" is open) never touches it. Built
+	-- once here; App:_SetAmbientMotion (called once bootstrap knows the
+	-- reduce-motion setting, and again whenever that setting changes) is
+	-- what actually starts or stops the motion.
+	local backgroundLayer = Factory.New("Frame", {
+		Name = "AmbientBackground",
+		Position = content.Position,
+		Size = content.Size,
+		BackgroundTransparency = 1,
+		ClipsDescendants = true,
+		ZIndex = 0,
+		Parent = shell,
+	})
+	self.backgroundLayer = backgroundLayer
+	self.ambientBlobs = {}
+	self.ambientEmbers = {}
+	for _, spec in {
+		{ diameter = 560, position = UDim2.new(1, -160, 0, -220), color = Colors.Cyan, transparency = 0.93 },
+		{ diameter = 460, position = UDim2.new(0, -220, 1, -160), color = Colors.Violet, transparency = 0.94 },
+	} do
+		local blob = Factory.Blob(backgroundLayer, spec.diameter, spec.position, spec.color, spec.transparency)
+		table.insert(self.ambientBlobs, { instance = blob, restPosition = spec.position })
+	end
+
 	self.toastHost = Factory.New("Frame", {
 		Name = "Toasts",
 		AnchorPoint = Vector2.new(1, 0),
@@ -614,6 +650,94 @@ function App:_BuildChrome()
 	self:_HighlightNavigation()
 end
 
+-- One ember: fades in, drifts upward with a little horizontal wander while
+-- fading back out, then reappears at a new random spot along the bottom.
+-- Self-scheduling rather than driven by a shared Heartbeat loop, so adding
+-- more later is just spawning more of these.
+function App:_LoopEmber(ember: Frame)
+	local function cycle()
+		if not self.ambientMotionEnabled or ember.Parent == nil then
+			return
+		end
+		local startX = math.random(0, 1000) / 1000
+		local driftX = math.clamp(startX + math.random(-80, 80) / 1000, 0, 1)
+		ember.Position = UDim2.new(startX, 0, 1, math.random(0, 60))
+		ember.BackgroundTransparency = 1
+		local riseSeconds = math.random(75, 145) / 10
+		local fadeIn = TweenService:Create(
+			ember,
+			TweenInfo.new(riseSeconds * 0.12, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+			{ BackgroundTransparency = 0.45 }
+		)
+		local rise = TweenService:Create(
+			ember,
+			TweenInfo.new(riseSeconds, Enum.EasingStyle.Linear),
+			{ Position = UDim2.new(driftX, 0, -0.05, 0) }
+		)
+		local fadeOut = TweenService:Create(
+			ember,
+			TweenInfo.new(riseSeconds * 0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
+			{ BackgroundTransparency = 1 }
+		)
+		fadeIn:Play()
+		rise:Play()
+		task.delay(riseSeconds * 0.65, function()
+			if self.ambientMotionEnabled and ember.Parent then
+				fadeOut:Play()
+			end
+		end)
+		task.delay(riseSeconds + math.random(0, 20) / 10, cycle)
+	end
+	cycle()
+end
+
+-- Starts or stops all ambient background motion (the two depth blobs
+-- breathing, and the ember drift) in one place, so both the initial
+-- reduce-motion check at bootstrap and a live toggle from Settings go
+-- through the same path. Embers are actually destroyed when disabled rather
+-- than merely paused -- reduce-motion should mean no motion, not motion
+-- that is invisibly still running.
+function App:_SetAmbientMotion(enabled: boolean)
+	self.ambientMotionEnabled = enabled
+	for _, ember in self.ambientEmbers do
+		ember:Destroy()
+	end
+	table.clear(self.ambientEmbers)
+	for _, entry in self.ambientBlobs do
+		if enabled then
+			local drift = math.random(14, 26)
+			local period = math.random(70, 110) / 10
+			TweenService:Create(
+				entry.instance,
+				TweenInfo.new(period, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+				{ Position = entry.restPosition + UDim2.fromOffset(drift, math.floor(drift * 0.6)) }
+			):Play()
+		else
+			TweenService:Create(entry.instance, TweenInfo.new(0.3), { Position = entry.restPosition }):Play()
+		end
+	end
+	if not enabled or not self.backgroundLayer then
+		return
+	end
+	for _ = 1, EMBER_COUNT do
+		local diameter = math.random(3, 6)
+		local ember = Factory.New("Frame", {
+			Name = "Ember",
+			Size = UDim2.fromOffset(diameter, diameter),
+			BackgroundColor3 = EMBER_COLORS[math.random(1, #EMBER_COLORS)],
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ZIndex = 0,
+			Parent = self.backgroundLayer,
+		})
+		Factory.Corner(ember, diameter / 2)
+		table.insert(self.ambientEmbers, ember)
+		task.delay(math.random(0, 60) / 10, function()
+			self:_LoopEmber(ember)
+		end)
+	end
+end
+
 function App:_SetStudioOpen(open: boolean)
 	local changed = self.shell.Visible ~= open
 	self.shell.Visible = open
@@ -639,6 +763,13 @@ function App:_ApplyResponsiveLayout()
 	self.nav.Size = UDim2.new(navScale, 0, 1, -78)
 	self.content.Position = UDim2.new(navScale, 0, 0, 78)
 	self.content.Size = UDim2.new(1 - navScale, 0, 1, -78)
+	-- AmbientBackground has to track Content's rect exactly: it's a sibling
+	-- (see _BuildChrome for why), not a child, so it doesn't get this for
+	-- free the way a normal child would.
+	if self.backgroundLayer then
+		self.backgroundLayer.Position = self.content.Position
+		self.backgroundLayer.Size = self.content.Size
+	end
 	self.navStack.Position = UDim2.fromOffset(if compact then 8 else 12, 18)
 	self.navStack.Size = UDim2.new(1, if compact then -16 else -24, 0, 330)
 	for page, button in self.navButtons do
@@ -861,6 +992,7 @@ function App:_Bootstrap()
 		end
 		self.uiScaleInstance.Scale = tonumber(data.profile.settings.uiScale) or 1
 		self:_UpdateSoundButton()
+		self:_SetAmbientMotion(data.profile.settings.reduceMotion ~= true)
 		self.loading:Destroy()
 		self:_RenderStatus()
 		self:_OpenPage("Create")
@@ -868,9 +1000,26 @@ function App:_Bootstrap()
 		self:_RefreshLocalizedPrices()
 		if not data.profile.onboarding.completed then
 			self:_ShowOnboarding()
-		elseif data.dailyBrief and (data.dailyBrief.rewardGranted or (data.dailyBrief.tokensGranted or 0) > 0) then
+		elseif
+			data.dailyBrief
+			and (
+				data.dailyBrief.rewardGranted
+				or (data.dailyBrief.tokensGranted or 0) > 0
+				or (data.dailyBrief.winBackTokensGranted or 0) > 0
+			)
+		then
 			self.sounds:Play("Success")
 			local parts = {}
+			if (data.dailyBrief.winBackTokensGranted or 0) > 0 then
+				table.insert(
+					parts,
+					string.format(
+						"Welcome back after %d days! +%d bonus Forge Tokens",
+						data.dailyBrief.daysAway or 0,
+						data.dailyBrief.winBackTokensGranted
+					)
+				)
+			end
 			if (data.dailyBrief.tokensGranted or 0) > 0 then
 				table.insert(parts, string.format("+%d Forge Tokens for returning", data.dailyBrief.tokensGranted))
 			end
@@ -916,6 +1065,7 @@ function App:_SetHighContrast(enabled: boolean)
 		return
 	end
 	local wasOpen = self.shell.Visible
+	local motionWasEnabled = self.ambientMotionEnabled
 	Theme.SetHighContrast(enabled)
 	self.gui:Destroy()
 	self:_BuildChrome()
@@ -923,6 +1073,10 @@ function App:_SetHighContrast(enabled: boolean)
 	self.shell.Visible = wasOpen
 	self.launcher.Visible = not wasOpen
 	self:_UpdateSoundButton()
+	-- _BuildChrome creates fresh blob/ember instances but doesn't itself
+	-- know whether ambient motion should be running -- carry the previous
+	-- state over rather than defaulting back to off.
+	self:_SetAmbientMotion(motionWasEnabled)
 	self:_RenderStatus()
 	self:_RenderActivePage()
 end
@@ -1049,12 +1203,6 @@ function App:_RenderActivePage()
 	if not self.state then
 		return
 	end
-	-- Purely decorative depth: two oversized, near-transparent circles
-	-- anchored off the top-right and bottom-left corners of every page, kept
-	-- behind all real content by Factory.Blob's low ZIndex and self.content's
-	-- own ClipsDescendants.
-	Factory.Blob(self.content, 560, UDim2.new(1, -160, 0, -220), Colors.Cyan, 0.93)
-	Factory.Blob(self.content, 460, UDim2.new(0, -220, 1, -160), Colors.Violet, 0.94)
 	if self.activePage == "Create" then
 		self:_RenderCreate()
 	elseif self.activePage == "My Studio" then
@@ -3596,6 +3744,9 @@ function App:_UpdateSetting(key: string, value: any)
 		local success, data = self:_Invoke(Network.Actions.UpdateSettings, { [key] = value })
 		if success then
 			self.state.profile.settings = data.settings
+			if key == "reduceMotion" then
+				self:_SetAmbientMotion(data.settings.reduceMotion ~= true)
+			end
 		end
 		self:_RenderActivePage()
 	end)
