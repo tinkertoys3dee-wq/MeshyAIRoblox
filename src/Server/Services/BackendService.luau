@@ -49,11 +49,27 @@ function BackendService:_Request(
 		return false, "BACKEND_NOT_CONFIGURED"
 	end
 
-	local secretSuccess, secret = pcall(function()
-		return HttpService:GetSecret(Config.Backend.SecretName)
-	end)
+	-- HttpService:GetSecret can fail transiently in Studio -- most often
+	-- right at the start of a fresh test session, before Studio's bridge
+	-- to Creator Hub secrets has finished warming up -- even though the
+	-- secret is genuinely configured and every other call in the same
+	-- session succeeds moments later. A single failed attempt here isn't
+	-- proof the secret is actually missing, so this retries with the same
+	-- backoff shape as the HTTP request loop below before giving up.
+	local secretSuccess, secret = false, nil :: any
+	for attempt = 1, MAX_ATTEMPTS do
+		secretSuccess, secret = pcall(function()
+			return HttpService:GetSecret(Config.Backend.SecretName)
+		end)
+		if secretSuccess then
+			break
+		end
+		if attempt < MAX_ATTEMPTS then
+			task.wait(0.35 * (2 ^ (attempt - 1)))
+		end
+	end
 	if not secretSuccess then
-		warn(`[BackendService] Creator Hub secret unavailable: {secret}`)
+		warn(`[BackendService] Creator Hub secret unavailable after {MAX_ATTEMPTS} attempts: {secret}`)
 		return false, "BACKEND_SECRET_UNAVAILABLE"
 	end
 
