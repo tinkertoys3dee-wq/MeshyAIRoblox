@@ -257,15 +257,17 @@ return table.freeze({
 	-- purchase receipt or an ad-completion callback is.
 	Arcade = {
 		Games = { "FlappyBird", "DinoRunner", "ColorSwitch" },
-		-- Free (bonusTokens — same guarantee as every other free grant, see
-		-- ProfileService.defaultProfile) weekly reward for each game's top 3
-		-- players by that game's best score of the week. Index = placement:
-		-- [1] = 1st, [2] = 2nd, [3] = 3rd. Since bonusTokens can only ever
-		-- buy the near-zero-marginal-cost Priority Pass (never a generation
-		-- product — see CommerceService:BeginIntentWithTokens), this can't
-		-- threaten the "only gain money" guarantee on real-cost products no
-		-- matter how large these numbers are; it's a game-balance/engagement
-		-- choice, not a revenue calculation.
+		-- Weekly reward for each game's top 3 players by that game's best
+		-- score of the week. Index = placement: [1] = 1st, [2] = 2nd,
+		-- [3] = 3rd. Unlike every other free grant in this file, ArcadeService
+		-- credits these to `tokens`, not `bonusTokens` — fully spendable,
+		-- generations included. That's a deliberate, bounded exception to the
+		-- "only gain money" guarantee (approved for the engagement value):
+		-- worst case is 800/game * #Games = 2400 tokens/week, worth ~2
+		-- generations (~$0.60) at the pricing in Config.Generation. See
+		-- ArcadeService's module header and docs/PRICING.md for the full
+		-- reasoning; raising these numbers meaningfully needs that math
+		-- re-checked, not just a game-balance judgment call.
 		WeeklyRewards = { 450, 250, 100 },
 		-- Sanity ceiling against an obviously spoofed score reaching the
 		-- leaderboard store. Can't stop a determined cheater on a

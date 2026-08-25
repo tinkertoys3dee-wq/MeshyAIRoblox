@@ -2,8 +2,18 @@
 
 -- Score tracking and weekly top-3 token payouts for the client-side arcade
 -- minigames (Flappy Bird, Dino Runner, Color Switch). See Config.Arcade for
--- the reward amounts and why they're safe to fund from bonusTokens
--- regardless of size.
+-- the reward amounts.
+--
+-- Unlike every other free grant (achievements, daily check-in, win-back —
+-- see ProfileService.defaultProfile), these are credited straight to
+-- `tokens`, the same fully-spendable pool ad rewards and Robux purchases
+-- fund, not the spend-restricted `bonusTokens` pool. That's a deliberate,
+-- bounded cost, not an oversight: max payout is 800 tokens/game * 3 games =
+-- 2400 tokens/week worst case (every rank won by a different player, every
+-- week), worth roughly 2 generations or ~$0.60 at the token pricing in
+-- Config.Generation. Accepted as an engagement investment, same category as
+-- the free tokens for watching an ad -- not something to "fix" back to
+-- bonusTokens without checking with the studio owner first.
 --
 -- Every game's actual play loop runs entirely on the client (see
 -- src/Client/UI/Games/) with no server authority over gameplay -- these are
@@ -179,10 +189,9 @@ function ArcadeService:_ProcessWeek(week: number)
 				continue
 			end
 			local granted = self.profiles:MutateUser(userId, function(profile)
-				-- bonusTokens, not tokens: this reward has no ad revenue or
-				-- Robux payment behind it, same as every other free grant —
-				-- see the matching comment on ProfileService.defaultProfile.
-				profile.bonusTokens = (profile.bonusTokens or 0) + reward
+				-- tokens, not bonusTokens: see the module header for why
+				-- this one specific grant is fully spendable.
+				profile.tokens = (profile.tokens or 0) + reward
 			end)
 			if not granted then
 				warn(`[ArcadeService] Could not grant week {week} {gameKey} rank {rank} reward to {userId}`)
@@ -192,7 +201,7 @@ function ArcadeService:_ProcessWeek(week: number)
 			if onlinePlayer and onlinePlayer.Parent == Players then
 				local profile = self.profiles:Get(onlinePlayer)
 				if profile then
-					self.push(onlinePlayer, Network.PushEvents.Profile, { bonusTokens = profile.bonusTokens })
+					self.push(onlinePlayer, Network.PushEvents.Profile, { tokens = profile.tokens })
 				end
 				self.push(onlinePlayer, Network.PushEvents.Toast, {
 					tone = "success",
