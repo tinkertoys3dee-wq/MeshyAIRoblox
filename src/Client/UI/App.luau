@@ -648,6 +648,22 @@ function App:_BuildChrome()
 	})
 	Factory.List(navStack, Enum.FillDirection.Vertical, 9)
 	self.navStack = navStack
+	-- A single persistent bar that slides to whichever nav button is active,
+	-- rather than every button just flatly recoloring on its own -- sits
+	-- flush against `nav`'s own left edge (not inside navStack) so it isn't
+	-- competing with any one button's own background for room.
+	local navIndicator = Factory.New("Frame", {
+		Name = "ActiveIndicator",
+		Size = UDim2.fromOffset(4, 48),
+		Position = UDim2.fromOffset(0, 18),
+		BackgroundColor3 = Colors.Cyan,
+		BorderSizePixel = 0,
+		ZIndex = 3,
+		Parent = nav,
+	})
+	Factory.Corner(navIndicator, 2)
+	self.navIndicator = navIndicator
+
 	for index, page in { "Create", "My Studio", "Discover", "Avatar Lab", "Settings" } do
 		local symbols = { "✦", "◈", "◎", "◇", "⚙" }
 		local button = Factory.Button(navStack, symbols[index] .. "   " .. page, UDim2.new(1, 0, 0, 48), nil, nil)
@@ -1314,12 +1330,34 @@ end
 function App:_HighlightNavigation()
 	for page, button in self.navButtons do
 		local active = page == self.activePage
-		button.BackgroundColor3 = if active then Colors.Violet else Colors.PanelSoft
-		button.TextColor3 = if active then Colors.Text else Colors.TextMuted
+		self:_Animate(
+			button,
+			TweenInfo.new(0.16, Enum.EasingStyle.Quad),
+			{ BackgroundColor3 = if active then Colors.Violet else Colors.PanelSoft }
+		)
+		self:_Animate(
+			button,
+			TweenInfo.new(0.16, Enum.EasingStyle.Quad),
+			{ TextColor3 = if active then Colors.Text else Colors.TextMuted }
+		)
 		local stroke = button:FindFirstChildOfClass("UIStroke")
 		if stroke then
-			stroke.Color = if active then Colors.Cyan else Colors.Line
-			stroke.Transparency = if active then 0.3 else 0.55
+			self:_Animate(stroke, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {
+				Color = if active then Colors.Cyan else Colors.Line,
+				Transparency = if active then 0.3 else 0.55,
+			})
+		end
+		if active and self.navIndicator then
+			-- Computed from the known navStack layout (18px offset, 48px
+			-- buttons, 9px gaps) rather than read off AbsolutePosition,
+			-- which isn't guaranteed to already reflect a UIListLayout pass
+			-- on the very frame a button was created.
+			local targetY = 18 + (button.LayoutOrder - 1) * 57
+			self:_Animate(
+				self.navIndicator,
+				TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+				{ Position = UDim2.fromOffset(0, targetY) }
+			)
 		end
 	end
 end
@@ -4495,23 +4533,50 @@ function App:_ShowLeaderboard()
 			return
 		end
 		local medals = { "🥇", "🥈", "🥉" }
+		-- Top 3 get their own tinted treatment (gold/silver/bronze) rather
+		-- than reading identically to everyone else with just a different
+		-- emoji -- the same rank-tinting idea the Arcade's leaderboards use.
+		local rankColors = { Colors.Gold, Color3.fromRGB(200, 208, 224), Color3.fromRGB(214, 158, 100) }
 		for rank, creator in creators do
+			local rankColor = rankColors[rank]
 			local row = Factory.New("Frame", {
 				Size = UDim2.new(1, 0, 0, 46),
-				BackgroundColor3 = Colors.Ink,
+				BackgroundColor3 = if rankColor then rankColor else Colors.Ink,
+				BackgroundTransparency = if rankColor then 0.88 else 0,
 				BorderSizePixel = 0,
 				LayoutOrder = rank,
 				ZIndex = 212,
 				Parent = listStack,
 			})
 			Factory.Corner(row, 10)
-			Factory.Label(row, medals[rank] or string.format("#%d", rank), UDim2.fromOffset(40, 46), {
-				Font = Theme.Fonts.Black,
-				TextSize = 16,
-				AlignX = Enum.TextXAlignment.Center,
+			if rankColor then
+				Factory.Stroke(row, rankColor, 0.6, 1)
+			else
+				Factory.Gradient(row, {
+					Color3.fromRGB(36, 40, 62),
+					Color3.fromRGB(22, 25, 40),
+				}, 90)
+			end
+			local rankBadge = Factory.New("Frame", {
+				Name = "RankBadge",
+				Size = UDim2.fromOffset(32, 32),
+				Position = UDim2.fromOffset(7, 7),
+				BackgroundColor3 = if rankColor then rankColor else Colors.PanelSoft,
+				BackgroundTransparency = if rankColor then 0.15 else 0,
+				BorderSizePixel = 0,
 				ZIndex = 213,
+				Parent = row,
 			})
-			Factory.Label(row, string.format("@%s", tostring(creator.name)), UDim2.new(1, -140, 0, 46), {
+			Factory.Corner(rankBadge, 11)
+			Factory.Label(rankBadge, medals[rank] or string.format("#%d", rank), UDim2.fromScale(1, 1), {
+				Font = Theme.Fonts.Black,
+				Color = if rankColor then Colors.Ink else Colors.TextMuted,
+				TextSize = if medals[rank] then 15 else 12,
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+				ZIndex = 214,
+			})
+			Factory.Label(row, string.format("@%s", tostring(creator.name)), UDim2.new(1, -150, 0, 46), {
 				Position = UDim2.fromOffset(48, 0),
 				Font = Theme.Fonts.Bold,
 				TextSize = 13,
@@ -4532,6 +4597,29 @@ function App:_ShowLeaderboard()
 					ZIndex = 213,
 				}
 			)
+
+			-- A quick staggered fade/rise -- each row starts a little later
+			-- than the one above it, so the list reads as settling into
+			-- place rather than popping in all at once.
+			if not (self.state and self.state.profile.settings.reduceMotion == true) then
+				row.BackgroundTransparency = 1
+				local targetTransparency = if rankColor then 0.88 else 0
+				local rowScale = Factory.New("UIScale", { Scale = 0.94, Parent = row })
+				task.delay(math.min(rank * 0.035, 0.35), function()
+					if row.Parent then
+						TweenService:Create(
+							row,
+							TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+							{ BackgroundTransparency = targetTransparency }
+						):Play()
+						TweenService:Create(
+							rowScale,
+							TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+							{ Scale = 1 }
+						):Play()
+					end
+				end)
+			end
 		end
 	end)
 end
@@ -4554,6 +4642,10 @@ function App:_Toast(tone: string, message: string)
 	-- reads correctly for colorblind players and in high-contrast mode.
 	local icon = if tone == "error" then "✕" elseif tone == "ready" then "◆" else "✓"
 	Factory.Stroke(toast, color, 0.2, 1.2)
+	Factory.Gradient(toast, {
+		Color3.fromRGB(66, 74, 106),
+		Color3.fromRGB(44, 50, 78),
+	}, 120)
 	local bar = Factory.New("Frame", {
 		Size = UDim2.fromOffset(5, 48),
 		Position = UDim2.fromOffset(10, 11),
@@ -4563,23 +4655,40 @@ function App:_Toast(tone: string, message: string)
 		Parent = toast,
 	})
 	Factory.Corner(bar, 99)
-	Factory.Label(toast, icon, UDim2.fromOffset(20, 20), {
-		Position = UDim2.fromOffset(26, 9),
+	local iconBadge = Factory.New("Frame", {
+		Name = "IconBadge",
+		Size = UDim2.fromOffset(30, 30),
+		Position = UDim2.fromOffset(22, 8),
+		BackgroundColor3 = color,
+		BackgroundTransparency = 0.82,
+		BorderSizePixel = 0,
+		ZIndex = 52,
+		Parent = toast,
+	})
+	Factory.Corner(iconBadge, 10)
+	Factory.Label(iconBadge, icon, UDim2.fromScale(1, 1), {
 		Color = color,
 		Font = Theme.Fonts.Black,
 		TextSize = 15,
 		AlignX = Enum.TextXAlignment.Center,
-		ZIndex = 52,
+		AlignY = Enum.TextYAlignment.Center,
+		ZIndex = 53,
 	})
-	Factory.Label(toast, message, UDim2.new(1, -62, 1, -18), {
-		Position = UDim2.fromOffset(48, 9),
+	Factory.Label(toast, message, UDim2.new(1, -70, 1, -18), {
+		Position = UDim2.fromOffset(62, 9),
 		Color = Colors.Text,
 		TextSize = 12,
 		Wrapped = true,
 		ZIndex = 52,
 	})
+
+	-- A combined slide-and-scale entrance -- the scale (via UIScale, since a
+	-- Frame's own Size can't itself "pop") is the extra flourish; the slide
+	-- is the part that was already there.
+	local toastScale = Factory.New("UIScale", { Scale = 0.9, Parent = toast })
 	toast.Position = UDim2.fromOffset(40, 0)
 	self:_Animate(toast, TweenInfo.new(0.25, Enum.EasingStyle.Quint), { Position = UDim2.new() })
+	self:_Animate(toastScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
 	if tone == "error" then
 		self.sounds:Play("Error")
 	elseif tone == "ready" then
