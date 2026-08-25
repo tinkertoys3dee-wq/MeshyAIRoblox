@@ -112,7 +112,7 @@ return table.freeze({
 		-- uploaded/generated reference) -- so it's priced identically. New
 		-- product awaiting a Creator Hub ID (0 = not configured yet, same
 		-- convention as every other placeholder in this file).
-		AvatarConversion = { Id = 0, SuggestedPrice = 159 },
+		AvatarConversion = { Id = 3709863858, SuggestedPrice = 159 },
 		PriorityPass = { Id = 3709322304, SuggestedPrice = 29 },
 		-- The Forge Tokens pack: a normal Robux-purchasable product AND the
 		-- product Roblox's rewarded-video-ad reward is created from
