@@ -364,6 +364,7 @@ local GENERATION_TOKEN_PRODUCTS = {
 	ImagePreviewMedium = true,
 	ImagePreviewHigh = true,
 	ImageConversion = true,
+	AvatarConversion = true,
 }
 
 local function tokenPriceFor(productKey: string, robuxPrice: number): number

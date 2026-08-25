@@ -44,6 +44,11 @@ for _, tier in Config.Generation.ImageQualityTiers do
 	IMAGE_QUALITY_TIERS[tier.Id] = { ProductKey = tier.ProductKey, OpenAIQuality = tier.OpenAIQuality }
 end
 
+local AVATAR_VIEWS: { [string]: boolean } = {}
+for _, view in Config.Generation.AvatarViews do
+	AVATAR_VIEWS[view.Id] = true
+end
+
 local IMAGE_ASSET_TYPES = {
 	[1] = true, -- Image
 	[13] = true, -- Decal
@@ -77,6 +82,8 @@ local function productKeyFor(method: string): string
 		return "ImageConversion"
 	elseif method == "IMAGE_UPLOAD" then
 		return "CustomImageUpload"
+	elseif method == "AVATAR_TO_3D" then
+		return "AvatarConversion"
 	end
 	return "DirectGeneration"
 end
@@ -109,6 +116,7 @@ end
 local MODEL_PRODUCING_METHODS = {
 	TEXT_TO_3D = true,
 	IMAGE_TO_3D = true,
+	AVATAR_TO_3D = true,
 }
 
 -- See Config.Generation.ModelQueueSeconds for why this exists. Returns nil
@@ -152,7 +160,8 @@ function GenerationService.new(
 	push: (Player, string, any) -> (),
 	analyticsService: any,
 	achievementService: any,
-	itemService: any
+	itemService: any,
+	avatarThumbnailService: any
 )
 	local self = setmetatable({
 		profiles = profileService,
@@ -162,6 +171,7 @@ function GenerationService.new(
 		analytics = analyticsService,
 		achievements = achievementService,
 		items = itemService,
+		avatarThumbnails = avatarThumbnailService,
 		push = push,
 		polling = {} :: { [string]: boolean },
 		launching = {} :: { [string]: boolean },
@@ -177,6 +187,9 @@ function GenerationService.new(
 	end
 	commerceService:Register("ImageConversion", function(player, payload, intentId)
 		return self:_Grant(player, "ImageConversion", payload, intentId)
+	end)
+	commerceService:Register("AvatarConversion", function(player, payload, intentId)
+		return self:_Grant(player, "AvatarConversion", payload, intentId)
 	end)
 	commerceService:Register("PriorityPass", function(player, _payload, intentId)
 		local granted = false
@@ -363,6 +376,71 @@ function GenerationService:CreateUploadedImage(player: Player, payload: any): (b
 		generationId = deterministicId("gen", intentId),
 		uploadAccepted = true,
 	}
+end
+
+-- Same wizard as Create()/CreateUploadedImage() (prompt, accessory type,
+-- style preset, detail level, pricing/payment) except the source image is
+-- the player's own current Roblox avatar render instead of an
+-- upload/AI-generated reference -- no custom-image pass required, since
+-- there's nothing to upload. See AvatarThumbnailService for why this needs
+-- a real server-fetched URL rather than the rbxthumb:// reference the
+-- client preview uses.
+function GenerationService:CreateFromAvatar(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" then
+		return false, "INVALID_REQUEST"
+	end
+	local accessoryType = payload.accessoryType
+	if type(accessoryType) ~= "string" or not ACCESSORY_TYPES[accessoryType] then
+		return false, "INVALID_ACCESSORY_TYPE"
+	end
+	local guidanceSuccess, stylePreset, detailLevel = readGuidance(payload)
+	if not guidanceSuccess then
+		return false, stylePreset
+	end
+	local avatarView = payload.avatarView
+	if type(avatarView) ~= "string" or not AVATAR_VIEWS[avatarView] then
+		return false, "INVALID_AVATAR_VIEW"
+	end
+	if not self.playerStates:Get(player).contentSharingAllowed then
+		return false, "CONTENT_SHARING_DISABLED"
+	end
+
+	local filterSuccess, filteredPrompt, filterError = ModerationService.FilterPrompt(player, payload.prompt)
+	if not filterSuccess then
+		return false, filterError
+	end
+	local studioMock = RunService:IsStudio() and Config.Studio.AllowMockBackend and not self.backend:IsConfigured()
+	local sourceImageUrl = nil :: string?
+	if not studioMock then
+		local thumbnailSuccess, thumbnailResult = self.avatarThumbnails:GetImageUrl(player.UserId, avatarView)
+		if not thumbnailSuccess then
+			return false, thumbnailResult
+		end
+		sourceImageUrl = thumbnailResult
+		local moderationSuccess, moderationResult = self.backend:ModeratePrompt(player, filteredPrompt)
+		if not moderationSuccess then
+			return false, moderationResult
+		end
+	end
+	if not self:_HasQueueSpace(player) then
+		return false, "QUEUE_FULL"
+	end
+	if not self.backend:IsConfigured() and not studioMock then
+		return false, "BACKEND_NOT_CONFIGURED"
+	end
+
+	return self:_UseCreditOrPrompt(player, "AvatarConversion", {
+		kind = "AVATAR_TO_3D",
+		filteredPrompt = filteredPrompt,
+		accessoryType = accessoryType,
+		stylePreset = stylePreset,
+		detailLevel = detailLevel,
+		sourceImageUrl = sourceImageUrl,
+		avatarView = avatarView,
+		usePriority = payload.usePriority == true,
+		-- See the matching comment in Create() above.
+		paymentMethod = if payload.paymentMethod == "TOKENS" then "TOKENS" else "ROBUX",
+	})
 end
 
 function GenerationService:ConvertImage(player: Player, payload: any): (boolean, any)
@@ -575,6 +653,8 @@ function GenerationService:_Prepare(
 			detailLevel = payload.detailLevel or "BALANCED",
 			imageQuality = payload.imageQuality,
 			sourceImageAssetId = payload.sourceImageAssetId,
+			sourceImageUrl = payload.sourceImageUrl,
+			avatarView = payload.avatarView,
 			createdAt = now,
 			updatedAt = now,
 			purchaseIntentId = intentId,
@@ -650,6 +730,9 @@ function GenerationService:_Launch(player: Player, generationId: string)
 	end
 	if generation.sourceImageAssetId then
 		requestPayload.sourceImageAssetId = generation.sourceImageAssetId
+	end
+	if generation.sourceImageUrl then
+		requestPayload.sourceImageUrl = generation.sourceImageUrl
 	end
 	if generation.method == "IMAGE_PREVIEW" and type(generation.imageQuality) == "string" then
 		local tier = IMAGE_QUALITY_TIERS[generation.imageQuality]
@@ -883,7 +966,10 @@ function GenerationService:_CompleteModel(player: Player, generationId: string, 
 			canPublish = true,
 			name = string.sub(generation.filteredPrompt, 1, 48),
 			filteredPrompt = generation.filteredPrompt,
-			method = if generation.method == "TEXT_TO_3D" then "TEXT_TO_3D" else "IMAGE_TO_3D",
+			method = if generation.method == "TEXT_TO_3D"
+				then "TEXT_TO_3D"
+				elseif generation.method == "AVATAR_TO_3D" then "AVATAR_TO_3D"
+				else "IMAGE_TO_3D",
 			stylePreset = generation.stylePreset or "AUTO",
 			detailLevel = generation.detailLevel or "BALANCED",
 			status = "READY",
