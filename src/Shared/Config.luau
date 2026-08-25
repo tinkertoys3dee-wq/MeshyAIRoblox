@@ -1,6 +1,6 @@
 --!strict
 
--- Public, non-secret configuration. API keys and the Roblox-to-backend shared
+-- Public, non-secret configuration. API keys and the Roblox-to-backend share
 -- secret belong in Railway variables / Creator Hub secrets, never here.
 return table.freeze({
 	Brand = {
