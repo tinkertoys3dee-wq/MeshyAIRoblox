@@ -12,6 +12,7 @@
 -- created under canvas) and is always called before a retry or a switch to
 -- a different game, never left for the caller to guess about.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
@@ -38,6 +39,11 @@ export type GameModule = {
 }
 
 export type WeeklyStanding = { userId: number, name: string, score: number }
+-- The requesting player's own placement -- `rank` is nil when they have a
+-- score but it fell outside the fetched top standings (still worth showing
+-- "you: N" even when you're not on the visible list).
+export type PersonalStanding = { rank: number?, score: number }
+export type WeeklyResult = { standings: { WeeklyStanding }, self: PersonalStanding? }
 
 local GameShell = {}
 GameShell.__index = GameShell
@@ -105,7 +111,7 @@ function GameShell.new(
 	sounds: any,
 	onExit: () -> (),
 	onGameEnd: (gameKey: string, score: number) -> (),
-	fetchWeeklyTop: (gameKey: string) -> { WeeklyStanding }?,
+	fetchWeeklyTop: (gameKey: string) -> WeeklyResult?,
 	reduceMotion: boolean?
 )
 	local self = setmetatable({
@@ -117,7 +123,7 @@ function GameShell.new(
 		stopGame = nil :: (() -> ())?,
 		currentGame = nil :: GameModule?,
 		bestScores = {} :: { [string]: number },
-		standingsCache = {} :: { [string]: { WeeklyStanding } },
+		standingsCache = {} :: { [string]: WeeklyResult },
 	}, GameShell)
 
 	local root = Factory.New("Frame", {
@@ -215,7 +221,7 @@ function GameShell.new(
 		Parent = root,
 	})
 	Factory.Corner(canvas, 14)
-	Factory.Stroke(canvas, Colors.Line, 0.55)
+	Factory.Stroke(canvas, Colors.Line, 0.4, 1.5)
 	self.canvas = canvas
 
 	local overlay = Factory.New("Frame", {
@@ -279,13 +285,66 @@ function GameShell.new(
 		AlignX = Enum.TextXAlignment.Center,
 		ZIndex = 32,
 	})
+	local retryShadow = Factory.New("Frame", {
+		Name = "RetryShadow",
+		Size = UDim2.fromOffset(200, 42),
+		Position = UDim2.new(0.5, -100, 0, 159),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.55,
+		BorderSizePixel = 0,
+		ZIndex = 31,
+		Parent = card,
+	})
+	Factory.Corner(retryShadow, Theme.SmallCorner)
 	local retryButton =
-		Factory.Button(card, "↻ Play again", UDim2.fromOffset(200, 42), UDim2.new(0.5, -100, 0, 156), "mint")
+		Factory.Button(card, "Play Again", UDim2.fromOffset(200, 42), UDim2.new(0.5, -100, 0, 156), "mint")
 	retryButton.ZIndex = 32
+	retryButton.TextXAlignment = Enum.TextXAlignment.Right
+	Factory.Gradient(retryButton, { Color3.fromRGB(150, 255, 210), Colors.Mint }, 90)
+	local retryIcon = Factory.New("Frame", {
+		Name = "Icon",
+		Size = UDim2.fromOffset(28, 28),
+		Position = UDim2.fromOffset(8, 7),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.82,
+		BorderSizePixel = 0,
+		ZIndex = 33,
+		Parent = retryButton,
+	})
+	Factory.Corner(retryIcon, 9)
+	Factory.Label(retryIcon, "↻", UDim2.fromScale(1, 1), {
+		Color = Colors.Ink,
+		Font = Theme.Fonts.Black,
+		TextSize = 16,
+		AlignX = Enum.TextXAlignment.Center,
+		AlignY = Enum.TextYAlignment.Center,
+		ZIndex = 34,
+	})
+	Factory.New("UIPadding", { PaddingRight = UDim.new(0, 20), Parent = retryButton })
 	sounds:Bind(retryButton)
+
 	local hubButton =
 		Factory.Button(card, "Back to Arcade", UDim2.fromOffset(200, 34), UDim2.new(0.5, -100, 0, 202), nil)
 	hubButton.ZIndex = 32
+	hubButton.TextXAlignment = Enum.TextXAlignment.Right
+	local hubIcon = Factory.New("Frame", {
+		Name = "Icon",
+		Size = UDim2.fromOffset(22, 22),
+		Position = UDim2.fromOffset(8, 6),
+		BackgroundColor3 = Colors.Rose,
+		BackgroundTransparency = 0.78,
+		BorderSizePixel = 0,
+		ZIndex = 33,
+		Parent = hubButton,
+	})
+	Factory.Corner(hubIcon, 7)
+	Factory.Label(hubIcon, "🎮", UDim2.fromScale(1, 1), {
+		TextSize = 12,
+		AlignX = Enum.TextXAlignment.Center,
+		AlignY = Enum.TextYAlignment.Center,
+		ZIndex = 34,
+	})
+	Factory.New("UIPadding", { PaddingRight = UDim.new(0, 16), Parent = hubButton })
 	sounds:Bind(hubButton)
 	hubButton.Activated:Connect(function()
 		self:Stop()
@@ -294,7 +353,7 @@ function GameShell.new(
 
 	local standingsPanel = Factory.New("Frame", {
 		Name = "WeeklyStandings",
-		Size = UDim2.fromOffset(230, 190),
+		Size = UDim2.fromOffset(232, 258),
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -8, 0, 8),
 		BackgroundColor3 = Colors.PanelRaised,
@@ -309,7 +368,7 @@ function GameShell.new(
 		Color3.fromRGB(64, 72, 104),
 		Color3.fromRGB(46, 52, 80),
 	}, 115)
-	Factory.Label(standingsPanel, "🏆  THIS WEEK · TOP 3", UDim2.new(1, -20, 0, 22), {
+	Factory.Label(standingsPanel, "🏆  THIS WEEK · TOP 10", UDim2.new(1, -20, 0, 22), {
 		Position = UDim2.fromOffset(10, 8),
 		Font = Theme.Fonts.Bold,
 		TextSize = 11,
@@ -326,16 +385,47 @@ function GameShell.new(
 		ZIndex = 26,
 		Parent = standingsPanel,
 	})
-	local standingsList = Factory.New("Frame", {
+	-- A ScrollingFrame rather than a plain Frame -- 10 rows don't reliably
+	-- fit the panel's height, so the list scrolls instead of the panel
+	-- growing to swallow the canvas.
+	local standingsList = Factory.New("ScrollingFrame", {
+		Name = "List",
 		Position = UDim2.fromOffset(10, 38),
-		Size = UDim2.new(1, -20, 1, -48),
+		Size = UDim2.new(1, -20, 0, 154),
 		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = Colors.Gold,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ZIndex = 26,
 		Parent = standingsPanel,
 	})
 	Factory.List(standingsList, Enum.FillDirection.Vertical, 6)
+	Factory.New("Frame", {
+		Name = "FooterDivider",
+		Position = UDim2.fromOffset(10, 198),
+		Size = UDim2.new(1, -20, 0, 1),
+		BackgroundColor3 = Colors.Gold,
+		BackgroundTransparency = 0.75,
+		BorderSizePixel = 0,
+		ZIndex = 26,
+		Parent = standingsPanel,
+	})
+	-- Pinned below the scrollable list -- "where do I stand" should never
+	-- require scrolling to find, especially when the honest answer is
+	-- "not in the top 10 yet".
+	local selfStandingLabel = Factory.Label(standingsPanel, "", UDim2.new(1, -20, 0, 40), {
+		Position = UDim2.fromOffset(10, 208),
+		Color = Colors.TextMuted,
+		Font = Theme.Fonts.Medium,
+		TextSize = 11,
+		Wrapped = true,
+		ZIndex = 26,
+	})
 	self.standingsPanel = standingsPanel
 	self.standingsList = standingsList
+	self.selfStandingLabel = selfStandingLabel
 
 	self.overlay = overlay
 	self.finalScoreLabel = finalScoreLabel
@@ -423,16 +513,18 @@ function GameShell:_ToggleWeeklyStandings()
 		TextSize = 11,
 		ZIndex = 26,
 	})
+	self.selfStandingLabel.Text = ""
 	task.spawn(function()
-		local standings: { WeeklyStanding } = self.fetchWeeklyTop(gameModule.Key) or {}
-		self.standingsCache[gameModule.Key] = standings
+		local result: WeeklyResult = self.fetchWeeklyTop(gameModule.Key) or { standings = {}, self = nil }
+		self.standingsCache[gameModule.Key] = result
 		if self.currentGame == gameModule and panel.Visible then
-			self:_RenderStandings(standings)
+			self:_RenderStandings(result)
 		end
 	end)
 end
 
-function GameShell:_RenderStandings(standings: { WeeklyStanding })
+function GameShell:_RenderStandings(result: WeeklyResult)
+	local standings = result.standings
 	for _, child in self.standingsList:GetChildren() do
 		child:Destroy()
 	end
@@ -443,36 +535,53 @@ function GameShell:_RenderStandings(standings: { WeeklyStanding })
 			Wrapped = true,
 			ZIndex = 26,
 		})
-		return
 	end
 	local medals = { "🥇", "🥈", "🥉" }
+	local localUserId = Players.LocalPlayer and Players.LocalPlayer.UserId
 	for rank, entry in standings do
+		local isSelf = entry.userId == localUserId
 		local row = Factory.New("Frame", {
 			Size = UDim2.new(1, 0, 0, 22),
-			BackgroundTransparency = 1,
+			BackgroundColor3 = Colors.Gold,
+			BackgroundTransparency = if isSelf then 0.85 else 1,
 			LayoutOrder = rank,
 			ZIndex = 26,
 			Parent = self.standingsList,
 		})
+		if isSelf then
+			Factory.Corner(row, 6)
+		end
 		Factory.Label(row, medals[rank] or string.format("#%d", rank), UDim2.fromOffset(24, 22), {
+			Position = UDim2.fromOffset(2, 0),
 			TextSize = 13,
 			ZIndex = 26,
 		})
-		Factory.Label(row, string.format("@%s", entry.name), UDim2.new(1, -80, 1, 0), {
-			Position = UDim2.fromOffset(26, 0),
+		Factory.Label(row, if isSelf then "You" else string.format("@%s", entry.name), UDim2.new(1, -84, 1, 0), {
+			Position = UDim2.fromOffset(28, 0),
+			Font = if isSelf then Theme.Fonts.Bold else Theme.Fonts.Regular,
 			TextSize = 11,
 			Truncate = Enum.TextTruncate.AtEnd,
 			ZIndex = 26,
 		})
-		Factory.Label(row, tostring(entry.score), UDim2.fromOffset(48, 22), {
+		Factory.Label(row, tostring(entry.score), UDim2.fromOffset(50, 22), {
 			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, 0, 0, 0),
+			Position = UDim2.new(1, -2, 0, 0),
 			AlignX = Enum.TextXAlignment.Right,
 			Font = Theme.Fonts.Bold,
 			Color = Colors.Gold,
 			TextSize = 12,
 			ZIndex = 26,
 		})
+	end
+
+	local personal = result.self
+	if not personal then
+		self.selfStandingLabel.Text = "You haven't posted a score this week yet."
+	elseif personal.rank then
+		self.selfStandingLabel.Text = string.format("You're #%d this week with %d.", personal.rank, personal.score)
+	else
+		self.selfStandingLabel.Text =
+			string.format("You're not in the top %d yet — your best is %d.", #standings, personal.score)
 	end
 end
 

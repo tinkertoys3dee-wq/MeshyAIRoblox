@@ -429,7 +429,7 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		if type(payload) ~= "table" then
 			return false, "INVALID_REQUEST"
 		end
-		return arcade:GetWeeklyTop(payload.game)
+		return arcade:GetWeeklyTop(player, payload.game)
 	end,
 }
 

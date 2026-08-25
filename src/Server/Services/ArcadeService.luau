@@ -37,6 +37,7 @@ ArcadeService.__index = ArcadeService
 local WEEK_SECONDS = 7 * 24 * 60 * 60
 local SCORE_STORE_PREFIX = "FUGC_Arcade_"
 local PAYOUT_CHECK_INTERVAL_SECONDS = 30 * 60
+local DISPLAY_TOP_COUNT = 10
 
 local GAMES: { [string]: boolean } = {}
 for _, name in Config.Arcade.Games do
@@ -130,26 +131,44 @@ function ArcadeService:SubmitScore(player: Player, gameKey: any, score: any): (b
 	return true, { best = newBest }
 end
 
--- Top 3 for `gameKey` this week, for the in-hub "this week" standings.
-function ArcadeService:GetWeeklyTop(gameKey: any): (boolean, any)
+-- Top `DISPLAY_TOP_COUNT` for `gameKey` this week, for the in-hub "this
+-- week" standings -- plus the requesting player's own rank/score, so the
+-- panel can show "where do I stand" even when that's outside the visible
+-- list. `self` is nil only when the player has no score at all this week;
+-- otherwise it always carries a score, with `rank` set only when they
+-- placed within the fetched page (a second, targeted read covers everyone
+-- else, since GetSortedAsync has no cheap "rank of this key" query).
+function ArcadeService:GetWeeklyTop(player: Player, gameKey: any): (boolean, any)
 	if type(gameKey) ~= "string" or not GAMES[gameKey] then
 		return false, "UNKNOWN_GAME"
 	end
 	local store = DataStoreService:GetOrderedDataStore(scoreStoreName(gameKey, currentWeek()))
 	local success, pages = pcall(function()
-		return store:GetSortedAsync(false, 3)
+		return store:GetSortedAsync(false, DISPLAY_TOP_COUNT)
 	end)
 	if not success then
-		return true, { standings = {} }
+		return true, { standings = {}, self = nil }
 	end
 	local standings = {}
-	for _, entry in pages:GetCurrentPage() do
+	local selfStanding = nil
+	for rank, entry in pages:GetCurrentPage() do
 		local userId = tonumber(entry.key)
 		if userId then
 			table.insert(standings, { userId = userId, name = self:_NameFor(userId), score = entry.value })
+			if userId == player.UserId then
+				selfStanding = { rank = rank, score = entry.value }
+			end
 		end
 	end
-	return true, { standings = standings }
+	if not selfStanding then
+		local ownSuccess, ownScore = pcall(function()
+			return store:GetAsync(tostring(player.UserId))
+		end)
+		if ownSuccess and type(ownScore) == "number" then
+			selfStanding = { rank = nil, score = ownScore }
+		end
+	end
+	return true, { standings = standings, self = selfStanding }
 end
 
 -- Atomically claims responsibility for paying out `week` so that, across
