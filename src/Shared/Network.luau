@@ -38,6 +38,8 @@ Network.Actions = table.freeze({
 	RequestRewardedAd = "RequestRewardedAd",
 	BuyTokens = "BuyTokens",
 	ReportInviteSent = "ReportInviteSent",
+	SubmitArcadeScore = "SubmitArcadeScore",
+	GetArcadeLeaderboard = "GetArcadeLeaderboard",
 })
 
 Network.PushEvents = table.freeze({

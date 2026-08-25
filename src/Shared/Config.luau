@@ -248,6 +248,31 @@ return table.freeze({
 		NonEarningTokenBudget = 110,
 	},
 
+	-- Client-side arcade minigames (Flappy Bird, Dino Runner, Color Switch) —
+	-- purely for session time and fun, not part of the Forge Tokens economy.
+	-- Their scores are simulated entirely on the client with no server
+	-- authority over gameplay, unlike everything else with a token reward in
+	-- this file, so ArcadeService:SubmitScore treats every submission as
+	-- unverified input: sanity-clamped, never trusted as truth the way a
+	-- purchase receipt or an ad-completion callback is.
+	Arcade = {
+		Games = { "FlappyBird", "DinoRunner", "ColorSwitch" },
+		-- Free (bonusTokens — same guarantee as every other free grant, see
+		-- ProfileService.defaultProfile) weekly reward for each game's top 3
+		-- players by that game's best score of the week. Index = placement:
+		-- [1] = 1st, [2] = 2nd, [3] = 3rd. Since bonusTokens can only ever
+		-- buy the near-zero-marginal-cost Priority Pass (never a generation
+		-- product — see CommerceService:BeginIntentWithTokens), this can't
+		-- threaten the "only gain money" guarantee on real-cost products no
+		-- matter how large these numbers are; it's a game-balance/engagement
+		-- choice, not a revenue calculation.
+		WeeklyRewards = { 450, 250, 100 },
+		-- Sanity ceiling against an obviously spoofed score reaching the
+		-- leaderboard store. Can't stop a determined cheater on a
+		-- client-simulated game, only bound the damage one can do.
+		MaxSubmittableScore = 100000,
+	},
+
 	Marketplace = {
 		MinimumTransferRobux = 10,
 		MaximumTransferRobux = 500,
@@ -261,6 +286,12 @@ return table.freeze({
 		ItemIndex = "ForgeUGC_ItemIndex_v1",
 		ReceiptClaims = "ForgeUGC_ReceiptClaims_v1",
 		LikesLeaderboard = "ForgeUGC_LikesLeaderboard_v1",
+		-- Single-key store: which week's arcade payout has already been
+		-- processed. Per-game-per-week score stores are named
+		-- programmatically by ArcadeService (they need a fresh key every
+		-- week, so a fixed list here wouldn't fit the pattern the other
+		-- stores use).
+		ArcadeMeta = "ForgeUGC_ArcadeMeta_v1",
 	},
 
 	Leaderboard = {

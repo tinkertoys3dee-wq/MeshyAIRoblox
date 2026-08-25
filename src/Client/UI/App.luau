@@ -17,6 +17,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Factory)
+local GamesHub = require(script.Parent.GamesHub)
 local SoundController = require(script.Parent.SoundController)
 local ViewportController = require(script.Parent.ViewportController)
 
@@ -424,6 +425,22 @@ function App:_BuildChrome()
 	end)
 	self.launcher = launcher
 
+	-- A separate entry point from the Forge Studio launcher above, not a
+	-- variant of it: this opens the Arcade (see GamesHub), which has nothing
+	-- to do with creation/fitting/marketplace. Same visibility rule as the
+	-- Forge launcher (only shown on the closed/idle base view) since it's a
+	-- peer of it, not something nested inside the studio.
+	local arcadeLauncher =
+		Factory.Button(gui, "🎮  Arcade", UDim2.fromOffset(220, 48), UDim2.new(0, 18, 1, -122), "mint")
+	arcadeLauncher.Name = "ArcadeLauncher"
+	arcadeLauncher.Visible = false
+	arcadeLauncher.ZIndex = 30
+	self:_BindButton(arcadeLauncher)
+	arcadeLauncher.Activated:Connect(function()
+		GamesHub.Show(self)
+	end)
+	self.arcadeLauncher = arcadeLauncher
+
 	local topbar = Factory.New("Frame", {
 		Name = "Topbar",
 		Size = UDim2.new(1, 0, 0, 78),
@@ -744,6 +761,7 @@ function App:_SetStudioOpen(open: boolean)
 	local changed = self.shell.Visible ~= open
 	self.shell.Visible = open
 	self.launcher.Visible = not open
+	self.arcadeLauncher.Visible = not open
 	if changed and open then
 		self.sounds:Play("PanelOpen")
 	elseif changed then
