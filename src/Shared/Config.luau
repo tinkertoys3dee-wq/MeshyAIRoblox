@@ -225,6 +225,17 @@ return table.freeze({
 		StreakMilestoneRepeatDay = 30,
 	},
 
+	Commerce = {
+		-- One-time bonusTokens welcome the first time CommerceService ever
+		-- processes a real Robux receipt for this player (see
+		-- CommerceService:_ProcessReceipt). Same bonusTokens pool and
+		-- Priority-Pass-only restriction as every other free grant in this
+		-- file -- a real purchase happening doesn't license a separate free
+		-- grant into the revenue-backed `tokens` pool. The point is making a
+		-- second purchase feel like an easy yes, not subsidizing the first.
+		FirstPurchaseBonusTokens = 10,
+	},
+
 	-- Each achievement in src/Shared/Achievements.luau also awards a Roblox
 	-- badge on unlock (BadgeService:AwardBadgeAsync). Create one Badge asset
 	-- per id below in Creator Hub and paste its numeric ID in; 0 means "not

@@ -474,6 +474,10 @@ function CommerceService:_ProcessReceipt(receiptInfo: { [string]: any }): Enum.P
 	if not profile then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
+	-- Captured before this receipt's own processedReceipts entry is written
+	-- below, so it reflects whether this is genuinely the player's first-ever
+	-- completed Robux purchase in this experience, not just this product.
+	local isFirstPurchase = next(profile.processedReceipts) == nil
 	local productKey = self:_ProductKey(receiptInfo.ProductId)
 	local handler = if productKey then self.handlers[productKey] else nil
 	if not productKey or not handler then
@@ -522,6 +526,9 @@ function CommerceService:_ProcessReceipt(receiptInfo: { [string]: any }): Enum.P
 			mutableProfile.pendingIntents[chosenIntentId] = nil
 		end
 		mutableProfile.processedReceipts[purchaseId] = os.time()
+		if isFirstPurchase then
+			mutableProfile.bonusTokens = (mutableProfile.bonusTokens or 0) + Config.Commerce.FirstPurchaseBonusTokens
+		end
 	end)
 	if not mutationSuccess or not self.profiles:Save(player) then
 		self.profiles:Mutate(player, function(mutableProfile)
@@ -535,6 +542,22 @@ function CommerceService:_ProcessReceipt(receiptInfo: { [string]: any }): Enum.P
 
 	if type(postCommit) == "function" then
 		task.spawn(postCommit)
+	end
+	if isFirstPurchase then
+		local updatedProfile = self.profiles:Get(player)
+		if updatedProfile then
+			self.push(player, Network.PushEvents.Profile, { bonusTokens = updatedProfile.bonusTokens })
+			self.push(player, Network.PushEvents.Toast, {
+				tone = "success",
+				message = string.format(
+					"Thanks for your first purchase! +%d bonus tokens on the house.",
+					Config.Commerce.FirstPurchaseBonusTokens
+				),
+			})
+		end
+		self.analytics:Custom(player, "FirstPurchaseBonusGranted", Config.Commerce.FirstPurchaseBonusTokens, {
+			productKey = productKey,
+		})
 	end
 	self.analytics:Economy(player, tonumber(receiptInfo.CurrencySpent) or 0, productKey)
 	return Enum.ProductPurchaseDecision.PurchaseGranted
