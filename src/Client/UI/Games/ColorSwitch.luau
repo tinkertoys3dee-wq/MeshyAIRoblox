@@ -16,21 +16,21 @@
 -- is below the ceiling or simply falling, exactly like the idle/start
 -- screen of the real game where nothing scrolls until you tap.
 --
--- Each ring is a spinning 4-color wheel with a hollow, non-rotating center
--- hub. The ball must pass through whichever of the 4 colored sections is
--- currently facing its approach side (the bottom, since the ball rises into
--- the ring from below) -- the hub mirrors that same color as an
--- always-legible readout, so reading the spin itself is a convenience, not
--- a requirement. Which section currently faces the ball is read directly
--- off Roblox's own rendered layout (AbsolutePosition/AbsoluteSize of the
--- actual spinning pieces) rather than computed by hand from the rotation
--- angle -- deriving "which of 4 squares rotated by R degrees is now at the
--- bottom" via trigonometry is exactly the kind of math that's easy to get
--- subtly wrong with no way to see the result, so instead this just asks the
--- engine where it actually put things. Passing a ring while the ball's own
--- color matches scores a point; a mismatch ends the run. Colored orbs drift
--- down the same line and change the ball's current color on contact -- the
--- only way to prepare for an upcoming ring that doesn't already match.
+-- Each ring is a spinning 4-color wheel with a genuinely empty hollow
+-- center (no readout, no glyph -- just a hole), matching the real game: the
+-- ball must pass through whichever of the 4 colored sections is currently
+-- facing its approach side (the bottom, since the ball rises into the ring
+-- from below), judged by eye off the actual spin, not a separate indicator.
+-- Which section currently faces the ball is read directly off Roblox's own
+-- rendered layout (AbsolutePosition/AbsoluteSize of the actual spinning
+-- pieces) rather than computed by hand from the rotation angle -- deriving
+-- "which of 4 squares rotated by R degrees is now at the bottom" via
+-- trigonometry is exactly the kind of math that's easy to get subtly wrong
+-- with no way to see the result, so instead this just asks the engine where
+-- it actually put things. Passing a ring while the ball's own color matches
+-- scores a point; a mismatch ends the run. Colored orbs drift down the same
+-- line and change the ball's current color on contact -- the only way to
+-- prepare for an upcoming ring that doesn't already match.
 
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -44,8 +44,8 @@ local GameShell = require(script.Parent.GameShell)
 local Colors = Theme.Colors
 local PALETTE_COLORS = { Colors.Rose, Colors.Gold, Colors.Cyan, Colors.Mint }
 -- Paired index-for-index with PALETTE_COLORS so every color carries a
--- non-color signal too -- the ball's glyph and every ring's hub both show
--- shape, not just hue.
+-- non-color signal too -- the ball, every orb, and every ring petal all
+-- show shape, not just hue.
 local PALETTE_SHAPES = { "●", "▲", "■", "★" }
 local PALETTE_COUNT = #PALETTE_COLORS
 
@@ -69,8 +69,6 @@ type Ring = {
 	backing: Frame,
 	spinner: Frame,
 	petals: { Frame },
-	hub: Frame,
-	hubGlyph: TextLabel,
 	quadrantColors: { number },
 	rotation: number,
 	spinSpeed: number,
@@ -252,12 +250,14 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			Parent = backing,
 		})
 		local quadrantColors = shuffledIndices()
-		local petalSize = (RING_SIZE - 12) / 2
+		local petalMargin = 7
+		local petalGap = 5
+		local petalSize = (RING_SIZE - petalMargin * 2 - petalGap) / 2
 		local petalOffsets = {
-			{ 3, 3 },
-			{ RING_SIZE / 2 + 1, 3 },
-			{ 3, RING_SIZE / 2 + 1 },
-			{ RING_SIZE / 2 + 1, RING_SIZE / 2 + 1 },
+			{ petalMargin, petalMargin },
+			{ petalMargin + petalSize + petalGap, petalMargin },
+			{ petalMargin, petalMargin + petalSize + petalGap },
+			{ petalMargin + petalSize + petalGap, petalMargin + petalSize + petalGap },
 		}
 		local petals = {}
 		for i, offset in petalOffsets do
@@ -271,6 +271,18 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 				Parent = spinner,
 			})
 			Factory.Corner(petal, 8)
+			-- Colorblind redundancy now that the center is genuinely empty
+			-- (no separate readout there): each petal carries its own shape
+			-- glyph, same as the ball and orbs. It spins with the petal, but
+			-- a glance still reads it -- shape, not orientation, is the
+			-- signal.
+			Factory.Label(petal, PALETTE_SHAPES[quadrantColors[i]], UDim2.fromScale(1, 1), {
+				Color = Colors.Ink,
+				TextSize = 12,
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+				ZIndex = 3,
+			})
 			petals[i] = petal
 		end
 
@@ -279,36 +291,27 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		local spinSpeed = (RING_SPIN_MIN + math.random() * (RING_SPIN_MAX - RING_SPIN_MIN))
 			* (if math.random() < 0.5 then -1 else 1)
 
-		-- A hollow, non-rotating hub punched through the middle of the
-		-- spinning petals -- reads as a ring/donut instead of a solid pie,
-		-- and doubles as the always-legible "safe color" readout.
+		-- A plain, non-rotating hollow hole punched through the middle of
+		-- the spinning petals -- genuinely empty (no color, no readout),
+		-- matching the real game: the ball reads whichever petal is
+		-- actually facing it, not a separate indicator.
 		local hub = Factory.New("Frame", {
 			Name = "Hub",
 			Size = UDim2.fromOffset(RING_HUB_SIZE, RING_HUB_SIZE),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5),
 			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 0.1,
 			BorderSizePixel = 0,
 			ZIndex = 4,
 			Parent = backing,
 		})
 		Factory.Corner(hub, RING_HUB_SIZE / 2)
-		Factory.Stroke(hub, Colors.Ink, 0.3, 2)
-		local hubGlyph = Factory.Label(hub, "", UDim2.fromScale(1, 1), {
-			Color = Colors.Ink,
-			Font = Theme.Fonts.Black,
-			TextSize = 16,
-			AlignX = Enum.TextXAlignment.Center,
-			AlignY = Enum.TextYAlignment.Center,
-			ZIndex = 5,
-		})
 
 		table.insert(rings, {
 			backing = backing,
 			spinner = spinner,
 			petals = petals,
-			hub = hub,
-			hubGlyph = hubGlyph,
 			quadrantColors = quadrantColors,
 			rotation = rotation,
 			spinSpeed = spinSpeed,
@@ -495,8 +498,6 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 				end
 			end
 			local facingColorIndex = ring.quadrantColors[facingIndex]
-			ring.hub.BackgroundColor3 = PALETTE_COLORS[facingColorIndex]
-			ring.hubGlyph.Text = PALETTE_SHAPES[facingColorIndex]
 
 			if not ring.checked and ring.y + RING_SIZE >= ballTop and ring.y <= ballBottom then
 				ring.checked = true
