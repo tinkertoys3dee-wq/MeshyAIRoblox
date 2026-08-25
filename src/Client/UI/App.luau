@@ -1173,6 +1173,7 @@ function App:_Bootstrap()
 				data.dailyBrief.rewardGranted
 				or (data.dailyBrief.tokensGranted or 0) > 0
 				or (data.dailyBrief.winBackTokensGranted or 0) > 0
+				or data.dailyBrief.milestoneReward ~= nil
 			)
 		then
 			self.sounds:Play("Success")
@@ -1194,6 +1195,19 @@ function App:_Bootstrap()
 				table.insert(
 					parts,
 					string.format("%d-day streak reward: one free Priority Pass", data.dailyBrief.streak)
+				)
+			end
+			if data.dailyBrief.milestoneReward then
+				local milestone = data.dailyBrief.milestoneReward
+				table.insert(
+					parts,
+					string.format(
+						"🏆 %d-day milestone: +%d tokens, +%d Priority Pass%s",
+						milestone.day,
+						milestone.tokens,
+						milestone.priorityPasses,
+						if milestone.priorityPasses == 1 then "" else "es"
+					)
 				)
 			end
 			self:_Toast("success", table.concat(parts, " · "))
@@ -2352,41 +2366,144 @@ function App:_RenderCreate()
 
 	local brief = self.state.dailyBrief
 	if brief then
-		local daily = Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 136 else 94), nil, "DailyBrief")
+		local hasMilestoneBanner = brief.milestoneReward ~= nil
+		local cardHeight = 156 + (if hasMilestoneBanner then 36 else 0)
+		local daily = Factory.Card(stack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyBrief")
 		daily.LayoutOrder = 5
-		Factory.Pill(daily, "DAILY BRIEF", Colors.Gold, 96).Position = UDim2.fromOffset(15, 15)
-		Factory.Label(
-			daily,
-			brief.theme,
-			if self.compact then UDim2.new(1, -144, 0, 30) else UDim2.new(0.48, -20, 0, 30),
-			{
-				Position = UDim2.fromOffset(128, 13),
-				Font = Theme.Fonts.Black,
-				TextSize = 18,
-			}
-		)
+
+		-- Flame badge: the same streak iconography as the status-bar pill,
+		-- now with its own gradient + stroke instead of a flat text pill.
+		local flame = Factory.New("Frame", {
+			Size = UDim2.fromOffset(44, 44),
+			Position = UDim2.fromOffset(16, 16),
+			BackgroundColor3 = Colors.Rose,
+			BorderSizePixel = 0,
+			Parent = daily,
+		})
+		Factory.Corner(flame, 22)
+		Factory.Gradient(flame, { Colors.Rose, Colors.Gold }, 135)
+		Factory.Stroke(flame, Colors.Ink, 0.3, 1.5)
+		Factory.Label(flame, "🔥", UDim2.fromScale(1, 1), {
+			TextSize = 20,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+		})
+
+		Factory.Label(daily, string.format("%d-day streak", brief.streak), UDim2.new(1, -76, 0, 24), {
+			Position = UDim2.fromOffset(72, 14),
+			Font = Theme.Fonts.Black,
+			TextSize = 18,
+		})
+		Factory.Label(daily, brief.theme, UDim2.new(1, -76, 0, 18), {
+			Position = UDim2.fromOffset(72, 38),
+			Color = Colors.TextMuted,
+			TextSize = 12,
+			Truncate = Enum.TextTruncate.AtEnd,
+		})
+
+		local briefY = 68
+		if hasMilestoneBanner then
+			local milestone = brief.milestoneReward
+			local banner = Factory.New("Frame", {
+				Position = UDim2.fromOffset(15, briefY),
+				Size = UDim2.new(1, -30, 0, 28),
+				BackgroundColor3 = Colors.Gold,
+				BackgroundTransparency = 0.82,
+				BorderSizePixel = 0,
+				Parent = daily,
+			})
+			Factory.Corner(banner, 8)
+			Factory.Stroke(banner, Colors.Gold, 0.4, 1)
+			Factory.Label(
+				banner,
+				string.format(
+					"🏆 %d-day milestone! +%d Forge Tokens · +%d Priority Pass%s",
+					milestone.day,
+					milestone.tokens,
+					milestone.priorityPasses,
+					if milestone.priorityPasses == 1 then "" else "es"
+				),
+				UDim2.new(1, -20, 1, 0),
+				{
+					Position = UDim2.fromOffset(10, 0),
+					Font = Theme.Fonts.Bold,
+					Color = Colors.Gold,
+					TextSize = 12,
+					AlignX = Enum.TextXAlignment.Center,
+				}
+			)
+			briefY += 36
+		end
+
+		-- A real journey bar toward the next streak milestone (7/14/30, then
+		-- every 30 days after), not just the existing "next check-in" line --
+		-- that's the reward worth building visible anticipation for.
+		local lastMilestoneDay = if brief.nextMilestoneDay <= 7
+			then 0
+			elseif brief.nextMilestoneDay <= 30 then brief.nextMilestoneDay - 7
+			else brief.nextMilestoneDay - Config.Retention.StreakMilestoneRepeatDay
+		local span = math.max(1, brief.nextMilestoneDay - lastMilestoneDay)
+		local progress = math.clamp((brief.streak - lastMilestoneDay) / span, 0, 1)
+
+		local track = Factory.New("Frame", {
+			Position = UDim2.fromOffset(15, briefY),
+			Size = UDim2.new(1, -76, 0, 10),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 0.4,
+			BorderSizePixel = 0,
+			Parent = daily,
+		})
+		Factory.Corner(track, 5)
+		local fill = Factory.New("Frame", {
+			Size = UDim2.new(progress, 0, 1, 0),
+			BackgroundColor3 = Colors.Gold,
+			BorderSizePixel = 0,
+			Parent = track,
+		})
+		Factory.Corner(fill, 5)
+		Factory.Gradient(fill, { Colors.Rose, Colors.Gold }, 0)
+		local flag = Factory.New("Frame", {
+			Size = UDim2.fromOffset(38, 20),
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(1, 8, 0.5, 0),
+			BackgroundColor3 = Colors.PanelSoft,
+			BorderSizePixel = 0,
+			Parent = track,
+		})
+		Factory.Corner(flag, 6)
+		Factory.Stroke(flag, Colors.Gold, 0.5, 1)
+		Factory.Label(flag, string.format("D%d", brief.nextMilestoneDay), UDim2.fromScale(1, 1), {
+			Font = Theme.Fonts.Bold,
+			TextSize = 10,
+			Color = Colors.Gold,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+		})
+		briefY += 20
+
 		Factory.Label(
 			daily,
 			string.format(
-				"%d-day streak · Priority pass in %d check-in%s",
-				brief.streak,
+				"Priority pass in %d check-in%s · milestone reward at day %d",
 				brief.nextRewardIn,
-				if brief.nextRewardIn == 1 then "" else "s"
+				if brief.nextRewardIn == 1 then "" else "s",
+				brief.nextMilestoneDay
 			),
-			if self.compact then UDim2.new(1, -30, 0, 26) else UDim2.new(0.52, -24, 0, 26),
+			UDim2.new(1, -30, 0, 18),
 			{
-				Position = if self.compact then UDim2.fromOffset(15, 52) else UDim2.new(0.48, 0, 0, 16),
-				AlignX = if self.compact then Enum.TextXAlignment.Left else Enum.TextXAlignment.Right,
+				Position = UDim2.fromOffset(15, briefY),
 				Color = Colors.TextMuted,
-				TextSize = 12,
+				TextSize = 11,
 			}
 		)
+		briefY += 24
+
 		Factory.Label(
 			daily,
 			"Use the theme as inspiration—or forge anything you can imagine.",
-			UDim2.new(1, -30, 0, 25),
+			UDim2.new(1, -30, 0, 20),
 			{
-				Position = UDim2.fromOffset(15, if self.compact then 88 else 57),
+				Position = UDim2.fromOffset(15, briefY),
 				Color = Colors.TextMuted,
 				TextSize = 12,
 			}
