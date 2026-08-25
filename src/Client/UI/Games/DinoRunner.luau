@@ -75,17 +75,30 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		Parent = canvas,
 	})
 	Factory.Gradient(sky, { Colors.PanelSoft, Colors.Panel }, 90)
+	local sun = Factory.New("Frame", {
+		Name = "Sun",
+		Size = UDim2.fromOffset(46, 46),
+		Position = UDim2.new(1, -70, 0, 18),
+		BackgroundColor3 = Colors.Gold,
+		BackgroundTransparency = 0.55,
+		BorderSizePixel = 0,
+		ZIndex = 1,
+		Parent = canvas,
+	})
+	Factory.Corner(sun, 23)
 
-	Factory.New("Frame", {
+	-- A proper band with its own gradient reads as ground/dirt; the old
+	-- 2px hairline was barely there.
+	local groundBand = Factory.New("Frame", {
 		Name = "Ground",
-		Size = UDim2.new(1, 0, 0, 2),
+		Size = UDim2.new(1, 0, 0, 10),
 		Position = UDim2.fromOffset(0, groundY() + DINO_SIZE),
-		BackgroundColor3 = Colors.Line,
-		BackgroundTransparency = 0.3,
+		BackgroundColor3 = Colors.PanelSoft,
 		BorderSizePixel = 0,
 		ZIndex = 2,
 		Parent = canvas,
 	})
+	Factory.Gradient(groundBand, { Colors.PanelSoft, Colors.Ink }, 90)
 
 	-- Short scrolling tick marks along the ground reinforce how fast the
 	-- game is currently moving -- decorative (the obstacles alone already
@@ -123,7 +136,47 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	-- Squash/stretch handle: cosmetic scale pulse on takeoff/landing, gated
 	-- under reduceMotion the same way FlappyBird's flap-squash is -- the
 	-- dino's actual jump arc (the gameplay motion) is unaffected either way.
+	-- Children below (tail/legs/eye) inherit this scale automatically.
 	local dinoScale = Factory.New("UIScale", { Scale = 1, Parent = dino })
+	Factory.New("Frame", {
+		Name = "Tail",
+		Size = UDim2.fromOffset(DINO_SIZE * 0.3, DINO_SIZE * 0.22),
+		Position = UDim2.fromOffset(-DINO_SIZE * 0.2, DINO_SIZE * 0.5),
+		BackgroundColor3 = Colors.Mint,
+		BorderSizePixel = 0,
+		ZIndex = 4,
+		Parent = dino,
+	})
+	for _, fraction in { 0.14, 0.6 } do
+		Factory.New("Frame", {
+			Name = "Leg",
+			Size = UDim2.fromOffset(DINO_SIZE * 0.22, DINO_SIZE * 0.26),
+			Position = UDim2.new(0, DINO_SIZE * fraction, 1, -DINO_SIZE * 0.05),
+			BackgroundColor3 = Color3.fromRGB(46, 189, 138),
+			BorderSizePixel = 0,
+			ZIndex = 4,
+			Parent = dino,
+		})
+	end
+	local eye = Factory.New("Frame", {
+		Name = "Eye",
+		Size = UDim2.fromOffset(DINO_SIZE * 0.28, DINO_SIZE * 0.28),
+		Position = UDim2.fromOffset(DINO_SIZE * 0.56, DINO_SIZE * 0.04),
+		BackgroundColor3 = Colors.Text,
+		BorderSizePixel = 0,
+		ZIndex = 6,
+		Parent = dino,
+	})
+	Factory.Corner(eye, DINO_SIZE * 0.14)
+	Factory.New("Frame", {
+		Name = "Pupil",
+		Size = UDim2.fromOffset(DINO_SIZE * 0.12, DINO_SIZE * 0.12),
+		Position = UDim2.fromOffset(DINO_SIZE * 0.72, DINO_SIZE * 0.1),
+		BackgroundColor3 = Colors.Ink,
+		BorderSizePixel = 0,
+		ZIndex = 7,
+		Parent = dino,
+	})
 	dinoY = groundY()
 
 	local function jump()
@@ -189,6 +242,40 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			Parent = canvas,
 		})
 		Factory.Corner(frame, 4)
+		-- A couple of thin ribs read as cactus texture instead of a plain
+		-- block; children of `frame` so they scroll and get destroyed with
+		-- it for free, same trick as the pipe caps and dino's own details.
+		for _, fraction in { 0.3, 0.7 } do
+			Factory.New("Frame", {
+				Name = "Rib",
+				Size = UDim2.new(0, 1, 1, -4),
+				Position = UDim2.new(fraction, 0, 0, 2),
+				BackgroundColor3 = Colors.Ink,
+				BackgroundTransparency = 0.55,
+				BorderSizePixel = 0,
+				ZIndex = 4,
+				Parent = frame,
+			})
+		end
+		-- An arm on a random side about half the time, for silhouette
+		-- variety between cacti.
+		if math.random() < 0.5 then
+			local armWidth = math.max(6, w * 0.45)
+			local armHeight = math.max(8, h * 0.32)
+			local onRight = math.random() < 0.5
+			local arm = Factory.New("Frame", {
+				Name = "Arm",
+				Size = UDim2.fromOffset(armWidth, armHeight),
+				Position = if onRight
+					then UDim2.fromOffset(w - 2, h * 0.25)
+					else UDim2.fromOffset(-armWidth + 2, h * 0.25),
+				BackgroundColor3 = Colors.Rose,
+				BorderSizePixel = 0,
+				ZIndex = 4,
+				Parent = frame,
+			})
+			Factory.Corner(arm, 3)
+		end
 		local x = width() + w
 		table.insert(obstacles, { frame = frame, x = x, width = w, height = h })
 	end
@@ -295,6 +382,8 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		tapConn:Disconnect()
 		dino:Destroy()
 		sky:Destroy()
+		sun:Destroy()
+		groundBand:Destroy()
 		for _, tick in groundTicks do
 			tick.instance:Destroy()
 		end

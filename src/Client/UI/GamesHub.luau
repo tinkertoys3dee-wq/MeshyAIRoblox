@@ -20,6 +20,16 @@ local ColorSwitch = require(script.Parent.Games.ColorSwitch)
 
 local Colors = Theme.Colors
 
+local function lighten(color: Color3, amount: number): Color3
+	local h, s, v = color:ToHSV()
+	return Color3.fromHSV(h, s, math.clamp(v + amount, 0, 1))
+end
+
+local function darken(color: Color3, amount: number): Color3
+	local h, s, v = color:ToHSV()
+	return Color3.fromHSV(h, s, math.clamp(v - amount, 0, 1))
+end
+
 -- Each tile deliberately isn't a uniform grid cell -- different sizes and a
 -- hand-placed offset per tile is what makes this read as an arcade cabinet
 -- lineup rather than a settings list. `wide` positions/sizes apply above the
@@ -44,14 +54,14 @@ local TILES = {
 		game = ColorSwitch,
 		color = Colors.Rose,
 		icon = "🎨",
-		blurb = "Match your color.",
+		blurb = "Bounce through the right color.",
 		wide = { size = UDim2.fromOffset(216, 120), position = UDim2.fromOffset(280, 292) },
 	},
 }
 
 local GamesHub = {}
 
--- `app` needs: .gui, .sounds, .compact, :_Invoke(action, payload), :_BindButton(button).
+-- `app` needs: .gui, .sounds, .compact, .state, :_Invoke(action, payload), :_BindButton(button).
 function GamesHub.Show(app: any)
 	local reduceMotion = app.state ~= nil and app.state.profile.settings.reduceMotion == true
 
@@ -104,21 +114,87 @@ function GamesHub.Show(app: any)
 	})
 	app.arcadeUiScale = uiScale
 
-	Factory.Pill(modal, "ARCADE", Colors.Rose, 100).Position = UDim2.fromOffset(16, 16)
+	-- A soft, static (non-animated -- cheap and reduceMotion-safe by
+	-- construction) glow behind the header for depth, the same trick the
+	-- app's own background layer uses elsewhere.
+	local glow = Factory.New("Frame", {
+		Name = "HeaderGlow",
+		Size = UDim2.fromOffset(360, 200),
+		Position = UDim2.fromOffset(-60, -90),
+		BackgroundColor3 = Colors.Rose,
+		BackgroundTransparency = 0.88,
+		BorderSizePixel = 0,
+		ZIndex = 211,
+		Parent = modal,
+	})
+	Factory.Corner(glow, 120)
+
+	local headerIcon = Factory.New("Frame", {
+		Name = "HeaderIcon",
+		Size = UDim2.fromOffset(52, 52),
+		Position = UDim2.fromOffset(16, 14),
+		BackgroundColor3 = Colors.Rose,
+		BorderSizePixel = 0,
+		ZIndex = 213,
+		Parent = modal,
+	})
+	Factory.Corner(headerIcon, 16)
+	Factory.Gradient(headerIcon, { lighten(Colors.Rose, 0.08), darken(Colors.Rose, 0.12) }, 120)
+	Factory.Stroke(headerIcon, Colors.Ink, 0.5, 1.5)
+	Factory.Label(headerIcon, "🕹️", UDim2.fromScale(1, 1), {
+		TextSize = 26,
+		AlignX = Enum.TextXAlignment.Center,
+		AlignY = Enum.TextYAlignment.Center,
+		ZIndex = 214,
+	})
+
+	Factory.Label(modal, "ARCADE", UDim2.new(1, -220, 0, 24), {
+		Position = UDim2.fromOffset(78, 12),
+		Font = Theme.Fonts.Black,
+		TextSize = 22,
+		Color = Colors.Text,
+		AlignX = Enum.TextXAlignment.Left,
+		Truncate = Enum.TextTruncate.AtEnd,
+		ZIndex = 213,
+	})
+	Factory.Label(modal, "Three games, one weekly leaderboard.", UDim2.new(1, -220, 0, 18), {
+		Position = UDim2.fromOffset(78, 38),
+		Font = Theme.Fonts.Medium,
+		TextSize = 12,
+		Color = Colors.TextMuted,
+		AlignX = Enum.TextXAlignment.Left,
+		Truncate = Enum.TextTruncate.AtEnd,
+		ZIndex = 213,
+	})
+
+	local rewardBanner = Factory.New("Frame", {
+		Name = "RewardBanner",
+		Size = UDim2.new(1, -32, 0, 30),
+		Position = UDim2.fromOffset(16, 74),
+		BackgroundColor3 = Colors.Gold,
+		BackgroundTransparency = 0.86,
+		BorderSizePixel = 0,
+		ZIndex = 212,
+		Parent = modal,
+	})
+	Factory.Corner(rewardBanner, 10)
+	Factory.Stroke(rewardBanner, Colors.Gold, 0.65, 1)
 	Factory.Label(
-		modal,
-		"Top 3 each game get a Forge Token bonus every week — 1st +450, 2nd +250, 3rd +100.",
-		UDim2.new(1, -140, 0, 34),
+		rewardBanner,
+		"🏆  Top 3 each game get a weekly Forge Token bonus — 1st +450 · 2nd +250 · 3rd +100",
+		UDim2.new(1, -20, 1, 0),
 		{
-			Position = UDim2.fromOffset(16, 46),
-			Color = Colors.TextMuted,
+			Position = UDim2.fromOffset(10, 0),
+			Color = Colors.Gold,
+			Font = Theme.Fonts.Medium,
 			TextSize = 11,
-			Wrapped = true,
-			ZIndex = 212,
+			Truncate = Enum.TextTruncate.AtEnd,
+			ZIndex = 213,
 		}
 	)
+
 	local closeButton = Factory.Button(modal, "×", UDim2.fromOffset(34, 34), UDim2.new(1, -50, 0, 14), nil)
-	closeButton.ZIndex = 213
+	closeButton.ZIndex = 214
 	app:_BindButton(closeButton)
 
 	-- The hub view (tile picker) and the game view (GameShell) share the
@@ -126,16 +202,16 @@ function GamesHub.Show(app: any)
 	-- on screen -- picking a game replaces the picker, Exit brings it back.
 	local hubView = Factory.New("Frame", {
 		Name = "HubView",
-		Position = UDim2.fromOffset(12, 92),
-		Size = UDim2.new(1, -24, 1, -104),
+		Position = UDim2.fromOffset(12, 116),
+		Size = UDim2.new(1, -24, 1, -128),
 		BackgroundTransparency = 1,
 		ZIndex = 212,
 		Parent = modal,
 	})
 	local gameView = Factory.New("Frame", {
 		Name = "GameView",
-		Position = UDim2.fromOffset(12, 92),
-		Size = UDim2.new(1, -24, 1, -104),
+		Position = UDim2.fromOffset(12, 116),
+		Size = UDim2.new(1, -24, 1, -128),
 		BackgroundTransparency = 1,
 		Visible = false,
 		ZIndex = 212,
@@ -188,6 +264,22 @@ function GamesHub.Show(app: any)
 		local useWide = not app.compact
 		local size = if useWide then tile.wide.size else UDim2.new(1, 0, 0, 84)
 		local position = if useWide then tile.wide.position else UDim2.fromOffset(0, (index - 1) * 92)
+		local tileHeight = size.Y.Offset
+
+		-- A soft drop shadow: a darker duplicate sat behind and slightly
+		-- offset from the tile itself, the cheapest way to fake elevation
+		-- with plain Frames.
+		local shadow = Factory.New("Frame", {
+			Name = "Shadow",
+			Size = size,
+			Position = position + UDim2.fromOffset(0, 5),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 0.55,
+			BorderSizePixel = 0,
+			ZIndex = 212,
+			Parent = hubView,
+		})
+		Factory.Corner(shadow, 18)
 
 		local button = Factory.New("TextButton", {
 			Name = tile.game.Key,
@@ -197,35 +289,98 @@ function GamesHub.Show(app: any)
 			BorderSizePixel = 0,
 			AutoButtonColor = false,
 			Text = "",
+			ClipsDescendants = true,
 			ZIndex = 213,
 			Parent = hubView,
 		})
 		Factory.Corner(button, 18)
-		Factory.Stroke(button, Colors.Ink, 0.5, 1.5)
+		Factory.Stroke(button, Colors.Ink, 0.45, 1.5)
+		Factory.Gradient(button, { lighten(tile.color, 0.1), darken(tile.color, 0.16) }, 130)
+		local gloss = Factory.New("Frame", {
+			Name = "Gloss",
+			Size = UDim2.new(1, -2, 0, math.min(30, tileHeight * 0.3)),
+			Position = UDim2.fromOffset(1, 1),
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundTransparency = 0.85,
+			BorderSizePixel = 0,
+			ZIndex = 214,
+			Parent = button,
+		})
+		Factory.Corner(gloss, 17)
 		local tileScale = Factory.New("UIScale", { Scale = 1, Parent = button })
-		Factory.Label(button, tile.icon, UDim2.fromOffset(40, 40), {
-			Position = UDim2.fromOffset(14, 12),
-			TextSize = 28,
-			AlignX = Enum.TextXAlignment.Left,
-			ZIndex = 214,
+
+		local iconBadge = Factory.New("Frame", {
+			Name = "IconBadge",
+			Size = UDim2.fromOffset(38, 38),
+			Position = UDim2.fromOffset(12, 10),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 0.35,
+			BorderSizePixel = 0,
+			ZIndex = 215,
+			Parent = button,
 		})
-		Factory.Label(button, tile.game.Name, UDim2.new(1, -28, 0, 24), {
-			Position = UDim2.fromOffset(14, 54),
+		Factory.Corner(iconBadge, 12)
+		Factory.Label(iconBadge, tile.icon, UDim2.fromScale(1, 1), {
+			TextSize = 20,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			ZIndex = 216,
+		})
+
+		-- A bottom scrim so the title/blurb stay legible in light text no
+		-- matter how bright the tile's own accent color is, the same trick a
+		-- media/game-store card uses over a busy thumbnail.
+		local scrimHeight = math.max(40, tileHeight * 0.42)
+		local scrim = Factory.New("Frame", {
+			Name = "Scrim",
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 0, 1, 0),
+			Size = UDim2.new(1, 0, 0, scrimHeight),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ZIndex = 215,
+			Parent = button,
+		})
+		Factory.New("UIGradient", {
+			Color = ColorSequence.new(Colors.Ink),
+			Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1),
+				NumberSequenceKeypoint.new(1, 0.22),
+			}),
+			Rotation = 90,
+			Parent = scrim,
+		})
+
+		Factory.Label(scrim, tile.game.Name, UDim2.new(1, -50, 0, 20), {
+			Position = UDim2.fromOffset(14, scrimHeight - 36),
 			Font = Theme.Fonts.Black,
-			TextSize = 16,
-			Color = Colors.Ink,
+			TextSize = 15,
+			Color = Colors.Text,
 			AlignX = Enum.TextXAlignment.Left,
-			ZIndex = 214,
+			Truncate = Enum.TextTruncate.AtEnd,
+			ZIndex = 216,
 		})
-		Factory.Label(button, tile.blurb, UDim2.new(1, -28, 0, 18), {
-			Position = UDim2.fromOffset(14, 78),
+		Factory.Label(scrim, tile.blurb, UDim2.new(1, -50, 0, 16), {
+			Position = UDim2.fromOffset(14, scrimHeight - 17),
 			Font = Theme.Fonts.Medium,
-			TextSize = 11,
-			Color = Colors.Ink,
-			TextTransparency = 0.25,
+			TextSize = 10,
+			Color = Colors.TextMuted,
 			AlignX = Enum.TextXAlignment.Left,
-			ZIndex = 214,
+			Truncate = Enum.TextTruncate.AtEnd,
+			ZIndex = 216,
 		})
+		Factory.Label(scrim, "▶", UDim2.fromOffset(22, 22), {
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, -10, 1, -8),
+			TextSize = 13,
+			Color = Colors.Text,
+			Transparency = 0.35,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			ZIndex = 216,
+		})
+
 		app.sounds:Bind(button)
 		button.Selectable = true
 		button.Activated:Connect(function()

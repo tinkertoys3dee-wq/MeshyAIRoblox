@@ -29,6 +29,8 @@ local BIRD_SIZE = 26
 local BIRD_X = 74
 local CLOUD_COUNT = 5
 local CLOUD_PARALLAX_SPEED = 26 -- px/sec, well under PIPE_SPEED for depth
+local PIPE_LIGHT_COLOR = Color3.fromRGB(140, 255, 205)
+local PIPE_DARK_COLOR = Color3.fromRGB(48, 196, 143)
 
 type Pipe = { top: Frame, bottom: Frame, x: number, gapY: number, scored: boolean }
 
@@ -91,8 +93,49 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	-- Flap squash/stretch handle: purely cosmetic scale pulse, so it's the
 	-- part of "flap" that reduceMotion turns off -- the bird's actual
 	-- position/velocity (the gameplay-relevant motion) is untouched either
-	-- way.
+	-- way. Children below (wing/eye/beak) inherit the bird's own Rotation
+	-- and this UIScale automatically -- Roblox rotates/scales a GuiObject's
+	-- whole visual subtree as a unit, not just itself.
 	local birdScale = Factory.New("UIScale", { Scale = 1, Parent = bird })
+	local wing = Factory.New("Frame", {
+		Name = "Wing",
+		Size = UDim2.fromOffset(BIRD_SIZE * 0.5, BIRD_SIZE * 0.32),
+		Position = UDim2.fromOffset(BIRD_SIZE * 0.1, BIRD_SIZE * 0.4),
+		BackgroundColor3 = Color3.fromRGB(214, 158, 40),
+		BorderSizePixel = 0,
+		ZIndex = 5,
+		Parent = bird,
+	})
+	Factory.Corner(wing, 6)
+	local eye = Factory.New("Frame", {
+		Name = "Eye",
+		Size = UDim2.fromOffset(BIRD_SIZE * 0.32, BIRD_SIZE * 0.32),
+		Position = UDim2.fromOffset(BIRD_SIZE * 0.52, BIRD_SIZE * 0.06),
+		BackgroundColor3 = Colors.Text,
+		BorderSizePixel = 0,
+		ZIndex = 5,
+		Parent = bird,
+	})
+	Factory.Corner(eye, BIRD_SIZE * 0.16)
+	Factory.New("Frame", {
+		Name = "Pupil",
+		Size = UDim2.fromOffset(BIRD_SIZE * 0.14, BIRD_SIZE * 0.14),
+		Position = UDim2.fromOffset(BIRD_SIZE * 0.7, BIRD_SIZE * 0.14),
+		BackgroundColor3 = Colors.Ink,
+		BorderSizePixel = 0,
+		ZIndex = 6,
+		Parent = bird,
+	})
+	local beak = Factory.New("Frame", {
+		Name = "Beak",
+		Size = UDim2.fromOffset(BIRD_SIZE * 0.34, BIRD_SIZE * 0.2),
+		Position = UDim2.fromOffset(BIRD_SIZE * 0.86, BIRD_SIZE * 0.36),
+		BackgroundColor3 = Color3.fromRGB(255, 138, 61),
+		BorderSizePixel = 0,
+		ZIndex = 5,
+		Parent = bird,
+	})
+	Factory.Corner(beak, 3)
 
 	-- Floored: AbsoluteSize can be fractional (UI scaling), and math.random
 	-- errors on a non-integer argument -- every caller below feeds these
@@ -116,6 +159,10 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			birdScale.Scale = 0.7
 			TweenService
 				:Create(birdScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+				:Play()
+			wing.Rotation = -35
+			TweenService
+				:Create(wing, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Rotation = 0 })
 				:Play()
 		end
 	end
@@ -158,6 +205,22 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			ZIndex = 3,
 			Parent = canvas,
 		})
+		Factory.Gradient(top, { PIPE_LIGHT_COLOR, PIPE_DARK_COLOR }, 0)
+		-- Caps are children of their pipe, not tracked separately -- they
+		-- inherit its Position every frame for free and get destroyed
+		-- automatically along with it, the same trick the bird's wing/eye/
+		-- beak use off its own Frame.
+		local topCap = Factory.New("Frame", {
+			Name = "Cap",
+			Size = UDim2.new(1, 12, 0, 16),
+			Position = UDim2.new(0, -6, 1, -16),
+			BackgroundColor3 = PIPE_DARK_COLOR,
+			BorderSizePixel = 0,
+			ZIndex = 3,
+			Parent = top,
+		})
+		Factory.Corner(topCap, 4)
+		Factory.Stroke(topCap, Colors.Ink, 0.6, 1)
 		local bottom = Factory.New("Frame", {
 			Name = "PipeBottom",
 			Size = UDim2.fromOffset(PIPE_WIDTH, math.max(0, h - bottomY)),
@@ -167,6 +230,18 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			ZIndex = 3,
 			Parent = canvas,
 		})
+		Factory.Gradient(bottom, { PIPE_LIGHT_COLOR, PIPE_DARK_COLOR }, 0)
+		local bottomCap = Factory.New("Frame", {
+			Name = "Cap",
+			Size = UDim2.new(1, 12, 0, 16),
+			Position = UDim2.new(0, -6, 0, 0),
+			BackgroundColor3 = PIPE_DARK_COLOR,
+			BorderSizePixel = 0,
+			ZIndex = 3,
+			Parent = bottom,
+		})
+		Factory.Corner(bottomCap, 4)
+		Factory.Stroke(bottomCap, Colors.Ink, 0.6, 1)
 		table.insert(pipes, { top = top, bottom = bottom, x = x, gapY = gapY, scored = false })
 	end
 
