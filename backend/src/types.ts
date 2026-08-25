@@ -1,7 +1,10 @@
 import { z } from "zod";
 
-export const jobKindSchema = z.enum(["TEXT_TO_3D", "IMAGE_PREVIEW", "IMAGE_UPLOAD", "IMAGE_TO_3D"]);
+export const jobKindSchema = z.enum(["TEXT_TO_3D", "IMAGE_PREVIEW", "IMAGE_UPLOAD", "IMAGE_TO_3D", "AVATAR_TO_3D"]);
 export type JobKind = z.infer<typeof jobKindSchema>;
+
+export const avatarViewSchema = z.enum(["HEADSHOT", "BUST", "FULL_BODY"]);
+export type AvatarView = z.infer<typeof avatarViewSchema>;
 
 export const stylePresetSchema = z.enum(["AUTO", "ANIME", "REALISTIC", "STYLIZED", "LOW_POLY", "FANTASY"]);
 export type StylePreset = z.infer<typeof stylePresetSchema>;
@@ -38,6 +41,7 @@ export const createJobSchema = z
     imageQuality: imageQualitySchema.optional(),
     sourceJobId: z.string().uuid().optional(),
     sourceImageAssetId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
+    avatarView: avatarViewSchema.optional(),
     priority: z.boolean().default(false),
     context: z
       .object({
@@ -71,6 +75,12 @@ export const createJobSchema = z
         path: ["imageQuality"],
         message: "imageQuality is only valid for IMAGE_PREVIEW",
       });
+    }
+    if (value.kind === "AVATAR_TO_3D" && !value.avatarView) {
+      context.addIssue({ code: "custom", path: ["avatarView"], message: "avatarView is required" });
+    }
+    if (value.kind !== "AVATAR_TO_3D" && value.avatarView) {
+      context.addIssue({ code: "custom", path: ["avatarView"], message: "avatarView is only valid for AVATAR_TO_3D" });
     }
   });
 
@@ -130,6 +140,7 @@ export type Job = {
   imageQuality?: ImageQuality;
   sourceJobId?: string;
   sourceImageAssetId?: number;
+  avatarView?: AvatarView;
   priority: boolean;
   context: CreateJobInput["context"];
   output: JobOutput;

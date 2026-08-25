@@ -147,6 +147,7 @@ export class JobRunner {
         if (job.kind === "IMAGE_PREVIEW") await this.#runImagePreview(job);
         else if (job.kind === "IMAGE_UPLOAD") await this.#runImageUpload(job);
         else if (job.kind === "TEXT_TO_3D") await this.#runTextTo3D(job);
+        else if (job.kind === "AVATAR_TO_3D") await this.#runAvatarTo3D(job);
         else await this.#runImageTo3D(job);
       }
       this.#logger.info({ jobId }, "Generation job completed");
@@ -283,6 +284,45 @@ export class JobRunner {
         "GENERATING_MESH",
         "Turning the approved image into Smart Topology",
         8 + Math.floor(providerProgress * 0.65),
+      );
+    });
+    await this.#finishModel(job, finalTask.model_urls?.glb, finalTask.thumbnail_url);
+  }
+
+  // Single-step, like #runTextTo3D: there is no separate approve-then-convert
+  // stage, since the player never sees or approves the avatar render itself
+  // -- accessoryType already tells Meshy what to extract from it, and the
+  // prompt (optional on the Roblox side) is just extra styling guidance.
+  async #runAvatarTo3D(job: Job): Promise<void> {
+    const guidedPrompt = composeMeshyPrompt(job.filteredPrompt, job.stylePreset, job.detailLevel);
+
+    let current = await this.#requiredJob(job.id);
+    let finalTaskId = current.output.meshyFinalTaskId;
+    if (!finalTaskId) {
+      let image = job.imageArtifact;
+      if (!image) {
+        if (!job.avatarView) {
+          throw new PipelineError("MISSING_AVATAR_VIEW", "Avatar-sourced generation has no avatar view", false);
+        }
+        await this.#set(job.id, "MODERATING", "Fetching your Roblox avatar", 6);
+        image = await this.#robloxReferences.downloadAvatarImage(job.playerUserId, job.avatarView);
+        await this.#repository.update(job.id, { imageArtifact: image, progress: 8, stage: "Avatar image ready" });
+      }
+      await this.#repository.update(job.id, {
+        status: "GENERATING_MESH",
+        stage: "Turning your avatar into Smart Topology",
+        progress: 10,
+      });
+      finalTaskId = await this.#meshy.createImageTo3D(image, "image/png", guidedPrompt);
+      await this.#mergeOutput(job.id, { meshyFinalTaskId: finalTaskId });
+    }
+
+    const finalTask = await this.#meshy.pollImageTask(finalTaskId, async (providerProgress) => {
+      await this.#set(
+        job.id,
+        "GENERATING_MESH",
+        "Turning your avatar into Smart Topology",
+        10 + Math.floor(providerProgress * 0.63),
       );
     });
     await this.#finishModel(job, finalTask.model_urls?.glb, finalTask.thumbnail_url);
