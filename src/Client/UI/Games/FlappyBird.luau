@@ -31,8 +31,10 @@ local CLOUD_COUNT = 5
 local CLOUD_PARALLAX_SPEED = 26 -- px/sec, well under PIPE_SPEED for depth
 local PIPE_LIGHT_COLOR = Color3.fromRGB(140, 255, 205)
 local PIPE_DARK_COLOR = Color3.fromRGB(48, 196, 143)
+local NEAR_MISS_MARGIN = 16 -- px of clearance below which a clean pass counts as a "close call"
+local COMBO_WINDOW = 2.2 -- seconds between scores before the streak resets
 
-type Pipe = { top: Frame, bottom: Frame, x: number, gapY: number, scored: boolean }
+type Pipe = { top: Frame, bottom: Frame, x: number, gapY: number, scored: boolean, nearMissed: boolean }
 
 local Game = {} :: GameShell.GameModule
 Game.Name = "Flappy Bird"
@@ -45,6 +47,8 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local score = 0
 	local pipes: { Pipe } = {}
 	local timeSincePipe = PIPE_INTERVAL -- spawn the first pipe immediately
+	local comboCount = 0
+	local lastScoreTime = 0
 
 	-- A soft sky gradient plus a handful of slow-drifting "clouds" well
 	-- behind the pipes (ZIndex 1-2, pipes are 3) -- pure background texture,
@@ -136,6 +140,116 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		Parent = bird,
 	})
 	Factory.Corner(beak, 3)
+
+	-- Full-canvas tint used for the near-miss "close call" cue -- sits above
+	-- the pipes/bird so a quick flash reads as a screen-wide reaction rather
+	-- than a local particle, then tweens straight back to invisible.
+	local flashOverlay = Factory.New("Frame", {
+		Name = "FlashOverlay",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Colors.Cyan,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 45,
+		Parent = canvas,
+	})
+	-- Streak readout: hidden until the player has chained two scores inside
+	-- COMBO_WINDOW of each other, then tracks the running combo until it
+	-- lapses or the game ends.
+	local comboLabel = Factory.Label(canvas, "", UDim2.fromOffset(160, 28), {
+		Name = "ComboLabel",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 14),
+		Color = Colors.Gold,
+		Font = Theme.Fonts.Black,
+		TextSize = 20,
+		AlignX = Enum.TextXAlignment.Center,
+		Transparency = 1,
+		ZIndex = 46,
+	})
+	Factory.New("UIStroke", {
+		Color = Colors.Ink,
+		Thickness = 2,
+		Transparency = 0.4,
+		Parent = comboLabel,
+	})
+
+	local function flashScreen(color: Color3, peakTransparency: number)
+		if api.reduceMotion then
+			return
+		end
+		flashOverlay.BackgroundColor3 = color
+		flashOverlay.BackgroundTransparency = peakTransparency
+		TweenService:Create(flashOverlay, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 1,
+		}):Play()
+	end
+
+	local function triggerNearMiss(pipeCenterX: number, pipeGapCenterY: number)
+		api.sounds:Play("Hover")
+		flashScreen(Colors.Cyan, 0.82)
+		GameShell.Burst(canvas, UDim2.fromOffset(pipeCenterX, pipeGapCenterY), Colors.Cyan, api.reduceMotion)
+	end
+
+	local comboFadeToken = 0
+	local function showScorePopup(combo: number)
+		local popupText = if combo >= 2 then string.format("+1  x%d", combo) else "+1"
+		local popupColor = if combo >= 5 then Colors.Gold elseif combo >= 2 then Colors.Mint else Colors.Text
+		local popup = Factory.Label(canvas, popupText, UDim2.fromOffset(100, 24), {
+			Name = "ScorePopup",
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.fromOffset(BIRD_X + BIRD_SIZE / 2, birdY - 6),
+			Color = popupColor,
+			Font = Theme.Fonts.Black,
+			TextSize = 18,
+			AlignX = Enum.TextXAlignment.Center,
+			ZIndex = 47,
+		})
+		Factory.New("UIStroke", { Color = Colors.Ink, Thickness = 1.5, Transparency = 0.5, Parent = popup })
+
+		comboFadeToken += 1
+		local myToken = comboFadeToken
+		if combo >= 2 then
+			comboLabel.Text = string.format("%dx STREAK", combo)
+			comboLabel.TextTransparency = 0
+			if not api.reduceMotion then
+				local pop = Factory.New("UIScale", { Scale = 1.3, Parent = comboLabel })
+				TweenService
+					:Create(pop, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+					:Play()
+			end
+			task.delay(COMBO_WINDOW, function()
+				if myToken == comboFadeToken and comboLabel.Parent then
+					if api.reduceMotion then
+						comboLabel.TextTransparency = 1
+					else
+						TweenService:Create(comboLabel, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+					end
+				end
+			end)
+		else
+			comboLabel.TextTransparency = 1
+		end
+
+		if combo > 0 and combo % 5 == 0 then
+			flashScreen(Colors.Gold, 0.75)
+			api.sounds:Play("Success")
+		end
+
+		if api.reduceMotion then
+			task.delay(0.35, function()
+				popup:Destroy()
+			end)
+			return
+		end
+		TweenService:Create(popup, TweenInfo.new(0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = popup.Position - UDim2.fromOffset(0, 34),
+			TextTransparency = 1,
+		}):Play()
+		task.delay(0.65, function()
+			popup:Destroy()
+		end)
+	end
 
 	-- Floored: AbsoluteSize can be fractional (UI scaling), and math.random
 	-- errors on a non-integer argument -- every caller below feeds these
@@ -242,7 +356,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		})
 		Factory.Corner(bottomCap, 4)
 		Factory.Stroke(bottomCap, Colors.Ink, 0.6, 1)
-		table.insert(pipes, { top = top, bottom = bottom, x = x, gapY = gapY, scored = false })
+		table.insert(pipes, { top = top, bottom = bottom, x = x, gapY = gapY, scored = false, nearMissed = false })
 	end
 
 	local function endGame()
@@ -324,17 +438,28 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 					endGame()
 					return
 				end
+				if not pipe.nearMissed then
+					local clearance = math.min(birdTop - gapTop, gapBottom - birdBottom)
+					if clearance < NEAR_MISS_MARGIN then
+						pipe.nearMissed = true
+						triggerNearMiss(pipeLeft + PIPE_WIDTH / 2, pipe.gapY)
+					end
+				end
 			elseif not pipe.scored and pipeRight < birdLeft then
 				pipe.scored = true
 				score += 1
 				api.setScore(score)
 				api.sounds:Play("Like")
+				local now = os.clock()
+				comboCount = if now - lastScoreTime <= COMBO_WINDOW then comboCount + 1 else 1
+				lastScoreTime = now
 				GameShell.Burst(
 					canvas,
 					bird.Position + UDim2.fromOffset(BIRD_SIZE / 2, BIRD_SIZE / 2),
-					Colors.Mint,
+					if comboCount >= 5 then Colors.Gold else Colors.Mint,
 					api.reduceMotion
 				)
+				showScorePopup(comboCount)
 			end
 		end
 	end)
@@ -346,6 +471,8 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		tapConn:Disconnect()
 		bird:Destroy()
 		sky:Destroy()
+		flashOverlay:Destroy()
+		comboLabel:Destroy()
 		for _, cloud in clouds do
 			cloud.instance:Destroy()
 		end

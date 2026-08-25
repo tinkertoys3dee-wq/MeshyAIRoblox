@@ -648,6 +648,22 @@ function App:_BuildChrome()
 	})
 	Factory.List(navStack, Enum.FillDirection.Vertical, 9)
 	self.navStack = navStack
+	-- A single persistent bar that slides to whichever nav button is active,
+	-- rather than every button just flatly recoloring on its own -- sits
+	-- flush against `nav`'s own left edge (not inside navStack) so it isn't
+	-- competing with any one button's own background for room.
+	local navIndicator = Factory.New("Frame", {
+		Name = "ActiveIndicator",
+		Size = UDim2.fromOffset(4, 48),
+		Position = UDim2.fromOffset(0, 18),
+		BackgroundColor3 = Colors.Cyan,
+		BorderSizePixel = 0,
+		ZIndex = 3,
+		Parent = nav,
+	})
+	Factory.Corner(navIndicator, 2)
+	self.navIndicator = navIndicator
+
 	for index, page in { "Create", "My Studio", "Discover", "Avatar Lab", "Settings" } do
 		local symbols = { "✦", "◈", "◎", "◇", "⚙" }
 		local button = Factory.Button(navStack, symbols[index] .. "   " .. page, UDim2.new(1, 0, 0, 48), nil, nil)
@@ -987,6 +1003,63 @@ function App:_Animate(instance: Instance, info: TweenInfo, properties: { [string
 	return tween
 end
 
+-- Shared overlay-fade + modal-scale-pop entrance for the app's full-screen
+-- confirm/upsell dialogs (Plus, leaderboard, onboarding) -- goes through
+-- _Animate so it's a no-op under reduceMotion (final values applied
+-- instantly) rather than each call site handling that itself.
+function App:_AnimateModalIn(overlay: Frame, modal: Frame)
+	local targetTransparency = overlay.BackgroundTransparency
+	overlay.BackgroundTransparency = 1
+	self:_Animate(
+		overlay,
+		TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ BackgroundTransparency = targetTransparency }
+	)
+	local scale = Factory.New("UIScale", { Scale = 0.92, Parent = modal })
+	self:_Animate(scale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+end
+
+-- Shared by the Settings page's own Invite card and any other contextual
+-- invite touchpoint (e.g. the Daily Quests clear-all banner) -- same native
+-- prompt + eligibility check everywhere a "grow the studio" moment happens.
+function App:_PromptFriendInvite()
+	local player = Players.LocalPlayer
+	local checkSuccess, allowed = pcall(function()
+		return SocialService:CanSendGameInviteAsync(player)
+	end)
+	if not checkSuccess or allowed ~= true then
+		self:_Toast("error", "Invites aren't available for your account or platform right now.")
+		return
+	end
+	local promptSuccess, promptProblem = pcall(function()
+		SocialService:PromptGameInvite(player)
+	end)
+	if not promptSuccess then
+		warn(string.format("[App] Game invite prompt failed: %s", tostring(promptProblem)))
+		self:_Toast("error", "Roblox could not open the invite prompt.")
+	end
+end
+
+-- Shared by the Create page's own Priority Pass button and the contextual
+-- upsell chip on a queued generation row -- both buy a pass the same way,
+-- for use on whatever gets submitted next (see the upsell chip's own
+-- comment for why it can't speed up a job already queued).
+function App:_BuyPriorityPass()
+	task.spawn(function()
+		local success, result = self:_Invoke(Network.Actions.BuyPriorityPass, { paymentMethod = self.paymentMethod })
+		if success and result.tokensSpent then
+			self.state.profile.tokens = result.tokens
+			self.state.profile.bonusTokens = result.bonusTokens
+			self.sounds:Play("Success")
+			self:_Toast("success", string.format("%d tokens spent on a priority pass.", result.tokensSpent))
+			self:_RenderActivePage()
+		elseif success and not result.mocked then
+			self.sounds:Play("PurchasePrompt")
+			self:_Toast("success", "Confirm the priority pass purchase in Roblox.")
+		end
+	end)
+end
+
 function App:_BindButton(button: GuiButton)
 	self.sounds:Bind(button)
 	button.Selectable = true
@@ -1141,6 +1214,7 @@ function App:_Bootstrap()
 				data.dailyBrief.rewardGranted
 				or (data.dailyBrief.tokensGranted or 0) > 0
 				or (data.dailyBrief.winBackTokensGranted or 0) > 0
+				or data.dailyBrief.milestoneReward ~= nil
 			)
 		then
 			self.sounds:Play("Success")
@@ -1162,6 +1236,19 @@ function App:_Bootstrap()
 				table.insert(
 					parts,
 					string.format("%d-day streak reward: one free Priority Pass", data.dailyBrief.streak)
+				)
+			end
+			if data.dailyBrief.milestoneReward then
+				local milestone = data.dailyBrief.milestoneReward
+				table.insert(
+					parts,
+					string.format(
+						"🏆 %d-day milestone: +%d tokens, +%d Priority Pass%s",
+						milestone.day,
+						milestone.tokens,
+						milestone.priorityPasses,
+						if milestone.priorityPasses == 1 then "" else "es"
+					)
 				)
 			end
 			self:_Toast("success", table.concat(parts, " · "))
@@ -1264,6 +1351,13 @@ function App:_ConnectPush()
 			end
 			self:_RenderStatus()
 			self:_RenderActivePage()
+		elseif eventName == Network.PushEvents.Quests then
+			self.state.questState = { questsDone = payload.questsDone }
+			self.questJustCompleted = payload.justCompleted
+			if not self.state.profile.settings.reduceMotion then
+				self.sounds:Play("Success")
+			end
+			self:_RenderActivePage()
 		end
 	end)
 end
@@ -1314,12 +1408,34 @@ end
 function App:_HighlightNavigation()
 	for page, button in self.navButtons do
 		local active = page == self.activePage
-		button.BackgroundColor3 = if active then Colors.Violet else Colors.PanelSoft
-		button.TextColor3 = if active then Colors.Text else Colors.TextMuted
+		self:_Animate(
+			button,
+			TweenInfo.new(0.16, Enum.EasingStyle.Quad),
+			{ BackgroundColor3 = if active then Colors.Violet else Colors.PanelSoft }
+		)
+		self:_Animate(
+			button,
+			TweenInfo.new(0.16, Enum.EasingStyle.Quad),
+			{ TextColor3 = if active then Colors.Text else Colors.TextMuted }
+		)
 		local stroke = button:FindFirstChildOfClass("UIStroke")
 		if stroke then
-			stroke.Color = if active then Colors.Cyan else Colors.Line
-			stroke.Transparency = if active then 0.3 else 0.55
+			self:_Animate(stroke, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {
+				Color = if active then Colors.Cyan else Colors.Line,
+				Transparency = if active then 0.3 else 0.55,
+			})
+		end
+		if active and self.navIndicator then
+			-- Computed from the known navStack layout (18px offset, 48px
+			-- buttons, 9px gaps) rather than read off AbsolutePosition,
+			-- which isn't guaranteed to already reflect a UIListLayout pass
+			-- on the very frame a button was created.
+			local targetY = 18 + (button.LayoutOrder - 1) * 57
+			self:_Animate(
+				self.navIndicator,
+				TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+				{ Position = UDim2.fromOffset(0, targetY) }
+			)
 		end
 	end
 end
@@ -2012,20 +2128,7 @@ function App:_RenderCreate()
 				self.usePriority = not self.usePriority
 				self:_RenderActivePage()
 			else
-				task.spawn(function()
-					local success, result =
-						self:_Invoke(Network.Actions.BuyPriorityPass, { paymentMethod = self.paymentMethod })
-					if success and result.tokensSpent then
-						self.state.profile.tokens = result.tokens
-						self.state.profile.bonusTokens = result.bonusTokens
-						self.sounds:Play("Success")
-						self:_Toast("success", string.format("%d tokens spent on a priority pass.", result.tokensSpent))
-						self:_RenderActivePage()
-					elseif success and not result.mocked then
-						self.sounds:Play("PurchasePrompt")
-						self:_Toast("success", "Confirm the priority pass purchase in Roblox.")
-					end
-				end)
+				self:_BuyPriorityPass()
 			end
 		end)
 		generate.Activated:Connect(function()
@@ -2212,7 +2315,24 @@ function App:_RenderCreate()
 		end)
 	end
 
-	local activity = Factory.Card(stack, UDim2.new(1, 0, 0, 188), nil, "Activity")
+	local availablePasses = self.state.profile.retryCredits.PriorityPass or 0
+	local hasQueuedRow = false
+	local rowCount = 0
+	for _, generationId in self.state.profile.generationOrder do
+		if rowCount >= 3 then
+			break
+		end
+		local generation = self.state.profile.generations[generationId]
+		if generation then
+			rowCount += 1
+			if generation.stage == "QUEUED" then
+				hasQueuedRow = true
+			end
+		end
+	end
+	local showUpsell = hasQueuedRow and availablePasses <= 0
+	local activityHeight = (if rowCount == 0 then 140 else 45 + rowCount * 50 + 14) + (if showUpsell then 46 else 0)
+	local activity = Factory.Card(stack, UDim2.new(1, 0, 0, activityHeight), nil, "Activity")
 	activity.LayoutOrder = 4
 	Factory.Label(activity, "LIVE CREATION ACTIVITY", UDim2.new(1, -32, 0, 24), {
 		Position = UDim2.fromOffset(16, 13),
@@ -2230,56 +2350,139 @@ function App:_RenderCreate()
 		if generation then
 			local row = Factory.New("Frame", {
 				Position = UDim2.fromOffset(16, y),
-				Size = UDim2.new(1, -32, 0, 36),
+				Size = UDim2.new(1, -32, 0, 44),
 				BackgroundColor3 = Colors.Ink,
 				BackgroundTransparency = 0.22,
 				BorderSizePixel = 0,
 				Parent = activity,
 			})
-			Factory.Corner(row, 9)
-			Factory.Label(row, string.sub(generation.filteredPrompt or "Creation", 1, 40), UDim2.new(0.4, -12, 1, 0), {
-				Position = UDim2.fromOffset(12, 0),
+			Factory.Corner(row, 10)
+			Factory.Stroke(row, Colors.Line, 0.75, 1)
+
+			local isModel = generation.method == "TEXT_TO_3D" or generation.method == "IMAGE_TO_3D"
+			local stageColor = if generation.stage == "FAILED"
+				then Colors.Danger
+				elseif generation.stage == "SUCCEEDED" or generation.stage == "IMAGE_READY" then Colors.Mint
+				else Colors.Cyan
+
+			-- Icon badge replaces the old flat MODEL/IMAGE tag -- same
+			-- gradient-circle-plus-glyph treatment used for badges
+			-- everywhere else this pass (toasts, leaderboard ranks, the
+			-- daily-brief flame).
+			local badge = Factory.New("Frame", {
+				Size = UDim2.fromOffset(30, 30),
+				Position = UDim2.fromOffset(7, 7),
+				BackgroundColor3 = if isModel then Colors.Violet else Colors.Cyan,
+				BorderSizePixel = 0,
+				Parent = row,
+			})
+			Factory.Corner(badge, 15)
+			Factory.Gradient(
+				badge,
+				if isModel
+					then { Colors.Violet, Color3.fromRGB(91, 94, 255) }
+					else { Colors.Cyan, Color3.fromRGB(70, 170, 220) },
+				135
+			)
+			Factory.Label(badge, if isModel then "🧊" else "🖼", UDim2.fromScale(1, 1), {
+				TextSize = 14,
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+			})
+
+			Factory.Label(row, string.sub(generation.filteredPrompt or "Creation", 1, 40), UDim2.new(1, -108, 0, 16), {
+				Position = UDim2.fromOffset(46, 4),
 				Font = Theme.Fonts.Medium,
 				TextSize = 12,
 				Truncate = Enum.TextTruncate.AtEnd,
 			})
-			local isModel = generation.method == "TEXT_TO_3D" or generation.method == "IMAGE_TO_3D"
-			local typeTag = Factory.New("Frame", {
-				Position = UDim2.new(0.4, 4, 0.5, -9),
-				Size = UDim2.new(0.15, -4, 0, 18),
-				BackgroundColor3 = if isModel then Colors.Violet else Colors.Cyan,
-				BackgroundTransparency = 0.78,
+			Factory.Label(row, string.format("%d%%", math.floor(generation.progress or 0)), UDim2.fromOffset(46, 16), {
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -8, 0, 4),
+				AlignX = Enum.TextXAlignment.Right,
+				Font = Theme.Fonts.Black,
+				Color = stageColor,
+				TextSize = 12,
+			})
+			Factory.Label(row, generation.stageText or generation.stage, UDim2.new(1, -58, 0, 14), {
+				Position = UDim2.fromOffset(46, 22),
+				Color = Colors.TextMuted,
+				TextSize = 10,
+				Truncate = Enum.TextTruncate.AtEnd,
+			})
+
+			-- A slim progress bar reads at a glance far better than the bare
+			-- percent text alone did.
+			local track = Factory.New("Frame", {
+				Position = UDim2.fromOffset(46, 39),
+				Size = UDim2.new(1, -58, 0, 3),
+				BackgroundColor3 = Colors.PanelSoft,
+				BackgroundTransparency = 0.3,
 				BorderSizePixel = 0,
 				Parent = row,
 			})
-			Factory.Corner(typeTag, 5)
-			Factory.Label(typeTag, if isModel then "MODEL" else "IMAGE", UDim2.new(1, 0, 1, 0), {
-				Font = Theme.Fonts.Bold,
-				TextSize = 10,
-				Color = if isModel then Colors.Violet else Colors.Cyan,
-				AlignX = Enum.TextXAlignment.Center,
+			Factory.Corner(track, 2)
+			local fill = Factory.New("Frame", {
+				Size = UDim2.new(math.clamp((generation.progress or 0) / 100, 0, 1), 0, 1, 0),
+				BackgroundColor3 = stageColor,
+				BorderSizePixel = 0,
+				Parent = track,
 			})
-			Factory.Label(row, generation.stageText or generation.stage, UDim2.new(0.3, 0, 1, 0), {
-				Position = UDim2.new(0.56, 0, 0, 0),
-				Color = Colors.TextMuted,
-				TextSize = 11,
-				Truncate = Enum.TextTruncate.AtEnd,
-			})
-			Factory.Label(
-				row,
-				string.format("%d%%", math.floor(generation.progress or 0)),
-				UDim2.new(0.13, -12, 1, 0),
-				{
-					Position = UDim2.new(0.87, 0, 0, 0),
-					AlignX = Enum.TextXAlignment.Right,
-					Font = Theme.Fonts.Bold,
-					Color = if generation.stage == "FAILED" then Colors.Danger else Colors.Cyan,
-					TextSize = 12,
-				}
-			)
-			y += 42
+			Factory.Corner(fill, 2)
+
+			y += 50
 			shown += 1
 		end
+	end
+	if showUpsell then
+		-- Contextual Priority Pass pitch, shown only while a generation is
+		-- actually sitting in the queue and the player has no pass banked --
+		-- the real moment of friction, not a generic pitch buried in
+		-- Settings. Framed around the NEXT submission (a pass here can't
+		-- retroactively speed up a job already queued -- queue time is
+		-- fixed at submission, see GenerationService._Prepare), which is
+		-- both the honest framing and the one that matches what buying a
+		-- pass from this exact button actually does.
+		local upsell = Factory.New("Frame", {
+			Position = UDim2.fromOffset(16, y),
+			Size = UDim2.new(1, -32, 0, 38),
+			BackgroundColor3 = Colors.Gold,
+			BackgroundTransparency = 0.85,
+			BorderSizePixel = 0,
+			Parent = activity,
+		})
+		Factory.Corner(upsell, 10)
+		Factory.Stroke(upsell, Colors.Gold, 0.5, 1)
+		Factory.Label(
+			upsell,
+			"⚡ Tired of the wait? Stock a Priority Pass for your next one.",
+			UDim2.new(1, -140, 1, 0),
+			{
+				Position = UDim2.fromOffset(12, 0),
+				Color = Colors.Gold,
+				Font = Theme.Fonts.Medium,
+				TextSize = 11,
+				Wrapped = true,
+			}
+		)
+		local upsellButton = Factory.New("TextButton", {
+			Size = UDim2.fromOffset(112, 26),
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -8, 0.5, 0),
+			BackgroundColor3 = Colors.Gold,
+			BorderSizePixel = 0,
+			AutoButtonColor = false,
+			Text = "Get a pass",
+			TextColor3 = Colors.Ink,
+			Font = Theme.Fonts.Bold,
+			TextSize = 11,
+			Parent = upsell,
+		})
+		Factory.Corner(upsellButton, 13)
+		self:_BindButton(upsellButton)
+		upsellButton.Activated:Connect(function()
+			self:_BuyPriorityPass()
+		end)
 	end
 	if shown == 0 then
 		Factory.Label(
@@ -2298,46 +2501,289 @@ function App:_RenderCreate()
 
 	local brief = self.state.dailyBrief
 	if brief then
-		local daily = Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 136 else 94), nil, "DailyBrief")
+		local hasMilestoneBanner = brief.milestoneReward ~= nil
+		local cardHeight = 156 + (if hasMilestoneBanner then 36 else 0)
+		local daily = Factory.Card(stack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyBrief")
 		daily.LayoutOrder = 5
-		Factory.Pill(daily, "DAILY BRIEF", Colors.Gold, 96).Position = UDim2.fromOffset(15, 15)
-		Factory.Label(
-			daily,
-			brief.theme,
-			if self.compact then UDim2.new(1, -144, 0, 30) else UDim2.new(0.48, -20, 0, 30),
-			{
-				Position = UDim2.fromOffset(128, 13),
-				Font = Theme.Fonts.Black,
-				TextSize = 18,
-			}
-		)
+
+		-- Flame badge: the same streak iconography as the status-bar pill,
+		-- now with its own gradient + stroke instead of a flat text pill.
+		local flame = Factory.New("Frame", {
+			Size = UDim2.fromOffset(44, 44),
+			Position = UDim2.fromOffset(16, 16),
+			BackgroundColor3 = Colors.Rose,
+			BorderSizePixel = 0,
+			Parent = daily,
+		})
+		Factory.Corner(flame, 22)
+		Factory.Gradient(flame, { Colors.Rose, Colors.Gold }, 135)
+		Factory.Stroke(flame, Colors.Ink, 0.3, 1.5)
+		Factory.Label(flame, "🔥", UDim2.fromScale(1, 1), {
+			TextSize = 20,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+		})
+
+		Factory.Label(daily, string.format("%d-day streak", brief.streak), UDim2.new(1, -76, 0, 24), {
+			Position = UDim2.fromOffset(72, 14),
+			Font = Theme.Fonts.Black,
+			TextSize = 18,
+		})
+		Factory.Label(daily, brief.theme, UDim2.new(1, -76, 0, 18), {
+			Position = UDim2.fromOffset(72, 38),
+			Color = Colors.TextMuted,
+			TextSize = 12,
+			Truncate = Enum.TextTruncate.AtEnd,
+		})
+
+		local briefY = 68
+		if hasMilestoneBanner then
+			local milestone = brief.milestoneReward
+			local banner = Factory.New("Frame", {
+				Position = UDim2.fromOffset(15, briefY),
+				Size = UDim2.new(1, -30, 0, 28),
+				BackgroundColor3 = Colors.Gold,
+				BackgroundTransparency = 0.82,
+				BorderSizePixel = 0,
+				Parent = daily,
+			})
+			Factory.Corner(banner, 8)
+			Factory.Stroke(banner, Colors.Gold, 0.4, 1)
+			Factory.Label(
+				banner,
+				string.format(
+					"🏆 %d-day milestone! +%d Forge Tokens · +%d Priority Pass%s",
+					milestone.day,
+					milestone.tokens,
+					milestone.priorityPasses,
+					if milestone.priorityPasses == 1 then "" else "es"
+				),
+				UDim2.new(1, -20, 1, 0),
+				{
+					Position = UDim2.fromOffset(10, 0),
+					Font = Theme.Fonts.Bold,
+					Color = Colors.Gold,
+					TextSize = 12,
+					AlignX = Enum.TextXAlignment.Center,
+				}
+			)
+			briefY += 36
+		end
+
+		-- A real journey bar toward the next streak milestone (7/14/30, then
+		-- every 30 days after), not just the existing "next check-in" line --
+		-- that's the reward worth building visible anticipation for.
+		local lastMilestoneDay = if brief.nextMilestoneDay <= 7
+			then 0
+			elseif brief.nextMilestoneDay <= 30 then brief.nextMilestoneDay - 7
+			else brief.nextMilestoneDay - Config.Retention.StreakMilestoneRepeatDay
+		local span = math.max(1, brief.nextMilestoneDay - lastMilestoneDay)
+		local progress = math.clamp((brief.streak - lastMilestoneDay) / span, 0, 1)
+
+		local track = Factory.New("Frame", {
+			Position = UDim2.fromOffset(15, briefY),
+			Size = UDim2.new(1, -76, 0, 10),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 0.4,
+			BorderSizePixel = 0,
+			Parent = daily,
+		})
+		Factory.Corner(track, 5)
+		local fill = Factory.New("Frame", {
+			Size = UDim2.new(progress, 0, 1, 0),
+			BackgroundColor3 = Colors.Gold,
+			BorderSizePixel = 0,
+			Parent = track,
+		})
+		Factory.Corner(fill, 5)
+		Factory.Gradient(fill, { Colors.Rose, Colors.Gold }, 0)
+		local flag = Factory.New("Frame", {
+			Size = UDim2.fromOffset(38, 20),
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(1, 8, 0.5, 0),
+			BackgroundColor3 = Colors.PanelSoft,
+			BorderSizePixel = 0,
+			Parent = track,
+		})
+		Factory.Corner(flag, 6)
+		Factory.Stroke(flag, Colors.Gold, 0.5, 1)
+		Factory.Label(flag, string.format("D%d", brief.nextMilestoneDay), UDim2.fromScale(1, 1), {
+			Font = Theme.Fonts.Bold,
+			TextSize = 10,
+			Color = Colors.Gold,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+		})
+		briefY += 20
+
 		Factory.Label(
 			daily,
 			string.format(
-				"%d-day streak · Priority pass in %d check-in%s",
-				brief.streak,
+				"Priority pass in %d check-in%s · milestone reward at day %d",
 				brief.nextRewardIn,
-				if brief.nextRewardIn == 1 then "" else "s"
+				if brief.nextRewardIn == 1 then "" else "s",
+				brief.nextMilestoneDay
 			),
-			if self.compact then UDim2.new(1, -30, 0, 26) else UDim2.new(0.52, -24, 0, 26),
+			UDim2.new(1, -30, 0, 18),
 			{
-				Position = if self.compact then UDim2.fromOffset(15, 52) else UDim2.new(0.48, 0, 0, 16),
-				AlignX = if self.compact then Enum.TextXAlignment.Left else Enum.TextXAlignment.Right,
+				Position = UDim2.fromOffset(15, briefY),
 				Color = Colors.TextMuted,
-				TextSize = 12,
+				TextSize = 11,
 			}
 		)
+		briefY += 24
+
 		Factory.Label(
 			daily,
 			"Use the theme as inspiration—or forge anything you can imagine.",
-			UDim2.new(1, -30, 0, 25),
+			UDim2.new(1, -30, 0, 20),
 			{
-				Position = UDim2.fromOffset(15, if self.compact then 88 else 57),
+				Position = UDim2.fromOffset(15, briefY),
 				Color = Colors.TextMuted,
 				TextSize = 12,
 			}
 		)
 	end
+
+	local questState = self.state.questState
+	if questState then
+		local quests = Config.Retention.Quests
+		local questsDone = questState.questsDone or {}
+		local doneCount = 0
+		for _, quest in quests do
+			if questsDone[quest.key] then
+				doneCount += 1
+			end
+		end
+		local allDone = doneCount >= #quests
+		local cardHeight = #quests * 46 + (if allDone then 104 else 46)
+		local questCard = Factory.Card(stack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyQuests")
+		questCard.LayoutOrder = 6
+		Factory.Label(questCard, "DAILY QUESTS", UDim2.new(1, -100, 0, 20), {
+			Position = UDim2.fromOffset(16, 13),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = Colors.Mint,
+		})
+		Factory.Label(questCard, string.format("%d / %d", doneCount, #quests), UDim2.fromOffset(70, 20), {
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -16, 0, 13),
+			AlignX = Enum.TextXAlignment.Right,
+			Font = Theme.Fonts.Black,
+			Color = if allDone then Colors.Gold else Colors.TextMuted,
+			TextSize = 12,
+		})
+
+		local qy = 40
+		for _, quest in quests do
+			local done = questsDone[quest.key] == true
+			local row = Factory.New("Frame", {
+				Position = UDim2.fromOffset(16, qy),
+				Size = UDim2.new(1, -32, 0, 38),
+				BackgroundColor3 = if done then Colors.Mint else Colors.Ink,
+				BackgroundTransparency = if done then 0.85 else 0.25,
+				BorderSizePixel = 0,
+				Parent = questCard,
+			})
+			Factory.Corner(row, 10)
+			if done then
+				Factory.Stroke(row, Colors.Mint, 0.5, 1)
+			end
+
+			local badge = Factory.New("Frame", {
+				Size = UDim2.fromOffset(28, 28),
+				Position = UDim2.fromOffset(5, 5),
+				BackgroundColor3 = if done then Colors.Mint else Colors.PanelSoft,
+				BorderSizePixel = 0,
+				Parent = row,
+			})
+			Factory.Corner(badge, 14)
+			Factory.Label(badge, if done then "✓" else quest.icon, UDim2.fromScale(1, 1), {
+				TextSize = if done then 14 else 13,
+				Color = if done then Colors.Ink else Colors.Text,
+				Font = Theme.Fonts.Black,
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+			})
+
+			Factory.Label(row, quest.label, UDim2.new(1, -110, 1, 0), {
+				Position = UDim2.fromOffset(42, 0),
+				Font = if done then Theme.Fonts.Medium else Theme.Fonts.Regular,
+				Color = if done then Colors.Text else Colors.TextMuted,
+				TextSize = 12,
+				Truncate = Enum.TextTruncate.AtEnd,
+			})
+			Factory.Label(row, string.format("+%d", quest.tokens), UDim2.fromOffset(50, 38), {
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -10, 0, 0),
+				AlignX = Enum.TextXAlignment.Right,
+				AlignY = Enum.TextYAlignment.Center,
+				Font = Theme.Fonts.Bold,
+				Color = if done then Colors.Mint else Colors.TextMuted,
+				TextSize = 12,
+			})
+
+			if
+				self.questJustCompleted == quest.key
+				and not (self.state.profile.settings and self.state.profile.settings.reduceMotion)
+			then
+				local pop = Factory.New("UIScale", { Scale = 0.9, Parent = row })
+				TweenService
+					:Create(pop, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+					:Play()
+			end
+
+			qy += 46
+		end
+
+		if allDone then
+			local banner = Factory.New("Frame", {
+				Position = UDim2.fromOffset(16, qy),
+				Size = UDim2.new(1, -32, 0, 50),
+				BackgroundColor3 = Colors.Gold,
+				BackgroundTransparency = 0.82,
+				BorderSizePixel = 0,
+				Parent = questCard,
+			})
+			Factory.Corner(banner, 8)
+			Factory.Stroke(banner, Colors.Gold, 0.4, 1)
+			Factory.Label(
+				banner,
+				string.format("🏆 All quests cleared! +%d bonus tokens", Config.Retention.QuestClearBonusTokens),
+				UDim2.new(1, -20, 0, 16),
+				{
+					Position = UDim2.fromOffset(10, 6),
+					Font = Theme.Fonts.Bold,
+					Color = Colors.Gold,
+					TextSize = 12,
+					AlignX = Enum.TextXAlignment.Center,
+				}
+			)
+			-- A quest-clear day is a genuine high point -- the natural,
+			-- non-pushy moment to surface the same invite prompt Settings
+			-- already offers, since a player enjoying the studio enough to
+			-- clear every quest is the one most likely to say yes.
+			local inviteRow = Factory.New("TextButton", {
+				Size = UDim2.fromOffset(150, 22),
+				AnchorPoint = Vector2.new(0.5, 0),
+				Position = UDim2.new(0.5, 0, 0, 24),
+				BackgroundColor3 = Colors.Gold,
+				BorderSizePixel = 0,
+				AutoButtonColor = false,
+				Text = "👥 Invite a friend",
+				TextColor3 = Colors.Ink,
+				Font = Theme.Fonts.Bold,
+				TextSize = 11,
+				Parent = banner,
+			})
+			Factory.Corner(inviteRow, 11)
+			self:_BindButton(inviteRow)
+			inviteRow.Activated:Connect(function()
+				self:_PromptFriendInvite()
+			end)
+		end
+	end
+	self.questJustCompleted = nil
 end
 
 function App:_RenderStudio()
@@ -4062,20 +4508,7 @@ function App:_RenderSettings()
 	)
 	self:_BindButton(inviteButton)
 	inviteButton.Activated:Connect(function()
-		local checkSuccess, allowed = pcall(function()
-			return SocialService:CanSendGameInviteAsync(player)
-		end)
-		if not checkSuccess or allowed ~= true then
-			self:_Toast("error", "Invites aren't available for your account or platform right now.")
-			return
-		end
-		local promptSuccess, promptProblem = pcall(function()
-			SocialService:PromptGameInvite(player)
-		end)
-		if not promptSuccess then
-			warn(string.format("[App] Game invite prompt failed: %s", tostring(promptProblem)))
-			self:_Toast("error", "Roblox could not open the invite prompt.")
-		end
+		self:_PromptFriendInvite()
 	end)
 
 	-- EQUIPPED NOW ----------------------------------------------------------
@@ -4356,6 +4789,7 @@ function App:_ShowOnboarding()
 		})
 	end
 	draw()
+	self:_AnimateModalIn(overlay, modal)
 end
 
 function App:_ShowPlus()
@@ -4367,38 +4801,124 @@ function App:_ShowPlus()
 		ZIndex = 210,
 		Parent = self.gui,
 	})
-	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, 300), UDim2.fromScale(0.5, 0.5), "PlusModal")
+	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, 400), UDim2.fromScale(0.5, 0.5), "PlusModal")
 	modal.AnchorPoint = Vector2.new(0.5, 0.5)
+	modal.ClipsDescendants = false
 	modal.ZIndex = 211
 	Factory.New("UISizeConstraint", {
-		MaxSize = Vector2.new(480, 300),
+		MaxSize = Vector2.new(480, 400),
 		Parent = modal,
 	})
-	Factory.Pill(modal, "ROBLOX PLUS", Colors.Mint, 110).Position = UDim2.new(0.5, -55, 0, 30)
-	Factory.Label(modal, "Support creators directly", UDim2.new(1, -50, 0, 42), {
-		Position = UDim2.fromOffset(25, 78),
+	-- Soft gold glow behind the modal reads as a premium/upsell accent from
+	-- across the screen, before the reader's eye even reaches the copy.
+	local glow = Factory.Blob(modal, 360, UDim2.new(0.5, 0, 0, -40), Colors.Gold, 0.88)
+	glow.AnchorPoint = Vector2.new(0.5, 0.5)
+	glow.ZIndex = 210
+
+	local badge = Factory.New("Frame", {
+		Name = "PlusBadge",
+		Size = UDim2.fromOffset(64, 64),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 22),
+		BackgroundColor3 = Colors.Gold,
+		BorderSizePixel = 0,
+		ZIndex = 212,
+		Parent = modal,
+	})
+	Factory.Corner(badge, 32)
+	Factory.Gradient(badge, { Color3.fromRGB(255, 220, 130), Colors.Gold }, 120)
+	Factory.Stroke(badge, Colors.Ink, 0.3, 1.5)
+	local badgeShadow = Factory.New("Frame", {
+		Size = UDim2.fromOffset(64, 64),
+		Position = UDim2.fromOffset(0, 4),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.72,
+		BorderSizePixel = 0,
+		ZIndex = 211,
+		Parent = badge,
+	})
+	Factory.Corner(badgeShadow, 32)
+	Factory.Label(badge, "♛", UDim2.fromScale(1, 1), {
+		Color = Colors.Ink,
+		TextSize = 30,
+		AlignX = Enum.TextXAlignment.Center,
+		AlignY = Enum.TextYAlignment.Center,
+		ZIndex = 213,
+	})
+
+	Factory.Label(modal, "Support creators directly", UDim2.new(1, -50, 0, 30), {
+		Position = UDim2.fromOffset(25, 96),
 		AlignX = Enum.TextXAlignment.Center,
 		Font = Theme.Fonts.Black,
-		TextSize = 22,
+		TextSize = 21,
 		ZIndex = 212,
 	})
 	Factory.Label(
 		modal,
 		"Plus is required to send Robux to another creator. You can still sell your own work and try on every public design without it.",
-		UDim2.new(1, -70, 0, 82),
+		UDim2.new(1, -70, 0, 56),
 		{
-			Position = UDim2.fromOffset(35, 128),
+			Position = UDim2.fromOffset(35, 130),
 			AlignX = Enum.TextXAlignment.Center,
 			AlignY = Enum.TextYAlignment.Top,
 			Color = Colors.TextMuted,
-			TextSize = 13,
+			TextSize = 12,
 			Wrapped = true,
 			ZIndex = 212,
 		}
 	)
+
+	local benefits = Factory.New("Frame", {
+		Position = UDim2.fromOffset(28, 196),
+		Size = UDim2.new(1, -56, 0, 96),
+		BackgroundTransparency = 1,
+		ZIndex = 212,
+		Parent = modal,
+	})
+	Factory.List(benefits, Enum.FillDirection.Vertical, 8)
+	for _, line in
+		{
+			"Send Robux straight to the creators you support",
+			"Unlock purchasing across every listed design",
+			"Nothing changes about selling or trying on your own work",
+		}
+	do
+		local row = Factory.New("Frame", {
+			Size = UDim2.new(1, 0, 0, 26),
+			BackgroundTransparency = 1,
+			ZIndex = 212,
+			Parent = benefits,
+		})
+		local check = Factory.New("Frame", {
+			Size = UDim2.fromOffset(18, 18),
+			Position = UDim2.fromOffset(0, 4),
+			BackgroundColor3 = Colors.Mint,
+			BackgroundTransparency = 0.15,
+			BorderSizePixel = 0,
+			ZIndex = 213,
+			Parent = row,
+		})
+		Factory.Corner(check, 9)
+		Factory.Label(check, "✓", UDim2.fromScale(1, 1), {
+			Color = Colors.Ink,
+			Font = Theme.Fonts.Bold,
+			TextSize = 11,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			ZIndex = 214,
+		})
+		Factory.Label(row, line, UDim2.new(1, -30, 1, 0), {
+			Position = UDim2.fromOffset(28, 0),
+			Color = Colors.TextMuted,
+			TextSize = 12,
+			Wrapped = true,
+			ZIndex = 213,
+		})
+	end
+
 	local subscribe =
-		Factory.Button(modal, "View Roblox Plus", UDim2.new(0.5, -24, 0, 42), UDim2.fromOffset(16, 228), "mint")
-	local closeButton = Factory.Button(modal, "Maybe later", UDim2.new(0.5, -24, 0, 42), UDim2.new(0.5, 8, 0, 228), nil)
+		Factory.Button(modal, "View Roblox Plus", UDim2.new(0.5, -24, 0, 44), UDim2.fromOffset(16, 316), "mint")
+	local closeButton = Factory.Button(modal, "Maybe later", UDim2.new(0.5, -24, 0, 44), UDim2.new(0.5, 8, 0, 316), nil)
 	subscribe.ZIndex = 213
 	closeButton.ZIndex = 213
 	self:_BindButton(subscribe)
@@ -4414,6 +4934,7 @@ function App:_ShowPlus()
 		self.sounds:Play("PanelClose")
 		overlay:Destroy()
 	end)
+	self:_AnimateModalIn(overlay, modal)
 end
 
 function App:_ShowLeaderboard()
@@ -4452,6 +4973,7 @@ function App:_ShowLeaderboard()
 		self.sounds:Play("PanelClose")
 		overlay:Destroy()
 	end)
+	self:_AnimateModalIn(overlay, modal)
 	local list = Factory.New("ScrollingFrame", {
 		Position = UDim2.fromOffset(12, 88),
 		Size = UDim2.new(1, -24, 1, -100),
@@ -4495,23 +5017,50 @@ function App:_ShowLeaderboard()
 			return
 		end
 		local medals = { "🥇", "🥈", "🥉" }
+		-- Top 3 get their own tinted treatment (gold/silver/bronze) rather
+		-- than reading identically to everyone else with just a different
+		-- emoji -- the same rank-tinting idea the Arcade's leaderboards use.
+		local rankColors = { Colors.Gold, Color3.fromRGB(200, 208, 224), Color3.fromRGB(214, 158, 100) }
 		for rank, creator in creators do
+			local rankColor = rankColors[rank]
 			local row = Factory.New("Frame", {
 				Size = UDim2.new(1, 0, 0, 46),
-				BackgroundColor3 = Colors.Ink,
+				BackgroundColor3 = if rankColor then rankColor else Colors.Ink,
+				BackgroundTransparency = if rankColor then 0.88 else 0,
 				BorderSizePixel = 0,
 				LayoutOrder = rank,
 				ZIndex = 212,
 				Parent = listStack,
 			})
 			Factory.Corner(row, 10)
-			Factory.Label(row, medals[rank] or string.format("#%d", rank), UDim2.fromOffset(40, 46), {
-				Font = Theme.Fonts.Black,
-				TextSize = 16,
-				AlignX = Enum.TextXAlignment.Center,
+			if rankColor then
+				Factory.Stroke(row, rankColor, 0.6, 1)
+			else
+				Factory.Gradient(row, {
+					Color3.fromRGB(36, 40, 62),
+					Color3.fromRGB(22, 25, 40),
+				}, 90)
+			end
+			local rankBadge = Factory.New("Frame", {
+				Name = "RankBadge",
+				Size = UDim2.fromOffset(32, 32),
+				Position = UDim2.fromOffset(7, 7),
+				BackgroundColor3 = if rankColor then rankColor else Colors.PanelSoft,
+				BackgroundTransparency = if rankColor then 0.15 else 0,
+				BorderSizePixel = 0,
 				ZIndex = 213,
+				Parent = row,
 			})
-			Factory.Label(row, string.format("@%s", tostring(creator.name)), UDim2.new(1, -140, 0, 46), {
+			Factory.Corner(rankBadge, 11)
+			Factory.Label(rankBadge, medals[rank] or string.format("#%d", rank), UDim2.fromScale(1, 1), {
+				Font = Theme.Fonts.Black,
+				Color = if rankColor then Colors.Ink else Colors.TextMuted,
+				TextSize = if medals[rank] then 15 else 12,
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+				ZIndex = 214,
+			})
+			Factory.Label(row, string.format("@%s", tostring(creator.name)), UDim2.new(1, -150, 0, 46), {
 				Position = UDim2.fromOffset(48, 0),
 				Font = Theme.Fonts.Bold,
 				TextSize = 13,
@@ -4532,6 +5081,29 @@ function App:_ShowLeaderboard()
 					ZIndex = 213,
 				}
 			)
+
+			-- A quick staggered fade/rise -- each row starts a little later
+			-- than the one above it, so the list reads as settling into
+			-- place rather than popping in all at once.
+			if not (self.state and self.state.profile.settings.reduceMotion == true) then
+				row.BackgroundTransparency = 1
+				local targetTransparency = if rankColor then 0.88 else 0
+				local rowScale = Factory.New("UIScale", { Scale = 0.94, Parent = row })
+				task.delay(math.min(rank * 0.035, 0.35), function()
+					if row.Parent then
+						TweenService:Create(
+							row,
+							TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+							{ BackgroundTransparency = targetTransparency }
+						):Play()
+						TweenService:Create(
+							rowScale,
+							TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+							{ Scale = 1 }
+						):Play()
+					end
+				end)
+			end
 		end
 	end)
 end
@@ -4554,6 +5126,10 @@ function App:_Toast(tone: string, message: string)
 	-- reads correctly for colorblind players and in high-contrast mode.
 	local icon = if tone == "error" then "✕" elseif tone == "ready" then "◆" else "✓"
 	Factory.Stroke(toast, color, 0.2, 1.2)
+	Factory.Gradient(toast, {
+		Color3.fromRGB(66, 74, 106),
+		Color3.fromRGB(44, 50, 78),
+	}, 120)
 	local bar = Factory.New("Frame", {
 		Size = UDim2.fromOffset(5, 48),
 		Position = UDim2.fromOffset(10, 11),
@@ -4563,23 +5139,40 @@ function App:_Toast(tone: string, message: string)
 		Parent = toast,
 	})
 	Factory.Corner(bar, 99)
-	Factory.Label(toast, icon, UDim2.fromOffset(20, 20), {
-		Position = UDim2.fromOffset(26, 9),
+	local iconBadge = Factory.New("Frame", {
+		Name = "IconBadge",
+		Size = UDim2.fromOffset(30, 30),
+		Position = UDim2.fromOffset(22, 8),
+		BackgroundColor3 = color,
+		BackgroundTransparency = 0.82,
+		BorderSizePixel = 0,
+		ZIndex = 52,
+		Parent = toast,
+	})
+	Factory.Corner(iconBadge, 10)
+	Factory.Label(iconBadge, icon, UDim2.fromScale(1, 1), {
 		Color = color,
 		Font = Theme.Fonts.Black,
 		TextSize = 15,
 		AlignX = Enum.TextXAlignment.Center,
-		ZIndex = 52,
+		AlignY = Enum.TextYAlignment.Center,
+		ZIndex = 53,
 	})
-	Factory.Label(toast, message, UDim2.new(1, -62, 1, -18), {
-		Position = UDim2.fromOffset(48, 9),
+	Factory.Label(toast, message, UDim2.new(1, -70, 1, -18), {
+		Position = UDim2.fromOffset(62, 9),
 		Color = Colors.Text,
 		TextSize = 12,
 		Wrapped = true,
 		ZIndex = 52,
 	})
+
+	-- A combined slide-and-scale entrance -- the scale (via UIScale, since a
+	-- Frame's own Size can't itself "pop") is the extra flourish; the slide
+	-- is the part that was already there.
+	local toastScale = Factory.New("UIScale", { Scale = 0.9, Parent = toast })
 	toast.Position = UDim2.fromOffset(40, 0)
 	self:_Animate(toast, TweenInfo.new(0.25, Enum.EasingStyle.Quint), { Position = UDim2.new() })
+	self:_Animate(toastScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
 	if tone == "error" then
 		self.sounds:Play("Error")
 	elseif tone == "ready" then

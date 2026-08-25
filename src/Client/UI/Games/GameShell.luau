@@ -101,6 +101,47 @@ function GameShell.Shake(frame: Frame, reduceMotion: boolean)
 	):Play()
 end
 
+local CONFETTI_COLORS = { Colors.Gold, Colors.Mint, Colors.Cyan, Colors.Rose, Colors.Violet }
+
+-- A burst of small colored rectangles falling from `originY` (a Y offset
+-- within `parent`) across `parent`'s width, for the "new best score"
+-- celebration -- a no-op under reduceMotion, same as Burst/Shake, since
+-- score/best text already carries the actual information; this is only
+-- flourish on top of it.
+function GameShell.Confetti(parent: Instance, width: number, originY: number, reduceMotion: boolean)
+	if reduceMotion then
+		return
+	end
+	for i = 1, 18 do
+		local size = 5 + math.random() * 4
+		local piece = Factory.New("Frame", {
+			Name = "Confetti",
+			Size = UDim2.fromOffset(size, size * 0.6),
+			Position = UDim2.fromOffset(math.random(0, math.max(1, math.floor(width))), originY),
+			Rotation = math.random(0, 359),
+			BackgroundColor3 = CONFETTI_COLORS[math.random(1, #CONFETTI_COLORS)],
+			BorderSizePixel = 0,
+			ZIndex = 40,
+			Parent = parent,
+		})
+		local fallDistance = 90 + math.random() * 70
+		local drift = math.random(-40, 40)
+		local tween = TweenService:Create(
+			piece,
+			TweenInfo.new(0.7 + math.random() * 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+			{
+				Position = piece.Position + UDim2.fromOffset(drift, fallDistance),
+				Rotation = piece.Rotation + math.random(-180, 180),
+				BackgroundTransparency = 1,
+			}
+		)
+		tween.Completed:Connect(function()
+			piece:Destroy()
+		end)
+		tween:Play()
+	end
+end
+
 -- `onGameEnd` fires once per finished game (fire-and-forget score submission
 -- — the shell doesn't wait on it or block the game-over screen for it).
 -- `fetchWeeklyTop` backs the "🏆 This week" panel; both are supplied by
@@ -312,7 +353,7 @@ function GameShell.new(
 		Parent = card,
 	})
 	Factory.Corner(badge, 16)
-	Factory.Label(badge, "💥", UDim2.fromScale(1, 1), {
+	local badgeGlyph = Factory.Label(badge, "💥", UDim2.fromScale(1, 1), {
 		TextSize = 22,
 		AlignX = Enum.TextXAlignment.Center,
 		AlignY = Enum.TextYAlignment.Center,
@@ -489,6 +530,10 @@ function GameShell.new(
 	self.selfStandingLabel = selfStandingLabel
 
 	self.overlay = overlay
+	self.card = card
+	self.badge = badge
+	self.badgeGlyph = badgeGlyph
+	self.titleLabel = titleLabel
 	self.finalScoreLabel = finalScoreLabel
 	self.bestLabel = bestLabel
 	self.titleScale = titleScale
@@ -511,12 +556,31 @@ end
 function GameShell:_GameOver(score: number)
 	local gameModule = self.currentGame
 	local name = gameModule and gameModule.Name or ""
-	local best = math.max(self.bestScores[name] or 0, score)
+	local previousBest = self.bestScores[name] or 0
+	-- A genuine new best needs a real score to beat, not just "0 beats
+	-- nothing" on someone's very first, immediate death.
+	local isNewBest = score > 0 and score > previousBest
+	local best = math.max(previousBest, score)
 	self.bestScores[name] = best
 	self.finalScoreLabel.Text = string.format("Score: %d", score)
 	self.bestLabel.Text = string.format("Best this session: %d", best)
 	self.overlay.Visible = true
 	self.sounds:Play("Error")
+
+	if isNewBest then
+		self.titleLabel.Text = "NEW BEST!"
+		self.titleLabel.Color = Colors.Gold
+		self.badge.BackgroundColor3 = Colors.Gold
+		self.badgeGlyph.Text = "🏆"
+		self.sounds:Play("Success")
+		GameShell.Confetti(self.card, 252, -10, self.reduceMotion)
+	else
+		self.titleLabel.Text = "GAME OVER"
+		self.titleLabel.Color = Colors.Rose
+		self.badge.BackgroundColor3 = Colors.Rose
+		self.badgeGlyph.Text = "💥"
+	end
+
 	if self.reduceMotion then
 		self.overlay.BackgroundTransparency = 0.15
 		self.titleScale.Scale = 1
@@ -598,33 +662,44 @@ function GameShell:_RenderStandings(result: WeeklyResult)
 		})
 	end
 	local medals = { "🥇", "🥈", "🥉" }
+	-- Rank-tinted backgrounds for 1st/2nd/3rd (gold/silver/bronze), so the
+	-- top of the list reads as distinct at a glance and not just via a
+	-- smaller emoji difference. The self-highlight (Gold, "You") still wins
+	-- over a rank tint when both would otherwise apply -- knowing "this row
+	-- is me" matters more than which specific rank tint it'd otherwise get.
+	local rankColors = { Colors.Gold, Color3.fromRGB(200, 208, 224), Color3.fromRGB(214, 158, 100) }
 	local localUserId = Players.LocalPlayer and Players.LocalPlayer.UserId
 	for rank, entry in standings do
 		local isSelf = entry.userId == localUserId
+		local rankColor = rankColors[rank]
+		local rowColor = if isSelf then Colors.Gold elseif rankColor then rankColor else nil
 		local row = Factory.New("Frame", {
-			Size = UDim2.new(1, 0, 0, 22),
-			BackgroundColor3 = Colors.Gold,
-			BackgroundTransparency = if isSelf then 0.85 else 1,
+			Size = UDim2.new(1, 0, 0, 24),
+			BackgroundColor3 = rowColor or Colors.Gold,
+			BackgroundTransparency = if isSelf then 0.85 elseif rankColor then 0.9 else 1,
 			LayoutOrder = rank,
 			ZIndex = 26,
 			Parent = self.standingsList,
 		})
-		if isSelf then
+		if rowColor then
 			Factory.Corner(row, 6)
+			if not isSelf then
+				Factory.Stroke(row, rankColor, 0.75, 1)
+			end
 		end
-		Factory.Label(row, medals[rank] or string.format("#%d", rank), UDim2.fromOffset(24, 22), {
+		Factory.Label(row, medals[rank] or string.format("#%d", rank), UDim2.fromOffset(24, 24), {
 			Position = UDim2.fromOffset(2, 0),
 			TextSize = 13,
 			ZIndex = 26,
 		})
 		Factory.Label(row, if isSelf then "You" else string.format("@%s", entry.name), UDim2.new(1, -84, 1, 0), {
 			Position = UDim2.fromOffset(28, 0),
-			Font = if isSelf then Theme.Fonts.Bold else Theme.Fonts.Regular,
+			Font = if isSelf or rankColor then Theme.Fonts.Bold else Theme.Fonts.Regular,
 			TextSize = 11,
 			Truncate = Enum.TextTruncate.AtEnd,
 			ZIndex = 26,
 		})
-		Factory.Label(row, tostring(entry.score), UDim2.fromOffset(50, 22), {
+		Factory.Label(row, tostring(entry.score), UDim2.fromOffset(50, 24), {
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, -2, 0, 0),
 			AlignX = Enum.TextXAlignment.Right,

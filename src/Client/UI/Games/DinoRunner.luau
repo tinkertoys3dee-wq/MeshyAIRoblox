@@ -33,6 +33,13 @@ local TICK_SPACING = 70
 -- non-integer argument.
 local MIN_OBSTACLE_GAP_CENTIS = 90
 local MAX_OBSTACLE_GAP_CENTIS = 160
+local DAY_CYCLE_SECONDS = 45 -- full day-to-night-to-day loop
+local STAR_COUNT = 10
+local DUST_INTERVAL = 0.08 -- continuous foot-dust cadence while grounded
+local SKY_NIGHT_TOP = Color3.fromRGB(21, 24, 48)
+local SKY_NIGHT_BOTTOM = Color3.fromRGB(8, 9, 20)
+local SUN_DAY_COLOR = Colors.Gold
+local MOON_NIGHT_COLOR = Color3.fromRGB(214, 222, 240)
 
 type Obstacle = { frame: Frame, x: number, width: number, height: number }
 
@@ -51,6 +58,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local obstacles: { Obstacle } = {}
 	local timeSinceObstacle = 0
 	local nextObstacleGap = MIN_OBSTACLE_GAP_CENTIS / 100
+	local timeSinceDust = 0
 
 	-- Floored: AbsoluteSize can be fractional (UI scaling), and math.random
 	-- errors on a non-integer argument -- spawnObstacle's width() feeds it.
@@ -74,7 +82,10 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		ZIndex = 1,
 		Parent = canvas,
 	})
-	Factory.Gradient(sky, { Colors.PanelSoft, Colors.Panel }, 90)
+	local skyDayTop, skyDayBottom = Colors.PanelSoft, Colors.Panel
+	local skyGradient = Factory.Gradient(sky, { skyDayTop, skyDayBottom }, 90)
+	-- Sun by day, moon by night -- same Frame, its color/position just tween
+	-- across the cycle rather than swapping instances.
 	local sun = Factory.New("Frame", {
 		Name = "Sun",
 		Size = UDim2.fromOffset(46, 46),
@@ -86,6 +97,27 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		Parent = canvas,
 	})
 	Factory.Corner(sun, 23)
+
+	-- Starfield: fully transparent by day, fades in as the sky darkens.
+	-- Purely decorative background texture, so it's frozen invisible under
+	-- reduceMotion rather than driven by the per-frame cycle update below.
+	local stars: { { instance: Frame, twinklePhase: number } } = {}
+	if not api.reduceMotion then
+		for _ = 1, STAR_COUNT do
+			local star = Factory.New("Frame", {
+				Name = "Star",
+				Size = UDim2.fromOffset(2, 2),
+				Position = UDim2.fromOffset(math.random(10, 500), math.random(8, 140)),
+				BackgroundColor3 = Color3.new(1, 1, 1),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				ZIndex = 1,
+				Parent = canvas,
+			})
+			Factory.Corner(star, 1)
+			table.insert(stars, { instance = star, twinklePhase = math.random() * math.pi * 2 })
+		end
+	end
 
 	-- A proper band with its own gradient reads as ground/dirt; the old
 	-- 2px hairline was barely there.
@@ -280,6 +312,56 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		table.insert(obstacles, { frame = frame, x = x, width = w, height = h })
 	end
 
+	-- Light continuous foot-dust while grounded and moving, distinct from the
+	-- one-shot Burst on takeoff/landing -- each puff kicks up and back, then
+	-- fades, so a faint trail is always visible behind a running dino instead
+	-- of only flashing at the two jump transitions.
+	local function spawnDustPuff(speed: number)
+		local size = 3 + math.random() * 3
+		local puff = Factory.New("Frame", {
+			Name = "Dust",
+			Size = UDim2.fromOffset(size, size),
+			Position = UDim2.fromOffset(DINO_X + math.random(-2, 6), groundY() + DINO_SIZE - math.random(0, 3)),
+			BackgroundColor3 = Colors.Line,
+			BackgroundTransparency = 0.3,
+			BorderSizePixel = 0,
+			ZIndex = 3,
+			Parent = canvas,
+		})
+		Factory.Corner(puff, size / 2)
+		local drift = speed * 0.16 + math.random(4, 14)
+		local rise = math.random(4, 10)
+		TweenService
+			:Create(puff, TweenInfo.new(0.32 + math.random() * 0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = puff.Position - UDim2.fromOffset(drift, rise),
+				Size = UDim2.fromOffset(size * 1.7, size * 1.7),
+				BackgroundTransparency = 1,
+			})
+			:Play()
+		task.delay(0.5, function()
+			puff:Destroy()
+		end)
+	end
+
+	-- Sky/sun/star readout for the current point in the day-night loop --
+	-- purely cosmetic background texture (same category as the parallax
+	-- ground ticks), so it's skipped every frame under reduceMotion and the
+	-- sky simply stays at its initial daylight look.
+	local function updateDayNightCycle(elapsedSeconds: number)
+		local dayPhase = (math.cos(elapsedSeconds / DAY_CYCLE_SECONDS * math.pi * 2) + 1) / 2
+		local nightAmount = 1 - dayPhase
+		skyGradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, skyDayTop:Lerp(SKY_NIGHT_TOP, nightAmount)),
+			ColorSequenceKeypoint.new(1, skyDayBottom:Lerp(SKY_NIGHT_BOTTOM, nightAmount)),
+		})
+		sun.BackgroundColor3 = SUN_DAY_COLOR:Lerp(MOON_NIGHT_COLOR, nightAmount)
+		sun.BackgroundTransparency = 0.55 - nightAmount * 0.2
+		for _, star in stars do
+			local twinkle = 0.15 * math.sin(elapsedSeconds * 2.4 + star.twinklePhase)
+			star.instance.BackgroundTransparency = math.clamp(1 - nightAmount * 0.85 + twinkle, 0, 1)
+		end
+	end
+
 	local function endGame()
 		if not running then
 			return
@@ -306,6 +388,10 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		if score ~= displayedScore then
 			displayedScore = score
 			api.setScore(score)
+		end
+
+		if not api.reduceMotion then
+			updateDayNightCycle(elapsed)
 		end
 
 		local ground = groundY()
@@ -336,6 +422,17 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		dino.Position = UDim2.fromOffset(DINO_X, dinoY)
 
 		local speed = currentSpeed()
+
+		if onGround and not api.reduceMotion then
+			timeSinceDust += dt
+			if timeSinceDust >= DUST_INTERVAL then
+				timeSinceDust = 0
+				spawnDustPuff(speed)
+			end
+		else
+			timeSinceDust = 0
+		end
+
 		timeSinceObstacle += dt
 		if timeSinceObstacle >= nextObstacleGap then
 			timeSinceObstacle = 0
@@ -386,6 +483,9 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		groundBand:Destroy()
 		for _, tick in groundTicks do
 			tick.instance:Destroy()
+		end
+		for _, star in stars do
+			star.instance:Destroy()
 		end
 		for _, obstacle in obstacles do
 			obstacle.frame:Destroy()

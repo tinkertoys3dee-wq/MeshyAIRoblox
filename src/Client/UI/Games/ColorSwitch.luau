@@ -64,6 +64,8 @@ local ORB_SPACING_MIN = 320 -- world px climbed between orb spawns
 local ORB_SPACING_MAX = 520
 local TRAIL_INTERVAL = 0.045
 local CEILING_FRACTION = 0.32 -- how far down the canvas the ball is pinned
+local NEAR_MISS_SEAM_DEGREES = 10 -- how close to a petal boundary counts as a close call
+local STREAK_WINDOW = 3.5 -- seconds between clean passes before the streak resets
 
 type Ring = {
 	backing: Frame,
@@ -104,6 +106,8 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local distanceSinceOrb = 0
 	local nextOrbSpacing = ORB_SPACING_MIN + math.random() * (ORB_SPACING_MAX - ORB_SPACING_MIN)
 	local trailTimer = 0
+	local streakCount = 0
+	local lastPassTime = 0
 
 	local function width(): number
 		local w = math.floor(canvas.AbsoluteSize.X)
@@ -163,6 +167,38 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local ballY = height() * 0.55
 	ball.Position = UDim2.fromOffset(centerX() - BALL_SIZE / 2, ballY)
 
+	-- Full-canvas tint for the near-miss "close call" cue, mirroring the
+	-- same trick used in FlappyBird/DinoRunner -- sits above every ring/orb
+	-- so a quick flash reads as a screen-wide reaction.
+	local flashOverlay = Factory.New("Frame", {
+		Name = "FlashOverlay",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Colors.Cyan,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 45,
+		Parent = canvas,
+	})
+	-- Streak readout: hidden until two clean ring passes land within
+	-- STREAK_WINDOW of each other, then tracks the run until it lapses.
+	local streakLabel = Factory.Label(canvas, "", UDim2.fromOffset(160, 28), {
+		Name = "StreakLabel",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 14),
+		Color = Colors.Gold,
+		Font = Theme.Fonts.Black,
+		TextSize = 20,
+		AlignX = Enum.TextXAlignment.Center,
+		Transparency = 1,
+		ZIndex = 46,
+	})
+	Factory.New("UIStroke", {
+		Color = Colors.Ink,
+		Thickness = 2,
+		Transparency = 0.4,
+		Parent = streakLabel,
+	})
+
 	local function setBallColor(colorIndex: number)
 		ballColorIndex = colorIndex
 		ball.BackgroundColor3 = PALETTE_COLORS[colorIndex]
@@ -210,6 +246,66 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			bounce()
 		end
 	end)
+
+	local function flashScreen(color: Color3, peakTransparency: number)
+		if api.reduceMotion then
+			return
+		end
+		flashOverlay.BackgroundColor3 = color
+		flashOverlay.BackgroundTransparency = peakTransparency
+		TweenService:Create(flashOverlay, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 1,
+		}):Play()
+	end
+
+	-- Fires when a clean pass happened close to the seam between two petals
+	-- -- a beat later or earlier and the wrong color would have been facing
+	-- the ball, so it reads as a genuine close call rather than a routine
+	-- pass.
+	local function triggerNearMiss()
+		flashScreen(Colors.Cyan, 0.82)
+		GameShell.Burst(
+			canvas,
+			ball.Position + UDim2.fromOffset(BALL_SIZE / 2, BALL_SIZE / 2),
+			Colors.Cyan,
+			api.reduceMotion
+		)
+	end
+
+	local streakFadeToken = 0
+	local function registerStreak()
+		local now = os.clock()
+		streakCount = if now - lastPassTime <= STREAK_WINDOW then streakCount + 1 else 1
+		lastPassTime = now
+
+		streakFadeToken += 1
+		local myToken = streakFadeToken
+		if streakCount >= 2 then
+			streakLabel.Text = string.format("%dx STREAK", streakCount)
+			streakLabel.TextColor3 = if streakCount >= 5 then Colors.Gold else Colors.Mint
+			streakLabel.TextTransparency = 0
+			if not api.reduceMotion then
+				local pop = Factory.New("UIScale", { Scale = 1.3, Parent = streakLabel })
+				TweenService
+					:Create(pop, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+					:Play()
+			end
+			task.delay(STREAK_WINDOW, function()
+				if myToken == streakFadeToken and streakLabel.Parent then
+					if api.reduceMotion then
+						streakLabel.TextTransparency = 1
+					else
+						TweenService:Create(streakLabel, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+					end
+				end
+			end)
+		end
+
+		if streakCount > 0 and streakCount % 5 == 0 then
+			flashScreen(Colors.Gold, 0.75)
+			api.sounds:Play("Success")
+		end
+	end
 
 	-- `initialY` lets the very first ring spawn already visible near the
 	-- ceiling (matching the real game's idle screen) instead of starting
@@ -514,6 +610,15 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 					PALETTE_COLORS[ballColorIndex],
 					api.reduceMotion
 				)
+				registerStreak()
+				-- How close the current rotation is to a petal boundary: a
+				-- beat later or earlier at this spin speed and a different
+				-- (likely wrong) color would have been facing the ball.
+				local seamOffset = ring.rotation % 90
+				local seamDistance = math.min(seamOffset, 90 - seamOffset)
+				if seamDistance <= NEAR_MISS_SEAM_DEGREES then
+					triggerNearMiss()
+				end
 			end
 
 			if ring.y > height() then
@@ -558,6 +663,8 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		tapConn:Disconnect()
 		ball:Destroy()
 		sky:Destroy()
+		flashOverlay:Destroy()
+		streakLabel:Destroy()
 		for _, ring in rings do
 			ring.backing:Destroy()
 		end

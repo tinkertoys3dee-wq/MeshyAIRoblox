@@ -29,6 +29,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
+local DailyChallenge = require(ReplicatedStorage:WaitForChild("DailyChallenge"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 
 local ArcadeService = {}
@@ -38,6 +39,11 @@ local WEEK_SECONDS = 7 * 24 * 60 * 60
 local SCORE_STORE_PREFIX = "FUGC_Arcade_"
 local PAYOUT_CHECK_INTERVAL_SECONDS = 30 * 60
 local DISPLAY_TOP_COUNT = 10
+-- Hard ceiling on how many friend userIds GetFriendStandings will read a
+-- score for. Each one is its own GetAsync call (there's no "sorted by these
+-- specific keys" query), so this bounds the request's DataStore read budget
+-- and latency regardless of how many friends a player has.
+local MAX_FRIENDS_CHECKED = 30
 
 local GAMES: { [string]: boolean } = {}
 for _, name in Config.Arcade.Games do
@@ -128,7 +134,53 @@ function ArcadeService:SubmitScore(player: Player, gameKey: any, score: any): (b
 	end
 
 	self.analytics:Custom(player, "ArcadeScoreSubmitted", clamped, { game = gameKey })
-	return true, { best = newBest }
+
+	-- Daily Challenge: a one-time-per-game-per-day bonus for clearing
+	-- today's target (see Shared/DailyChallenge.luau), on top of whatever
+	-- this submission does to the weekly leaderboard -- a fresh reason to
+	-- replay a game you've already gotten good at, not just a first-timer's
+	-- reward.
+	local day = math.floor(os.time() / 86400)
+	local target = DailyChallenge.GetTarget(gameKey, day)
+	local challengeBonusGranted = 0
+	if target and clamped >= target then
+		local justCleared = false
+		local mutateSuccess = self.profiles:Mutate(player, function(profile)
+			if profile.daily.challengesDay ~= day then
+				profile.daily.challengesDay = day
+				profile.daily.challengesDone = {}
+			end
+			if profile.daily.challengesDone[gameKey] then
+				return
+			end
+			profile.daily.challengesDone[gameKey] = true
+			profile.bonusTokens = (profile.bonusTokens or 0) + Config.Arcade.DailyChallengeBonusTokens
+			justCleared = true
+		end)
+		if mutateSuccess and justCleared then
+			self.profiles:Save(player)
+			challengeBonusGranted = Config.Arcade.DailyChallengeBonusTokens
+			local profile = self.profiles:Get(player)
+			if profile and player.Parent == Players then
+				self.push(player, Network.PushEvents.Profile, { bonusTokens = profile.bonusTokens })
+				self.push(player, Network.PushEvents.Toast, {
+					tone = "success",
+					message = string.format(
+						"🎯 Daily Challenge cleared in %s! +%d bonus tokens",
+						gameKey,
+						challengeBonusGranted
+					),
+				})
+			end
+			self.analytics:Custom(player, "DailyChallengeCleared", challengeBonusGranted, {
+				game = gameKey,
+				target = target,
+				score = clamped,
+			})
+		end
+	end
+
+	return true, { best = newBest, challengeTarget = target, challengeBonusGranted = challengeBonusGranted }
 end
 
 -- Top `DISPLAY_TOP_COUNT` for `gameKey` this week, for the in-hub "this
@@ -168,6 +220,82 @@ function ArcadeService:GetWeeklyTop(player: Player, gameKey: any): (boolean, any
 			selfStanding = { rank = nil, score = ownScore }
 		end
 	end
+	return true, { standings = standings, self = selfStanding }
+end
+
+-- "Beat your friends" standings for `gameKey` this week -- unlike
+-- GetWeeklyTop's global top 10 (which most players will never crack),
+-- comparing against people you actually know is the stronger reason to come
+-- back and reclaim the top spot. Returns the same { standings, self } shape
+-- as GetWeeklyTop so the client can reuse its existing standings-row
+-- rendering unchanged, but here `self` is also included IN `standings`
+-- (a friends list is small enough to show in full, so there's no separate
+-- "outside the visible page" case to handle).
+function ArcadeService:GetFriendStandings(player: Player, gameKey: any): (boolean, any)
+	if type(gameKey) ~= "string" or not GAMES[gameKey] then
+		return false, "UNKNOWN_GAME"
+	end
+	local store = DataStoreService:GetOrderedDataStore(scoreStoreName(gameKey, currentWeek()))
+
+	local friendIds = {}
+	local pagesSuccess, pages = pcall(function()
+		return Players:GetFriendsAsync(player.UserId)
+	end)
+	if pagesSuccess then
+		while #friendIds < MAX_FRIENDS_CHECKED do
+			local pageSuccess, page = pcall(function()
+				return pages:GetCurrentPage()
+			end)
+			if not pageSuccess then
+				break
+			end
+			for _, entry in page do
+				table.insert(friendIds, entry.Id)
+				if #friendIds >= MAX_FRIENDS_CHECKED then
+					break
+				end
+			end
+			if pages.IsFinished or #friendIds >= MAX_FRIENDS_CHECKED then
+				break
+			end
+			local advanced = pcall(function()
+				pages:AdvanceToNextPageAsync()
+			end)
+			if not advanced then
+				break
+			end
+		end
+	end
+
+	local standings = {}
+	for _, friendId in friendIds do
+		local success, score = pcall(function()
+			return store:GetAsync(tostring(friendId))
+		end)
+		if success and type(score) == "number" then
+			table.insert(standings, { userId = friendId, name = self:_NameFor(friendId), score = score })
+		end
+	end
+
+	local ownSuccess, ownScore = pcall(function()
+		return store:GetAsync(tostring(player.UserId))
+	end)
+	if ownSuccess and type(ownScore) == "number" then
+		table.insert(standings, { userId = player.UserId, name = self:_NameFor(player.UserId), score = ownScore })
+	end
+
+	table.sort(standings, function(a, b)
+		return a.score > b.score
+	end)
+
+	local selfStanding = nil
+	for rank, entry in standings do
+		if entry.userId == player.UserId then
+			selfStanding = { rank = rank, score = entry.score }
+			break
+		end
+	end
+
 	return true, { standings = standings, self = selfStanding }
 end
 

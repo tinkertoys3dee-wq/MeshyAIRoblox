@@ -59,7 +59,7 @@ local profiles = ProfileService.new()
 local playerStates = PlayerStateService.new()
 local analytics = AnalyticsService.new()
 local achievements = AchievementService.new(profiles, push, analytics)
-local retention = RetentionService.new(profiles, analytics, achievements)
+local retention = RetentionService.new(profiles, analytics, achievements, push)
 local backend = BackendService.new()
 local commerce = CommerceService.new(profiles, playerStates, analytics, push)
 local adRewards = AdRewardService.new(profiles, playerStates, commerce, push, analytics, achievements)
@@ -150,6 +150,7 @@ local function bootstrap(player: Player): (boolean, any)
 			},
 			prices = commerce:GetPrices(),
 			dailyBrief = retention:GetBrief(player),
+			questState = retention:GetQuestState(player),
 		}
 end
 
@@ -167,7 +168,11 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		analytics:Funnel(player, funnel, 2, "Method and prompt submitted", {
 			method = if type(payload) == "table" then payload.kind else "unknown",
 		})
-		return generations:Create(player, payload)
+		local success, result = generations:Create(player, payload)
+		if success then
+			retention:MarkQuest(player, "GENERATE")
+		end
+		return success, result
 	end,
 	[Network.Actions.CreateUploadedImage] = function(player, payload)
 		analytics:BeginFunnel(player, "reference", "Custom image submitted", {
@@ -176,12 +181,20 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		analytics:Funnel(player, "reference", 2, "Custom image sent to moderation", {
 			method = "IMAGE_UPLOAD",
 		})
-		return generations:CreateUploadedImage(player, payload)
+		local success, result = generations:CreateUploadedImage(player, payload)
+		if success then
+			retention:MarkQuest(player, "GENERATE")
+		end
+		return success, result
 	end,
 	[Network.Actions.ConvertImage] = function(player, payload)
 		analytics:BeginFunnel(player, "generation", "Approved conversion started", { method = "IMAGE_TO_3D" })
 		analytics:Funnel(player, "generation", 2, "Reference image approved", { method = "IMAGE_TO_3D" })
-		return generations:ConvertImage(player, payload)
+		local success, result = generations:ConvertImage(player, payload)
+		if success then
+			retention:MarkQuest(player, "GENERATE")
+		end
+		return success, result
 	end,
 	[Network.Actions.PromptCustomImagePass] = function(player)
 		analytics:Custom(player, "CustomImagePassPrompted", 1, {})
@@ -227,6 +240,7 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		local success, result = items:SaveFit(player, payload)
 		if success then
 			analytics:Custom(player, "AccessoryFitSaved", 1, {})
+			retention:MarkQuest(player, "FIT")
 		end
 		return success, result
 	end,
@@ -423,13 +437,23 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		if type(payload) ~= "table" then
 			return false, "INVALID_REQUEST"
 		end
-		return arcade:SubmitScore(player, payload.game, payload.score)
+		local success, result = arcade:SubmitScore(player, payload.game, payload.score)
+		if success then
+			retention:MarkQuest(player, "ARCADE")
+		end
+		return success, result
 	end,
 	[Network.Actions.GetArcadeLeaderboard] = function(player, payload)
 		if type(payload) ~= "table" then
 			return false, "INVALID_REQUEST"
 		end
 		return arcade:GetWeeklyTop(player, payload.game)
+	end,
+	[Network.Actions.GetFriendArcadeLeaderboard] = function(player, payload)
+		if type(payload) ~= "table" then
+			return false, "INVALID_REQUEST"
+		end
+		return arcade:GetFriendStandings(player, payload.game)
 	end,
 }
 

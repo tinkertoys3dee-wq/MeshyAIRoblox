@@ -41,6 +41,7 @@ Network.Actions = table.freeze({
 	ReportInviteSent = "ReportInviteSent",
 	SubmitArcadeScore = "SubmitArcadeScore",
 	GetArcadeLeaderboard = "GetArcadeLeaderboard",
+	GetFriendArcadeLeaderboard = "GetFriendArcadeLeaderboard",
 })
 
 Network.PushEvents = table.freeze({
@@ -50,6 +51,7 @@ Network.PushEvents = table.freeze({
 	Toast = "Toast",
 	Transfer = "Transfer",
 	Entitlements = "Entitlements",
+	Quests = "Quests",
 })
 
 return table.freeze(Network)

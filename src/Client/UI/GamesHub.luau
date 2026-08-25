@@ -16,9 +16,11 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SocialService = game:GetService("SocialService")
 local TweenService = game:GetService("TweenService")
 
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
+local DailyChallenge = require(ReplicatedStorage:WaitForChild("DailyChallenge"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Factory = require(script.Parent.Factory)
 local GameShell = require(script.Parent.Games.GameShell)
@@ -163,6 +165,51 @@ function GamesHub.Show(app: any)
 	})
 	Factory.Corner(glow, 120)
 
+	-- A handful of faint drifting motes across the whole modal -- ambient
+	-- texture, not a focal effect, echoing the same idea as the app's own
+	-- ember system elsewhere. Individual looping tweens rather than a
+	-- Heartbeat connection: they harmlessly stop doing anything the moment
+	-- their particle is destroyed with the rest of the modal, no manual
+	-- disconnect required on close.
+	if not reduceMotion then
+		local ambientLayer = Factory.New("Frame", {
+			Name = "AmbientLayer",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			ClipsDescendants = true,
+			ZIndex = 211,
+			Parent = modal,
+		})
+		for _ = 1, 7 do
+			local size = 3 + math.random() * 4
+			local particle = Factory.New("Frame", {
+				Name = "Mote",
+				Size = UDim2.fromOffset(size, size),
+				Position = UDim2.new(math.random(), 0, math.random(), 0),
+				BackgroundColor3 = Color3.new(1, 1, 1),
+				BackgroundTransparency = 0.78 + math.random() * 0.15,
+				BorderSizePixel = 0,
+				ZIndex = 211,
+				Parent = ambientLayer,
+			})
+			Factory.Corner(particle, size / 2)
+			local driftX = math.random(-16, 16)
+			local driftY = 18 + math.random() * 24
+			TweenService:Create(
+				particle,
+				TweenInfo.new(
+					3 + math.random() * 2.5,
+					Enum.EasingStyle.Sine,
+					Enum.EasingDirection.InOut,
+					-1,
+					true,
+					math.random() * 2.5
+				),
+				{ Position = particle.Position + UDim2.fromOffset(driftX, -driftY) }
+			):Play()
+		end
+	end
+
 	local headerIcon = Factory.New("Frame", {
 		Name = "HeaderIcon",
 		Size = UDim2.fromOffset(52, 52),
@@ -275,6 +322,54 @@ function GamesHub.Show(app: any)
 		Parent = modal,
 	})
 
+	-- A brief dip-to-dark covering just the content area (not the header,
+	-- which stays interactive throughout) whenever the picker/game/
+	-- leaderboard views swap -- cheaper and more robust than trying to
+	-- cross-fade dozens of individual descendants across three very
+	-- different view layouts.
+	local transitionOverlay = Factory.New("Frame", {
+		Name = "ViewTransition",
+		Position = UDim2.fromOffset(12, 116),
+		Size = UDim2.new(1, -24, 1, -128),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 218,
+		Parent = modal,
+	})
+	local switchingView = false
+	-- `applyVisibility` does the actual Visible swap (plus whatever other
+	-- setup that view's switch-in function needs); wrapping it here just
+	-- adds the fade around that swap.
+	local function switchView(applyVisibility: () -> ())
+		if reduceMotion then
+			applyVisibility()
+			return
+		end
+		if switchingView then
+			applyVisibility()
+			return
+		end
+		switchingView = true
+		TweenService:Create(transitionOverlay, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 0,
+		}):Play()
+		task.delay(0.12, function()
+			if not transitionOverlay.Parent then
+				return
+			end
+			applyVisibility()
+			TweenService
+				:Create(transitionOverlay, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+					BackgroundTransparency = 1,
+				})
+				:Play()
+			task.delay(0.18, function()
+				switchingView = false
+			end)
+		end)
+	end
+
 	local function submitScore(gameKey: string, score: number)
 		task.spawn(function()
 			app:_Invoke(Network.Actions.SubmitArcadeScore, { game = gameKey, score = score })
@@ -289,25 +384,40 @@ function GamesHub.Show(app: any)
 		return nil
 	end
 
+	-- "Beat your friends" standings -- same shape as fetchWeeklyTop so
+	-- renderLeaderboardStandings needs no scope-specific branching of its
+	-- own, just a different data source and a different empty-state message.
+	local function fetchFriendTop(gameKey: string): GameShell.WeeklyResult?
+		local success, result = app:_Invoke(Network.Actions.GetFriendArcadeLeaderboard, { game = gameKey })
+		if success and type(result) == "table" and type(result.standings) == "table" then
+			return { standings = result.standings, self = result.self }
+		end
+		return nil
+	end
+
 	local shell: any = nil
 
 	local function showHub()
-		hubView.Visible = true
-		gameView.Visible = false
-		leaderboardView.Visible = false
-		if shell then
-			shell:Stop()
-		end
+		switchView(function()
+			hubView.Visible = true
+			gameView.Visible = false
+			leaderboardView.Visible = false
+			if shell then
+				shell:Stop()
+			end
+		end)
 	end
 
 	local function playGame(gameModule: GameShell.GameModule)
-		hubView.Visible = false
-		leaderboardView.Visible = false
-		gameView.Visible = true
-		if not shell then
-			shell = GameShell.new(gameView, app.sounds, showHub, submitScore, fetchWeeklyTop, reduceMotion)
-		end
-		shell:Run(gameModule)
+		switchView(function()
+			hubView.Visible = false
+			leaderboardView.Visible = false
+			gameView.Visible = true
+			if not shell then
+				shell = GameShell.new(gameView, app.sounds, showHub, submitScore, fetchWeeklyTop, reduceMotion)
+			end
+			shell:Run(gameModule)
+		end)
 	end
 
 	closeButton.Activated:Connect(function()
@@ -367,10 +477,27 @@ function GamesHub.Show(app: any)
 		Parent = leaderboardView,
 	})
 
+	-- Global vs. Friends scope toggle -- a segmented control, same visual
+	-- language as the game tabs below it (active = filled Cyan, inactive =
+	-- dim outline), so the two rows read as one coherent header rather than
+	-- two unrelated controls stacked on top of each other.
+	local scopeToggle = Factory.New("Frame", {
+		Name = "ScopeToggle",
+		Position = UDim2.fromOffset(0, 37),
+		Size = UDim2.new(1, 0, 0, 26),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.5,
+		BorderSizePixel = 0,
+		ZIndex = 213,
+		Parent = leaderboardView,
+	})
+	Factory.Corner(scopeToggle, Theme.SmallCorner)
+	Factory.Stroke(scopeToggle, Colors.Line, 0.6)
+
 	local standingsHost = Factory.New("Frame", {
 		Name = "StandingsHost",
-		Position = UDim2.fromOffset(0, 43),
-		Size = UDim2.new(1, 0, 1, -43),
+		Position = UDim2.fromOffset(0, 71),
+		Size = UDim2.new(1, 0, 1, -71),
 		BackgroundColor3 = Colors.PanelRaised,
 		BackgroundTransparency = 0.05,
 		BorderSizePixel = 0,
@@ -421,7 +548,39 @@ function GamesHub.Show(app: any)
 
 	local standingsCache: { [string]: GameShell.WeeklyResult } = {}
 	local selectedGameKey = GAMES[1].game.Key
+	local leaderboardScope: string = "global"
 	local tabButtons: { [string]: TextButton } = {}
+	local scopeButtons: { [string]: TextButton } = {}
+
+	local function setActiveScope(scope: string)
+		for key, button in scopeButtons do
+			local active = key == scope
+			button.BackgroundColor3 = if active then Colors.Cyan else Colors.PanelSoft
+			button.BackgroundTransparency = if active then 0.1 else 0.7
+			button.TextColor3 = if active then Colors.Ink else Colors.Text
+		end
+	end
+
+	for i, entry in { { key = "global", label = "🌐 Global" }, { key = "friends", label = "👥 Friends" } } do
+		local button = Factory.New("TextButton", {
+			Name = entry.key .. "Scope",
+			Position = UDim2.new((i - 1) / 2, if i == 1 then 3 else 2, 0, 3),
+			Size = UDim2.new(0.5, if i == 1 then -5 else -5, 1, -6),
+			BackgroundColor3 = Colors.PanelSoft,
+			BackgroundTransparency = 0.7,
+			BorderSizePixel = 0,
+			AutoButtonColor = false,
+			Text = entry.label,
+			TextColor3 = Colors.Text,
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			ZIndex = 214,
+			Parent = scopeToggle,
+		})
+		Factory.Corner(button, Theme.SmallCorner - 2)
+		app.sounds:Bind(button)
+		scopeButtons[entry.key] = button
+	end
 
 	local function setActiveTab(gameKey: string)
 		for key, tab in tabButtons do
@@ -432,7 +591,28 @@ function GamesHub.Show(app: any)
 		end
 	end
 
-	local function renderLeaderboardStandings(result: GameShell.WeeklyResult)
+	-- Same native prompt + eligibility check App.luau's own invite card uses;
+	-- the reward itself is granted by App's existing
+	-- SocialService.GameInvitePromptClosed listener, which fires regardless
+	-- of which UI opened the prompt, so nothing extra needs wiring here.
+	local function promptFriendInvite()
+		local player = Players.LocalPlayer
+		local checkSuccess, allowed = pcall(function()
+			return SocialService:CanSendGameInviteAsync(player)
+		end)
+		if not checkSuccess or allowed ~= true then
+			app:_Toast("error", "Invites aren't available for your account or platform right now.")
+			return
+		end
+		local promptSuccess = pcall(function()
+			SocialService:PromptGameInvite(player)
+		end)
+		if not promptSuccess then
+			app:_Toast("error", "Roblox could not open the invite prompt.")
+		end
+	end
+
+	local function renderLeaderboardStandings(result: GameShell.WeeklyResult, scope: string)
 		for _, child in standingsList:GetChildren() do
 			if child:IsA("GuiObject") then
 				child:Destroy()
@@ -442,7 +622,9 @@ function GamesHub.Show(app: any)
 		if #standings == 0 then
 			Factory.Label(
 				standingsList,
-				"No scores yet this week — be the first to set one!",
+				if scope == "friends"
+					then "None of your friends have played this game yet."
+					else "No scores yet this week — be the first to set one!",
 				UDim2.new(1, 0, 0, 40),
 				{
 					Color = Colors.TextMuted,
@@ -452,20 +634,57 @@ function GamesHub.Show(app: any)
 				}
 			)
 		end
+		if scope == "friends" and #standings <= 1 then
+			local inviteRow = Factory.New("Frame", {
+				Size = UDim2.new(1, 0, 0, 44),
+				LayoutOrder = 999,
+				BackgroundTransparency = 1,
+				Parent = standingsList,
+			})
+			Factory.Label(inviteRow, "Invite a friend to start a real rivalry.", UDim2.new(1, 0, 0, 18), {
+				Color = Colors.TextMuted,
+				TextSize = 11,
+				AlignX = Enum.TextXAlignment.Center,
+				ZIndex = 214,
+			})
+			local inviteButton = Factory.New("TextButton", {
+				Size = UDim2.fromOffset(160, 22),
+				Position = UDim2.new(0.5, -80, 0, 20),
+				BackgroundColor3 = Colors.Mint,
+				BorderSizePixel = 0,
+				AutoButtonColor = false,
+				Text = "👥 Invite a friend",
+				TextColor3 = Colors.Ink,
+				Font = Theme.Fonts.Bold,
+				TextSize = 11,
+				ZIndex = 214,
+				Parent = inviteRow,
+			})
+			Factory.Corner(inviteButton, 11)
+			app.sounds:Bind(inviteButton)
+			inviteButton.Activated:Connect(promptFriendInvite)
+		end
 		local medals = { "🥇", "🥈", "🥉" }
+		local rankColors = { Colors.Gold, Color3.fromRGB(200, 208, 224), Color3.fromRGB(214, 158, 100) }
 		local localUserId = Players.LocalPlayer and Players.LocalPlayer.UserId
 		for rank, entry in standings do
 			local isSelf = entry.userId == localUserId
+			local rankColor = rankColors[rank]
+			local rowColor = if isSelf then Colors.Gold elseif rankColor then rankColor else nil
+			local finalTransparency = if isSelf then 0.85 elseif rankColor then 0.9 else 1
 			local row = Factory.New("Frame", {
 				Size = UDim2.new(1, 0, 0, 30),
-				BackgroundColor3 = Colors.Gold,
-				BackgroundTransparency = if isSelf then 0.85 else 1,
+				BackgroundColor3 = rowColor or Colors.Gold,
+				BackgroundTransparency = if reduceMotion then finalTransparency else 1,
 				LayoutOrder = rank,
 				ZIndex = 214,
 				Parent = standingsList,
 			})
-			if isSelf then
+			if rowColor then
 				Factory.Corner(row, 8)
+				if not isSelf then
+					Factory.Stroke(row, rankColor, 0.75, 1)
+				end
 			end
 			Factory.Label(row, medals[rank] or string.format("#%d", rank), UDim2.fromOffset(32, 30), {
 				Position = UDim2.fromOffset(4, 0),
@@ -474,7 +693,7 @@ function GamesHub.Show(app: any)
 			})
 			Factory.Label(row, if isSelf then "You" else string.format("@%s", entry.name), UDim2.new(1, -110, 1, 0), {
 				Position = UDim2.fromOffset(40, 0),
-				Font = if isSelf then Theme.Fonts.Bold else Theme.Fonts.Regular,
+				Font = if isSelf or rankColor then Theme.Fonts.Bold else Theme.Fonts.Regular,
 				TextSize = 13,
 				Truncate = Enum.TextTruncate.AtEnd,
 				ZIndex = 214,
@@ -488,6 +707,28 @@ function GamesHub.Show(app: any)
 				TextSize = 14,
 				ZIndex = 214,
 			})
+
+			-- A quick staggered fade/rise so the list settles into place
+			-- rather than popping in all at once -- skipped under
+			-- reduceMotion (the row is already at its final transparency
+			-- above in that case).
+			if not reduceMotion then
+				local rowScale = Factory.New("UIScale", { Scale = 0.94, Parent = row })
+				task.delay(math.min(rank * 0.035, 0.35), function()
+					if row.Parent then
+						TweenService:Create(
+							row,
+							TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+							{ BackgroundTransparency = finalTransparency }
+						):Play()
+						TweenService:Create(
+							rowScale,
+							TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+							{ Scale = 1 }
+						):Play()
+					end
+				end)
+			end
 		end
 		local personal = result.self
 		if not personal then
@@ -503,9 +744,12 @@ function GamesHub.Show(app: any)
 	local function loadLeaderboard(gameKey: string)
 		selectedGameKey = gameKey
 		setActiveTab(gameKey)
-		local cached = standingsCache[gameKey]
+		setActiveScope(leaderboardScope)
+		local scope = leaderboardScope
+		local cacheKey = scope .. ":" .. gameKey
+		local cached = standingsCache[cacheKey]
 		if cached then
-			renderLeaderboardStandings(cached)
+			renderLeaderboardStandings(cached, scope)
 			return
 		end
 		for _, child in standingsList:GetChildren() do
@@ -520,11 +764,26 @@ function GamesHub.Show(app: any)
 		})
 		selfStandingLabel.Text = ""
 		task.spawn(function()
-			local result = fetchWeeklyTop(gameKey) or { standings = {}, self = nil }
-			standingsCache[gameKey] = result
-			if selectedGameKey == gameKey and leaderboardView.Visible then
-				renderLeaderboardStandings(result)
+			local result: GameShell.WeeklyResult
+			if scope == "friends" then
+				result = fetchFriendTop(gameKey) or { standings = {}, self = nil }
+			else
+				result = fetchWeeklyTop(gameKey) or { standings = {}, self = nil }
 			end
+			standingsCache[cacheKey] = result
+			if selectedGameKey == gameKey and leaderboardScope == scope and leaderboardView.Visible then
+				renderLeaderboardStandings(result, scope)
+			end
+		end)
+	end
+
+	for scope, button in scopeButtons do
+		button.Activated:Connect(function()
+			if leaderboardScope == scope then
+				return
+			end
+			leaderboardScope = scope
+			loadLeaderboard(selectedGameKey)
 		end)
 	end
 
@@ -569,15 +828,18 @@ function GamesHub.Show(app: any)
 		end
 	end
 	setActiveTab(selectedGameKey)
+	setActiveScope(leaderboardScope)
 
 	local function showLeaderboardTab()
-		hubView.Visible = false
-		gameView.Visible = false
-		leaderboardView.Visible = true
-		if shell then
-			shell:Stop()
-		end
-		loadLeaderboard(selectedGameKey)
+		switchView(function()
+			hubView.Visible = false
+			gameView.Visible = false
+			leaderboardView.Visible = true
+			if shell then
+				shell:Stop()
+			end
+			loadLeaderboard(selectedGameKey)
+		end)
 	end
 
 	-- ===== Tile picker =====
@@ -777,6 +1039,41 @@ function GamesHub.Show(app: any)
 					chip.Visible = true
 				end
 			end)
+
+			-- Today's Daily Challenge target -- a pure local computation
+			-- (see Shared/DailyChallenge.luau), so unlike the stats chip
+			-- above it needs no round trip and is visible immediately.
+			local challengeTarget = DailyChallenge.GetTarget(statsGameKey, math.floor(os.time() / 86400))
+			if challengeTarget then
+				local challengeChip = Factory.New("Frame", {
+					Name = "ChallengeChip",
+					Size = UDim2.fromOffset(108, 22),
+					AnchorPoint = Vector2.new(1, 0),
+					Position = UDim2.new(1, -10, 0, 40),
+					BackgroundColor3 = Colors.Gold,
+					BackgroundTransparency = 0.25,
+					BorderSizePixel = 0,
+					ZIndex = 215,
+					Parent = button,
+				})
+				Factory.Corner(challengeChip, 11)
+				Factory.Stroke(challengeChip, Colors.Gold, 0.4, 1)
+				Factory.Label(
+					challengeChip,
+					string.format("🎯 Target: %d", challengeTarget),
+					UDim2.new(1, -16, 1, 0),
+					{
+						Position = UDim2.fromOffset(8, 0),
+						Font = Theme.Fonts.Bold,
+						TextSize = 10,
+						Color = Colors.Ink,
+						AlignX = Enum.TextXAlignment.Center,
+						AlignY = Enum.TextYAlignment.Center,
+						Truncate = Enum.TextTruncate.AtEnd,
+						ZIndex = 216,
+					}
+				)
+			end
 		end
 
 		-- A bottom scrim so the title/blurb stay legible in light text no

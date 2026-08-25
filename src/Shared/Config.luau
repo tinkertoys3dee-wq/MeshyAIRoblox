@@ -194,6 +194,46 @@ return table.freeze({
 		-- retention grant) top-up for a returning lapsed player. Kept modest
 		-- and one-shot per return -- this is a welcome, not a subsidy.
 		WinBackBonusTokens = 6,
+		-- Three short daily objectives, each touching a different part of
+		-- the app in one sitting (see RetentionService:MarkQuest) rather
+		-- than rewarding just one of them -- session depth, not just
+		-- session count, is the point. bonusTokens, same Priority-Pass-only
+		-- restriction as every other grant in this table.
+		Quests = {
+			{ key = "GENERATE", label = "Forge or convert something new", icon = "🧊", tokens = 3 },
+			{ key = "FIT", label = "Save a fit on any item", icon = "🪄", tokens = 3 },
+			{ key = "ARCADE", label = "Post a score in the Arcade", icon = "🎮", tokens = 3 },
+		},
+		-- Extra one-shot bonus for clearing all Quests the same UTC day, on
+		-- top of the per-quest tokens above.
+		QuestClearBonusTokens = 6,
+		-- Escalating bonus on top of the every-3rd-day Priority Pass credit,
+		-- keyed by streak day. Deliberately lands on 7/14/30 -- the exact
+		-- D7/D30 windows Roblox's own retention analytics (and, by
+		-- extension, discovery/recommendation weighting) are most sensitive
+		-- to, so these are the days most worth making feel like a genuine
+		-- occasion rather than another routine check-in. bonusTokens, same
+		-- restriction as every other grant here (Priority Pass only).
+		StreakMilestones = {
+			[7] = { tokens = 10, priorityPasses = 1 },
+			[14] = { tokens = 18, priorityPasses = 1 },
+			[30] = { tokens = 40, priorityPasses = 2 },
+		},
+		-- Once a streak passes the highest configured milestone, that same
+		-- tier repeats every this-many days instead of the table needing an
+		-- entry for every future day forever.
+		StreakMilestoneRepeatDay = 30,
+	},
+
+	Commerce = {
+		-- One-time bonusTokens welcome the first time CommerceService ever
+		-- processes a real Robux receipt for this player (see
+		-- CommerceService:_ProcessReceipt). Same bonusTokens pool and
+		-- Priority-Pass-only restriction as every other free grant in this
+		-- file -- a real purchase happening doesn't license a separate free
+		-- grant into the revenue-backed `tokens` pool. The point is making a
+		-- second purchase feel like an easy yes, not subsidizing the first.
+		FirstPurchaseBonusTokens = 10,
 	},
 
 	-- Each achievement in src/Shared/Achievements.luau also awards a Roblox
@@ -273,6 +313,13 @@ return table.freeze({
 		-- leaderboard store. Can't stop a determined cheater on a
 		-- client-simulated game, only bound the damage one can do.
 		MaxSubmittableScore = 100000,
+		-- One-time-per-game-per-day bonus for clearing that day's Daily
+		-- Challenge target (see Shared/DailyChallenge.luau). Unlike
+		-- WeeklyRewards above, this is a normal bonusTokens grant --
+		-- Priority-Pass-only, same restriction as every other free grant in
+		-- this file, not the fully-spendable `tokens` exception WeeklyRewards
+		-- carries.
+		DailyChallengeBonusTokens = 8,
 	},
 
 	Marketplace = {
