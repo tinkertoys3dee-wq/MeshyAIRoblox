@@ -536,7 +536,17 @@ function GenerationService:_Prepare(
 	end
 
 	local now = os.time()
-	local priority = self.playerStates:Get(player).groupMember
+	-- Time-to-first-wow: a brand new player's first model rides the same
+	-- fast queue lane as a group member or Priority Pass, until they've
+	-- actually received one completed model -- not just made their first
+	-- attempt, since a common first session is a reference-image step
+	-- before ever converting one. Roblox's own new-player retention
+	-- weighting (and, by extension, discovery/recommendation) is most
+	-- sensitive to exactly this window, so it's worth the same fast lane a
+	-- paying/group player gets, free, without touching pricing at all.
+	local isFirstModel = MODEL_PRODUCING_METHODS[payload.kind] == true
+		and (profile.stats.generationsCompleted or 0) == 0
+	local priority = self.playerStates:Get(player).groupMember or isFirstModel
 	if payload.usePriority == true and not priority then
 		self.profiles:Mutate(player, function(profile)
 			local passes = profile.retryCredits.PriorityPass or 0
