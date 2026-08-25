@@ -153,7 +153,10 @@ function GameShell.new(
 		BorderSizePixel = 0,
 		Parent = hud,
 	})
-	self.gameTitle = Factory.Label(hud, "", UDim2.new(1, -220, 1, 0), {
+	-- The right-side cluster (score, trophy, exit) reserves a fixed 230px
+	-- from the HUD's right edge; gameTitle's own width stops 8px short of
+	-- that so the two can never formally overlap regardless of text length.
+	self.gameTitle = Factory.Label(hud, "", UDim2.new(1, -230, 1, 0), {
 		Position = UDim2.fromOffset(14, 0),
 		Font = Theme.Fonts.Black,
 		TextSize = 16,
@@ -162,7 +165,7 @@ function GameShell.new(
 	local scoreBadge = Factory.New("Frame", {
 		Name = "ScoreBadge",
 		Size = UDim2.fromOffset(96, 26),
-		Position = UDim2.new(1, -210, 0, 7),
+		Position = UDim2.new(1, -222, 0, 7),
 		BackgroundColor3 = Colors.Gold,
 		BackgroundTransparency = 0.85,
 		BorderSizePixel = 0,
@@ -187,7 +190,7 @@ function GameShell.new(
 	local trophyButton = Factory.New("TextButton", {
 		Name = "TrophyButton",
 		Size = UDim2.fromOffset(30, 30),
-		Position = UDim2.new(1, -104, 0, 5),
+		Position = UDim2.new(1, -118, 0, 5),
 		BackgroundColor3 = Colors.PanelSoft,
 		BorderSizePixel = 0,
 		AutoButtonColor = false,
@@ -201,7 +204,7 @@ function GameShell.new(
 	trophyButton.Activated:Connect(function()
 		self:_ToggleWeeklyStandings()
 	end)
-	local exitButton = Factory.Button(hud, "✕ Exit", UDim2.fromOffset(70, 30), UDim2.new(1, -70, 0, 5), nil)
+	local exitButton = Factory.Button(hud, "✕ Exit", UDim2.fromOffset(70, 30), UDim2.new(1, -80, 0, 5), nil)
 	sounds:Bind(exitButton)
 	exitButton.Activated:Connect(function()
 		self:Stop()
