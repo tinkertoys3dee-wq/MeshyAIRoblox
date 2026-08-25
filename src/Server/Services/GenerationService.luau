@@ -49,6 +49,15 @@ for _, view in Config.Generation.AvatarViews do
 	AVATAR_VIEWS[view.Id] = true
 end
 
+-- Unlike every other generation method, AVATAR_TO_3D already has a fixed,
+-- concrete source image (the player's own avatar) plus an explicit
+-- accessoryType, so a prompt is optional guidance rather than the only
+-- description of what to build. FilterPrompt still requires *some* real
+-- text (Config.Generation.PromptMinLength), so a blank/whitespace-only
+-- prompt substitutes this fixed, always-safe default instead of blocking
+-- generation over missing text.
+local AVATAR_DEFAULT_PROMPT = "Match the style, colors, and details of my current Roblox avatar."
+
 local IMAGE_ASSET_TYPES = {
 	[1] = true, -- Image
 	[13] = true, -- Decal
@@ -405,7 +414,10 @@ function GenerationService:CreateFromAvatar(player: Player, payload: any): (bool
 		return false, "CONTENT_SHARING_DISABLED"
 	end
 
-	local filterSuccess, filteredPrompt, filterError = ModerationService.FilterPrompt(player, payload.prompt)
+	local rawPrompt = if type(payload.prompt) == "string" then payload.prompt else ""
+	local hasPrompt = #string.gsub(rawPrompt, "%s", "") > 0
+	local filterSuccess, filteredPrompt, filterError =
+		ModerationService.FilterPrompt(player, if hasPrompt then rawPrompt else AVATAR_DEFAULT_PROMPT)
 	if not filterSuccess then
 		return false, filterError
 	end

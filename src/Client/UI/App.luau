@@ -199,6 +199,10 @@ end
 -- AvatarBust/Avatar) -- the engine resolves this locally, no HTTP call.
 -- The server-side fetch for the generation job itself is a different,
 -- real URL; see AvatarThumbnailService for why.
+--
+-- Unlike type=Asset thumbnails, avatar thumbnail types only accept one of a
+-- fixed discrete size set -- 48/60/100/150/180/352/420 (plus 720 for the
+-- full-body Avatar type only) -- any other w/h silently fails to render.
 local function avatarThumbnail(userId: number, thumbType: string, size: number?): string
 	local pixels = size or 420
 	return string.format("rbxthumb://type=%s&id=%d&w=%d&h=%d", thumbType, userId, pixels, pixels)
@@ -1857,16 +1861,23 @@ function App:_RenderCreate()
 		local cursorY = 14
 		local promptCard = Factory.Card(stack, UDim2.new(1, 0, 0, 560), nil, "PromptCard")
 		promptCard.LayoutOrder = 2
-		Factory.Label(promptCard, "1  DESCRIBE YOUR ACCESSORY", UDim2.new(1, -32, 0, 24), {
-			Position = UDim2.fromOffset(16, cursorY),
-			Font = Theme.Fonts.Bold,
-			TextSize = 12,
-			Color = Colors.Cyan,
-		})
+		Factory.Label(
+			promptCard,
+			if isAvatar then "1  STYLING NOTES (OPTIONAL)" else "1  DESCRIBE YOUR ACCESSORY",
+			UDim2.new(1, -32, 0, 24),
+			{
+				Position = UDim2.fromOffset(16, cursorY),
+				Font = Theme.Fonts.Bold,
+				TextSize = 12,
+				Color = Colors.Cyan,
+			}
+		)
 		cursorY += 32
 		local prompt = self:_TextBox(
 			promptCard,
-			"Example: A glossy crescent-moon crown made of translucent violet crystal, chunky silhouette, no floating pieces",
+			if isAvatar
+				then 'Optional -- e.g. "Make it glossy with a violet crystal accent." Leave blank to match your avatar as-is.'
+				else "Example: A glossy crescent-moon crown made of translucent violet crystal, chunky silhouette, no floating pieces",
 			UDim2.new(1, -32, 0, 80),
 			UDim2.fromOffset(16, cursorY),
 			true
@@ -1992,7 +2003,7 @@ function App:_RenderCreate()
 				Position = UDim2.fromOffset(16, cursorY),
 				BackgroundColor3 = Colors.Ink,
 				BorderSizePixel = 0,
-				Image = avatarThumbnail(player.UserId, previewThumbType, 128),
+				Image = avatarThumbnail(player.UserId, previewThumbType, 150),
 				ScaleType = Enum.ScaleType.Crop,
 				Parent = promptCard,
 			})
