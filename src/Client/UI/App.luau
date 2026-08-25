@@ -579,10 +579,12 @@ function App:_BuildChrome()
 	self.backgroundLayer = backgroundLayer
 	self.ambientBlobs = {}
 	self.ambientEmbers = {}
-	for _, spec in {
-		{ diameter = 560, position = UDim2.new(1, -160, 0, -220), color = Colors.Cyan, transparency = 0.93 },
-		{ diameter = 460, position = UDim2.new(0, -220, 1, -160), color = Colors.Violet, transparency = 0.94 },
-	} do
+	for _, spec in
+		{
+			{ diameter = 560, position = UDim2.new(1, -160, 0, -220), color = Colors.Cyan, transparency = 0.93 },
+			{ diameter = 460, position = UDim2.new(0, -220, 1, -160), color = Colors.Violet, transparency = 0.94 },
+		}
+	do
 		local blob = Factory.Blob(backgroundLayer, spec.diameter, spec.position, spec.color, spec.transparency)
 		table.insert(self.ambientBlobs, { instance = blob, restPosition = spec.position })
 	end
@@ -1337,18 +1339,13 @@ function App:_RenderCreate()
 		Font = Theme.Fonts.Black,
 		TextSize = 28,
 	})
-	Factory.Label(
-		tokensCard,
-		tokensDescriptionText,
-		UDim2.new(0.42, -16, 0, tokensDescriptionHeight),
-		{
-			Position = UDim2.fromOffset(16, tokensDescriptionY),
-			Color = Colors.TextMuted,
-			TextSize = 11,
-			Wrapped = true,
-			AlignY = Enum.TextYAlignment.Top,
-		}
-	)
+	Factory.Label(tokensCard, tokensDescriptionText, UDim2.new(0.42, -16, 0, tokensDescriptionHeight), {
+		Position = UDim2.fromOffset(16, tokensDescriptionY),
+		Color = Colors.TextMuted,
+		TextSize = 11,
+		Wrapped = true,
+		AlignY = Enum.TextYAlignment.Top,
+	})
 	-- Applies to every purchase button below (generation, conversion, and
 	-- the Priority Pass) — CommerceService silently draws from whichever
 	-- pool a given purchase is actually allowed to use, per the comment
@@ -3392,9 +3389,7 @@ function App:_RenderAvatarLab()
 	-- it, so the catalog grid below gets that space back instead of always
 	-- reserving it for filters most sessions never open.
 	local filtersExpanded = self.catalogFiltersExpanded == true
-	local filtersActive = self.catalogCreatorName ~= ""
-		or self.catalogMinPrice ~= ""
-		or self.catalogMaxPrice ~= ""
+	local filtersActive = self.catalogCreatorName ~= "" or self.catalogMinPrice ~= "" or self.catalogMaxPrice ~= ""
 	local controlsHeight = if filtersExpanded
 		then (if self.compact then 276 else 200)
 		else (if self.compact then 194 else 151)
