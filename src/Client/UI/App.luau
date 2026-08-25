@@ -1003,6 +1003,22 @@ function App:_Animate(instance: Instance, info: TweenInfo, properties: { [string
 	return tween
 end
 
+-- Shared overlay-fade + modal-scale-pop entrance for the app's full-screen
+-- confirm/upsell dialogs (Plus, leaderboard, onboarding) -- goes through
+-- _Animate so it's a no-op under reduceMotion (final values applied
+-- instantly) rather than each call site handling that itself.
+function App:_AnimateModalIn(overlay: Frame, modal: Frame)
+	local targetTransparency = overlay.BackgroundTransparency
+	overlay.BackgroundTransparency = 1
+	self:_Animate(
+		overlay,
+		TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ BackgroundTransparency = targetTransparency }
+	)
+	local scale = Factory.New("UIScale", { Scale = 0.92, Parent = modal })
+	self:_Animate(scale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+end
+
 function App:_BindButton(button: GuiButton)
 	self.sounds:Bind(button)
 	button.Selectable = true
@@ -4394,6 +4410,7 @@ function App:_ShowOnboarding()
 		})
 	end
 	draw()
+	self:_AnimateModalIn(overlay, modal)
 end
 
 function App:_ShowPlus()
@@ -4405,38 +4422,124 @@ function App:_ShowPlus()
 		ZIndex = 210,
 		Parent = self.gui,
 	})
-	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, 300), UDim2.fromScale(0.5, 0.5), "PlusModal")
+	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, 400), UDim2.fromScale(0.5, 0.5), "PlusModal")
 	modal.AnchorPoint = Vector2.new(0.5, 0.5)
+	modal.ClipsDescendants = false
 	modal.ZIndex = 211
 	Factory.New("UISizeConstraint", {
-		MaxSize = Vector2.new(480, 300),
+		MaxSize = Vector2.new(480, 400),
 		Parent = modal,
 	})
-	Factory.Pill(modal, "ROBLOX PLUS", Colors.Mint, 110).Position = UDim2.new(0.5, -55, 0, 30)
-	Factory.Label(modal, "Support creators directly", UDim2.new(1, -50, 0, 42), {
-		Position = UDim2.fromOffset(25, 78),
+	-- Soft gold glow behind the modal reads as a premium/upsell accent from
+	-- across the screen, before the reader's eye even reaches the copy.
+	local glow = Factory.Blob(modal, 360, UDim2.new(0.5, 0, 0, -40), Colors.Gold, 0.88)
+	glow.AnchorPoint = Vector2.new(0.5, 0.5)
+	glow.ZIndex = 210
+
+	local badge = Factory.New("Frame", {
+		Name = "PlusBadge",
+		Size = UDim2.fromOffset(64, 64),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 22),
+		BackgroundColor3 = Colors.Gold,
+		BorderSizePixel = 0,
+		ZIndex = 212,
+		Parent = modal,
+	})
+	Factory.Corner(badge, 32)
+	Factory.Gradient(badge, { Color3.fromRGB(255, 220, 130), Colors.Gold }, 120)
+	Factory.Stroke(badge, Colors.Ink, 0.3, 1.5)
+	local badgeShadow = Factory.New("Frame", {
+		Size = UDim2.fromOffset(64, 64),
+		Position = UDim2.fromOffset(0, 4),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.72,
+		BorderSizePixel = 0,
+		ZIndex = 211,
+		Parent = badge,
+	})
+	Factory.Corner(badgeShadow, 32)
+	Factory.Label(badge, "♛", UDim2.fromScale(1, 1), {
+		Color = Colors.Ink,
+		TextSize = 30,
+		AlignX = Enum.TextXAlignment.Center,
+		AlignY = Enum.TextYAlignment.Center,
+		ZIndex = 213,
+	})
+
+	Factory.Label(modal, "Support creators directly", UDim2.new(1, -50, 0, 30), {
+		Position = UDim2.fromOffset(25, 96),
 		AlignX = Enum.TextXAlignment.Center,
 		Font = Theme.Fonts.Black,
-		TextSize = 22,
+		TextSize = 21,
 		ZIndex = 212,
 	})
 	Factory.Label(
 		modal,
 		"Plus is required to send Robux to another creator. You can still sell your own work and try on every public design without it.",
-		UDim2.new(1, -70, 0, 82),
+		UDim2.new(1, -70, 0, 56),
 		{
-			Position = UDim2.fromOffset(35, 128),
+			Position = UDim2.fromOffset(35, 130),
 			AlignX = Enum.TextXAlignment.Center,
 			AlignY = Enum.TextYAlignment.Top,
 			Color = Colors.TextMuted,
-			TextSize = 13,
+			TextSize = 12,
 			Wrapped = true,
 			ZIndex = 212,
 		}
 	)
+
+	local benefits = Factory.New("Frame", {
+		Position = UDim2.fromOffset(28, 196),
+		Size = UDim2.new(1, -56, 0, 96),
+		BackgroundTransparency = 1,
+		ZIndex = 212,
+		Parent = modal,
+	})
+	Factory.List(benefits, Enum.FillDirection.Vertical, 8)
+	for _, line in
+		{
+			"Send Robux straight to the creators you support",
+			"Unlock purchasing across every listed design",
+			"Nothing changes about selling or trying on your own work",
+		}
+	do
+		local row = Factory.New("Frame", {
+			Size = UDim2.new(1, 0, 0, 26),
+			BackgroundTransparency = 1,
+			ZIndex = 212,
+			Parent = benefits,
+		})
+		local check = Factory.New("Frame", {
+			Size = UDim2.fromOffset(18, 18),
+			Position = UDim2.fromOffset(0, 4),
+			BackgroundColor3 = Colors.Mint,
+			BackgroundTransparency = 0.15,
+			BorderSizePixel = 0,
+			ZIndex = 213,
+			Parent = row,
+		})
+		Factory.Corner(check, 9)
+		Factory.Label(check, "✓", UDim2.fromScale(1, 1), {
+			Color = Colors.Ink,
+			Font = Theme.Fonts.Bold,
+			TextSize = 11,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			ZIndex = 214,
+		})
+		Factory.Label(row, line, UDim2.new(1, -30, 1, 0), {
+			Position = UDim2.fromOffset(28, 0),
+			Color = Colors.TextMuted,
+			TextSize = 12,
+			Wrapped = true,
+			ZIndex = 213,
+		})
+	end
+
 	local subscribe =
-		Factory.Button(modal, "View Roblox Plus", UDim2.new(0.5, -24, 0, 42), UDim2.fromOffset(16, 228), "mint")
-	local closeButton = Factory.Button(modal, "Maybe later", UDim2.new(0.5, -24, 0, 42), UDim2.new(0.5, 8, 0, 228), nil)
+		Factory.Button(modal, "View Roblox Plus", UDim2.new(0.5, -24, 0, 44), UDim2.fromOffset(16, 316), "mint")
+	local closeButton = Factory.Button(modal, "Maybe later", UDim2.new(0.5, -24, 0, 44), UDim2.new(0.5, 8, 0, 316), nil)
 	subscribe.ZIndex = 213
 	closeButton.ZIndex = 213
 	self:_BindButton(subscribe)
@@ -4452,6 +4555,7 @@ function App:_ShowPlus()
 		self.sounds:Play("PanelClose")
 		overlay:Destroy()
 	end)
+	self:_AnimateModalIn(overlay, modal)
 end
 
 function App:_ShowLeaderboard()
@@ -4490,6 +4594,7 @@ function App:_ShowLeaderboard()
 		self.sounds:Play("PanelClose")
 		overlay:Destroy()
 	end)
+	self:_AnimateModalIn(overlay, modal)
 	local list = Factory.New("ScrollingFrame", {
 		Position = UDim2.fromOffset(12, 88),
 		Size = UDim2.new(1, -24, 1, -100),
