@@ -20,6 +20,7 @@ local SocialService = game:GetService("SocialService")
 local TweenService = game:GetService("TweenService")
 
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
+local DailyChallenge = require(ReplicatedStorage:WaitForChild("DailyChallenge"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Factory = require(script.Parent.Factory)
 local GameShell = require(script.Parent.Games.GameShell)
@@ -1038,6 +1039,41 @@ function GamesHub.Show(app: any)
 					chip.Visible = true
 				end
 			end)
+
+			-- Today's Daily Challenge target -- a pure local computation
+			-- (see Shared/DailyChallenge.luau), so unlike the stats chip
+			-- above it needs no round trip and is visible immediately.
+			local challengeTarget = DailyChallenge.GetTarget(statsGameKey, math.floor(os.time() / 86400))
+			if challengeTarget then
+				local challengeChip = Factory.New("Frame", {
+					Name = "ChallengeChip",
+					Size = UDim2.fromOffset(108, 22),
+					AnchorPoint = Vector2.new(1, 0),
+					Position = UDim2.new(1, -10, 0, 40),
+					BackgroundColor3 = Colors.Gold,
+					BackgroundTransparency = 0.25,
+					BorderSizePixel = 0,
+					ZIndex = 215,
+					Parent = button,
+				})
+				Factory.Corner(challengeChip, 11)
+				Factory.Stroke(challengeChip, Colors.Gold, 0.4, 1)
+				Factory.Label(
+					challengeChip,
+					string.format("🎯 Target: %d", challengeTarget),
+					UDim2.new(1, -16, 1, 0),
+					{
+						Position = UDim2.fromOffset(8, 0),
+						Font = Theme.Fonts.Bold,
+						TextSize = 10,
+						Color = Colors.Ink,
+						AlignX = Enum.TextXAlignment.Center,
+						AlignY = Enum.TextYAlignment.Center,
+						Truncate = Enum.TextTruncate.AtEnd,
+						ZIndex = 216,
+					}
+				)
+			end
 		end
 
 		-- A bottom scrim so the title/blurb stay legible in light text no
