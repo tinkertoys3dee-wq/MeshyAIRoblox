@@ -29,6 +29,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
+local DailyChallenge = require(ReplicatedStorage:WaitForChild("DailyChallenge"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 
 local ArcadeService = {}
@@ -133,7 +134,53 @@ function ArcadeService:SubmitScore(player: Player, gameKey: any, score: any): (b
 	end
 
 	self.analytics:Custom(player, "ArcadeScoreSubmitted", clamped, { game = gameKey })
-	return true, { best = newBest }
+
+	-- Daily Challenge: a one-time-per-game-per-day bonus for clearing
+	-- today's target (see Shared/DailyChallenge.luau), on top of whatever
+	-- this submission does to the weekly leaderboard -- a fresh reason to
+	-- replay a game you've already gotten good at, not just a first-timer's
+	-- reward.
+	local day = math.floor(os.time() / 86400)
+	local target = DailyChallenge.GetTarget(gameKey, day)
+	local challengeBonusGranted = 0
+	if target and clamped >= target then
+		local justCleared = false
+		local mutateSuccess = self.profiles:Mutate(player, function(profile)
+			if profile.daily.challengesDay ~= day then
+				profile.daily.challengesDay = day
+				profile.daily.challengesDone = {}
+			end
+			if profile.daily.challengesDone[gameKey] then
+				return
+			end
+			profile.daily.challengesDone[gameKey] = true
+			profile.bonusTokens = (profile.bonusTokens or 0) + Config.Arcade.DailyChallengeBonusTokens
+			justCleared = true
+		end)
+		if mutateSuccess and justCleared then
+			self.profiles:Save(player)
+			challengeBonusGranted = Config.Arcade.DailyChallengeBonusTokens
+			local profile = self.profiles:Get(player)
+			if profile and player.Parent == Players then
+				self.push(player, Network.PushEvents.Profile, { bonusTokens = profile.bonusTokens })
+				self.push(player, Network.PushEvents.Toast, {
+					tone = "success",
+					message = string.format(
+						"🎯 Daily Challenge cleared in %s! +%d bonus tokens",
+						gameKey,
+						challengeBonusGranted
+					),
+				})
+			end
+			self.analytics:Custom(player, "DailyChallengeCleared", challengeBonusGranted, {
+				game = gameKey,
+				target = target,
+				score = clamped,
+			})
+		end
+	end
+
+	return true, { best = newBest, challengeTarget = target, challengeBonusGranted = challengeBonusGranted }
 end
 
 -- Top `DISPLAY_TOP_COUNT` for `gameKey` this week, for the in-hub "this

@@ -313,6 +313,13 @@ return table.freeze({
 		-- leaderboard store. Can't stop a determined cheater on a
 		-- client-simulated game, only bound the damage one can do.
 		MaxSubmittableScore = 100000,
+		-- One-time-per-game-per-day bonus for clearing that day's Daily
+		-- Challenge target (see Shared/DailyChallenge.luau). Unlike
+		-- WeeklyRewards above, this is a normal bonusTokens grant --
+		-- Priority-Pass-only, same restriction as every other free grant in
+		-- this file, not the fully-spendable `tokens` exception WeeklyRewards
+		-- carries.
+		DailyChallengeBonusTokens = 8,
 	},
 
 	Marketplace = {
