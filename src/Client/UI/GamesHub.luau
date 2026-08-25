@@ -324,6 +324,17 @@ function GamesHub.Show(app: any)
 	-- tab is selected fill the rest, cached per game-key so switching tabs
 	-- back and forth doesn't re-hit the network every time.
 
+	local leaderboardBackShadow = Factory.New("Frame", {
+		Name = "BackShadow",
+		Size = UDim2.fromOffset(70, 28),
+		Position = UDim2.fromOffset(0, 5),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.6,
+		BorderSizePixel = 0,
+		ZIndex = 212,
+		Parent = leaderboardView,
+	})
+	Factory.Corner(leaderboardBackShadow, Theme.SmallCorner)
 	local leaderboardBack = Factory.New("TextButton", {
 		Name = "BackButton",
 		Size = UDim2.fromOffset(70, 28),
@@ -340,6 +351,10 @@ function GamesHub.Show(app: any)
 	})
 	Factory.Corner(leaderboardBack, Theme.SmallCorner)
 	Factory.Stroke(leaderboardBack, Colors.Line, 0.55)
+	Factory.Gradient(leaderboardBack, {
+		Color3.fromRGB(74, 82, 114),
+		Color3.fromRGB(52, 58, 84),
+	}, 120)
 	app.sounds:Bind(leaderboardBack)
 	leaderboardBack.Activated:Connect(showHub)
 
@@ -534,6 +549,18 @@ function GamesHub.Show(app: any)
 			})
 			Factory.Corner(tab, Theme.SmallCorner)
 			Factory.Stroke(tab, Colors.Line, 0.6)
+			-- A white overlay gradient rather than a colored one, since it
+			-- needs to look right over both the active (Gold) and inactive
+			-- (PanelSoft) fill setActiveTab swaps between.
+			Factory.New("UIGradient", {
+				Color = ColorSequence.new(Color3.new(1, 1, 1)),
+				Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 0.75),
+					NumberSequenceKeypoint.new(1, 1),
+				}),
+				Rotation = 90,
+				Parent = tab,
+			})
 			app.sounds:Bind(tab)
 			tab.Activated:Connect(function()
 				loadLeaderboard(tile.game.Key)

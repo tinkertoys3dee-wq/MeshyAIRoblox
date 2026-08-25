@@ -187,11 +187,21 @@ function GameShell.new(
 		AlignX = Enum.TextXAlignment.Center,
 		AlignY = Enum.TextYAlignment.Center,
 	})
+	local trophyShadow = Factory.New("Frame", {
+		Name = "TrophyShadow",
+		Size = UDim2.fromOffset(30, 30),
+		Position = UDim2.new(1, -118, 0, 7),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.6,
+		BorderSizePixel = 0,
+		Parent = hud,
+	})
+	Factory.Corner(trophyShadow, 15)
 	local trophyButton = Factory.New("TextButton", {
 		Name = "TrophyButton",
 		Size = UDim2.fromOffset(30, 30),
 		Position = UDim2.new(1, -118, 0, 5),
-		BackgroundColor3 = Colors.PanelSoft,
+		BackgroundColor3 = Colors.Gold,
 		BorderSizePixel = 0,
 		AutoButtonColor = false,
 		Text = "🏆",
@@ -199,12 +209,60 @@ function GameShell.new(
 		Parent = hud,
 	})
 	Factory.Corner(trophyButton, 15)
-	Factory.Stroke(trophyButton, Colors.Line, 0.6)
+	Factory.Stroke(trophyButton, Colors.Ink, 0.4, 1.5)
+	Factory.Gradient(trophyButton, { Color3.fromRGB(255, 224, 140), Color3.fromRGB(214, 158, 40) }, 120)
 	sounds:Bind(trophyButton)
 	trophyButton.Activated:Connect(function()
 		self:_ToggleWeeklyStandings()
 	end)
-	local exitButton = Factory.Button(hud, "✕ Exit", UDim2.fromOffset(70, 30), UDim2.new(1, -80, 0, 5), nil)
+
+	local exitShadow = Factory.New("Frame", {
+		Name = "ExitShadow",
+		Size = UDim2.fromOffset(70, 30),
+		Position = UDim2.new(1, -80, 0, 7),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.6,
+		BorderSizePixel = 0,
+		Parent = hud,
+	})
+	Factory.Corner(exitShadow, Theme.SmallCorner)
+	local exitButton = Factory.New("TextButton", {
+		Name = "ExitButton",
+		Size = UDim2.fromOffset(70, 30),
+		Position = UDim2.new(1, -80, 0, 5),
+		BackgroundColor3 = Colors.Danger,
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		Text = "Exit",
+		TextColor3 = Colors.Text,
+		Font = Theme.Fonts.Bold,
+		TextSize = 12,
+		Parent = hud,
+	})
+	Factory.Corner(exitButton, Theme.SmallCorner)
+	Factory.Stroke(exitButton, Colors.Ink, 0.4, 1.5)
+	Factory.Gradient(exitButton, { Color3.fromRGB(255, 140, 150), Colors.Danger }, 120)
+	exitButton.TextXAlignment = Enum.TextXAlignment.Right
+	Factory.New("UIPadding", { PaddingRight = UDim.new(0, 10), Parent = exitButton })
+	local exitIcon = Factory.New("Frame", {
+		Name = "Icon",
+		Size = UDim2.fromOffset(20, 20),
+		Position = UDim2.fromOffset(5, 5),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.75,
+		BorderSizePixel = 0,
+		ZIndex = 2,
+		Parent = exitButton,
+	})
+	Factory.Corner(exitIcon, 7)
+	Factory.Label(exitIcon, "✕", UDim2.fromScale(1, 1), {
+		Color = Colors.Text,
+		Font = Theme.Fonts.Black,
+		TextSize = 11,
+		AlignX = Enum.TextXAlignment.Center,
+		AlignY = Enum.TextYAlignment.Center,
+		ZIndex = 3,
+	})
 	sounds:Bind(exitButton)
 	exitButton.Activated:Connect(function()
 		self:Stop()
