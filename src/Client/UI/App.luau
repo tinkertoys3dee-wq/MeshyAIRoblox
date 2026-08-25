@@ -1019,6 +1019,27 @@ function App:_AnimateModalIn(overlay: Frame, modal: Frame)
 	self:_Animate(scale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
 end
 
+-- Shared by the Settings page's own Invite card and any other contextual
+-- invite touchpoint (e.g. the Daily Quests clear-all banner) -- same native
+-- prompt + eligibility check everywhere a "grow the studio" moment happens.
+function App:_PromptFriendInvite()
+	local player = Players.LocalPlayer
+	local checkSuccess, allowed = pcall(function()
+		return SocialService:CanSendGameInviteAsync(player)
+	end)
+	if not checkSuccess or allowed ~= true then
+		self:_Toast("error", "Invites aren't available for your account or platform right now.")
+		return
+	end
+	local promptSuccess, promptProblem = pcall(function()
+		SocialService:PromptGameInvite(player)
+	end)
+	if not promptSuccess then
+		warn(string.format("[App] Game invite prompt failed: %s", tostring(promptProblem)))
+		self:_Toast("error", "Roblox could not open the invite prompt.")
+	end
+end
+
 -- Shared by the Create page's own Priority Pass button and the contextual
 -- upsell chip on a queued generation row -- both buy a pass the same way,
 -- for use on whatever gets submitted next (see the upsell chip's own
@@ -2635,7 +2656,7 @@ function App:_RenderCreate()
 			end
 		end
 		local allDone = doneCount >= #quests
-		local cardHeight = #quests * 46 + (if allDone then 82 else 46)
+		local cardHeight = #quests * 46 + (if allDone then 104 else 46)
 		local questCard = Factory.Card(stack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyQuests")
 		questCard.LayoutOrder = 6
 		Factory.Label(questCard, "DAILY QUESTS", UDim2.new(1, -100, 0, 20), {
@@ -2718,7 +2739,7 @@ function App:_RenderCreate()
 		if allDone then
 			local banner = Factory.New("Frame", {
 				Position = UDim2.fromOffset(16, qy),
-				Size = UDim2.new(1, -32, 0, 28),
+				Size = UDim2.new(1, -32, 0, 50),
 				BackgroundColor3 = Colors.Gold,
 				BackgroundTransparency = 0.82,
 				BorderSizePixel = 0,
@@ -2729,15 +2750,37 @@ function App:_RenderCreate()
 			Factory.Label(
 				banner,
 				string.format("🏆 All quests cleared! +%d bonus tokens", Config.Retention.QuestClearBonusTokens),
-				UDim2.new(1, -20, 1, 0),
+				UDim2.new(1, -20, 0, 16),
 				{
-					Position = UDim2.fromOffset(10, 0),
+					Position = UDim2.fromOffset(10, 6),
 					Font = Theme.Fonts.Bold,
 					Color = Colors.Gold,
 					TextSize = 12,
 					AlignX = Enum.TextXAlignment.Center,
 				}
 			)
+			-- A quest-clear day is a genuine high point -- the natural,
+			-- non-pushy moment to surface the same invite prompt Settings
+			-- already offers, since a player enjoying the studio enough to
+			-- clear every quest is the one most likely to say yes.
+			local inviteRow = Factory.New("TextButton", {
+				Size = UDim2.fromOffset(150, 22),
+				AnchorPoint = Vector2.new(0.5, 0),
+				Position = UDim2.new(0.5, 0, 0, 24),
+				BackgroundColor3 = Colors.Gold,
+				BorderSizePixel = 0,
+				AutoButtonColor = false,
+				Text = "👥 Invite a friend",
+				TextColor3 = Colors.Ink,
+				Font = Theme.Fonts.Bold,
+				TextSize = 11,
+				Parent = banner,
+			})
+			Factory.Corner(inviteRow, 11)
+			self:_BindButton(inviteRow)
+			inviteRow.Activated:Connect(function()
+				self:_PromptFriendInvite()
+			end)
 		end
 	end
 	self.questJustCompleted = nil
@@ -4465,20 +4508,7 @@ function App:_RenderSettings()
 	)
 	self:_BindButton(inviteButton)
 	inviteButton.Activated:Connect(function()
-		local checkSuccess, allowed = pcall(function()
-			return SocialService:CanSendGameInviteAsync(player)
-		end)
-		if not checkSuccess or allowed ~= true then
-			self:_Toast("error", "Invites aren't available for your account or platform right now.")
-			return
-		end
-		local promptSuccess, promptProblem = pcall(function()
-			SocialService:PromptGameInvite(player)
-		end)
-		if not promptSuccess then
-			warn(string.format("[App] Game invite prompt failed: %s", tostring(promptProblem)))
-			self:_Toast("error", "Roblox could not open the invite prompt.")
-		end
+		self:_PromptFriendInvite()
 	end)
 
 	-- EQUIPPED NOW ----------------------------------------------------------
