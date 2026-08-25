@@ -58,7 +58,7 @@
     <circle cx="512.0" cy="512.0" r="458" fill="none" stroke="#000000" stroke-opacity="0.14" stroke-width="10"/>
     <g filter="url(#softShadowProductAvatarConversion)">
       <circle cx="362" cy="446" r="34" fill="#FFFFFF"/>
-      <path d="M300 570 A62 62 0 0 1 424 570 Z" fill="#FFFFFF"/>
+      <path d="M300 570 A62 62 0 0 1 424 570 L424 586 Q424 600 410 600 L314 600 Q300 600 300 586 Z" fill="#FFFFFF"/>
     </g>
     <g filter="url(#tinyShadowProductAvatarConversion)"><path d="M462 492 L542 492 M520 466 L546 492 L520 518" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></g>
     <g filter="url(#softShadowProductAvatarConversion)"><path d="M642 392 L729.0 442.0 L642 492 L555.0 442.0 Z" fill="#FFFFFF"/><path d="M555.0 442.0 L642 492 L642 592 L555.0 542.0 Z" fill="#C9D6FF" opacity="0.75"/><path d="M729.0 442.0 L642 492 L642 592 L729.0 542.0 Z" fill="#8FA3E8" opacity="0.7"/><path d="M642 392 L729.0 442.0 M642 392 L555.0 442.0 M642 492 L642 592 M555.0 442.0 L555.0 542.0 M729.0 442.0 L729.0 542.0 M555.0 542.0 L642 592 L729.0 542.0" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-opacity="0.85"/></g>
