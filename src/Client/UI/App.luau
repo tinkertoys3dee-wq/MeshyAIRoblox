@@ -196,9 +196,12 @@ end
 
 -- Cheap, instant client-side avatar preview. `thumbType` is one of
 -- Config.Generation.AvatarViews' ThumbType values (AvatarHeadShot/
--- AvatarBust/Avatar) -- the engine resolves this locally, no HTTP call.
--- The server-side fetch for the generation job itself is a different,
--- real URL; see AvatarThumbnailService for why.
+-- AvatarBust/Avatar) -- the engine resolves this locally, no HTTP call
+-- (and unlike a fetchable URL, HttpService couldn't make this call anyway:
+-- Roblox blocks HttpService from reaching Roblox-owned domains). The real
+-- fetchable image URL the generation job itself needs is instead resolved
+-- by the external backend, from the avatarView this client sends and the
+-- playerUserId already stamped on every job -- see GenerationService.
 --
 -- Unlike type=Asset thumbnails, avatar thumbnail types only accept one of a
 -- fixed discrete size set -- 48/60/100/150/180/352/420 (plus 720 for the

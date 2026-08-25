@@ -57,7 +57,6 @@ export type GenerationRecord = {
 	detailLevel: string,
 	imageQuality: string?,
 	sourceImageAssetId: number?,
-	sourceImageUrl: string?,
 	avatarView: string?,
 	backendJobId: string?,
 	sourceBackendJobId: string?,

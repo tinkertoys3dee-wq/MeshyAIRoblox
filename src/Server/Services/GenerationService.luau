@@ -169,8 +169,7 @@ function GenerationService.new(
 	push: (Player, string, any) -> (),
 	analyticsService: any,
 	achievementService: any,
-	itemService: any,
-	avatarThumbnailService: any
+	itemService: any
 )
 	local self = setmetatable({
 		profiles = profileService,
@@ -180,7 +179,6 @@ function GenerationService.new(
 		analytics = analyticsService,
 		achievements = achievementService,
 		items = itemService,
-		avatarThumbnails = avatarThumbnailService,
 		push = push,
 		polling = {} :: { [string]: boolean },
 		launching = {} :: { [string]: boolean },
@@ -391,9 +389,13 @@ end
 -- style preset, detail level, pricing/payment) except the source image is
 -- the player's own current Roblox avatar render instead of an
 -- upload/AI-generated reference -- no custom-image pass required, since
--- there's nothing to upload. See AvatarThumbnailService for why this needs
--- a real server-fetched URL rather than the rbxthumb:// reference the
--- client preview uses.
+-- there's nothing to upload. Unlike an early version of this feature, the
+-- Roblox server does NOT resolve a real fetchable avatar image URL itself:
+-- HttpService is blocked from reaching Roblox-owned domains (confirmed live
+-- -- "HttpService is not allowed to access that Roblox resource" against
+-- thumbnails.roblox.com), so only `avatarView` is sent to the backend,
+-- which resolves the actual thumbnail URL itself from the `playerUserId`
+-- BackendService already stamps on every job (see BackendService:CreateJob).
 function GenerationService:CreateFromAvatar(player: Player, payload: any): (boolean, any)
 	if type(payload) ~= "table" then
 		return false, "INVALID_REQUEST"
@@ -422,13 +424,7 @@ function GenerationService:CreateFromAvatar(player: Player, payload: any): (bool
 		return false, filterError
 	end
 	local studioMock = RunService:IsStudio() and Config.Studio.AllowMockBackend and not self.backend:IsConfigured()
-	local sourceImageUrl = nil :: string?
 	if not studioMock then
-		local thumbnailSuccess, thumbnailResult = self.avatarThumbnails:GetImageUrl(player.UserId, avatarView)
-		if not thumbnailSuccess then
-			return false, thumbnailResult
-		end
-		sourceImageUrl = thumbnailResult
 		local moderationSuccess, moderationResult = self.backend:ModeratePrompt(player, filteredPrompt)
 		if not moderationSuccess then
 			return false, moderationResult
@@ -447,7 +443,6 @@ function GenerationService:CreateFromAvatar(player: Player, payload: any): (bool
 		accessoryType = accessoryType,
 		stylePreset = stylePreset,
 		detailLevel = detailLevel,
-		sourceImageUrl = sourceImageUrl,
 		avatarView = avatarView,
 		usePriority = payload.usePriority == true,
 		-- See the matching comment in Create() above.
@@ -665,7 +660,6 @@ function GenerationService:_Prepare(
 			detailLevel = payload.detailLevel or "BALANCED",
 			imageQuality = payload.imageQuality,
 			sourceImageAssetId = payload.sourceImageAssetId,
-			sourceImageUrl = payload.sourceImageUrl,
 			avatarView = payload.avatarView,
 			createdAt = now,
 			updatedAt = now,
@@ -743,8 +737,11 @@ function GenerationService:_Launch(player: Player, generationId: string)
 	if generation.sourceImageAssetId then
 		requestPayload.sourceImageAssetId = generation.sourceImageAssetId
 	end
-	if generation.sourceImageUrl then
-		requestPayload.sourceImageUrl = generation.sourceImageUrl
+	if generation.avatarView then
+		-- The backend, not the Roblox server, resolves this into a real
+		-- fetchable thumbnail URL -- see BackendService:CreateJob and the
+		-- comment above CreateFromAvatar for why.
+		requestPayload.avatarView = generation.avatarView
 	end
 	if generation.method == "IMAGE_PREVIEW" and type(generation.imageQuality) == "string" then
 		local tier = IMAGE_QUALITY_TIERS[generation.imageQuality]

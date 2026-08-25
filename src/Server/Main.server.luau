@@ -39,7 +39,6 @@ local PlayerStateService = require(script.Parent.Services.PlayerStateService)
 local BackendService = require(script.Parent.Services.BackendService)
 local CommerceService = require(script.Parent.Services.CommerceService)
 local GenerationService = require(script.Parent.Services.GenerationService)
-local AvatarThumbnailService = require(script.Parent.Services.AvatarThumbnailService)
 local ItemService = require(script.Parent.Services.ItemService)
 local CommunityService = require(script.Parent.Services.CommunityService)
 local CatalogService = require(script.Parent.Services.CatalogService)
@@ -65,18 +64,8 @@ local backend = BackendService.new()
 local commerce = CommerceService.new(profiles, playerStates, analytics, push)
 local adRewards = AdRewardService.new(profiles, playerStates, commerce, push, analytics, achievements)
 local items = ItemService.new(profiles, playerStates, push)
-local avatarThumbnails = AvatarThumbnailService.new()
-local generations = GenerationService.new(
-	profiles,
-	playerStates,
-	backend,
-	commerce,
-	push,
-	analytics,
-	achievements,
-	items,
-	avatarThumbnails
-)
+local generations =
+	GenerationService.new(profiles, playerStates, backend, commerce, push, analytics, achievements, items)
 local leaderboard = LeaderboardService.new()
 local arcade = ArcadeService.new(profiles, playerStates, push, analytics)
 local community = CommunityService.new(profiles, playerStates, push, analytics, achievements, leaderboard)
