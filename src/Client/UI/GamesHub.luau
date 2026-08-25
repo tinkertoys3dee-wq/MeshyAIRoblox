@@ -8,6 +8,7 @@
 -- chrome -- there's nothing here that needs to survive being closed.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
@@ -52,17 +53,25 @@ local GamesHub = {}
 
 -- `app` needs: .gui, .sounds, .compact, :_Invoke(action, payload), :_BindButton(button).
 function GamesHub.Show(app: any)
+	local reduceMotion = app.state ~= nil and app.state.profile.settings.reduceMotion == true
+
 	local overlay = Factory.New("Frame", {
 		Name = "ArcadeOverlay",
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = Colors.Ink,
-		BackgroundTransparency = 0.2,
+		BackgroundTransparency = if reduceMotion then 0.2 else 1,
 		BorderSizePixel = 0,
 		ZIndex = 210,
 		Parent = app.gui,
 	})
 
-	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, 520), UDim2.fromScale(0.5, 0.5), "ArcadeModal")
+	local restingModalPosition = UDim2.fromScale(0.5, 0.5)
+	local modal = Factory.Card(
+		overlay,
+		UDim2.new(1, -32, 0, 520),
+		if reduceMotion then restingModalPosition else restingModalPosition + UDim2.fromOffset(0, 18),
+		"ArcadeModal"
+	)
 	modal.AnchorPoint = Vector2.new(0.5, 0.5)
 	modal.ZIndex = 211
 	modal.ClipsDescendants = true
@@ -70,6 +79,30 @@ function GamesHub.Show(app: any)
 		MaxSize = Vector2.new(560, 520),
 		Parent = modal,
 	})
+
+	-- A quick fade-and-rise entrance -- skipped under reduceMotion, where
+	-- both the overlay and modal are simply created at their final resting
+	-- state above instead of animated into it.
+	if not reduceMotion then
+		TweenService:Create(overlay, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 0.2,
+		}):Play()
+		TweenService:Create(modal, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = restingModalPosition,
+		}):Play()
+	end
+
+	-- This modal is parented to app.gui, a sibling of the scaled `shell` (not
+	-- inside it), so it does NOT inherit App's own UIScale automatically --
+	-- without this it would stay stuck at 1x for players who picked a larger
+	-- UI scale for readability. Registered on `app` so the Settings page's
+	-- scale chips can keep it live while the Arcade is open; cleared below
+	-- when the modal closes.
+	local uiScale = Factory.New("UIScale", {
+		Scale = if app.state then tonumber(app.state.profile.settings.uiScale) or 1 else 1,
+		Parent = modal,
+	})
+	app.arcadeUiScale = uiScale
 
 	Factory.Pill(modal, "ARCADE", Colors.Rose, 100).Position = UDim2.fromOffset(16, 16)
 	Factory.Label(
@@ -135,7 +168,7 @@ function GamesHub.Show(app: any)
 
 	local function playGame(gameModule: GameShell.GameModule)
 		if not shell then
-			shell = GameShell.new(gameView, app.sounds, showHub, submitScore, fetchWeeklyTop)
+			shell = GameShell.new(gameView, app.sounds, showHub, submitScore, fetchWeeklyTop, reduceMotion)
 		end
 		hubView.Visible = false
 		gameView.Visible = true
@@ -147,6 +180,7 @@ function GamesHub.Show(app: any)
 		if shell then
 			shell:Destroy()
 		end
+		app.arcadeUiScale = nil
 		overlay:Destroy()
 	end)
 
@@ -168,6 +202,7 @@ function GamesHub.Show(app: any)
 		})
 		Factory.Corner(button, 18)
 		Factory.Stroke(button, Colors.Ink, 0.5, 1.5)
+		local tileScale = Factory.New("UIScale", { Scale = 1, Parent = button })
 		Factory.Label(button, tile.icon, UDim2.fromOffset(40, 40), {
 			Position = UDim2.fromOffset(14, 12),
 			TextSize = 28,
@@ -194,6 +229,16 @@ function GamesHub.Show(app: any)
 		app.sounds:Bind(button)
 		button.Selectable = true
 		button.Activated:Connect(function()
+			if not reduceMotion then
+				tileScale.Scale = 0.92
+				TweenService
+					:Create(
+						tileScale,
+						TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+						{ Scale = 1 }
+					)
+					:Play()
+			end
 			playGame(tile.game)
 		end)
 	end

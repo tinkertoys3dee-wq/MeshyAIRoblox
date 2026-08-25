@@ -8,6 +8,7 @@
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Parent.Factory)
@@ -24,6 +25,8 @@ local BASE_SPEED = 260
 local SPEED_PER_SCORE = 0.6
 local MAX_SPEED = 640
 local SCORE_PER_SECOND = 10
+local TICK_COUNT = 8
+local TICK_SPACING = 70
 -- In hundredths of a second so math.random (integers only) can pick between
 -- them directly -- computing these from float seconds risks a value like
 -- 1.6 * 100 landing on 159.999999... and erroring math.random on a
@@ -63,6 +66,16 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		return if w > 40 then w else 520
 	end
 
+	local sky = Factory.New("Frame", {
+		Name = "Sky",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Colors.Panel,
+		BorderSizePixel = 0,
+		ZIndex = 1,
+		Parent = canvas,
+	})
+	Factory.Gradient(sky, { Colors.PanelSoft, Colors.Panel }, 90)
+
 	Factory.New("Frame", {
 		Name = "Ground",
 		Size = UDim2.new(1, 0, 0, 2),
@@ -73,6 +86,28 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		ZIndex = 2,
 		Parent = canvas,
 	})
+
+	-- Short scrolling tick marks along the ground reinforce how fast the
+	-- game is currently moving -- decorative (the obstacles alone already
+	-- carry the real gameplay speed), so skipped entirely under reduceMotion
+	-- rather than left scrolling in the background.
+	local groundTicks: { { instance: Frame, x: number } } = {}
+	if not api.reduceMotion then
+		for i = 1, TICK_COUNT do
+			local x = (i - 1) * TICK_SPACING
+			local tick = Factory.New("Frame", {
+				Name = "GroundTick",
+				Size = UDim2.fromOffset(18, 2),
+				Position = UDim2.fromOffset(x, groundY() + DINO_SIZE),
+				BackgroundColor3 = Colors.Line,
+				BackgroundTransparency = 0.65,
+				BorderSizePixel = 0,
+				ZIndex = 2,
+				Parent = canvas,
+			})
+			table.insert(groundTicks, { instance = tick, x = x })
+		end
+	end
 
 	local dino = Factory.New("Frame", {
 		Name = "Dino",
@@ -85,6 +120,10 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	})
 	Factory.Corner(dino, 6)
 	Factory.Stroke(dino, Colors.Ink, 0.3, 1.5)
+	-- Squash/stretch handle: cosmetic scale pulse on takeoff/landing, gated
+	-- under reduceMotion the same way FlappyBird's flap-squash is -- the
+	-- dino's actual jump arc (the gameplay motion) is unaffected either way.
+	local dinoScale = Factory.New("UIScale", { Scale = 1, Parent = dino })
 	dinoY = groundY()
 
 	local function jump()
@@ -94,6 +133,22 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		velocityY = JUMP_VELOCITY
 		onGround = false
 		api.sounds:Play("Press")
+		GameShell.Burst(
+			canvas,
+			dino.Position + UDim2.fromOffset(DINO_SIZE / 2, DINO_SIZE),
+			Colors.Line,
+			api.reduceMotion
+		)
+		if not api.reduceMotion then
+			dinoScale.Scale = 1
+			TweenService
+				:Create(
+					dinoScale,
+					TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{ Scale = 1.25 }
+				)
+				:Play()
+		end
 	end
 
 	local inputConn = UserInputService.InputBegan:Connect(function(input, processed)
@@ -143,6 +198,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			return
 		end
 		running = false
+		GameShell.Shake(canvas, api.reduceMotion)
+		GameShell.Burst(
+			canvas,
+			dino.Position + UDim2.fromOffset(DINO_SIZE / 2, DINO_SIZE / 2),
+			Colors.Danger,
+			api.reduceMotion
+		)
 		api.gameOver(score)
 	end
 
@@ -160,12 +222,29 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		end
 
 		local ground = groundY()
+		local wasAirborne = not onGround
 		velocityY += GRAVITY * dt
 		dinoY += velocityY * dt
 		if dinoY >= ground then
 			dinoY = ground
 			velocityY = 0
 			onGround = true
+			if wasAirborne then
+				GameShell.Burst(
+					canvas,
+					dino.Position + UDim2.fromOffset(DINO_SIZE / 2, DINO_SIZE),
+					Colors.Line,
+					api.reduceMotion
+				)
+				if not api.reduceMotion then
+					dinoScale.Scale = 0.8
+					TweenService:Create(
+						dinoScale,
+						TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+						{ Scale = 1 }
+					):Play()
+				end
+			end
 		end
 		dino.Position = UDim2.fromOffset(DINO_X, dinoY)
 
@@ -175,6 +254,14 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			timeSinceObstacle = 0
 			nextObstacleGap = math.random(MIN_OBSTACLE_GAP_CENTIS, MAX_OBSTACLE_GAP_CENTIS) / 100
 			spawnObstacle()
+		end
+
+		for _, tick in groundTicks do
+			tick.x -= speed * dt
+			if tick.x < -20 then
+				tick.x += TICK_COUNT * TICK_SPACING
+			end
+			tick.instance.Position = UDim2.fromOffset(tick.x, ground + DINO_SIZE)
 		end
 
 		local dinoLeft, dinoRight = DINO_X, DINO_X + DINO_SIZE
@@ -207,6 +294,10 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		inputConn:Disconnect()
 		tapConn:Disconnect()
 		dino:Destroy()
+		sky:Destroy()
+		for _, tick in groundTicks do
+			tick.instance:Destroy()
+		end
 		for _, obstacle in obstacles do
 			obstacle.frame:Destroy()
 		end

@@ -13,6 +13,7 @@
 -- a different game, never left for the caller to guess about.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Parent.Factory)
@@ -23,6 +24,11 @@ export type GameApi = {
 	sounds: any,
 	setScore: (score: number) -> (),
 	gameOver: (score: number) -> (),
+	-- True when the player enabled Settings > Reduce motion. Every game
+	-- reads this before playing a decorative effect (screen shake, particle
+	-- bursts, squash/stretch) -- never before moving the player/obstacles
+	-- themselves, since that motion carries the actual gameplay information.
+	reduceMotion: boolean,
 }
 
 export type GameModule = {
@@ -36,6 +42,59 @@ export type WeeklyStanding = { userId: number, name: string, score: number }
 local GameShell = {}
 GameShell.__index = GameShell
 
+-- Small radial particle puff shared by all three games (gate passed, pipe
+-- cleared, obstacle jumped) so the effect only has to be built once. A no-op
+-- under reduceMotion -- it's pure decoration, never the game's only signal
+-- that something happened (a sound and/or score update always accompanies
+-- it), so skipping it costs nothing but flourish.
+function GameShell.Burst(parent: Instance, position: UDim2, color: Color3, reduceMotion: boolean)
+	if reduceMotion then
+		return
+	end
+	for i = 1, 6 do
+		local angle = (i / 6) * math.pi * 2 + math.random() * 0.4
+		local distance = 22 + math.random() * 16
+		local particle = Factory.New("Frame", {
+			Name = "Particle",
+			Size = UDim2.fromOffset(6, 6),
+			Position = position,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = color,
+			BorderSizePixel = 0,
+			ZIndex = 40,
+			Parent = parent,
+		})
+		Factory.Corner(particle, 3)
+		local targetPosition = position + UDim2.fromOffset(math.cos(angle) * distance, math.sin(angle) * distance)
+		local tween = TweenService:Create(
+			particle,
+			TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ Position = targetPosition, BackgroundTransparency = 1, Size = UDim2.fromOffset(2, 2) }
+		)
+		tween.Completed:Connect(function()
+			particle:Destroy()
+		end)
+		tween:Play()
+	end
+end
+
+-- Nudges `frame` away from its current position and eases it back -- used
+-- for crash/collision feedback. A no-op under reduceMotion since a sudden
+-- shake is exactly the kind of motion that setting exists to suppress, and
+-- the games always pair it with a sound and the game-over screen anyway.
+function GameShell.Shake(frame: Frame, reduceMotion: boolean)
+	if reduceMotion then
+		return
+	end
+	local restingPosition = frame.Position
+	frame.Position = restingPosition + UDim2.fromOffset(math.random(-7, 7), math.random(-5, 5))
+	TweenService:Create(
+		frame,
+		TweenInfo.new(0.3, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
+		{ Position = restingPosition }
+	):Play()
+end
+
 -- `onGameEnd` fires once per finished game (fire-and-forget score submission
 -- — the shell doesn't wait on it or block the game-over screen for it).
 -- `fetchWeeklyTop` backs the "🏆 This week" panel; both are supplied by
@@ -46,13 +105,15 @@ function GameShell.new(
 	sounds: any,
 	onExit: () -> (),
 	onGameEnd: (gameKey: string, score: number) -> (),
-	fetchWeeklyTop: (gameKey: string) -> { WeeklyStanding }?
+	fetchWeeklyTop: (gameKey: string) -> { WeeklyStanding }?,
+	reduceMotion: boolean?
 )
 	local self = setmetatable({
 		sounds = sounds,
 		onExit = onExit,
 		onGameEnd = onGameEnd,
 		fetchWeeklyTop = fetchWeeklyTop,
+		reduceMotion = reduceMotion == true,
 		stopGame = nil :: (() -> ())?,
 		currentGame = nil :: GameModule?,
 		bestScores = {} :: { [string]: number },
@@ -123,7 +184,7 @@ function GameShell.new(
 		ZIndex = 30,
 		Parent = canvas,
 	})
-	Factory.Label(overlay, "GAME OVER", UDim2.new(1, -40, 0, 34), {
+	local titleLabel = Factory.Label(overlay, "GAME OVER", UDim2.new(1, -40, 0, 34), {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0.28, 0),
 		Font = Theme.Fonts.Black,
@@ -132,6 +193,7 @@ function GameShell.new(
 		AlignX = Enum.TextXAlignment.Center,
 		ZIndex = 31,
 	})
+	local titleScale = Factory.New("UIScale", { Scale = 1, Parent = titleLabel })
 	local finalScoreLabel = Factory.Label(overlay, "", UDim2.new(1, -40, 0, 24), {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0.28, 40),
@@ -196,6 +258,7 @@ function GameShell.new(
 	self.overlay = overlay
 	self.finalScoreLabel = finalScoreLabel
 	self.bestLabel = bestLabel
+	self.titleScale = titleScale
 
 	-- Always restarts whatever `currentGame` is currently set to, so no
 	-- individual game needs to know how retry works.
@@ -221,6 +284,28 @@ function GameShell:_GameOver(score: number)
 	self.bestLabel.Text = string.format("Best this session: %d", best)
 	self.overlay.Visible = true
 	self.sounds:Play("Error")
+	if self.reduceMotion then
+		self.overlay.BackgroundTransparency = 0.15
+		self.titleScale.Scale = 1
+	else
+		-- A quick fade-in-and-punch on the "GAME OVER" title -- purely
+		-- decorative feedback, so it's the first thing skipped under Reduce
+		-- motion (set to its final resting state above instead).
+		self.overlay.BackgroundTransparency = 1
+		self.titleScale.Scale = 0.4
+		TweenService:Create(
+			self.overlay,
+			TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ BackgroundTransparency = 0.15 }
+		):Play()
+		TweenService
+			:Create(
+				self.titleScale,
+				TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+				{ Scale = 1 }
+			)
+			:Play()
+	end
 	if gameModule then
 		-- Fire-and-forget: a network hiccup here should never interrupt the
 		-- game-over screen the player is already looking at.
@@ -320,6 +405,7 @@ function GameShell:Run(gameModule: GameModule)
 	self:SetScore(0)
 	self.stopGame = gameModule.Start(self.canvas, {
 		sounds = self.sounds,
+		reduceMotion = self.reduceMotion,
 		setScore = function(score: number)
 			self:SetScore(score)
 		end,

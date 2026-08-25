@@ -299,6 +299,10 @@ function App.new()
 		ambientMotionEnabled = false,
 		ambientBlobs = {} :: { { instance: Frame, restPosition: UDim2 } },
 		ambientEmbers = {} :: { Frame },
+		-- Set by GamesHub while the Arcade modal is open (nil otherwise) so
+		-- the Settings page's UIScale chips can keep it live-scaled too --
+		-- see the "Make Arcade modal inherit UIScale" fix in GamesHub.luau.
+		arcadeUiScale = nil :: UIScale?,
 	}, App)
 	self:_BuildChrome()
 	AvatarEditorService.PromptAllowInventoryReadAccessCompleted:Connect(function(result)
@@ -3853,6 +3857,9 @@ function App:_RenderSettings()
 		self:_BindButton(chip)
 		chip.Activated:Connect(function()
 			self.uiScaleInstance.Scale = option.Value
+			if self.arcadeUiScale then
+				self.arcadeUiScale.Scale = option.Value
+			end
 			self:_UpdateSetting("uiScale", option.Value)
 		end)
 	end

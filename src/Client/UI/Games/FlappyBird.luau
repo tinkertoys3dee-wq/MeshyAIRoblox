@@ -11,6 +11,7 @@
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Parent.Factory)
@@ -26,6 +27,8 @@ local PIPE_WIDTH = 58
 local PIPE_INTERVAL = 1.5
 local BIRD_SIZE = 26
 local BIRD_X = 74
+local CLOUD_COUNT = 5
+local CLOUD_PARALLAX_SPEED = 26 -- px/sec, well under PIPE_SPEED for depth
 
 type Pipe = { top: Frame, bottom: Frame, x: number, gapY: number, scored: boolean }
 
@@ -41,6 +44,39 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local pipes: { Pipe } = {}
 	local timeSincePipe = PIPE_INTERVAL -- spawn the first pipe immediately
 
+	-- A soft sky gradient plus a handful of slow-drifting "clouds" well
+	-- behind the pipes (ZIndex 1-2, pipes are 3) -- pure background texture,
+	-- parallax-scrolled at a fraction of PIPE_SPEED for depth. Frozen in
+	-- place (no per-frame scroll) under reduceMotion; they still render, just
+	-- as a static backdrop rather than an animated one.
+	local sky = Factory.New("Frame", {
+		Name = "Sky",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Colors.Panel,
+		BorderSizePixel = 0,
+		ZIndex = 1,
+		Parent = canvas,
+	})
+	Factory.Gradient(sky, { Colors.PanelSoft, Colors.Panel }, 90)
+	local clouds: { { instance: Frame, x: number, y: number } } = {}
+	for i = 1, CLOUD_COUNT do
+		local cloudSize = 30 + math.random() * 40
+		local instance = Factory.New("Frame", {
+			Name = "Cloud",
+			Size = UDim2.fromOffset(cloudSize, cloudSize * 0.5),
+			BackgroundColor3 = Colors.Text,
+			BackgroundTransparency = 0.88,
+			BorderSizePixel = 0,
+			ZIndex = 2,
+			Parent = canvas,
+		})
+		Factory.Corner(instance, cloudSize)
+		local x = math.random(0, 520)
+		local y = 20 + math.random() * 180
+		instance.Position = UDim2.fromOffset(x, y)
+		table.insert(clouds, { instance = instance, x = x, y = y })
+	end
+
 	local bird = Factory.New("Frame", {
 		Name = "Bird",
 		Size = UDim2.fromOffset(BIRD_SIZE, BIRD_SIZE),
@@ -52,6 +88,11 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	})
 	Factory.Corner(bird, BIRD_SIZE / 2)
 	Factory.Stroke(bird, Colors.Ink, 0.3, 1.5)
+	-- Flap squash/stretch handle: purely cosmetic scale pulse, so it's the
+	-- part of "flap" that reduceMotion turns off -- the bird's actual
+	-- position/velocity (the gameplay-relevant motion) is untouched either
+	-- way.
+	local birdScale = Factory.New("UIScale", { Scale = 1, Parent = bird })
 
 	-- Floored: AbsoluteSize can be fractional (UI scaling), and math.random
 	-- errors on a non-integer argument -- every caller below feeds these
@@ -71,6 +112,12 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		end
 		velocityY = FLAP_VELOCITY
 		api.sounds:Play("Press")
+		if not api.reduceMotion then
+			birdScale.Scale = 0.7
+			TweenService
+				:Create(birdScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+				:Play()
+		end
 	end
 
 	local inputConn = UserInputService.InputBegan:Connect(function(input, processed)
@@ -128,6 +175,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			return
 		end
 		running = false
+		GameShell.Shake(canvas, api.reduceMotion)
+		GameShell.Burst(
+			canvas,
+			bird.Position + UDim2.fromOffset(BIRD_SIZE / 2, BIRD_SIZE / 2),
+			Colors.Danger,
+			api.reduceMotion
+		)
 		api.gameOver(score)
 	end
 
@@ -150,6 +204,20 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			return
 		end
 		bird.Position = UDim2.fromOffset(BIRD_X, birdY)
+		-- Tilt is a direct readout of the bird's own existing vertical
+		-- velocity, not an independent animation, so it stays on even under
+		-- reduceMotion the same way the bird's position itself does.
+		bird.Rotation = math.clamp(velocityY * 0.08, -30, 75)
+
+		if not api.reduceMotion then
+			for _, cloud in clouds do
+				cloud.x -= CLOUD_PARALLAX_SPEED * dt
+				if cloud.x < -60 then
+					cloud.x = width() + 20
+				end
+				cloud.instance.Position = UDim2.fromOffset(cloud.x, cloud.y)
+			end
+		end
 
 		timeSincePipe += dt
 		if timeSincePipe >= PIPE_INTERVAL then
@@ -186,6 +254,12 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 				score += 1
 				api.setScore(score)
 				api.sounds:Play("Like")
+				GameShell.Burst(
+					canvas,
+					bird.Position + UDim2.fromOffset(BIRD_SIZE / 2, BIRD_SIZE / 2),
+					Colors.Mint,
+					api.reduceMotion
+				)
 			end
 		end
 	end)
@@ -196,6 +270,10 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		inputConn:Disconnect()
 		tapConn:Disconnect()
 		bird:Destroy()
+		sky:Destroy()
+		for _, cloud in clouds do
+			cloud.instance:Destroy()
+		end
 		for _, pipe in pipes do
 			pipe.top:Destroy()
 			pipe.bottom:Destroy()

@@ -10,6 +10,7 @@
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Parent.Factory)
@@ -17,6 +18,10 @@ local GameShell = require(script.Parent.GameShell)
 
 local Colors = Theme.Colors
 local LANE_COLORS = { Colors.Rose, Colors.Gold, Colors.Cyan, Colors.Mint }
+-- Paired index-for-index with LANE_COLORS: colorblind and low-vision players
+-- match the ball to a gate by SHAPE, not hue, so color is a convenience for
+-- sighted players rather than the only signal the game gives anyone.
+local LANE_SHAPES = { "●", "▲", "■", "★" }
 local LANE_COUNT = #LANE_COLORS
 
 local BALL_SIZE = 22
@@ -30,14 +35,20 @@ local GATE_INTERVAL_BASE = 1.7
 local GATE_INTERVAL_MIN = 0.95
 local COLOR_CYCLE_SECONDS = 1.7
 
-type Gate = { frame: Frame, segments: { Frame }, laneColors: { Color3 }, y: number, checked: boolean }
+type Gate = { frame: Frame, segments: { Frame }, laneIndices: { number }, y: number, checked: boolean }
 
 local Game = {} :: GameShell.GameModule
 Game.Name = "Color Switch"
 Game.Key = "ColorSwitch"
 
-local function shuffledColors(): { Color3 }
-	local pool = table.clone(LANE_COLORS)
+-- A permutation of palette INDICES rather than colors directly, so a gate's
+-- color and shape per lane are always derived from the same index and can
+-- never drift out of pairing with each other.
+local function shuffledIndices(): { number }
+	local pool = {}
+	for i = 1, LANE_COUNT do
+		pool[i] = i
+	end
 	for i = LANE_COUNT, 2, -1 do
 		local j = math.random(1, i)
 		pool[i], pool[j] = pool[j], pool[i]
@@ -73,6 +84,16 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		return height() * BALL_Y_FRACTION
 	end
 
+	local sky = Factory.New("Frame", {
+		Name = "Sky",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Colors.Panel,
+		BorderSizePixel = 0,
+		ZIndex = 1,
+		Parent = canvas,
+	})
+	Factory.Gradient(sky, { Colors.PanelSoft, Colors.Panel }, 90)
+
 	local trackLines = {}
 	for lane = 1, LANE_COUNT - 1 do
 		local line = Factory.New("Frame", {
@@ -97,6 +118,19 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	})
 	Factory.Corner(ball, BALL_SIZE / 2)
 	Factory.Stroke(ball, Colors.Ink, 0.2, 2)
+	-- Cosmetic pulse on every color change, gated under reduceMotion -- the
+	-- glyph swap below already carries the actual information change on its
+	-- own.
+	local ballScale = Factory.New("UIScale", { Scale = 1, Parent = ball })
+	-- Shape glyph on top of the ball's own color fill -- the color-blind
+	-- redundancy signal described above.
+	local ballGlyph = Factory.Label(ball, LANE_SHAPES[ballColorIndex], UDim2.fromScale(1, 1), {
+		Color = Colors.Ink,
+		TextSize = 13,
+		AlignX = Enum.TextXAlignment.Center,
+		AlignY = Enum.TextYAlignment.Center,
+		ZIndex = 7,
+	})
 	local ballX = laneCenterX(laneIndex) - BALL_SIZE / 2
 	ball.Position = UDim2.fromOffset(ballX, ballY() - BALL_SIZE / 2)
 
@@ -141,7 +175,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	end)
 
 	local function spawnGate()
-		local laneColors = shuffledColors()
+		local laneIndices = shuffledIndices()
 		local gateFrame = Factory.New("Frame", {
 			Name = "Gate",
 			Size = UDim2.fromOffset(width(), GATE_HEIGHT),
@@ -153,21 +187,29 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		local segments = {}
 		local lw = laneWidth()
 		for lane = 1, LANE_COUNT do
+			local laneIdx = laneIndices[lane]
 			local segment = Factory.New("Frame", {
 				Name = "Segment",
 				Size = UDim2.fromOffset(lw - 3, GATE_HEIGHT),
 				Position = UDim2.fromOffset((lane - 1) * lw, 0),
-				BackgroundColor3 = laneColors[lane],
+				BackgroundColor3 = LANE_COLORS[laneIdx],
 				BorderSizePixel = 0,
 				ZIndex = 3,
 				Parent = gateFrame,
 			})
 			Factory.Corner(segment, 3)
+			Factory.Label(segment, LANE_SHAPES[laneIdx], UDim2.fromScale(1, 1), {
+				Color = Colors.Ink,
+				TextSize = 11,
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+				ZIndex = 4,
+			})
 			table.insert(segments, segment)
 		end
 		table.insert(
 			gates,
-			{ frame = gateFrame, segments = segments, laneColors = laneColors, y = -GATE_HEIGHT, checked = false }
+			{ frame = gateFrame, segments = segments, laneIndices = laneIndices, y = -GATE_HEIGHT, checked = false }
 		)
 	end
 
@@ -176,6 +218,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			return
 		end
 		running = false
+		GameShell.Shake(canvas, api.reduceMotion)
+		GameShell.Burst(
+			canvas,
+			ball.Position + UDim2.fromOffset(BALL_SIZE / 2, BALL_SIZE / 2),
+			Colors.Danger,
+			api.reduceMotion
+		)
 		api.gameOver(score)
 	end
 
@@ -191,6 +240,17 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			colorTimer -= COLOR_CYCLE_SECONDS
 			ballColorIndex = (ballColorIndex % LANE_COUNT) + 1
 			ball.BackgroundColor3 = LANE_COLORS[ballColorIndex]
+			ballGlyph.Text = LANE_SHAPES[ballColorIndex]
+			if not api.reduceMotion then
+				ballScale.Scale = 1.35
+				TweenService
+					:Create(
+						ballScale,
+						TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+						{ Scale = 1 }
+					)
+					:Play()
+			end
 		end
 
 		local targetX = laneCenterX(laneIndex) - BALL_SIZE / 2
@@ -218,14 +278,20 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 
 			if not gate.checked and gate.y + GATE_HEIGHT >= by - BALL_SIZE / 2 then
 				gate.checked = true
-				local safeColor = gate.laneColors[laneIndex]
-				if safeColor ~= LANE_COLORS[ballColorIndex] then
+				local safeIndex = gate.laneIndices[laneIndex]
+				if safeIndex ~= ballColorIndex then
 					endGame()
 					return
 				end
 				score += 1
 				api.setScore(score)
 				api.sounds:Play("Like")
+				GameShell.Burst(
+					canvas,
+					ball.Position + UDim2.fromOffset(BALL_SIZE / 2, BALL_SIZE / 2),
+					LANE_COLORS[ballColorIndex],
+					api.reduceMotion
+				)
 			end
 
 			if gate.y > height() then
@@ -241,6 +307,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		inputConn:Disconnect()
 		tapConn:Disconnect()
 		ball:Destroy()
+		sky:Destroy()
 		for _, line in trackLines do
 			line:Destroy()
 		end
