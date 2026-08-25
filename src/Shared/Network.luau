@@ -41,6 +41,7 @@ Network.Actions = table.freeze({
 	ReportInviteSent = "ReportInviteSent",
 	SubmitArcadeScore = "SubmitArcadeScore",
 	GetArcadeLeaderboard = "GetArcadeLeaderboard",
+	GetFriendArcadeLeaderboard = "GetFriendArcadeLeaderboard",
 })
 
 Network.PushEvents = table.freeze({

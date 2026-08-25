@@ -431,6 +431,12 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		return arcade:GetWeeklyTop(player, payload.game)
 	end,
+	[Network.Actions.GetFriendArcadeLeaderboard] = function(player, payload)
+		if type(payload) ~= "table" then
+			return false, "INVALID_REQUEST"
+		end
+		return arcade:GetFriendStandings(player, payload.game)
+	end,
 }
 
 typedRequestRemote.OnServerInvoke = function(player: Player, action: any, payload: any)
