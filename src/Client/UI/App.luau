@@ -243,6 +243,7 @@ local GENERATION_TOKEN_PRODUCTS = {
 	ImagePreviewMedium = true,
 	ImagePreviewHigh = true,
 	ImageConversion = true,
+	AvatarConversion = true,
 }
 
 -- Display-only mirror of CommerceService:BeginIntentWithTokens's math; the
