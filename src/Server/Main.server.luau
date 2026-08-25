@@ -39,6 +39,7 @@ local PlayerStateService = require(script.Parent.Services.PlayerStateService)
 local BackendService = require(script.Parent.Services.BackendService)
 local CommerceService = require(script.Parent.Services.CommerceService)
 local GenerationService = require(script.Parent.Services.GenerationService)
+local AvatarThumbnailService = require(script.Parent.Services.AvatarThumbnailService)
 local ItemService = require(script.Parent.Services.ItemService)
 local CommunityService = require(script.Parent.Services.CommunityService)
 local CatalogService = require(script.Parent.Services.CatalogService)
@@ -64,8 +65,18 @@ local backend = BackendService.new()
 local commerce = CommerceService.new(profiles, playerStates, analytics, push)
 local adRewards = AdRewardService.new(profiles, playerStates, commerce, push, analytics, achievements)
 local items = ItemService.new(profiles, playerStates, push)
-local generations =
-	GenerationService.new(profiles, playerStates, backend, commerce, push, analytics, achievements, items)
+local avatarThumbnails = AvatarThumbnailService.new()
+local generations = GenerationService.new(
+	profiles,
+	playerStates,
+	backend,
+	commerce,
+	push,
+	analytics,
+	achievements,
+	items,
+	avatarThumbnails
+)
 local leaderboard = LeaderboardService.new()
 local arcade = ArcadeService.new(profiles, playerStates, push, analytics)
 local community = CommunityService.new(profiles, playerStates, push, analytics, achievements, leaderboard)
@@ -182,6 +193,19 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			method = "IMAGE_UPLOAD",
 		})
 		local success, result = generations:CreateUploadedImage(player, payload)
+		if success then
+			retention:MarkQuest(player, "GENERATE")
+		end
+		return success, result
+	end,
+	[Network.Actions.CreateFromAvatar] = function(player, payload)
+		analytics:BeginFunnel(player, "generation", "Avatar-sourced creation started", {
+			method = "AVATAR_TO_3D",
+		})
+		analytics:Funnel(player, "generation", 2, "Avatar view and prompt submitted", {
+			method = "AVATAR_TO_3D",
+		})
+		local success, result = generations:CreateFromAvatar(player, payload)
 		if success then
 			retention:MarkQuest(player, "GENERATE")
 		end
