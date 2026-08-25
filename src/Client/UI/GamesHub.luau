@@ -163,6 +163,51 @@ function GamesHub.Show(app: any)
 	})
 	Factory.Corner(glow, 120)
 
+	-- A handful of faint drifting motes across the whole modal -- ambient
+	-- texture, not a focal effect, echoing the same idea as the app's own
+	-- ember system elsewhere. Individual looping tweens rather than a
+	-- Heartbeat connection: they harmlessly stop doing anything the moment
+	-- their particle is destroyed with the rest of the modal, no manual
+	-- disconnect required on close.
+	if not reduceMotion then
+		local ambientLayer = Factory.New("Frame", {
+			Name = "AmbientLayer",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			ClipsDescendants = true,
+			ZIndex = 211,
+			Parent = modal,
+		})
+		for _ = 1, 7 do
+			local size = 3 + math.random() * 4
+			local particle = Factory.New("Frame", {
+				Name = "Mote",
+				Size = UDim2.fromOffset(size, size),
+				Position = UDim2.new(math.random(), 0, math.random(), 0),
+				BackgroundColor3 = Color3.new(1, 1, 1),
+				BackgroundTransparency = 0.78 + math.random() * 0.15,
+				BorderSizePixel = 0,
+				ZIndex = 211,
+				Parent = ambientLayer,
+			})
+			Factory.Corner(particle, size / 2)
+			local driftX = math.random(-16, 16)
+			local driftY = 18 + math.random() * 24
+			TweenService:Create(
+				particle,
+				TweenInfo.new(
+					3 + math.random() * 2.5,
+					Enum.EasingStyle.Sine,
+					Enum.EasingDirection.InOut,
+					-1,
+					true,
+					math.random() * 2.5
+				),
+				{ Position = particle.Position + UDim2.fromOffset(driftX, -driftY) }
+			):Play()
+		end
+	end
+
 	local headerIcon = Factory.New("Frame", {
 		Name = "HeaderIcon",
 		Size = UDim2.fromOffset(52, 52),
@@ -275,6 +320,54 @@ function GamesHub.Show(app: any)
 		Parent = modal,
 	})
 
+	-- A brief dip-to-dark covering just the content area (not the header,
+	-- which stays interactive throughout) whenever the picker/game/
+	-- leaderboard views swap -- cheaper and more robust than trying to
+	-- cross-fade dozens of individual descendants across three very
+	-- different view layouts.
+	local transitionOverlay = Factory.New("Frame", {
+		Name = "ViewTransition",
+		Position = UDim2.fromOffset(12, 116),
+		Size = UDim2.new(1, -24, 1, -128),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 218,
+		Parent = modal,
+	})
+	local switchingView = false
+	-- `applyVisibility` does the actual Visible swap (plus whatever other
+	-- setup that view's switch-in function needs); wrapping it here just
+	-- adds the fade around that swap.
+	local function switchView(applyVisibility: () -> ())
+		if reduceMotion then
+			applyVisibility()
+			return
+		end
+		if switchingView then
+			applyVisibility()
+			return
+		end
+		switchingView = true
+		TweenService:Create(transitionOverlay, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 0,
+		}):Play()
+		task.delay(0.12, function()
+			if not transitionOverlay.Parent then
+				return
+			end
+			applyVisibility()
+			TweenService
+				:Create(transitionOverlay, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+					BackgroundTransparency = 1,
+				})
+				:Play()
+			task.delay(0.18, function()
+				switchingView = false
+			end)
+		end)
+	end
+
 	local function submitScore(gameKey: string, score: number)
 		task.spawn(function()
 			app:_Invoke(Network.Actions.SubmitArcadeScore, { game = gameKey, score = score })
@@ -292,22 +385,26 @@ function GamesHub.Show(app: any)
 	local shell: any = nil
 
 	local function showHub()
-		hubView.Visible = true
-		gameView.Visible = false
-		leaderboardView.Visible = false
-		if shell then
-			shell:Stop()
-		end
+		switchView(function()
+			hubView.Visible = true
+			gameView.Visible = false
+			leaderboardView.Visible = false
+			if shell then
+				shell:Stop()
+			end
+		end)
 	end
 
 	local function playGame(gameModule: GameShell.GameModule)
-		hubView.Visible = false
-		leaderboardView.Visible = false
-		gameView.Visible = true
-		if not shell then
-			shell = GameShell.new(gameView, app.sounds, showHub, submitScore, fetchWeeklyTop, reduceMotion)
-		end
-		shell:Run(gameModule)
+		switchView(function()
+			hubView.Visible = false
+			leaderboardView.Visible = false
+			gameView.Visible = true
+			if not shell then
+				shell = GameShell.new(gameView, app.sounds, showHub, submitScore, fetchWeeklyTop, reduceMotion)
+			end
+			shell:Run(gameModule)
+		end)
 	end
 
 	closeButton.Activated:Connect(function()
@@ -453,19 +550,26 @@ function GamesHub.Show(app: any)
 			)
 		end
 		local medals = { "🥇", "🥈", "🥉" }
+		local rankColors = { Colors.Gold, Color3.fromRGB(200, 208, 224), Color3.fromRGB(214, 158, 100) }
 		local localUserId = Players.LocalPlayer and Players.LocalPlayer.UserId
 		for rank, entry in standings do
 			local isSelf = entry.userId == localUserId
+			local rankColor = rankColors[rank]
+			local rowColor = if isSelf then Colors.Gold elseif rankColor then rankColor else nil
+			local finalTransparency = if isSelf then 0.85 elseif rankColor then 0.9 else 1
 			local row = Factory.New("Frame", {
 				Size = UDim2.new(1, 0, 0, 30),
-				BackgroundColor3 = Colors.Gold,
-				BackgroundTransparency = if isSelf then 0.85 else 1,
+				BackgroundColor3 = rowColor or Colors.Gold,
+				BackgroundTransparency = if reduceMotion then finalTransparency else 1,
 				LayoutOrder = rank,
 				ZIndex = 214,
 				Parent = standingsList,
 			})
-			if isSelf then
+			if rowColor then
 				Factory.Corner(row, 8)
+				if not isSelf then
+					Factory.Stroke(row, rankColor, 0.75, 1)
+				end
 			end
 			Factory.Label(row, medals[rank] or string.format("#%d", rank), UDim2.fromOffset(32, 30), {
 				Position = UDim2.fromOffset(4, 0),
@@ -474,7 +578,7 @@ function GamesHub.Show(app: any)
 			})
 			Factory.Label(row, if isSelf then "You" else string.format("@%s", entry.name), UDim2.new(1, -110, 1, 0), {
 				Position = UDim2.fromOffset(40, 0),
-				Font = if isSelf then Theme.Fonts.Bold else Theme.Fonts.Regular,
+				Font = if isSelf or rankColor then Theme.Fonts.Bold else Theme.Fonts.Regular,
 				TextSize = 13,
 				Truncate = Enum.TextTruncate.AtEnd,
 				ZIndex = 214,
@@ -488,6 +592,28 @@ function GamesHub.Show(app: any)
 				TextSize = 14,
 				ZIndex = 214,
 			})
+
+			-- A quick staggered fade/rise so the list settles into place
+			-- rather than popping in all at once -- skipped under
+			-- reduceMotion (the row is already at its final transparency
+			-- above in that case).
+			if not reduceMotion then
+				local rowScale = Factory.New("UIScale", { Scale = 0.94, Parent = row })
+				task.delay(math.min(rank * 0.035, 0.35), function()
+					if row.Parent then
+						TweenService:Create(
+							row,
+							TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+							{ BackgroundTransparency = finalTransparency }
+						):Play()
+						TweenService:Create(
+							rowScale,
+							TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+							{ Scale = 1 }
+						):Play()
+					end
+				end)
+			end
 		end
 		local personal = result.self
 		if not personal then
@@ -571,13 +697,15 @@ function GamesHub.Show(app: any)
 	setActiveTab(selectedGameKey)
 
 	local function showLeaderboardTab()
-		hubView.Visible = false
-		gameView.Visible = false
-		leaderboardView.Visible = true
-		if shell then
-			shell:Stop()
-		end
-		loadLeaderboard(selectedGameKey)
+		switchView(function()
+			hubView.Visible = false
+			gameView.Visible = false
+			leaderboardView.Visible = true
+			if shell then
+				shell:Stop()
+			end
+			loadLeaderboard(selectedGameKey)
+		end)
 	end
 
 	-- ===== Tile picker =====
