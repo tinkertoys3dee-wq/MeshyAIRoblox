@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import type { AppConfig } from "./config.js";
-import { composeAvatarMeshyPrompt, composeMeshyPrompt } from "./guidance.js";
+import { composeMeshyPrompt } from "./guidance.js";
 import { ImageProvider } from "./providers/openai-image.js";
 import { MeshyClient } from "./providers/meshy.js";
 import { RobloxAssetClient } from "./providers/roblox-assets.js";
@@ -294,12 +294,7 @@ export class JobRunner {
   // -- accessoryType already tells Meshy what to extract from it, and the
   // prompt (optional on the Roblox side) is just extra styling guidance.
   async #runAvatarTo3D(job: Job): Promise<void> {
-    const guidedPrompt = composeAvatarMeshyPrompt(
-      job.accessoryType,
-      job.filteredPrompt,
-      job.stylePreset,
-      job.detailLevel,
-    );
+    const guidedPrompt = composeMeshyPrompt(job.filteredPrompt, job.stylePreset, job.detailLevel);
 
     let current = await this.#requiredJob(job.id);
     let finalTaskId = current.output.meshyFinalTaskId;
