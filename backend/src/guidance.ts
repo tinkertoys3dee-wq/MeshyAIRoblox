@@ -36,7 +36,7 @@ const ACCESSORY_ISOLATION_DESCRIPTION: Record<AccessoryType, string> = {
 
 export function accessoryIsolationGuidance(accessoryType?: AccessoryType): string {
   const description = accessoryType ? ACCESSORY_ISOLATION_DESCRIPTION[accessoryType] : "a single wearable accessory";
-  return `Model ONLY ${description}, as one standalone object -- no head, face, body, full character, mannequin, or other body part.`;
+  return `A single isolated 3D asset: ONLY ${description}. Modeled alone in empty space, product-photography style -- no head, face, body, full character, mannequin, or other body part.`;
 }
 
 export function styleGuidance(stylePreset: StylePreset): string {
@@ -58,14 +58,28 @@ export function composeAvatarGraphicPrompt(filteredPrompt: string, stylePreset: 
   ].join("\n");
 }
 
+// Meshy's text-to-3D models don't support a dedicated negative-prompt field
+// (Meshy's own guidance for this case is to lead with a strong positive
+// description of what to generate, rather than rely on a single "don't
+// include X" clause). A short prompt like "cool anime hair" with only style
+// guidance appended gave Meshy nothing telling it to stop at the hair, so it
+// reasonably completed that into a whole anime character wearing that hair.
+// The isolation framing is placed BEFORE the player's own description (the
+// first thing the model reads, and the actual `prompt` field Meshy uses for
+// SHAPE, not just texture -- see MeshyClient.createTextPreview) and repeated
+// briefly at the end for reinforcement, rather than appended only once at
+// the very end where it's easiest for a long prompt to bury it.
 export function composeMeshyPrompt(
   filteredPrompt: string,
   stylePreset: StylePreset,
   detailLevel: DetailLevel,
   accessoryType?: AccessoryType,
 ): string {
-  const suffix = ` Style direction: ${styleGuidance(stylePreset)}. Detail direction: ${detailGuidance(detailLevel)}. ${accessoryIsolationGuidance(accessoryType)}`;
+  const description = accessoryType ? ACCESSORY_ISOLATION_DESCRIPTION[accessoryType] : "a single wearable accessory";
+  const prefix = `${accessoryIsolationGuidance(accessoryType)} `;
+  const suffix = ` Style direction: ${styleGuidance(stylePreset)}. Detail direction: ${detailGuidance(detailLevel)}. Reminder: isolated ${description} only, nothing else.`;
   const maximumLength = 600;
-  const description = filteredPrompt.slice(0, Math.max(1, maximumLength - suffix.length)).trimEnd();
-  return `${description}${suffix}`;
+  const available = Math.max(1, maximumLength - prefix.length - suffix.length);
+  const trimmedPrompt = filteredPrompt.slice(0, available).trimEnd();
+  return `${prefix}${trimmedPrompt}${suffix}`;
 }
