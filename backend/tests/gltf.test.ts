@@ -97,7 +97,7 @@ describe("validateAndNormalizeGlb", () => {
     await expect(validateAndNormalizeGlb(glb, config)).resolves.toMatchObject({ triangles: 8, vertices: 6 });
   });
 
-  it("still rejects non-manifold geometry that cannot be repaired safely", async () => {
+  it("accepts non-manifold geometry that cannot be repaired safely -- Roblox renders it fine unclosed", async () => {
     const document = await new NodeIO().readBinary(new Uint8Array(await fixture()));
     const primitive = document.getRoot().listMeshes()[0]?.listPrimitives()[0];
     const position = primitive?.getAttribute("POSITION");
@@ -107,6 +107,6 @@ describe("validateAndNormalizeGlb", () => {
     texcoord?.setArray(new Float32Array([...(texcoord.getArray() ?? []), 0.5, 0.5]));
     indices?.setArray(new Uint16Array([...(indices.getArray() ?? []), 0, 1, 4]));
     const glb = Buffer.from(await new NodeIO().writeBinary(document));
-    await expect(validateAndNormalizeGlb(glb, config)).rejects.toMatchObject({ code: "NOT_WATERTIGHT" });
+    await expect(validateAndNormalizeGlb(glb, config)).resolves.toMatchObject({ triangles: 5, vertices: 5 });
   });
 });

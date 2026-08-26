@@ -70,7 +70,6 @@ local GENERATION_FAILURE_LABELS = {
 	MULTI_MESH = "The generated model could not be reduced to one accessory mesh",
 	MULTI_PRIMITIVE = "The generated materials could not be reduced to one accessory mesh",
 	MULTI_MESH_NODE = "The generated scene could not be reduced to one accessory mesh",
-	NOT_WATERTIGHT = "The generated surface had openings that could not be repaired safely",
 	TRIANGLE_LIMIT = "The repaired model exceeded the triangle limit",
 	VERTEX_LIMIT = "The repaired model exceeded the vertex limit",
 	MISSING_UV = "The generated model did not contain usable texture coordinates",
