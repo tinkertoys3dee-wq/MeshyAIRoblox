@@ -376,6 +376,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		return success, result
 	end,
+	[Network.Actions.UntryCatalogAsset] = function(player, payload)
+		return catalog:Untry(player, payload)
+	end,
 	[Network.Actions.ResetAvatar] = function(player)
 		return catalog:Reset(player)
 	end,

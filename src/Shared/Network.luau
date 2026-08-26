@@ -33,6 +33,7 @@ Network.Actions = table.freeze({
 	TryOnCommunityItem = "TryOnCommunityItem",
 	PromptPlus = "PromptPlus",
 	TryCatalogAsset = "TryCatalogAsset",
+	UntryCatalogAsset = "UntryCatalogAsset",
 	ResetAvatar = "ResetAvatar",
 	UpdateSettings = "UpdateSettings",
 	CompleteOnboarding = "CompleteOnboarding",

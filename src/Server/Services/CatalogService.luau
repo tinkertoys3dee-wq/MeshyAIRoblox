@@ -68,6 +68,35 @@ function CatalogService:TryOn(player: Player, payload: any): (boolean, any)
 	return true, {}
 end
 
+function CatalogService:Untry(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" or type(payload.assetId) ~= "number" or payload.assetId <= 0 then
+		return false, "INVALID_REQUEST"
+	end
+	local assetId = math.floor(payload.assetId)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return false, "CHARACTER_UNAVAILABLE"
+	end
+	local success, problem = pcall(function()
+		local description = humanoid:GetAppliedDescription()
+		local accessories = description:GetAccessories(true)
+		local filtered = {}
+		for _, accessory in accessories do
+			if accessory.AssetId ~= assetId then
+				table.insert(filtered, accessory)
+			end
+		end
+		description:SetAccessories(filtered, true)
+		humanoid:ApplyDescriptionAsync(description)
+	end)
+	if not success then
+		warn(string.format("[CatalogService] Catalog un-equip failed: %s", tostring(problem)))
+		return false, "UNEQUIP_FAILED"
+	end
+	return true, {}
+end
+
 function CatalogService:Reset(player: Player): (boolean, any)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")

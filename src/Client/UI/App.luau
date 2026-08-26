@@ -308,6 +308,7 @@ function App.new()
 		-- Survives _RenderActivePage's destroy/rebuild cycle (unlike the
 		-- ScrollingFrame instances themselves) -- see _TrackScroll.
 		scrollPositions = {} :: { [string]: Vector2 },
+		triedOnAssetIds = {} :: { [number]: boolean },
 		usePriority = false,
 		paymentMethod = "ROBUX",
 		adAvailable = nil :: boolean?,
@@ -4174,7 +4175,14 @@ function App:_RenderAvatarLab()
 	end)
 	reset.Activated:Connect(function()
 		task.spawn(function()
-			self:_Invoke(Network.Actions.ResetAvatar, {})
+			local success = self:_Invoke(Network.Actions.ResetAvatar, {})
+			if success then
+				-- Reset reapplies the player's saved Roblox avatar wholesale,
+				-- discarding every catalog try-on at once, so the client's
+				-- per-item tracking must be cleared to match.
+				self.triedOnAssetIds = {}
+				self:_RenderActivePage()
+			end
 		end)
 	end)
 	local accessoryChipsY = if self.compact then 106 else 63
@@ -4425,24 +4433,37 @@ function App:_RenderAvatarLab()
 					TextSize = 11,
 				}
 			)
-			local try = Factory.Button(card, "Try", UDim2.new(0.45, -12, 0, 38), UDim2.fromOffset(10, 248), "primary")
+			local try = Factory.Button(
+				card,
+				if self.triedOnAssetIds[assetId] then "Unequip" else "Try",
+				UDim2.new(0.45, -12, 0, 38),
+				UDim2.fromOffset(10, 248),
+				if self.triedOnAssetIds[assetId] then "danger" else "primary"
+			)
 			local buy = Factory.Button(card, "Buy", UDim2.new(0.55, -8, 0, 38), UDim2.new(0.45, 4, 0, 248), "mint")
 			self:_BindButton(try)
 			self:_BindButton(buy)
 			try.Activated:Connect(function()
+				local removing = self.triedOnAssetIds[assetId] == true
 				try.Active = false
-				try.Text = "Applying…"
+				try.Text = if removing then "Removing…" else "Applying…"
 				task.spawn(function()
-					local success = self:_Invoke(Network.Actions.TryCatalogAsset, {
-						assetId = assetId,
-						avatarAssetType = self.catalogType,
-					})
+					local success = self:_Invoke(
+						if removing then Network.Actions.UntryCatalogAsset else Network.Actions.TryCatalogAsset,
+						{ assetId = assetId, avatarAssetType = self.catalogType }
+					)
 					if success then
-						self:_Toast("success", "Catalog item applied. Keep browsing to build your look.")
-					end
-					if try.Parent then
+						if removing then
+							self.triedOnAssetIds[assetId] = nil
+							self:_Toast("success", "Catalog item removed.")
+						else
+							self.triedOnAssetIds[assetId] = true
+							self:_Toast("success", "Catalog item applied. Keep browsing to build your look.")
+						end
+						self:_RenderActivePage()
+					elseif try.Parent then
 						try.Active = true
-						try.Text = "Try"
+						try.Text = if removing then "Unequip" else "Try"
 					end
 				end)
 			end)
