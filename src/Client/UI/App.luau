@@ -7,6 +7,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local SocialService = game:GetService("SocialService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -1486,7 +1487,22 @@ end
 function App:_TrackScroll(scrollingFrame: ScrollingFrame, key: string)
 	local saved = self.scrollPositions[key]
 	if saved then
-		scrollingFrame.CanvasPosition = saved
+		-- Every one of these ScrollingFrames uses AutomaticCanvasSize, and at
+		-- the moment it's created (right before its children get built below
+		-- it in the same render pass) its canvas is still empty. Restoring
+		-- CanvasPosition immediately here gets silently clamped back to
+		-- (0, 0) -- there's nothing to scroll to yet -- which is exactly why
+		-- the previous version of this fix still snapped back to the top on
+		-- every re-render. Waiting one Heartbeat lets Roblox finish the
+		-- UIListLayout + AutomaticCanvasSize pass for everything this render
+		-- just added before the restore is attempted.
+		local version = self.pageVersion
+		task.spawn(function()
+			RunService.Heartbeat:Wait()
+			if version == self.pageVersion and scrollingFrame.Parent then
+				scrollingFrame.CanvasPosition = saved
+			end
+		end)
 	end
 	table.insert(
 		self.pageConnections,
@@ -1584,7 +1600,7 @@ function App:_RenderCreate()
 		Parent = self.content,
 	})
 	self:_TrackScroll(page, "Create")
-	Factory.ScalePadding(page, 0.006, 0.006)
+	Factory.ScalePadding(page, 0.012, 0.012)
 	local stack = Factory.New("Frame", {
 		Size = UDim2.new(1, -8, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
@@ -2979,7 +2995,7 @@ function App:_RenderStudio()
 		Parent = collection,
 	})
 	self:_TrackScroll(itemScroll, "StudioCollection")
-	Factory.ScalePadding(itemScroll, 0.008, 0.008)
+	Factory.ScalePadding(itemScroll, 0.016, 0.016)
 	local itemStack = Factory.New("Frame", {
 		Size = UDim2.new(1, -6, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
@@ -3080,7 +3096,7 @@ function App:_RenderStudio()
 		Parent = inspector,
 	})
 	self:_TrackScroll(inspectScroll, "StudioInspect")
-	Factory.ScalePadding(inspectScroll, 0.006, 0.006)
+	Factory.ScalePadding(inspectScroll, 0.012, 0.012)
 	local body = Factory.New("Frame", {
 		Size = UDim2.new(1, -8, 0, 1240),
 		BackgroundTransparency = 1,
@@ -3875,7 +3891,7 @@ function App:_RenderDiscover()
 		Parent = self.content,
 	})
 	self:_TrackScroll(grid, "DiscoverGrid")
-	Factory.ScalePadding(grid, 0.004, 0.004)
+	Factory.ScalePadding(grid, 0.008, 0.008)
 	Factory.New("UIGridLayout", {
 		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 336),
 		CellPadding = UDim2.fromOffset(12, 12),
@@ -4404,7 +4420,7 @@ function App:_RenderAvatarLab()
 		Parent = self.content,
 	})
 	self:_TrackScroll(grid, "AvatarLabGrid")
-	Factory.ScalePadding(grid, 0.004, 0.004)
+	Factory.ScalePadding(grid, 0.008, 0.008)
 	Factory.New("UIGridLayout", {
 		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 292),
 		CellPadding = UDim2.fromOffset(12, 12),
@@ -4513,8 +4529,38 @@ function App:_RenderAvatarGraphics()
 		"Turn your current Roblox avatar into a standalone piece of art -- no accessory, no 3D model, just a picture worth keeping."
 	)
 
-	local composer =
-		Factory.Card(self.content, UDim2.new(0.95, 0, 0, 460), UDim2.new(0.025, 0, 0, 94), "GraphicComposer")
+	-- Everything below -- the composer, any in-progress activity, and the
+	-- full gallery -- lives inside one scrolling stack, the same pattern the
+	-- Create page uses. A fixed-height controls-card-plus-scrolling-grid
+	-- split (like Avatar Lab's catalog) only works when the controls card is
+	-- short; this page's composer alone can run past 450px, which left the
+	-- gallery with zero or negative remaining height on smaller screens --
+	-- exactly why some options were unreachable. One scroll that grows with
+	-- its content is reachable at any screen size.
+	local page = Factory.New("ScrollingFrame", {
+		Name = "AvatarGraphicsScroll",
+		Position = UDim2.new(0.02, 0, 0, 96),
+		Size = UDim2.new(0.96, 0, 1, -112),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = Colors.Mint,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		Parent = self.content,
+	})
+	self:_TrackScroll(page, "AvatarGraphics")
+	Factory.ScalePadding(page, 0.012, 0.012)
+	local stack = Factory.New("Frame", {
+		Size = UDim2.new(1, -8, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		Parent = page,
+	})
+	Factory.List(stack, Enum.FillDirection.Vertical, 14)
+
+	local composer = Factory.Card(stack, UDim2.new(1, 0, 0, 460), nil, "GraphicComposer")
+	composer.LayoutOrder = 1
 	local cursorY = 16
 
 	Factory.Label(composer, "1  CHOOSE YOUR AVATAR VIEW", UDim2.new(1, -32, 0, 22), {
@@ -4682,7 +4728,7 @@ function App:_RenderAvatarGraphics()
 
 	local safetyY = cursorY
 	local buttonY = if self.compact then safetyY + 39 else safetyY
-	composer.Size = UDim2.new(0.95, 0, 0, buttonY + 58)
+	composer.Size = UDim2.new(1, 0, 0, buttonY + 58)
 	Factory.Label(
 		composer,
 		"Your avatar is fetched automatically · Roblox TextService + provider moderation · never becomes a 3D model or accessory",
@@ -4752,8 +4798,6 @@ function App:_RenderAvatarGraphics()
 		end)
 	end)
 
-	local nextY = 94 + composer.Size.Y.Offset + 16
-
 	local inFlightCount = 0
 	for _, generationId in self.state.profile.generationOrder do
 		local generation = self.state.profile.generations[generationId]
@@ -4766,12 +4810,8 @@ function App:_RenderAvatarGraphics()
 	end
 	if inFlightCount > 0 then
 		local activityHeight = 45 + inFlightCount * 50 + 14
-		local activity = Factory.Card(
-			self.content,
-			UDim2.new(0.95, 0, 0, activityHeight),
-			UDim2.new(0.025, 0, 0, nextY),
-			"GraphicActivity"
-		)
+		local activity = Factory.Card(stack, UDim2.new(1, 0, 0, activityHeight), nil, "GraphicActivity")
+		activity.LayoutOrder = 2
 		Factory.Label(activity, "IN PROGRESS", UDim2.new(1, -32, 0, 24), {
 			Position = UDim2.fromOffset(16, 13),
 			Font = Theme.Fonts.Bold,
@@ -4860,40 +4900,45 @@ function App:_RenderAvatarGraphics()
 				y += 50
 			end
 		end
-		nextY += activityHeight + 16
 	end
 
-	Factory.Label(self.content, "YOUR AVATAR GRAPHICS", UDim2.new(0.95, 0, 0, 24), {
-		Position = UDim2.new(0.025, 0, 0, nextY),
+	local galleryHeader = Factory.Label(stack, "YOUR AVATAR GRAPHICS", UDim2.new(1, 0, 0, 24), {
 		Font = Theme.Fonts.Bold,
 		TextSize = 13,
 		Color = Colors.TextMuted,
 	})
-	nextY += 32
+	galleryHeader.LayoutOrder = 3
 
-	local grid = Factory.New("ScrollingFrame", {
-		Position = UDim2.new(0.02, 0, 0, nextY),
-		Size = UDim2.new(0.96, 0, 1, -(nextY + 16)),
+	local graphicCount = #(self.state.profile.graphicOrder or {})
+	if graphicCount == 0 then
+		local empty = Factory.Label(
+			stack,
+			"No avatar graphics yet. Create one above to see it here.",
+			UDim2.new(1, 0, 0, 100),
+			{ AlignX = Enum.TextXAlignment.Center, Color = Colors.TextMuted, Wrapped = true, TextSize = 13 }
+		)
+		empty.LayoutOrder = 4
+		return
+	end
+
+	local gridColumns = self.gridColumns
+	local gallery = Factory.New("Frame", {
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		CanvasSize = UDim2.new(),
-		ScrollBarThickness = 4,
-		ScrollBarImageColor3 = Colors.Cyan,
-		Parent = self.content,
+		LayoutOrder = 4,
+		Parent = stack,
 	})
-	self:_TrackScroll(grid, "AvatarGraphicsGrid")
-	Factory.ScalePadding(grid, 0.004, 0.004)
 	Factory.New("UIGridLayout", {
-		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 270),
+		CellSize = UDim2.new(1 / gridColumns, -12 * (gridColumns - 1) / gridColumns, 0, 270),
 		CellPadding = UDim2.fromOffset(12, 12),
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Parent = grid,
+		Parent = gallery,
 	})
 	for index, graphicId in self.state.profile.graphicOrder do
 		local graphic = self.state.profile.graphics[graphicId]
 		if graphic then
-			local card = Factory.Card(grid, UDim2.fromScale(1, 1), nil, "GraphicItem")
+			local card = Factory.Card(gallery, UDim2.fromScale(1, 1), nil, "GraphicItem")
 			card.LayoutOrder = index
 			local image = Factory.New("ImageLabel", {
 				Size = UDim2.new(1, -20, 0, 160),
@@ -4940,14 +4985,6 @@ function App:_RenderAvatarGraphics()
 			end)
 		end
 	end
-	if #(self.state.profile.graphicOrder or {}) == 0 then
-		Factory.Label(grid, "No avatar graphics yet. Create one above to see it here.", UDim2.new(1, -8, 0, 100), {
-			AlignX = Enum.TextXAlignment.Center,
-			Color = Colors.TextMuted,
-			Wrapped = true,
-			TextSize = 13,
-		})
-	end
 end
 
 function App:_UpdateSetting(key: string, value: any)
@@ -4978,7 +5015,7 @@ function App:_RenderSettings()
 		Parent = self.content,
 	})
 	self:_TrackScroll(page, "Settings")
-	Factory.ScalePadding(page, 0.006, 0.006)
+	Factory.ScalePadding(page, 0.012, 0.012)
 	local stack = Factory.New("Frame", {
 		Size = UDim2.new(1, -8, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
