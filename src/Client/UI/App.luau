@@ -305,6 +305,9 @@ function App.new()
 		catalogMinPrice = "",
 		catalogMaxPrice = "",
 		catalogFiltersExpanded = false,
+		-- Survives _RenderActivePage's destroy/rebuild cycle (unlike the
+		-- ScrollingFrame instances themselves) -- see _TrackScroll.
+		scrollPositions = {} :: { [string]: Vector2 },
 		usePriority = false,
 		paymentMethod = "ROBUX",
 		adAvailable = nil :: boolean?,
@@ -1459,6 +1462,30 @@ function App:_HighlightNavigation()
 	end
 end
 
+-- _RenderActivePage tears down and rebuilds every ScrollingFrame from
+-- scratch on every re-render -- which happens far more often than an actual
+-- page change: any click that touches state, and every ~4s of generation-
+-- progress polling while Create is open (see the AmbientBackground comment
+-- above). A freshly created ScrollingFrame always starts at CanvasPosition
+-- (0,0), so without this a player scrolled partway down would get silently
+-- snapped back to the top on the next unrelated re-render. `key` must be
+-- unique and stable across re-renders of the same scroll region (not the
+-- Instance itself, which is destroyed and recreated every time) --
+-- self.scrollPositions lives on the App object, not under self.content, so
+-- it survives the destroy/rebuild cycle that wipes the ScrollingFrame.
+function App:_TrackScroll(scrollingFrame: ScrollingFrame, key: string)
+	local saved = self.scrollPositions[key]
+	if saved then
+		scrollingFrame.CanvasPosition = saved
+	end
+	table.insert(
+		self.pageConnections,
+		scrollingFrame:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+			self.scrollPositions[key] = scrollingFrame.CanvasPosition
+		end)
+	)
+end
+
 function App:_RenderActivePage()
 	self.pageVersion += 1
 	for _, connection in self.pageConnections do
@@ -1544,6 +1571,7 @@ function App:_RenderCreate()
 		CanvasSize = UDim2.new(),
 		Parent = self.content,
 	})
+	self:_TrackScroll(page, "Create")
 	Factory.ScalePadding(page, 0.006, 0.006)
 	local stack = Factory.New("Frame", {
 		Size = UDim2.new(1, -8, 0, 0),
@@ -2938,6 +2966,7 @@ function App:_RenderStudio()
 		ScrollBarImageColor3 = Colors.Violet,
 		Parent = collection,
 	})
+	self:_TrackScroll(itemScroll, "StudioCollection")
 	Factory.ScalePadding(itemScroll, 0.008, 0.008)
 	local itemStack = Factory.New("Frame", {
 		Size = UDim2.new(1, -6, 0, 0),
@@ -3038,6 +3067,7 @@ function App:_RenderStudio()
 		ScrollBarImageColor3 = Colors.Cyan,
 		Parent = inspector,
 	})
+	self:_TrackScroll(inspectScroll, "StudioInspect")
 	Factory.ScalePadding(inspectScroll, 0.006, 0.006)
 	local body = Factory.New("Frame", {
 		Size = UDim2.new(1, -8, 0, 1240),
@@ -3832,6 +3862,7 @@ function App:_RenderDiscover()
 		ScrollBarImageColor3 = Colors.Violet,
 		Parent = self.content,
 	})
+	self:_TrackScroll(grid, "DiscoverGrid")
 	Factory.ScalePadding(grid, 0.004, 0.004)
 	Factory.New("UIGridLayout", {
 		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 336),
@@ -4353,6 +4384,7 @@ function App:_RenderAvatarLab()
 		ScrollBarImageColor3 = Colors.Cyan,
 		Parent = self.content,
 	})
+	self:_TrackScroll(grid, "AvatarLabGrid")
 	Factory.ScalePadding(grid, 0.004, 0.004)
 	Factory.New("UIGridLayout", {
 		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 292),
@@ -4462,6 +4494,7 @@ function App:_RenderSettings()
 		CanvasSize = UDim2.new(),
 		Parent = self.content,
 	})
+	self:_TrackScroll(page, "Settings")
 	Factory.ScalePadding(page, 0.006, 0.006)
 	local stack = Factory.New("Frame", {
 		Size = UDim2.new(1, -8, 0, 0),
