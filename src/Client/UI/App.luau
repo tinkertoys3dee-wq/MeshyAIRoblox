@@ -4930,7 +4930,7 @@ function App:_RenderAvatarGraphics()
 		Parent = stack,
 	})
 	Factory.New("UIGridLayout", {
-		CellSize = UDim2.new(1 / gridColumns, -12 * (gridColumns - 1) / gridColumns, 0, 270),
+		CellSize = UDim2.new(1 / gridColumns, -12 * (gridColumns - 1) / gridColumns, 0, 316),
 		CellPadding = UDim2.fromOffset(12, 12),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = gallery,
@@ -4968,7 +4968,34 @@ function App:_RenderAvatarGraphics()
 				Color = Colors.TextMuted,
 				TextSize = 10,
 			})
-			local delete = Factory.Button(card, "Delete", UDim2.new(1, -20, 0, 32), UDim2.fromOffset(10, 228), nil)
+			-- Roblox experiences cannot save a file to the player's device --
+			-- there is no such API in the client sandbox, for any experience.
+			-- This is the closest honest substitute: TextEditable = false lets
+			-- the player select and copy the raw asset ID (Ctrl+A, Ctrl+C)
+			-- without being able to edit it, as a reference for support or
+			-- for anyone with Roblox API access of their own.
+			Factory.Label(card, "ASSET ID · TAP, THEN CTRL+C", UDim2.new(1, -20, 0, 12), {
+				Position = UDim2.fromOffset(10, 228),
+				Color = Colors.TextMuted,
+				TextSize = 8,
+			})
+			local assetIdBox = Factory.New("TextBox", {
+				Size = UDim2.new(1, -20, 0, 24),
+				Position = UDim2.fromOffset(10, 241),
+				BackgroundColor3 = Colors.Ink,
+				BackgroundTransparency = 0.12,
+				BorderSizePixel = 0,
+				Text = tostring(graphic.previewAssetId or 0),
+				TextColor3 = Colors.Text,
+				Font = Theme.Fonts.Regular,
+				TextSize = 12,
+				TextEditable = false,
+				ClearTextOnFocus = false,
+				TextXAlignment = Enum.TextXAlignment.Center,
+				Parent = card,
+			})
+			Factory.Corner(assetIdBox, 8)
+			local delete = Factory.Button(card, "Delete", UDim2.new(1, -20, 0, 32), UDim2.fromOffset(10, 270), nil)
 			self:_BindButton(delete)
 			delete.Activated:Connect(function()
 				delete.Active = false
