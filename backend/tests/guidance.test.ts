@@ -32,6 +32,19 @@ describe("generation guidance", () => {
     expect(prompt).toContain("no head, face, body, full character, mannequin, or other body part");
   });
 
+  // The isolation instruction leads the prompt rather than only trailing it:
+  // Meshy's shape-defining `prompt` field is what a long, buried instruction
+  // is easiest to lose track of, and it's also the first thing the model
+  // reads. It's repeated briefly at the end too, for reinforcement.
+  it("puts the isolation instruction before the player's own words, and repeats it at the end", () => {
+    const prompt = composeMeshyPrompt("cool anime hair", "ANIME", "BALANCED", "HairAccessory");
+    const isolationIndex = prompt.indexOf("A single isolated 3D asset");
+    const descriptionIndex = prompt.indexOf("cool anime hair");
+    expect(isolationIndex).toBe(0);
+    expect(descriptionIndex).toBeGreaterThan(isolationIndex);
+    expect(prompt).toMatch(/Reminder: isolated .* only, nothing else\.$/);
+  });
+
   it("describes every accessory type distinctly", () => {
     expect(accessoryIsolationGuidance("Hat")).toContain("a hat");
     expect(accessoryIsolationGuidance("FaceAccessory")).toContain("glasses or a mask");
