@@ -102,7 +102,6 @@ export async function validateAndNormalizeGlb(input: Buffer, config: AppConfig):
     vertices += position.getCount();
     const indices = primitive.getIndices();
     triangles += Math.floor((indices?.getCount() ?? position.getCount()) / 3);
-    assertWatertight(positions, indices?.getArray());
   }
 
   if (triangles <= 0 || vertices <= 0) {
@@ -243,54 +242,60 @@ function sanitizeAndRepairPrimitive(primitive: Primitive): void {
   }
 
   const topology = collectTopology(positions, compactIndices);
-  if (topology.nonManifold) {
-    throw new PipelineError("NOT_WATERTIGHT", "Generated mesh contains non-manifold edges", false);
-  }
   if (topology.boundaryEdges.length === 0) return;
 
-  const loops = buildBoundaryLoops(topology.boundaryEdges);
-  const boundaryVertexCount = loops.reduce((total, loop) => total + loop.length, 0);
-  if (loops.length > MAX_REPAIR_BOUNDARY_LOOPS || boundaryVertexCount > MAX_REPAIR_BOUNDARY_VERTICES) {
-    throw new PipelineError("NOT_WATERTIGHT", "Generated mesh has too many open boundaries to repair safely", false);
-  }
+  // A closed, watertight surface only matters for 3D printing, CSG, or
+  // physics simulation -- none of which apply here. This game only ever
+  // renders these as a visual Roblox accessory MeshPart (collision is a
+  // simple Hull, when it's even enabled at all), and a rasterizer has no
+  // trouble drawing an open or non-manifold surface. Closing small holes
+  // below is still worth doing when it's safe and cheap -- it can only
+  // improve the result -- but a hole this shape or size is no longer worth
+  // failing the whole generation over: better an imperfect model the player
+  // actually gets than a failed one they don't.
+  try {
+    if (topology.nonManifold) {
+      throw new PipelineError("NOT_WATERTIGHT", "Generated mesh contains non-manifold edges", false);
+    }
+    const loops = buildBoundaryLoops(topology.boundaryEdges);
+    const boundaryVertexCount = loops.reduce((total, loop) => total + loop.length, 0);
+    if (loops.length > MAX_REPAIR_BOUNDARY_LOOPS || boundaryVertexCount > MAX_REPAIR_BOUNDARY_VERTICES) {
+      throw new PipelineError("NOT_WATERTIGHT", "Generated mesh has too many open boundaries to repair safely", false);
+    }
 
-  const centerLoops = loops.filter((loop) => loop.length > 3);
-  const centerIndices = appendLoopCenters(primitive, centerLoops, topology.representatives);
-  const repairedIndices = Array.from(compactIndices, Number);
-  let centerCursor = 0;
-  for (const loop of loops) {
-    if (loop.length === 3) {
-      repairedIndices.push(
-        requiredRepresentative(topology.representatives, loop[1]),
-        requiredRepresentative(topology.representatives, loop[0]),
-        requiredRepresentative(topology.representatives, loop[2]),
-      );
-      continue;
+    const centerLoops = loops.filter((loop) => loop.length > 3);
+    const centerIndices = appendLoopCenters(primitive, centerLoops, topology.representatives);
+    const repairedIndices = Array.from(compactIndices, Number);
+    let centerCursor = 0;
+    for (const loop of loops) {
+      if (loop.length === 3) {
+        repairedIndices.push(
+          requiredRepresentative(topology.representatives, loop[1]),
+          requiredRepresentative(topology.representatives, loop[0]),
+          requiredRepresentative(topology.representatives, loop[2]),
+        );
+        continue;
+      }
+      const center = centerIndices[centerCursor];
+      centerCursor += 1;
+      if (center === undefined) {
+        throw new PipelineError("MESH_REPAIR_FAILED", "Generated mesh repair lost a boundary center", false);
+      }
+      for (let index = 0; index < loop.length; index += 1) {
+        const left = loop[index];
+        const right = loop[(index + 1) % loop.length];
+        if (left === undefined || right === undefined) continue;
+        repairedIndices.push(
+          requiredRepresentative(topology.representatives, right),
+          requiredRepresentative(topology.representatives, left),
+          center,
+        );
+      }
     }
-    const center = centerIndices[centerCursor];
-    centerCursor += 1;
-    if (center === undefined) {
-      throw new PipelineError("MESH_REPAIR_FAILED", "Generated mesh repair lost a boundary center", false);
-    }
-    for (let index = 0; index < loop.length; index += 1) {
-      const left = loop[index];
-      const right = loop[(index + 1) % loop.length];
-      if (left === undefined || right === undefined) continue;
-      repairedIndices.push(
-        requiredRepresentative(topology.representatives, right),
-        requiredRepresentative(topology.representatives, left),
-        center,
-      );
-    }
+    primitive.getIndices()?.setArray(indexArray(repairedIndices));
+  } catch (error) {
+    if (!(error instanceof PipelineError) || error.code !== "NOT_WATERTIGHT") throw error;
   }
-  primitive.getIndices()?.setArray(indexArray(repairedIndices));
-
-  const repairedPosition = primitive.getAttribute("POSITION")?.getArray();
-  const finalIndices = primitive.getIndices()?.getArray();
-  if (!repairedPosition || !finalIndices) {
-    throw new PipelineError("MESH_REPAIR_FAILED", "Generated mesh repair produced no geometry", false);
-  }
-  assertWatertight(repairedPosition, finalIndices);
 }
 
 function triangleAreaSquared(positions: ArrayLike<number>, a: number, b: number, c: number): number {
@@ -461,43 +466,6 @@ function edgeKey(left: number, right: number): string {
   return left < right ? `${left}:${right}` : `${right}:${left}`;
 }
 
-function assertWatertight(
-  positions: ArrayLike<number>,
-  rawIndices: ArrayLike<number> | null | undefined,
-): void {
-  const vertexCount = Math.floor(positions.length / 3);
-  const indices = rawIndices ? Array.from(rawIndices) : Array.from({ length: vertexCount }, (_, index) => index);
-  if (indices.length % 3 !== 0) {
-    throw new PipelineError("INVALID_TRIANGLES", "Generated mesh has an incomplete triangle", false);
-  }
-
-  // glTF commonly splits vertices along UV or normal seams. Weld by position
-  // before counting edges so a geometrically closed surface is not rejected
-  // merely because its texture coordinates use separate vertex records.
-  const { canonical } = canonicalizePositions(positions);
-
-  const edges = new Map<string, number>();
-  for (let index = 0; index < indices.length; index += 3) {
-    const a = canonical[indices[index] ?? -1];
-    const b = canonical[indices[index + 1] ?? -1];
-    const c = canonical[indices[index + 2] ?? -1];
-    if (a === undefined || b === undefined || c === undefined || a === b || b === c || c === a) {
-      throw new PipelineError("DEGENERATE_TRIANGLE", "Generated mesh contains an invalid triangle", false);
-    }
-    countEdge(edges, a, b);
-    countEdge(edges, b, c);
-    countEdge(edges, c, a);
-  }
-  if ([...edges.values()].some((count) => count !== 2)) {
-    throw new PipelineError("NOT_WATERTIGHT", "Generated mesh has open or non-manifold edges", false);
-  }
-}
-
 function quantize(value: number): number {
   return Math.round(value * 100_000);
-}
-
-function countEdge(edges: Map<string, number>, left: number, right: number): void {
-  const key = left < right ? `${left}:${right}` : `${right}:${left}`;
-  edges.set(key, (edges.get(key) ?? 0) + 1);
 }

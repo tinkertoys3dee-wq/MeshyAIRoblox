@@ -200,6 +200,22 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		return success, result
 	end,
+	[Network.Actions.CreateAvatarGraphic] = function(player, payload)
+		analytics:BeginFunnel(player, "generation", "Avatar graphic creation started", {
+			method = "AVATAR_GRAPHIC",
+		})
+		analytics:Funnel(player, "generation", 2, "Avatar view and prompt submitted", {
+			method = "AVATAR_GRAPHIC",
+		})
+		local success, result = generations:CreateAvatarGraphic(player, payload)
+		if success then
+			retention:MarkQuest(player, "GENERATE")
+		end
+		return success, result
+	end,
+	[Network.Actions.DeleteGraphic] = function(player, payload)
+		return generations:DeleteGraphic(player, payload)
+	end,
 	[Network.Actions.ConvertImage] = function(player, payload)
 		analytics:BeginFunnel(player, "generation", "Approved conversion started", { method = "IMAGE_TO_3D" })
 		analytics:Funnel(player, "generation", 2, "Reference image approved", { method = "IMAGE_TO_3D" })
@@ -375,6 +391,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			achievements:Unlock(player, "FIRST_TRY_ON")
 		end
 		return success, result
+	end,
+	[Network.Actions.UntryCatalogAsset] = function(player, payload)
+		return catalog:Untry(player, payload)
 	end,
 	[Network.Actions.ResetAvatar] = function(player)
 		return catalog:Reset(player)

@@ -165,5 +165,38 @@ describe("backend HTTP boundary", () => {
       payload: { ...body, requestId: "bad_tier_request_12345", imageQuality: "high" },
     });
     expect(invalidTier.statusCode).toBe(400);
+
+    const { accessoryType: _unused, ...bodyWithoutAccessory } = body;
+    const graphic = await app.inject({
+      method: "POST",
+      url: "/v1/jobs",
+      headers: {
+        "x-forge-secret": "test-shared-secret",
+        "x-roblox-user-id": "12345",
+      },
+      payload: {
+        ...bodyWithoutAccessory,
+        requestId: "graphic_request_12345",
+        kind: "AVATAR_GRAPHIC",
+        avatarView: "BUST",
+        filteredPrompt: "a heroic fantasy portrait with golden light",
+      },
+    });
+    expect(graphic.statusCode).toBe(202);
+    expect(graphic.json().job).not.toHaveProperty("accessoryType");
+    const graphicId = graphic.json().job.id as string;
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    const graphicReady = await app.inject({
+      method: "GET",
+      url: "/v1/jobs/" + graphicId,
+      headers: {
+        "x-forge-secret": "test-shared-secret",
+        "x-roblox-user-id": "12345",
+      },
+    });
+    expect(graphicReady.json().job).toMatchObject({
+      status: "SUCCEEDED",
+      output: { previewAssetId: 0 },
+    });
   });
 });

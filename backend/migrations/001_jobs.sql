@@ -27,6 +27,9 @@ ALTER TABLE forge_jobs ADD COLUMN IF NOT EXISTS detail_level TEXT NOT NULL DEFAU
 ALTER TABLE forge_jobs ADD COLUMN IF NOT EXISTS source_image_asset_id BIGINT NULL;
 ALTER TABLE forge_jobs ADD COLUMN IF NOT EXISTS image_quality TEXT NULL;
 ALTER TABLE forge_jobs ADD COLUMN IF NOT EXISTS avatar_view TEXT NULL;
+-- AVATAR_GRAPHIC jobs produce a standalone image and never an accessory, so
+-- they have no accessory slot to record here.
+ALTER TABLE forge_jobs ALTER COLUMN accessory_type DROP NOT NULL;
 
 CREATE INDEX IF NOT EXISTS forge_jobs_player_created_idx
   ON forge_jobs (player_user_id, created_at DESC);

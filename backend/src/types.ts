@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-export const jobKindSchema = z.enum(["TEXT_TO_3D", "IMAGE_PREVIEW", "IMAGE_UPLOAD", "IMAGE_TO_3D", "AVATAR_TO_3D"]);
+export const jobKindSchema = z.enum([
+  "TEXT_TO_3D",
+  "IMAGE_PREVIEW",
+  "IMAGE_UPLOAD",
+  "IMAGE_TO_3D",
+  "AVATAR_TO_3D",
+  "AVATAR_GRAPHIC",
+]);
 export type JobKind = z.infer<typeof jobKindSchema>;
 
 export const avatarViewSchema = z.enum(["HEADSHOT", "BUST", "FULL_BODY"]);
@@ -35,7 +42,9 @@ export const createJobSchema = z
     playerUserId: z.number().int().positive(),
     kind: jobKindSchema,
     filteredPrompt: z.string().trim().min(6).max(500),
-    accessoryType: accessoryTypeSchema,
+    // Optional: AVATAR_GRAPHIC produces a standalone image, never an
+    // accessory, so it has no meaningful accessory slot to record.
+    accessoryType: accessoryTypeSchema.optional(),
     stylePreset: stylePresetSchema.default("AUTO"),
     detailLevel: detailLevelSchema.default("BALANCED"),
     imageQuality: imageQualitySchema.optional(),
@@ -69,18 +78,32 @@ export const createJobSchema = z
         message: "sourceImageAssetId is only valid for IMAGE_UPLOAD or IMAGE_TO_3D",
       });
     }
-    if (value.kind !== "IMAGE_PREVIEW" && value.imageQuality) {
+    if (value.kind !== "IMAGE_PREVIEW" && value.kind !== "AVATAR_GRAPHIC" && value.imageQuality) {
       context.addIssue({
         code: "custom",
         path: ["imageQuality"],
-        message: "imageQuality is only valid for IMAGE_PREVIEW",
+        message: "imageQuality is only valid for IMAGE_PREVIEW or AVATAR_GRAPHIC",
       });
     }
-    if (value.kind === "AVATAR_TO_3D" && !value.avatarView) {
+    if ((value.kind === "AVATAR_TO_3D" || value.kind === "AVATAR_GRAPHIC") && !value.avatarView) {
       context.addIssue({ code: "custom", path: ["avatarView"], message: "avatarView is required" });
     }
-    if (value.kind !== "AVATAR_TO_3D" && value.avatarView) {
-      context.addIssue({ code: "custom", path: ["avatarView"], message: "avatarView is only valid for AVATAR_TO_3D" });
+    if (value.kind !== "AVATAR_TO_3D" && value.kind !== "AVATAR_GRAPHIC" && value.avatarView) {
+      context.addIssue({
+        code: "custom",
+        path: ["avatarView"],
+        message: "avatarView is only valid for AVATAR_TO_3D or AVATAR_GRAPHIC",
+      });
+    }
+    if (value.kind !== "AVATAR_GRAPHIC" && !value.accessoryType) {
+      context.addIssue({ code: "custom", path: ["accessoryType"], message: "accessoryType is required" });
+    }
+    if (value.kind === "AVATAR_GRAPHIC" && value.accessoryType) {
+      context.addIssue({
+        code: "custom",
+        path: ["accessoryType"],
+        message: "accessoryType is not valid for AVATAR_GRAPHIC",
+      });
     }
   });
 
@@ -134,7 +157,7 @@ export type Job = {
   stage: string;
   progress: number;
   filteredPrompt: string;
-  accessoryType: AccessoryType;
+  accessoryType?: AccessoryType;
   stylePreset: StylePreset;
   detailLevel: DetailLevel;
   imageQuality?: ImageQuality;
@@ -162,7 +185,7 @@ export function publicJob(job: Job) {
     status: job.status,
     stage: job.stage,
     progress: job.progress,
-    accessoryType: job.accessoryType,
+    ...(job.accessoryType ? { accessoryType: job.accessoryType } : {}),
     stylePreset: job.stylePreset,
     detailLevel: job.detailLevel,
     ...(job.imageQuality ? { imageQuality: job.imageQuality } : {}),

@@ -27,6 +27,8 @@ local function defaultProfile(userId: number): { [string]: any }
 		itemOrder = {},
 		generations = {},
 		generationOrder = {},
+		graphics = {},
+		graphicOrder = {},
 		likedItems = {},
 		favoriteItems = {},
 		pendingIntents = {},

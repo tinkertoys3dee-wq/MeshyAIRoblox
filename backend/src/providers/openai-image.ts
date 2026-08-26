@@ -1,6 +1,6 @@
-import OpenAI from "openai";
+import OpenAI, { toFile } from "openai";
 import type { AppConfig } from "../config.js";
-import { detailGuidance, styleGuidance } from "../guidance.js";
+import { composeAvatarGraphicPrompt, detailGuidance, styleGuidance } from "../guidance.js";
 import { PipelineError, type DetailLevel, type ImageQuality, type StylePreset } from "../types.js";
 
 export class ImageProvider {
@@ -81,6 +81,39 @@ export class ImageProvider {
       throw new PipelineError(
         "IMAGE_PROVIDER_ERROR",
         error instanceof Error ? error.message : "Image generation failed",
+        true,
+      );
+    }
+  }
+
+  async generateAvatarGraphic(
+    avatarImage: Buffer,
+    filteredPrompt: string,
+    requestId: string,
+    stylePreset: StylePreset,
+    quality?: ImageQuality,
+  ): Promise<Buffer> {
+    const prompt = composeAvatarGraphicPrompt(filteredPrompt, stylePreset);
+    try {
+      const result = await this.#client.images.edit(
+        {
+          model: this.#model,
+          image: await toFile(avatarImage, "avatar.png", { type: "image/png" }),
+          prompt,
+          size: "1024x1024",
+          quality: quality ?? this.#quality,
+          n: 1,
+        },
+        { headers: { "Idempotency-Key": `forge-graphic-${requestId}` } },
+      );
+      const encoded = result.data?.[0]?.b64_json;
+      if (!encoded) throw new PipelineError("IMAGE_EMPTY", "OpenAI returned no image data", true);
+      return Buffer.from(encoded, "base64");
+    } catch (error) {
+      if (error instanceof PipelineError) throw error;
+      throw new PipelineError(
+        "IMAGE_PROVIDER_ERROR",
+        error instanceof Error ? error.message : "Avatar graphic generation failed",
         true,
       );
     }
