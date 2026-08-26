@@ -26,7 +26,20 @@ end
 function AccessoryFit.GetOffsetCFrame(fit: { [string]: any }): CFrame
 	local position = fit.position
 	local rotation = fit.rotation
-	return CFrame.new(position.x, position.y, position.z)
+	-- fit.position is the origin-to-attachment offset computed once, at the
+	-- Handle's unscaled base size (see ComputeDefaultPosition below). A
+	-- Roblox Attachment's CFrame is fixed in studs relative to its parent
+	-- part and does NOT move when that part's Size changes, but a MeshPart's
+	-- visible geometry DOES scale around its own origin when Size changes.
+	-- Left unscaled here, every time a player uses the scale slider -- the
+	-- normal way to fit an item to their character -- the mesh's true anchor
+	-- point drifts away from where fit.position still thinks it is, by
+	-- fit.position * (1 - scale) studs: invisible exactly at scale = 1 (why
+	-- this went unnoticed), but present for any resized item of any
+	-- accessory type. Scaling the offset here keeps the anchor pinned to the
+	-- attachment at every scale, matching how the mesh itself is scaling.
+	local scale = fit.scale
+	return CFrame.new(position.x * scale.x, position.y * scale.y, position.z * scale.z)
 		* CFrame.Angles(math.rad(rotation.x), math.rad(rotation.y), math.rad(rotation.z))
 end
 
