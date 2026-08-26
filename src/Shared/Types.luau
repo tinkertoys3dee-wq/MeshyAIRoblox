@@ -11,7 +11,13 @@ export type FitTransform = {
 
 export type ItemLicense = "ORIGINAL" | "PERSONAL_COPY"
 export type Visibility = "PRIVATE" | "PUBLIC"
-export type GenerationMethod = "TEXT_TO_3D" | "IMAGE_PREVIEW" | "IMAGE_UPLOAD" | "IMAGE_TO_3D" | "AVATAR_TO_3D"
+export type GenerationMethod =
+	"TEXT_TO_3D"
+	| "IMAGE_PREVIEW"
+	| "IMAGE_UPLOAD"
+	| "IMAGE_TO_3D"
+	| "AVATAR_TO_3D"
+	| "AVATAR_GRAPHIC"
 
 export type ItemRecord = {
 	id: string,
@@ -52,7 +58,9 @@ export type GenerationRecord = {
 	stageText: string,
 	progress: number,
 	filteredPrompt: string,
-	accessoryType: string,
+	-- Absent for AVATAR_GRAPHIC: it produces a standalone image, never an
+	-- accessory, so it has no accessory slot to record.
+	accessoryType: string?,
 	stylePreset: string,
 	detailLevel: string,
 	imageQuality: string?,
@@ -62,8 +70,26 @@ export type GenerationRecord = {
 	sourceBackendJobId: string?,
 	previewAssetId: number?,
 	itemId: string?,
+	-- Set only for AVATAR_GRAPHIC once its PlayerProfile.graphics entry
+	-- exists -- the graphic equivalent of itemId above.
+	graphicId: string?,
 	errorCode: string?,
 	failureHandled: boolean?,
+	createdAt: number,
+	updatedAt: number,
+}
+
+-- A standalone stylized image generated from the player's own avatar --
+-- never an accessory, never converted to 3D. Kept in its own gallery
+-- (PlayerProfile.graphics) rather than PlayerProfile.items since it has none
+-- of an ItemRecord's accessory-specific concepts (fit, license, publishing).
+export type GraphicRecord = {
+	id: string,
+	ownerUserId: number,
+	filteredPrompt: string,
+	stylePreset: string,
+	avatarView: string,
+	previewAssetId: number,
 	createdAt: number,
 	updatedAt: number,
 }
@@ -101,6 +127,8 @@ export type PlayerProfile = {
 	itemOrder: { string },
 	generations: { [string]: GenerationRecord },
 	generationOrder: { string },
+	graphics: { [string]: GraphicRecord },
+	graphicOrder: { string },
 	likedItems: { [string]: boolean },
 	favoriteItems: { [string]: boolean },
 	pendingIntents: { [string]: PendingIntent },

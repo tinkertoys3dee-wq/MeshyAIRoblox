@@ -119,7 +119,7 @@ function sameRequest(existing: Job, incoming: CreateJobInput): boolean {
     existing.playerUserId === incoming.playerUserId &&
     existing.kind === incoming.kind &&
     existing.filteredPrompt === incoming.filteredPrompt &&
-    existing.accessoryType === incoming.accessoryType &&
+    (existing.accessoryType ?? undefined) === (incoming.accessoryType ?? undefined) &&
     existing.stylePreset === incoming.stylePreset &&
     existing.detailLevel === incoming.detailLevel &&
     (existing.imageQuality ?? undefined) === (incoming.imageQuality ?? undefined) &&

@@ -134,6 +134,9 @@ local ERROR_MESSAGES = {
 	TOKENS_NOT_ACCEPTED = "Forge Tokens can't pay for that.",
 	AD_UNAVAILABLE = "No rewarded ad is available right now. Try again in a few minutes.",
 	AD_NOT_COMPLETED = "The ad was closed before it finished, so no tokens were earned.",
+	INVALID_AVATAR_VIEW = "Choose one of the available avatar views.",
+	BACKEND_GRAPHIC_MISSING = "The generator finished without returning a usable image. A retry credit was added.",
+	NOT_FOUND = "That could not be found. It may have already been removed.",
 }
 
 local CATALOG_TYPES = {
@@ -286,6 +289,7 @@ function App.new()
 		selectedAvatarView = "HEADSHOT",
 		customImageAssetId = "",
 		draftPrompt = "",
+		avatarGraphicPrompt = "",
 		selectedItemId = nil :: string?,
 		fitDrafts = {} :: { [string]: { [string]: any } },
 		pageConnections = {} :: { RBXScriptConnection },
@@ -687,8 +691,8 @@ function App:_BuildChrome()
 	Factory.Corner(navIndicator, 2)
 	self.navIndicator = navIndicator
 
-	for index, page in { "Create", "My Studio", "Discover", "Avatar Lab", "Settings" } do
-		local symbols = { "✦", "◈", "◎", "◇", "⚙" }
+	for index, page in { "Create", "My Studio", "Discover", "Avatar Lab", "Avatar Graphics", "Settings" } do
+		local symbols = { "✦", "◈", "◎", "◇", "❑", "⚙" }
 		local button = Factory.Button(navStack, symbols[index] .. "   " .. page, UDim2.new(1, 0, 0, 48), nil, nil)
 		button.Name = page
 		button.LayoutOrder = index
@@ -945,13 +949,14 @@ function App:_ApplyResponsiveLayout()
 		self.backgroundLayer.Size = self.content.Size
 	end
 	self.navStack.Position = UDim2.fromOffset(if compact then 8 else 12, 18)
-	self.navStack.Size = UDim2.new(1, if compact then -16 else -24, 0, 330)
+	self.navStack.Size = UDim2.new(1, if compact then -16 else -24, 0, 387)
 	for page, button in self.navButtons do
 		local symbol = if page == "Create"
 			then "✦"
 			elseif page == "My Studio" then "◈"
 			elseif page == "Discover" then "◎"
 			elseif page == "Avatar Lab" then "◇"
+			elseif page == "Avatar Graphics" then "❑"
 			else "⚙"
 		button.Text = if compact then symbol else symbol .. "   " .. page
 		button.TextXAlignment = if compact then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
@@ -1364,7 +1369,11 @@ function App:_ConnectPush()
 					self:_RefreshBootstrap()
 				end)
 			end
-		elseif eventName == Network.PushEvents.Item or eventName == Network.PushEvents.Transfer then
+		elseif
+			eventName == Network.PushEvents.Item
+			or eventName == Network.PushEvents.Transfer
+			or eventName == Network.PushEvents.Graphic
+		then
 			task.delay(0.2, function()
 				self:_RefreshBootstrap()
 			end)
@@ -1509,6 +1518,8 @@ function App:_RenderActivePage()
 		self:_RenderDiscover()
 	elseif self.activePage == "Avatar Lab" then
 		self:_RenderAvatarLab()
+	elseif self.activePage == "Avatar Graphics" then
+		self:_RenderAvatarGraphics()
 	else
 		self:_RenderSettings()
 	end
@@ -4480,6 +4491,457 @@ function App:_RenderAvatarLab()
 	end
 	if #(self.catalogResults or {}) == 0 then
 		Factory.Label(grid, self.catalogError or "No catalog items matched this search.", UDim2.new(1, -8, 0, 100), {
+			AlignX = Enum.TextXAlignment.Center,
+			Color = Colors.TextMuted,
+			Wrapped = true,
+			TextSize = 13,
+		})
+	end
+end
+
+-- A standalone image section, deliberately separate from every accessory /
+-- 3D-model generation method above: nothing created here can be equipped,
+-- fitted, or converted to a mesh. It exists purely to turn the player's own
+-- current Roblox avatar into a piece of art they can browse and keep, using
+-- the same purchasable image-quality tiers as the reference-image step
+-- (Config.Generation.ImageQualityTiers) since both are a single OpenAI image
+-- call with no Meshy pipeline cost behind them -- see
+-- GenerationService:CreateAvatarGraphic.
+function App:_RenderAvatarGraphics()
+	self:_PageHeader(
+		"Avatar Graphics",
+		"Turn your current Roblox avatar into a standalone piece of art -- no accessory, no 3D model, just a picture worth keeping."
+	)
+
+	local composer =
+		Factory.Card(self.content, UDim2.new(0.95, 0, 0, 460), UDim2.new(0.025, 0, 0, 94), "GraphicComposer")
+	local cursorY = 16
+
+	Factory.Label(composer, "1  CHOOSE YOUR AVATAR VIEW", UDim2.new(1, -32, 0, 22), {
+		Position = UDim2.fromOffset(16, cursorY),
+		Font = Theme.Fonts.Bold,
+		TextSize = 12,
+		Color = Colors.Mint,
+	})
+	cursorY += 27
+
+	local function chipRow(
+		options: { any },
+		selectedValue: string,
+		positionY: number,
+		color: Color3,
+		onChoose: (string) -> ()
+	)
+		local row = Factory.New("ScrollingFrame", {
+			Position = UDim2.fromOffset(16, positionY),
+			Size = UDim2.new(1, -32, 0, 38),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 0,
+			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			CanvasSize = UDim2.new(),
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			Parent = composer,
+		})
+		Factory.List(row, Enum.FillDirection.Horizontal, 8)
+		for _, option in options do
+			local selected = selectedValue == option.Id
+			local chip =
+				Factory.Button(row, option.Label, UDim2.fromOffset(98, 34), nil, if selected then "primary" else nil)
+			if selected then
+				chip.BackgroundColor3 = color
+			end
+			self:_BindButton(chip)
+			chip.Activated:Connect(function()
+				onChoose(option.Id)
+			end)
+		end
+	end
+
+	chipRow(Config.Generation.AvatarViews, self.selectedAvatarView, cursorY, Colors.Mint, function(value)
+		self.selectedAvatarView = value
+		self:_RenderActivePage()
+	end)
+	cursorY += 46
+
+	local previewThumbType = "AvatarBust"
+	for _, view in Config.Generation.AvatarViews do
+		if view.Id == self.selectedAvatarView then
+			previewThumbType = view.ThumbType
+			break
+		end
+	end
+	local avatarPreview = Factory.New("ImageLabel", {
+		Size = UDim2.fromOffset(64, 64),
+		Position = UDim2.fromOffset(16, cursorY),
+		BackgroundColor3 = Colors.Ink,
+		BorderSizePixel = 0,
+		Image = avatarThumbnail(player.UserId, previewThumbType, 150),
+		ScaleType = Enum.ScaleType.Crop,
+		Parent = composer,
+	})
+	Factory.Corner(avatarPreview, 12)
+	Factory.Label(
+		composer,
+		"Fetched automatically from your current Roblox avatar -- nothing to upload",
+		UDim2.new(1, -32 - 76, 0, 64),
+		{
+			Position = UDim2.fromOffset(16 + 64 + 12, cursorY),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Center,
+		}
+	)
+	cursorY += 74
+
+	Factory.Label(composer, "2  CHOOSE A VISUAL STYLE", UDim2.new(1, -32, 0, 22), {
+		Position = UDim2.fromOffset(16, cursorY),
+		Font = Theme.Fonts.Bold,
+		TextSize = 12,
+		Color = Colors.Violet,
+	})
+	cursorY += 27
+	chipRow(Config.Generation.StylePresets, self.selectedStylePreset, cursorY, Colors.Violet, function(value)
+		self.selectedStylePreset = value
+		self:_RenderActivePage()
+	end)
+	cursorY += 46
+
+	Factory.Label(composer, "3  CHOOSE IMAGE QUALITY", UDim2.new(1, -32, 0, 22), {
+		Position = UDim2.fromOffset(16, cursorY),
+		Font = Theme.Fonts.Bold,
+		TextSize = 12,
+		Color = Colors.Gold,
+	})
+	cursorY += 27
+	local qualityRow = Factory.New("ScrollingFrame", {
+		Position = UDim2.fromOffset(16, cursorY),
+		Size = UDim2.new(1, -32, 0, 38),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 0,
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(),
+		ScrollingDirection = Enum.ScrollingDirection.X,
+		Parent = composer,
+	})
+	Factory.List(qualityRow, Enum.FillDirection.Horizontal, 8)
+	for _, tier in Config.Generation.ImageQualityTiers do
+		local tierSelected = self.selectedImageQuality == tier.Id
+		local chip = Factory.Button(
+			qualityRow,
+			string.format("%s · R$ %d", tier.Label, self.state.prices[tier.ProductKey] or 0),
+			UDim2.fromOffset(146, 34),
+			nil,
+			if tierSelected then "primary" else nil
+		)
+		if tierSelected then
+			chip.BackgroundColor3 = Colors.Gold
+		end
+		self:_BindButton(chip)
+		chip.Activated:Connect(function()
+			self.selectedImageQuality = tier.Id
+			self:_RenderActivePage()
+		end)
+	end
+	cursorY += 46
+
+	Factory.Label(composer, "4  DESCRIBE A SCENE OR THEME (OPTIONAL)", UDim2.new(1, -32, 0, 22), {
+		Position = UDim2.fromOffset(16, cursorY),
+		Font = Theme.Fonts.Bold,
+		TextSize = 12,
+		Color = Colors.Rose,
+	})
+	cursorY += 27
+	local prompt = self:_TextBox(
+		composer,
+		"For example: a heroic fantasy portrait bathed in golden light",
+		UDim2.new(1, -32, 0, 64),
+		UDim2.fromOffset(16, cursorY),
+		true
+	)
+	prompt.Text = self.avatarGraphicPrompt
+	local count = Factory.Label(
+		composer,
+		string.format("%d / %d", #self.avatarGraphicPrompt, Config.Generation.PromptMaxLength),
+		UDim2.fromOffset(120, 20),
+		{
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -18, 0, cursorY + 46),
+			AlignX = Enum.TextXAlignment.Right,
+			Color = Colors.TextMuted,
+			TextSize = 11,
+		}
+	)
+	prompt:GetPropertyChangedSignal("Text"):Connect(function()
+		self.avatarGraphicPrompt = string.sub(prompt.Text, 1, Config.Generation.PromptMaxLength)
+		count.Text = string.format("%d / %d", #prompt.Text, Config.Generation.PromptMaxLength)
+	end)
+	cursorY += 72
+
+	local safetyY = cursorY
+	local buttonY = if self.compact then safetyY + 39 else safetyY
+	composer.Size = UDim2.new(0.95, 0, 0, buttonY + 58)
+	Factory.Label(
+		composer,
+		"Your avatar is fetched automatically · Roblox TextService + provider moderation · never becomes a 3D model or accessory",
+		if self.compact then UDim2.new(1, -32, 0, 34) else UDim2.new(1, -300, 0, 42),
+		{
+			Position = UDim2.fromOffset(16, safetyY),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Wrapped = true,
+		}
+	)
+
+	local selectedQualityTier = nil :: { Id: string, Label: string, ProductKey: string, OpenAIQuality: string }?
+	for _, tier in Config.Generation.ImageQualityTiers do
+		if tier.Id == self.selectedImageQuality then
+			selectedQualityTier = tier
+			break
+		end
+	end
+	local graphicProductKey = if selectedQualityTier then selectedQualityTier.ProductKey else "ImagePreviewLow"
+	local price = self.state.prices[graphicProductKey]
+	local payWithTokens = self.paymentMethod == "TOKENS"
+	local priceText = if payWithTokens
+		then string.format("%d ad tokens", tokenPrice(price, graphicProductKey))
+		else string.format("R$ %d", price)
+	local actionText = string.format("Create avatar graphic · %s", priceText)
+	local generate = Factory.Button(
+		composer,
+		actionText,
+		if self.compact then UDim2.new(1, -32, 0, 42) else UDim2.new(0, 260, 0, 42),
+		if self.compact then UDim2.new(0, 16, 0, buttonY) else UDim2.new(1, -276, 0, buttonY),
+		"primary"
+	)
+	self:_BindButton(generate)
+	generate.Activated:Connect(function()
+		generate.Active = false
+		generate.Text = "Fetching your avatar…"
+		task.spawn(function()
+			local request = {
+				avatarView = self.selectedAvatarView,
+				stylePreset = self.selectedStylePreset,
+				imageQuality = self.selectedImageQuality,
+				prompt = prompt.Text,
+				paymentMethod = self.paymentMethod,
+			}
+			local success, result = self:_Invoke(Network.Actions.CreateAvatarGraphic, request)
+			generate.Active = true
+			generate.Text = actionText
+			if success then
+				if result.usedRetryCredit then
+					self:_Toast("success", "Retry credit applied. Your avatar graphic is entering the queue.")
+				elseif result.mocked then
+					self:_Toast("success", "Studio mock purchase confirmed. Your avatar graphic is entering the queue.")
+				elseif result.tokensSpent then
+					self.state.profile.tokens = result.tokens
+					self.state.profile.bonusTokens = result.bonusTokens
+					self.sounds:Play("Success")
+					self:_Toast(
+						"success",
+						string.format("%d tokens spent. Your avatar graphic is entering the queue.", result.tokensSpent)
+					)
+				else
+					self.sounds:Play("PurchasePrompt")
+					self:_Toast("success", "Purchase prompt opened. Generation begins only after Roblox confirms it.")
+				end
+			end
+		end)
+	end)
+
+	local nextY = 94 + composer.Size.Y.Offset + 16
+
+	local inFlightCount = 0
+	for _, generationId in self.state.profile.generationOrder do
+		local generation = self.state.profile.generations[generationId]
+		if generation and generation.method == "AVATAR_GRAPHIC" and generation.stage ~= "SUCCEEDED" then
+			inFlightCount += 1
+			if inFlightCount >= 3 then
+				break
+			end
+		end
+	end
+	if inFlightCount > 0 then
+		local activityHeight = 45 + inFlightCount * 50 + 14
+		local activity = Factory.Card(
+			self.content,
+			UDim2.new(0.95, 0, 0, activityHeight),
+			UDim2.new(0.025, 0, 0, nextY),
+			"GraphicActivity"
+		)
+		Factory.Label(activity, "IN PROGRESS", UDim2.new(1, -32, 0, 24), {
+			Position = UDim2.fromOffset(16, 13),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = Colors.Cyan,
+		})
+		local y = 45
+		local shown = 0
+		for _, generationId in self.state.profile.generationOrder do
+			if shown >= 3 then
+				break
+			end
+			local generation = self.state.profile.generations[generationId]
+			if generation and generation.method == "AVATAR_GRAPHIC" and generation.stage ~= "SUCCEEDED" then
+				shown += 1
+				local row = Factory.New("Frame", {
+					Position = UDim2.fromOffset(16, y),
+					Size = UDim2.new(1, -32, 0, 44),
+					BackgroundColor3 = Colors.Ink,
+					BackgroundTransparency = 0.22,
+					BorderSizePixel = 0,
+					Parent = activity,
+				})
+				Factory.Corner(row, 10)
+				Factory.Stroke(row, Colors.Line, 0.75, 1)
+				local stageColor = if generation.stage == "FAILED" then Colors.Danger else Colors.Cyan
+				local badge = Factory.New("Frame", {
+					Size = UDim2.fromOffset(30, 30),
+					Position = UDim2.fromOffset(7, 7),
+					BackgroundColor3 = Colors.Cyan,
+					BorderSizePixel = 0,
+					Parent = row,
+				})
+				Factory.Corner(badge, 15)
+				Factory.Gradient(badge, { Colors.Cyan, Color3.fromRGB(70, 170, 220) }, 135)
+				Factory.Label(badge, "🖼", UDim2.fromScale(1, 1), {
+					TextSize = 14,
+					AlignX = Enum.TextXAlignment.Center,
+					AlignY = Enum.TextYAlignment.Center,
+				})
+				Factory.Label(
+					row,
+					string.sub(generation.filteredPrompt or "Avatar graphic", 1, 40),
+					UDim2.new(1, -108, 0, 16),
+					{
+						Position = UDim2.fromOffset(46, 4),
+						Font = Theme.Fonts.Medium,
+						TextSize = 12,
+						Truncate = Enum.TextTruncate.AtEnd,
+					}
+				)
+				Factory.Label(
+					row,
+					string.format("%d%%", math.floor(generation.progress or 0)),
+					UDim2.fromOffset(46, 16),
+					{
+						AnchorPoint = Vector2.new(1, 0),
+						Position = UDim2.new(1, -8, 0, 4),
+						AlignX = Enum.TextXAlignment.Right,
+						Font = Theme.Fonts.Black,
+						Color = stageColor,
+						TextSize = 12,
+					}
+				)
+				Factory.Label(row, generation.stageText or generation.stage, UDim2.new(1, -58, 0, 14), {
+					Position = UDim2.fromOffset(46, 22),
+					Color = Colors.TextMuted,
+					TextSize = 10,
+					Truncate = Enum.TextTruncate.AtEnd,
+				})
+				local track = Factory.New("Frame", {
+					Position = UDim2.fromOffset(46, 39),
+					Size = UDim2.new(1, -58, 0, 3),
+					BackgroundColor3 = Colors.PanelSoft,
+					BackgroundTransparency = 0.3,
+					BorderSizePixel = 0,
+					Parent = row,
+				})
+				Factory.Corner(track, 2)
+				Factory.New("Frame", {
+					Size = UDim2.new(math.clamp((generation.progress or 0) / 100, 0, 1), 0, 1, 0),
+					BackgroundColor3 = stageColor,
+					BorderSizePixel = 0,
+					Parent = track,
+				})
+				y += 50
+			end
+		end
+		nextY += activityHeight + 16
+	end
+
+	Factory.Label(self.content, "YOUR AVATAR GRAPHICS", UDim2.new(0.95, 0, 0, 24), {
+		Position = UDim2.new(0.025, 0, 0, nextY),
+		Font = Theme.Fonts.Bold,
+		TextSize = 13,
+		Color = Colors.TextMuted,
+	})
+	nextY += 32
+
+	local grid = Factory.New("ScrollingFrame", {
+		Position = UDim2.new(0.02, 0, 0, nextY),
+		Size = UDim2.new(0.96, 0, 1, -(nextY + 16)),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = Colors.Cyan,
+		Parent = self.content,
+	})
+	self:_TrackScroll(grid, "AvatarGraphicsGrid")
+	Factory.ScalePadding(grid, 0.004, 0.004)
+	Factory.New("UIGridLayout", {
+		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 270),
+		CellPadding = UDim2.fromOffset(12, 12),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = grid,
+	})
+	for index, graphicId in self.state.profile.graphicOrder do
+		local graphic = self.state.profile.graphics[graphicId]
+		if graphic then
+			local card = Factory.Card(grid, UDim2.fromScale(1, 1), nil, "GraphicItem")
+			card.LayoutOrder = index
+			local image = Factory.New("ImageLabel", {
+				Size = UDim2.new(1, -20, 0, 160),
+				Position = UDim2.fromOffset(10, 10),
+				BackgroundColor3 = Colors.Ink,
+				BorderSizePixel = 0,
+				Image = thumbnail(graphic.previewAssetId, 420),
+				ScaleType = Enum.ScaleType.Crop,
+				Parent = card,
+			})
+			Factory.Corner(image, 11)
+			Factory.Label(
+				card,
+				string.sub(graphic.filteredPrompt or "Avatar graphic", 1, 60),
+				UDim2.new(1, -20, 0, 32),
+				{ Position = UDim2.fromOffset(10, 176), Font = Theme.Fonts.Medium, TextSize = 11, Wrapped = true }
+			)
+			local avatarViewLabel = "Bust"
+			for _, view in Config.Generation.AvatarViews do
+				if view.Id == graphic.avatarView then
+					avatarViewLabel = view.Label
+					break
+				end
+			end
+			Factory.Label(card, avatarViewLabel, UDim2.new(1, -20, 0, 16), {
+				Position = UDim2.fromOffset(10, 210),
+				Color = Colors.TextMuted,
+				TextSize = 10,
+			})
+			local delete = Factory.Button(card, "Delete", UDim2.new(1, -20, 0, 32), UDim2.fromOffset(10, 228), nil)
+			self:_BindButton(delete)
+			delete.Activated:Connect(function()
+				delete.Active = false
+				delete.Text = "Removing…"
+				task.spawn(function()
+					local success = self:_Invoke(Network.Actions.DeleteGraphic, { graphicId = graphicId })
+					if success then
+						self:_RenderActivePage()
+					elseif delete.Parent then
+						delete.Active = true
+						delete.Text = "Delete"
+					end
+				end)
+			end)
+		end
+	end
+	if #(self.state.profile.graphicOrder or {}) == 0 then
+		Factory.Label(grid, "No avatar graphics yet. Create one above to see it here.", UDim2.new(1, -8, 0, 100), {
 			AlignX = Enum.TextXAlignment.Center,
 			Color = Colors.TextMuted,
 			Wrapped = true,

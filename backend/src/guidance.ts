@@ -24,6 +24,17 @@ export function detailGuidance(detailLevel: DetailLevel): string {
   return DETAIL_GUIDANCE[detailLevel];
 }
 
+export function composeAvatarGraphicPrompt(filteredPrompt: string, stylePreset: StylePreset): string {
+  return [
+    "Reimagine the person shown in the attached reference image as a striking piece of key art.",
+    "Preserve their recognizable identity: hairstyle, outfit silhouette, and color palette from the reference.",
+    "Compose it as a single polished portrait or scene, not a grid, collage, or multiple panels.",
+    "Do not add any text, logos, watermarks, or UI elements anywhere in the image.",
+    `Visual style: ${styleGuidance(stylePreset)}.`,
+    `Scene or theme direction: <description>${filteredPrompt}</description>`,
+  ].join("\n");
+}
+
 export function composeMeshyPrompt(
   filteredPrompt: string,
   stylePreset: StylePreset,

@@ -58,6 +58,11 @@ end
 -- generation over missing text.
 local AVATAR_DEFAULT_PROMPT = "Match the style, colors, and details of my current Roblox avatar."
 
+-- Same rationale as AVATAR_DEFAULT_PROMPT above: AVATAR_GRAPHIC always has a
+-- fixed source (the player's own avatar render), so a scene/theme prompt is
+-- optional creative direction rather than the only description of the image.
+local AVATAR_GRAPHIC_DEFAULT_PROMPT = "A striking portrait celebrating my current Roblox avatar."
+
 local IMAGE_ASSET_TYPES = {
 	[1] = true, -- Image
 	[13] = true, -- Decal
@@ -92,6 +97,8 @@ local function productKeyFor(method: string): string
 		return "CustomImageUpload"
 	elseif method == "AVATAR_TO_3D" then
 		return "AvatarConversion"
+	elseif method == "AVATAR_GRAPHIC" then
+		return "ImagePreviewLow"
 	end
 	return "DirectGeneration"
 end
@@ -449,6 +456,67 @@ function GenerationService:CreateFromAvatar(player: Player, payload: any): (bool
 	})
 end
 
+-- Unlike CreateFromAvatar above, this never produces an accessory or a 3D
+-- model at all -- it's a standalone stylized image of the player's own
+-- avatar, priced and paid for through the same purchasable image-quality
+-- tiers as the IMAGE_PREVIEW reference-image step (Config.Generation.
+-- ImageQualityTiers), since both are a single OpenAI image call with no
+-- Meshy pipeline cost behind them.
+function GenerationService:CreateAvatarGraphic(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" then
+		return false, "INVALID_REQUEST"
+	end
+	local guidanceSuccess, stylePreset, _detailLevel = readGuidance(payload)
+	if not guidanceSuccess then
+		return false, stylePreset
+	end
+	local avatarView = payload.avatarView
+	if type(avatarView) ~= "string" or not AVATAR_VIEWS[avatarView] then
+		return false, "INVALID_AVATAR_VIEW"
+	end
+	local requestedTier = if type(payload.imageQuality) == "string" then payload.imageQuality else "LOW"
+	if not IMAGE_QUALITY_TIERS[requestedTier] then
+		return false, "INVALID_IMAGE_QUALITY"
+	end
+	if not self.playerStates:Get(player).contentSharingAllowed then
+		return false, "CONTENT_SHARING_DISABLED"
+	end
+
+	local rawPrompt = if type(payload.prompt) == "string" then payload.prompt else ""
+	local hasPrompt = #string.gsub(rawPrompt, "%s", "") > 0
+	local filterSuccess, filteredPrompt, filterError =
+		ModerationService.FilterPrompt(player, if hasPrompt then rawPrompt else AVATAR_GRAPHIC_DEFAULT_PROMPT)
+	if not filterSuccess then
+		return false, filterError
+	end
+	local studioMock = RunService:IsStudio() and Config.Studio.AllowMockBackend and not self.backend:IsConfigured()
+	if not studioMock then
+		local moderationSuccess, moderationResult = self.backend:ModeratePrompt(player, filteredPrompt)
+		if not moderationSuccess then
+			return false, moderationResult
+		end
+	end
+	if not self:_HasQueueSpace(player) then
+		return false, "QUEUE_FULL"
+	end
+	if not self.backend:IsConfigured() and not studioMock then
+		return false, "BACKEND_NOT_CONFIGURED"
+	end
+
+	local productKey = IMAGE_QUALITY_TIERS[requestedTier].ProductKey
+	return self:_UseCreditOrPrompt(player, productKey, {
+		kind = "AVATAR_GRAPHIC",
+		filteredPrompt = filteredPrompt,
+		stylePreset = stylePreset,
+		detailLevel = "BALANCED",
+		avatarView = avatarView,
+		imageQuality = requestedTier,
+		usePriority = false,
+		-- See the matching comment in Create() above.
+		paymentMethod = if payload.paymentMethod == "TOKENS" then "TOKENS" else "ROBUX",
+	})
+end
+
 function GenerationService:ConvertImage(player: Player, payload: any): (boolean, any)
 	if type(payload) ~= "table" or type(payload.generationId) ~= "string" then
 		return false, "INVALID_REQUEST"
@@ -742,7 +810,10 @@ function GenerationService:_Launch(player: Player, generationId: string)
 		-- comment above CreateFromAvatar for why.
 		requestPayload.avatarView = generation.avatarView
 	end
-	if generation.method == "IMAGE_PREVIEW" and type(generation.imageQuality) == "string" then
+	if
+		(generation.method == "IMAGE_PREVIEW" or generation.method == "AVATAR_GRAPHIC")
+		and type(generation.imageQuality) == "string"
+	then
 		local tier = IMAGE_QUALITY_TIERS[generation.imageQuality]
 		requestPayload.imageQuality = if tier then tier.OpenAIQuality else "low"
 	end
@@ -839,6 +910,27 @@ function GenerationService:_Poll(player: Player, generationId: string, backendJo
 					return
 				elseif job.status == "SUCCEEDED" then
 					local output = if type(job.output) == "table" then job.output else {}
+					local currentProfile = self.profiles:Get(player)
+					local currentGeneration = currentProfile and currentProfile.generations[generationId]
+					if currentGeneration and currentGeneration.method == "AVATAR_GRAPHIC" then
+						-- Never produces a model, so it skips the modelAssetId
+						-- check and the model queue-time gate entirely (see
+						-- computeMinReadyAt: AVATAR_GRAPHIC isn't in
+						-- MODEL_PRODUCING_METHODS) and hands the graphic over
+						-- the moment the backend reports it ready.
+						if
+							not RunService:IsStudio()
+							and (type(output.previewAssetId) ~= "number" or output.previewAssetId <= 0)
+						then
+							self.polling[generationId] = nil
+							self:_Fail(player, generationId, "BACKEND_GRAPHIC_MISSING", true, productKey)
+							return
+						end
+						self.polling[generationId] = nil
+						pushGenerationUpdate(job.status, job.stage, job.progress)
+						self:_CompleteGraphic(player, generationId, output)
+						return
+					end
 					if
 						not RunService:IsStudio()
 						and (type(output.modelAssetId) ~= "number" or output.modelAssetId <= 0)
@@ -847,8 +939,6 @@ function GenerationService:_Poll(player: Player, generationId: string, backendJo
 						self:_Fail(player, generationId, "BACKEND_MODEL_MISSING", true, productKey)
 						return
 					end
-					local currentProfile = self.profiles:Get(player)
-					local currentGeneration = currentProfile and currentProfile.generations[generationId]
 					local minReadyAt = currentGeneration and currentGeneration.minReadyAt
 					if type(minReadyAt) ~= "number" or os.time() >= minReadyAt then
 						self.polling[generationId] = nil
@@ -1020,6 +1110,73 @@ function GenerationService:_CompleteModel(player: Player, generationId: string, 
 	end
 end
 
+-- Same re-entrant-safe shape as _CompleteModel above, but stores into
+-- PlayerProfile.graphics instead of .items: an avatar graphic has no fit,
+-- license, or publishing concept, so an ItemRecord would carry a pile of
+-- meaningless fields for it.
+function GenerationService:_CompleteGraphic(player: Player, generationId: string, output: { [string]: any })
+	local profile = self.profiles:Get(player)
+	local existingGeneration = profile and profile.generations[generationId]
+	if not existingGeneration then
+		return
+	end
+	local graphicId = existingGeneration.graphicId or deterministicId("graphic", generationId)
+	local created = false
+	self.profiles:Mutate(player, function(profile)
+		local generation = profile.generations[generationId]
+		if not generation then
+			return
+		end
+		if profile.graphics[graphicId] then
+			generation.stage = "SUCCEEDED"
+			generation.stageText = "Your avatar graphic is ready"
+			generation.progress = 100
+			generation.graphicId = graphicId
+			generation.updatedAt = os.time()
+			return
+		end
+		local now = os.time()
+		profile.graphics[graphicId] = {
+			id = graphicId,
+			ownerUserId = player.UserId,
+			filteredPrompt = generation.filteredPrompt,
+			stylePreset = generation.stylePreset or "AUTO",
+			avatarView = generation.avatarView or "BUST",
+			previewAssetId = output.previewAssetId,
+			createdAt = now,
+			updatedAt = now,
+		}
+		created = true
+		table.insert(profile.graphicOrder, 1, graphicId)
+		generation.stage = "SUCCEEDED"
+		generation.stageText = "Your avatar graphic is ready"
+		generation.progress = 100
+		generation.graphicId = graphicId
+		generation.updatedAt = now
+		profile.stats.generationsCompleted += 1
+	end)
+	self.profiles:Save(player)
+	self.push(
+		player,
+		Network.PushEvents.Graphic,
+		{ graphicId = graphicId, graphic = self.profiles:Get(player).graphics[graphicId] }
+	)
+	if created then
+		self.push(player, Network.PushEvents.Toast, { tone = "ready", message = "Your avatar graphic is ready." })
+		self.analytics:Funnel(player, "generation", 4, "Avatar graphic ready", {
+			method = self.profiles:Get(player).generations[generationId].method,
+		})
+		self.analytics:Custom(player, "GenerationCompleted", 1, {
+			durationSeconds = math.max(0, os.time() - existingGeneration.createdAt),
+			productKey = existingGeneration.productKey,
+			method = existingGeneration.method,
+		})
+		self.achievements:Unlock(player, "FIRST_CREATION")
+		local completedCount = self.profiles:Get(player).stats.generationsCompleted
+		self.achievements:CheckCount(player, "FIVE_CREATIONS", completedCount, 5)
+	end
+end
+
 function GenerationService:_Fail(
 	player: Player,
 	generationId: string,
@@ -1091,6 +1248,8 @@ function GenerationService:_RunStudioMock(player: Player, generationId: string, 
 				Network.PushEvents.Generation,
 				{ generationId = generationId, stage = "IMAGE_READY", progress = 100 }
 			)
+		elseif kind == "AVATAR_GRAPHIC" then
+			self:_CompleteGraphic(player, generationId, { previewAssetId = 0 })
 		else
 			self:_CompleteModel(player, generationId, { modelAssetId = 0, thumbnailAssetId = 0 })
 		end
@@ -1141,6 +1300,32 @@ function GenerationService:Resume(player: Player)
 			end
 		end
 	end
+end
+
+function GenerationService:DeleteGraphic(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" or type(payload.graphicId) ~= "string" then
+		return false, "INVALID_REQUEST"
+	end
+	local graphicId = payload.graphicId
+	local removed = false
+	self.profiles:Mutate(player, function(profile)
+		if not profile.graphics[graphicId] then
+			return
+		end
+		profile.graphics[graphicId] = nil
+		for index, id in profile.graphicOrder do
+			if id == graphicId then
+				table.remove(profile.graphicOrder, index)
+				break
+			end
+		end
+		removed = true
+	end)
+	if not removed then
+		return false, "NOT_FOUND"
+	end
+	self.profiles:Save(player)
+	return true, {}
 end
 
 return GenerationService

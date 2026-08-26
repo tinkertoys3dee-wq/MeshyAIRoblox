@@ -37,7 +37,7 @@ export class MemoryJobRepository implements JobRepository {
       stage: "Waiting for a worker",
       progress: 0,
       filteredPrompt: input.filteredPrompt,
-      accessoryType: input.accessoryType,
+      ...(input.accessoryType ? { accessoryType: input.accessoryType } : {}),
       stylePreset: input.stylePreset,
       detailLevel: input.detailLevel,
       ...(input.imageQuality ? { imageQuality: input.imageQuality } : {}),
@@ -91,7 +91,7 @@ type JobRow = {
   stage: string;
   progress: number;
   filtered_prompt: string;
-  accessory_type: Job["accessoryType"];
+  accessory_type: Job["accessoryType"] | null;
   style_preset: Job["stylePreset"];
   detail_level: Job["detailLevel"];
   image_quality: string | null;
@@ -145,7 +145,7 @@ export class PostgresJobRepository implements JobRepository {
         input.playerUserId,
         input.kind,
         input.filteredPrompt,
-        input.accessoryType,
+        input.accessoryType ?? null,
         input.stylePreset,
         input.detailLevel,
         input.imageQuality ?? null,
@@ -222,7 +222,7 @@ function rowToJob(row: JobRow): Job {
     stage: row.stage,
     progress: row.progress,
     filteredPrompt: row.filtered_prompt,
-    accessoryType: row.accessory_type,
+    ...(row.accessory_type ? { accessoryType: row.accessory_type } : {}),
     stylePreset: row.style_preset,
     detailLevel: row.detail_level,
     ...(row.image_quality ? { imageQuality: row.image_quality as ImageQuality } : {}),

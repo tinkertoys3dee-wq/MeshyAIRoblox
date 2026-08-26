@@ -148,6 +148,7 @@ export class JobRunner {
         else if (job.kind === "IMAGE_UPLOAD") await this.#runImageUpload(job);
         else if (job.kind === "TEXT_TO_3D") await this.#runTextTo3D(job);
         else if (job.kind === "AVATAR_TO_3D") await this.#runAvatarTo3D(job);
+        else if (job.kind === "AVATAR_GRAPHIC") await this.#runAvatarGraphic(job);
         else await this.#runImageTo3D(job);
       }
       this.#logger.info({ jobId }, "Generation job completed");
@@ -328,6 +329,48 @@ export class JobRunner {
     await this.#finishModel(job, finalTask.model_urls?.glb, finalTask.thumbnail_url);
   }
 
+  // Unlike every other job kind, this never produces a mesh: it's a
+  // standalone piece of key art derived from the player's own avatar. It
+  // finishes at SUCCEEDED directly, with output.previewAssetId holding the
+  // final graphic itself rather than an intermediate reference to approve.
+  async #runAvatarGraphic(job: Job): Promise<void> {
+    let image = job.imageArtifact;
+    if (!image) {
+      if (!job.avatarView) {
+        throw new PipelineError("MISSING_AVATAR_VIEW", "Avatar graphic generation has no avatar view", false);
+      }
+      await this.#set(job.id, "MODERATING", "Fetching your Roblox avatar", 6);
+      const avatarImage = await this.#robloxReferences.downloadAvatarImage(job.playerUserId, job.avatarView);
+      await this.#set(job.id, "GENERATING_IMAGE", "Painting your avatar graphic", 15);
+      image = await this.#images.generateAvatarGraphic(
+        avatarImage,
+        job.filteredPrompt,
+        job.id,
+        job.stylePreset,
+        job.imageQuality,
+      );
+      image = await sharp(image).resize(1024, 1024, { fit: "cover" }).png({ compressionLevel: 9 }).toBuffer();
+      await this.#images.assertImageSafe(image);
+      await this.#repository.update(job.id, { imageArtifact: image, progress: 80, stage: "Avatar graphic ready" });
+    }
+
+    const current = await this.#requiredJob(job.id);
+    let previewAssetId = current.output.previewAssetId;
+    if (!previewAssetId) {
+      await this.#set(job.id, "UPLOADING", "Uploading your avatar graphic to Roblox", 90);
+      previewAssetId = await this.#roblox.uploadImage(image, job.id, "graphic");
+      await this.#mergeOutput(job.id, { previewAssetId });
+    }
+
+    await this.#repository.update(job.id, {
+      status: "SUCCEEDED",
+      stage: "Your avatar graphic is ready",
+      progress: 100,
+      output: { ...(await this.#requiredJob(job.id)).output, previewAssetId },
+      imageArtifact: image,
+    });
+  }
+
   async #finishModel(job: Job, modelUrl: string | undefined, thumbnailUrl: string | undefined): Promise<void> {
     if (!modelUrl) throw new PipelineError("MISSING_MODEL", "Meshy returned no GLB model", true);
     await this.#set(job.id, "VALIDATING", "Downloading the finished Meshy model", 76);
@@ -388,6 +431,20 @@ export class JobRunner {
         stage: "Mock reference ready",
         progress: 100,
         output: { previewAssetId: job.sourceImageAssetId ?? 0 },
+        imageArtifact: image,
+      });
+      return;
+    }
+    if (job.kind === "AVATAR_GRAPHIC") {
+      const image = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFhQGAWvBFPQAAAABJRU5ErkJggg==",
+        "base64",
+      );
+      await this.#repository.update(job.id, {
+        status: "SUCCEEDED",
+        stage: "Mock avatar graphic ready",
+        progress: 100,
+        output: { previewAssetId: 0 },
         imageArtifact: image,
       });
       return;
