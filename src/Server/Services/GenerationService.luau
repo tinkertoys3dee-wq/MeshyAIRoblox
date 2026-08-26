@@ -1143,6 +1143,7 @@ function GenerationService:_CompleteGraphic(player: Player, generationId: string
 			stylePreset = generation.stylePreset or "AUTO",
 			avatarView = generation.avatarView or "BUST",
 			previewAssetId = output.previewAssetId,
+			backendJobId = generation.backendJobId or "",
 			createdAt = now,
 			updatedAt = now,
 		}

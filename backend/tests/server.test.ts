@@ -198,5 +198,20 @@ describe("backend HTTP boundary", () => {
       status: "SUCCEEDED",
       output: { previewAssetId: 0 },
     });
+
+    // The shareable image link needs no auth headers at all -- it's opened
+    // from the player's own browser, outside Roblox entirely.
+    const image = await app.inject({ method: "GET", url: `/v1/graphics/${graphicId}/image` });
+    expect(image.statusCode).toBe(200);
+    expect(image.headers["content-type"]).toBe("image/png");
+    expect(image.rawPayload.length).toBeGreaterThan(0);
+
+    // A job that isn't a succeeded AVATAR_GRAPHIC (the earlier TEXT_TO_3D
+    // job from this same test) must never be served through this route.
+    const wrongKind = await app.inject({ method: "GET", url: `/v1/graphics/${id}/image` });
+    expect(wrongKind.statusCode).toBe(404);
+
+    const missing = await app.inject({ method: "GET", url: "/v1/graphics/does-not-exist/image" });
+    expect(missing.statusCode).toBe(404);
   });
 });
