@@ -228,7 +228,7 @@ export class JobRunner {
   }
 
   async #runTextTo3D(job: Job): Promise<void> {
-    const guidedPrompt = composeMeshyPrompt(job.filteredPrompt, job.stylePreset, job.detailLevel);
+    const guidedPrompt = composeMeshyPrompt(job.filteredPrompt, job.stylePreset, job.detailLevel, job.accessoryType);
     let current = await this.#requiredJob(job.id);
     let previewTaskId = current.output.meshyPreviewTaskId;
     if (!previewTaskId) {
@@ -260,7 +260,7 @@ export class JobRunner {
     // after creation, while uploaded references have already passed Roblox asset
     // moderation and the ownership/type checks in RobloxReferenceClient. Re-running
     // vision moderation here would charge for the same image a second time.
-    const guidedPrompt = composeMeshyPrompt(job.filteredPrompt, job.stylePreset, job.detailLevel);
+    const guidedPrompt = composeMeshyPrompt(job.filteredPrompt, job.stylePreset, job.detailLevel, job.accessoryType);
 
     let current = await this.#requiredJob(job.id);
     let finalTaskId = current.output.meshyFinalTaskId;
@@ -295,7 +295,7 @@ export class JobRunner {
   // -- accessoryType already tells Meshy what to extract from it, and the
   // prompt (optional on the Roblox side) is just extra styling guidance.
   async #runAvatarTo3D(job: Job): Promise<void> {
-    const guidedPrompt = composeMeshyPrompt(job.filteredPrompt, job.stylePreset, job.detailLevel);
+    const guidedPrompt = composeMeshyPrompt(job.filteredPrompt, job.stylePreset, job.detailLevel, job.accessoryType);
 
     let current = await this.#requiredJob(job.id);
     let finalTaskId = current.output.meshyFinalTaskId;
