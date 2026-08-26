@@ -81,6 +81,10 @@ function ViewportController.new(viewport: ViewportFrame)
 		avatar = nil :: Model?,
 		currentFit = nil :: { [string]: any }?,
 		focus = DEFAULT_FOCUS,
+		-- Recentered once the real avatar loads (see the head-lookup below);
+		-- ResetCamera() returns to this instead of the generic guess so it
+		-- stays correct for this player's actual proportions.
+		defaultFocus = DEFAULT_FOCUS,
 		yaw = 0,
 		pitch = -4,
 		distance = 9.25,
@@ -236,6 +240,18 @@ function ViewportController.new(viewport: ViewportFrame)
 				avatar:PivotTo(CFrame.new())
 				avatar.Parent = world
 				self.avatar = avatar
+				-- DEFAULT_FOCUS guesses a default-proportioned avatar's head
+				-- height. A player's real avatar (body scale sliders, a
+				-- custom head/accessory height) can put the actual head well
+				-- outside this viewport's narrow 34-degree close-up FOV at
+				-- that guess, cropping it out of frame entirely. Recenter on
+				-- the real loaded head once it's known.
+				local head = avatar:FindFirstChild("Head")
+				if head and head:IsA("BasePart") then
+					self.defaultFocus = Vector3.new(self.defaultFocus.X, head.Position.Y - 0.35, self.defaultFocus.Z)
+					self.focus = self.defaultFocus
+					self:_UpdateCamera()
+				end
 				if self.currentFit then
 					self:ApplyFit(self.currentFit)
 				end
@@ -257,7 +273,7 @@ function ViewportController:_UpdateCamera()
 end
 
 function ViewportController:ResetCamera()
-	self.focus = DEFAULT_FOCUS
+	self.focus = self.defaultFocus
 	self.yaw = 0
 	self.pitch = -4
 	self.distance = 9.25
