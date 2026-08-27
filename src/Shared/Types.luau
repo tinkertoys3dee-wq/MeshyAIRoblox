@@ -90,6 +90,12 @@ export type GraphicRecord = {
 	stylePreset: string,
 	avatarView: string,
 	previewAssetId: number,
+	-- The backend job that produced this graphic. The backend serves the
+	-- full-resolution PNG it already generated at GET /v1/graphics/{backendJobId}/image
+	-- with no auth required, so the client can build a link the player can
+	-- open in their own browser to view or save it -- Roblox itself has no
+	-- API for an experience to save a file to the player's device.
+	backendJobId: string,
 	createdAt: number,
 	updatedAt: number,
 }
