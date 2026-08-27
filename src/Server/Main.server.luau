@@ -391,6 +391,30 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	[Network.Actions.BeginMarketplacePurchase] = function(player, payload)
 		return community:BeginPurchase(player, payload)
 	end,
+	[Network.Actions.SetGraphicVisibility] = function(player, payload)
+		return community:SetGraphicVisibility(player, payload)
+	end,
+	[Network.Actions.SetGraphicListing] = function(player, payload)
+		return community:SetGraphicListing(player, payload)
+	end,
+	[Network.Actions.GetGraphicsMarketplace] = function(player, payload)
+		return community:GetGraphicsMarketplace(player, payload)
+	end,
+	[Network.Actions.ToggleGraphicLike] = function(player, payload)
+		if not reactionLimiter:consume(player.UserId) then
+			return false, "RATE_LIMITED"
+		end
+		return community:ToggleGraphicLike(player, payload)
+	end,
+	[Network.Actions.ToggleGraphicFavorite] = function(player, payload)
+		if not reactionLimiter:consume(player.UserId) then
+			return false, "RATE_LIMITED"
+		end
+		return community:ToggleGraphicFavorite(player, payload)
+	end,
+	[Network.Actions.BeginGraphicPurchase] = function(player, payload)
+		return community:BeginGraphicPurchase(player, payload)
+	end,
 	[Network.Actions.RequestPrivateModel] = function(player, payload)
 		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
 			return false, "INVALID_REQUEST"
