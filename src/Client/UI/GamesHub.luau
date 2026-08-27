@@ -20,6 +20,7 @@ local SocialService = game:GetService("SocialService")
 local TweenService = game:GetService("TweenService")
 
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
+local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local DailyChallenge = require(ReplicatedStorage:WaitForChild("DailyChallenge"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Factory = require(script.Parent.Factory)
@@ -268,7 +269,7 @@ function GamesHub.Show(app: any)
 		Truncate = Enum.TextTruncate.AtEnd,
 		ZIndex = 213,
 	})
-	Factory.Label(modal, "Three games, one weekly leaderboard.", UDim2.new(1, -220, 0, 18), {
+	Factory.Label(modal, string.format("%d games, one weekly leaderboard.", #GAMES), UDim2.new(1, -220, 0, 18), {
 		Position = UDim2.fromOffset(78, 38),
 		Font = Theme.Fonts.Medium,
 		TextSize = 12,
@@ -290,9 +291,15 @@ function GamesHub.Show(app: any)
 	})
 	Factory.Corner(rewardBanner, 10)
 	Factory.Stroke(rewardBanner, Colors.Gold, 0.65, 1)
+	local rewards = Config.Arcade.WeeklyRewards
 	Factory.Label(
 		rewardBanner,
-		"🏆  Top 3 each game get a weekly Forge Token bonus — 1st +450 · 2nd +250 · 3rd +100",
+		string.format(
+			"🏆  Top 3 each game get a weekly Forge Token bonus — 1st +%d · 2nd +%d · 3rd +%d",
+			rewards[1],
+			rewards[2],
+			rewards[3]
+		),
 		UDim2.new(1, -20, 1, 0),
 		{
 			Position = UDim2.fromOffset(10, 0),
