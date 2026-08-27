@@ -601,7 +601,7 @@ function App:_BuildChrome()
 	local arcadeLauncher = buildLauncher(
 		"🎮",
 		"Arcade",
-		"3 mini-games · weekly prizes",
+		string.format("%d mini-games · weekly prizes", #Config.Arcade.Games),
 		-146,
 		Colors.Mint,
 		Color3.fromRGB(160, 255, 215),
@@ -1666,7 +1666,11 @@ function App:_RenderCreate()
 	-- instead, so its position is independent of the description's height.
 	local rightX = if self.compact then 0 else 0.46
 	local rightWidth = if self.compact then 1 else 0.54
-	local inset = if self.compact then 16 else 0
+	-- Wide mode used to leave this at 0 -- the right column's buttons then
+	-- sat flush against the card's own right edge with no breathing room,
+	-- unlike every other card in the app (14-16px is the norm). Matching
+	-- compact's inset here fixes that instead of introducing a new number.
+	local inset = 16
 	local gap = 8
 	local tokensDescriptionY = 70
 	-- Scaled from the previous copy's proven-good 32/50 at a proportional
@@ -3265,8 +3269,13 @@ function App:_RenderStudio()
 	-- scrolls, separate from the controls/presets/actions below -- they used
 	-- to share one scrolling body, so reaching the sliders scrolled the
 	-- viewport out of view right along with them.
+	-- Trimmed from an earlier 380 (with a 292-tall viewport): on a real
+	-- desktop window this fixed, never-scrolling header was leaving almost
+	-- nothing of the FIT CONTROLS card below visible before the player
+	-- scrolled at all. A smaller viewport here buys back room for the
+	-- sliders to actually show up front.
 	local header = Factory.New("Frame", {
-		Size = UDim2.new(1, -12, 0, 380),
+		Size = UDim2.new(1, -12, 0, 298),
 		Position = UDim2.fromOffset(6, 6),
 		BackgroundTransparency = 1,
 		Parent = inspector,
@@ -3297,7 +3306,7 @@ function App:_RenderStudio()
 		UDim2.fromOffset(132, 47)
 	local viewport = Factory.New("ViewportFrame", {
 		Position = UDim2.fromOffset(16, 84),
-		Size = UDim2.new(1, -32, 0, 292),
+		Size = UDim2.new(1, -32, 0, 210),
 		BackgroundColor3 = Color3.fromRGB(62, 72, 108),
 		BorderSizePixel = 0,
 		Parent = header,
@@ -3338,8 +3347,8 @@ function App:_RenderStudio()
 	end)
 
 	local inspectScroll = Factory.New("ScrollingFrame", {
-		Size = UDim2.new(1, -12, 1, -392),
-		Position = UDim2.fromOffset(6, 392),
+		Size = UDim2.new(1, -12, 1, -310),
+		Position = UDim2.fromOffset(6, 310),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
