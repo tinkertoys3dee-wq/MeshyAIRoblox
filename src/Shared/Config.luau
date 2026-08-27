@@ -312,27 +312,29 @@ return table.freeze({
 		NonEarningTokenBudget = 110,
 	},
 
-	-- Client-side arcade minigames (Flappy Bird, Dino Runner, Color Switch) —
-	-- purely for session time and fun, not part of the Forge Tokens economy.
-	-- Their scores are simulated entirely on the client with no server
-	-- authority over gameplay, unlike everything else with a token reward in
-	-- this file, so ArcadeService:SubmitScore treats every submission as
-	-- unverified input: sanity-clamped, never trusted as truth the way a
-	-- purchase receipt or an ad-completion callback is.
+	-- Client-side arcade minigames (Flappy Bird, Dino Runner, Color Switch,
+	-- Neon Snake, Block Stacker) — purely for session time and fun, not part
+	-- of the Forge Tokens economy. Their scores are simulated entirely on the
+	-- client with no server authority over gameplay, unlike everything else
+	-- with a token reward in this file, so ArcadeService:SubmitScore treats
+	-- every submission as unverified input: sanity-clamped, never trusted as
+	-- truth the way a purchase receipt or an ad-completion callback is.
 	Arcade = {
-		Games = { "FlappyBird", "DinoRunner", "ColorSwitch" },
+		Games = { "FlappyBird", "DinoRunner", "ColorSwitch", "NeonSnake", "BlockStacker" },
 		-- Weekly reward for each game's top 3 players by that game's best
 		-- score of the week. Index = placement: [1] = 1st, [2] = 2nd,
 		-- [3] = 3rd. Unlike every other free grant in this file, ArcadeService
 		-- credits these to `tokens`, not `bonusTokens` — fully spendable,
 		-- generations included. That's a deliberate, bounded exception to the
 		-- "only gain money" guarantee (approved for the engagement value):
-		-- worst case is 800/game * #Games = 2400 tokens/week, worth ~2
-		-- generations (~$0.60) at the pricing in Config.Generation. See
+		-- worst case is 640/game * #Games = 3200 tokens/week, worth roughly
+		-- 2.7 generations (~$0.80) at the pricing in Config.Generation. See
 		-- ArcadeService's module header and docs/PRICING.md for the full
 		-- reasoning; raising these numbers meaningfully needs that math
-		-- re-checked, not just a game-balance judgment call.
-		WeeklyRewards = { 450, 250, 100 },
+		-- re-checked, not just a game-balance judgment call. (Lowered 20%
+		-- from an original 450/250/100 -- keep this comment's math in sync
+		-- with WeeklyRewards and Games if either changes again.)
+		WeeklyRewards = { 360, 200, 80 },
 		-- Sanity ceiling against an obviously spoofed score reaching the
 		-- leaderboard store. Can't stop a determined cheater on a
 		-- client-simulated game, only bound the damage one can do.
@@ -342,8 +344,8 @@ return table.freeze({
 		-- WeeklyRewards above, this is a normal bonusTokens grant --
 		-- Priority-Pass-only, same restriction as every other free grant in
 		-- this file, not the fully-spendable `tokens` exception WeeklyRewards
-		-- carries.
-		DailyChallengeBonusTokens = 8,
+		-- carries. (Lowered 20% from an original 8.)
+		DailyChallengeBonusTokens = 6,
 	},
 
 	Marketplace = {

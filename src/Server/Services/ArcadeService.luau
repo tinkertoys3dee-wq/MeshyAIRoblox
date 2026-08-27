@@ -1,16 +1,16 @@
 --!strict
 
 -- Score tracking and weekly top-3 token payouts for the client-side arcade
--- minigames (Flappy Bird, Dino Runner, Color Switch). See Config.Arcade for
--- the reward amounts.
+-- minigames (Flappy Bird, Dino Runner, Color Switch, Neon Snake, Block
+-- Stacker). See Config.Arcade for the reward amounts.
 --
 -- Unlike every other free grant (achievements, daily check-in, win-back —
 -- see ProfileService.defaultProfile), these are credited straight to
 -- `tokens`, the same fully-spendable pool ad rewards and Robux purchases
 -- fund, not the spend-restricted `bonusTokens` pool. That's a deliberate,
--- bounded cost, not an oversight: max payout is 800 tokens/game * 3 games =
--- 2400 tokens/week worst case (every rank won by a different player, every
--- week), worth roughly 2 generations or ~$0.60 at the token pricing in
+-- bounded cost, not an oversight: max payout is 640 tokens/game * 5 games =
+-- 3200 tokens/week worst case (every rank won by a different player, every
+-- week), worth roughly 2.7 generations or ~$0.80 at the token pricing in
 -- Config.Generation. Accepted as an engagement investment, same category as
 -- the free tokens for watching an ad -- not something to "fix" back to
 -- bonusTokens without checking with the studio owner first.

@@ -27,6 +27,8 @@ local GameShell = require(script.Parent.Games.GameShell)
 local FlappyBird = require(script.Parent.Games.FlappyBird)
 local DinoRunner = require(script.Parent.Games.DinoRunner)
 local ColorSwitch = require(script.Parent.Games.ColorSwitch)
+local NeonSnake = require(script.Parent.Games.NeonSnake)
+local BlockStacker = require(script.Parent.Games.BlockStacker)
 
 local Colors = Theme.Colors
 
@@ -40,12 +42,6 @@ local function darken(color: Color3, amount: number): Color3
 	return Color3.fromHSV(h, s, math.clamp(v - amount, 0, 1))
 end
 
--- `wide` positions/sizes are a verified-fit 2x2 grid within the hub view's
--- fixed 536x392 content box (see the width/height derivation in the Show
--- function below) -- NOT hand-waved offsets, since the last layout
--- overflowed the visible area once the header grew and nobody re-checked
--- the numbers. `wide` applies above the compact breakpoint; compact always
--- stacks full-width instead.
 local GAMES = {
 	{
 		game = FlappyBird,
@@ -65,16 +61,42 @@ local GAMES = {
 		icon = "🎨",
 		blurb = "Bounce through the right color.",
 	},
+	{
+		game = NeonSnake,
+		color = Colors.Violet,
+		icon = "🐍",
+		blurb = "Grow without biting yourself.",
+	},
+	{
+		game = BlockStacker,
+		color = Colors.Danger,
+		icon = "🧱",
+		blurb = "Stack it straight, don't miss.",
+	},
 }
 
 local TILE_SIZE = UDim2.fromOffset(248, 172)
 local COMPACT_TILE_SIZE = UDim2.new(1, 0, 0, 84)
-local TILE_POSITIONS = {
-	UDim2.fromOffset(12, 12),
-	UDim2.fromOffset(270, 12),
-	UDim2.fromOffset(12, 194),
-	UDim2.fromOffset(270, 194), -- reserved for the Leaderboard tile
-}
+local COMPACT_TILE_HEIGHT = 92
+-- Wide-mode tiles (#GAMES games + 1 Leaderboard tile) lay out into a fixed
+-- 2-column grid computed from TILE_SIZE, rather than a hand-typed list of
+-- offsets -- the previous hand-typed version overflowed the visible area
+-- once the header grew and nobody re-checked the numbers; a computed grid
+-- can't drift out of sync with GAMES's length the same way. `wide` applies
+-- above the compact breakpoint; compact always stacks full-width instead
+-- (see COMPACT_TILE_HEIGHT above).
+local TILE_GRID_ORIGIN = Vector2.new(12, 12)
+local TILE_GRID_GAP = 10
+local TILE_GRID_COLUMNS = 2
+
+local function wideTilePosition(index: number): UDim2
+	local column = (index - 1) % TILE_GRID_COLUMNS
+	local row = math.floor((index - 1) / TILE_GRID_COLUMNS)
+	return UDim2.fromOffset(
+		TILE_GRID_ORIGIN.X + column * (TILE_SIZE.X.Offset + TILE_GRID_GAP),
+		TILE_GRID_ORIGIN.Y + row * (TILE_SIZE.Y.Offset + TILE_GRID_GAP)
+	)
+end
 
 local GamesHub = {}
 
@@ -92,10 +114,18 @@ function GamesHub.Show(app: any)
 		Parent = app.gui,
 	})
 
+	-- Height (702) is derived, not guessed: hubView's content box is
+	-- modal height - 128 (see hubView's Size below), and a 3-row wide-mode
+	-- tile grid (6 tiles: #GAMES games + 1 Leaderboard tile, computed by
+	-- wideTilePosition above) needs 3*TILE_SIZE.Y + 2*TILE_GRID_GAP + the
+	-- same 26px bottom margin the original 2-row layout used = 574, so
+	-- modal height = 574 + 128 = 702. hubView is a ScrollingFrame (see
+	-- below) as a safety net on unusually short windows, but on any normal
+	-- desktop size this fits with no scrolling needed.
 	local restingModalPosition = UDim2.fromScale(0.5, 0.5)
 	local modal = Factory.Card(
 		overlay,
-		UDim2.new(1, -32, 0, 520),
+		UDim2.new(1, -32, 0, 702),
 		if reduceMotion then restingModalPosition else restingModalPosition + UDim2.fromOffset(0, 18),
 		"ArcadeModal"
 	)
@@ -110,7 +140,7 @@ function GamesHub.Show(app: any)
 	-- "usually about that". The tile grid below is sized against that fixed
 	-- number, not a guess.
 	Factory.New("UISizeConstraint", {
-		MaxSize = Vector2.new(560, 520),
+		MaxSize = Vector2.new(560, 702),
 		Parent = modal,
 	})
 	-- A console-style accent strip along the very top edge -- a small frame
@@ -1166,7 +1196,7 @@ function GamesHub.Show(app: any)
 		for index, tile in GAMES do
 			buildTile(
 				COMPACT_TILE_SIZE,
-				UDim2.fromOffset(0, (index - 1) * 92),
+				UDim2.fromOffset(0, (index - 1) * COMPACT_TILE_HEIGHT),
 				tile.color,
 				tile.icon,
 				tile.game.Name,
@@ -1179,7 +1209,7 @@ function GamesHub.Show(app: any)
 		end
 		buildTile(
 			COMPACT_TILE_SIZE,
-			UDim2.fromOffset(0, #GAMES * 92),
+			UDim2.fromOffset(0, #GAMES * COMPACT_TILE_HEIGHT),
 			Colors.Gold,
 			"🏆",
 			"Leaderboard",
@@ -1188,13 +1218,13 @@ function GamesHub.Show(app: any)
 		)
 	else
 		for index, tile in GAMES do
-			buildTile(TILE_SIZE, TILE_POSITIONS[index], tile.color, tile.icon, tile.game.Name, tile.blurb, function()
+			buildTile(TILE_SIZE, wideTilePosition(index), tile.color, tile.icon, tile.game.Name, tile.blurb, function()
 				playGame(tile.game)
 			end, tile.game.Key)
 		end
 		buildTile(
 			TILE_SIZE,
-			TILE_POSITIONS[4],
+			wideTilePosition(#GAMES + 1),
 			Colors.Gold,
 			"🏆",
 			"Leaderboard",
