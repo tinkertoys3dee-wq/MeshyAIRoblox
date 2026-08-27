@@ -14,6 +14,8 @@ CommunityService.__index = CommunityService
 
 local INDEX_KEY = "public_v1"
 local MAX_PUBLIC_ITEMS = 250
+local GRAPHIC_INDEX_KEY = "public_graphics_v1"
+local MAX_PUBLIC_GRAPHICS = 250
 local CACHE_SECONDS = 12
 
 local function deepCopy<T>(value: T): T
@@ -61,6 +63,32 @@ local function publicItem(
 	}
 end
 
+local function publicGraphic(
+	graphic: { [string]: any },
+	ownerName: string,
+	viewerProfile: { [string]: any }
+): { [string]: any }
+	return {
+		id = graphic.id,
+		ownerUserId = graphic.ownerUserId,
+		ownerName = ownerName,
+		kind = graphic.kind or "AVATAR_GRAPHIC",
+		filteredPrompt = graphic.filteredPrompt,
+		stylePreset = graphic.stylePreset or "AUTO",
+		createdAt = graphic.createdAt,
+		updatedAt = graphic.updatedAt,
+		previewAssetId = graphic.previewAssetId,
+		backendJobId = graphic.backendJobId,
+		isListed = graphic.isListed == true,
+		listingPriceRobux = graphic.listingPriceRobux,
+		likes = graphic.likes or 0,
+		favorites = graphic.favorites or 0,
+		views = graphic.views or 0,
+		viewerLiked = viewerProfile.likedGraphics[graphic.id] == true,
+		viewerFavorited = viewerProfile.favoriteGraphics[graphic.id] == true,
+	}
+end
+
 function CommunityService.new(
 	profileService: any,
 	playerStateService: any,
@@ -77,9 +105,12 @@ function CommunityService.new(
 		achievements = achievementService,
 		leaderboard = leaderboardService,
 		indexStore = DataStoreService:GetDataStore(Config.DataStores.ItemIndex),
+		graphicIndexStore = DataStoreService:GetDataStore(Config.DataStores.GraphicIndex),
 		claimStore = DataStoreService:GetDataStore(Config.DataStores.ReceiptClaims),
 		indexCache = nil :: { [string]: any }?,
 		indexCacheAt = 0,
+		graphicIndexCache = nil :: { [string]: any }?,
+		graphicIndexCacheAt = 0,
 		nameCache = {} :: { [number]: string },
 		activeTransferPrompts = {} :: { [number]: string },
 	}, CommunityService)
@@ -177,6 +208,90 @@ function CommunityService:_AdjustIndex(itemId: string, field: string, delta: num
 	self.indexCache = nil
 end
 
+-- Same shape and rationale as _ReadIndex/_UpdateIndex/_AdjustIndex above, but
+-- against a separate DataStore (Config.DataStores.GraphicIndex) and cache, so
+-- the item and graphic marketplaces never contend for the same public index.
+function CommunityService:_ReadGraphicIndex(forceRefresh: boolean?): { [string]: any }
+	if not forceRefresh and self.graphicIndexCache and os.clock() - self.graphicIndexCacheAt < CACHE_SECONDS then
+		return deepCopy(self.graphicIndexCache)
+	end
+	local success, result = pcall(function()
+		return self.graphicIndexStore:GetAsync(GRAPHIC_INDEX_KEY)
+	end)
+	local index = if success and type(result) == "table" then result else { entries = {}, updatedAt = os.time() }
+	if type(index.entries) ~= "table" then
+		index.entries = {}
+	end
+	self.graphicIndexCache = index
+	self.graphicIndexCacheAt = os.clock()
+	return deepCopy(index)
+end
+
+function CommunityService:_UpdateGraphicIndex(graphic: { [string]: any }, visible: boolean): boolean
+	local success, problem = pcall(function()
+		self.graphicIndexStore:UpdateAsync(GRAPHIC_INDEX_KEY, function(stored)
+			local index = if type(stored) == "table" then stored else { entries = {} }
+			if type(index.entries) ~= "table" then
+				index.entries = {}
+			end
+			if visible then
+				local old = index.entries[graphic.id] or {}
+				index.entries[graphic.id] = {
+					graphicId = graphic.id,
+					ownerUserId = graphic.ownerUserId,
+					updatedAt = os.time(),
+					isListed = graphic.isListed == true,
+					listingPriceRobux = graphic.listingPriceRobux,
+					likes = graphic.likes or old.likes or 0,
+					favorites = graphic.favorites or old.favorites or 0,
+					views = graphic.views or old.views or 0,
+				}
+				local entries = {}
+				for _, entry in index.entries do
+					table.insert(entries, entry)
+				end
+				if #entries > MAX_PUBLIC_GRAPHICS then
+					table.sort(entries, function(left, right)
+						return score(left) > score(right)
+					end)
+					for position = MAX_PUBLIC_GRAPHICS + 1, #entries do
+						index.entries[entries[position].graphicId] = nil
+					end
+				end
+			else
+				index.entries[graphic.id] = nil
+			end
+			index.updatedAt = os.time()
+			return index
+		end)
+	end)
+	if not success then
+		warn(string.format("[CommunityService] Public graphic index update failed: %s", tostring(problem)))
+		return false
+	end
+	self.graphicIndexCache = nil
+	return true
+end
+
+function CommunityService:_AdjustGraphicIndex(graphicId: string, field: string, delta: number)
+	local success, problem = pcall(function()
+		self.graphicIndexStore:UpdateAsync(GRAPHIC_INDEX_KEY, function(stored)
+			local index = if type(stored) == "table" then stored else { entries = {} }
+			local entry = index.entries and index.entries[graphicId]
+			if entry then
+				entry[field] = math.max(0, (entry[field] or 0) + delta)
+				entry.updatedAt = os.time()
+			end
+			index.updatedAt = os.time()
+			return index
+		end)
+	end)
+	if not success then
+		warn(string.format("[CommunityService] Graphic engagement index update failed: %s", tostring(problem)))
+	end
+	self.graphicIndexCache = nil
+end
+
 function CommunityService:_OwnerName(userId: number): string
 	if self.nameCache[userId] then
 		return self.nameCache[userId]
@@ -212,6 +327,30 @@ function CommunityService:_ResolvePublic(itemId: string, forceRefresh: boolean?)
 		item.listingPriceRobux = reference.listingPriceRobux
 	end
 	return item, self:_OwnerName(reference.ownerUserId)
+end
+
+function CommunityService:_ResolvePublicGraphic(
+	graphicId: string,
+	forceRefresh: boolean?
+): ({ [string]: any }?, string?)
+	local index = self:_ReadGraphicIndex(forceRefresh)
+	local reference = index.entries[graphicId]
+	if not reference then
+		return nil, nil
+	end
+	local ownerProfile = self.profiles:ReadUser(reference.ownerUserId)
+	local graphic = ownerProfile and ownerProfile.graphics[graphicId]
+	if not graphic or graphic.visibility ~= "PUBLIC" then
+		return nil, nil
+	end
+	graphic.likes = reference.likes or graphic.likes or 0
+	graphic.favorites = reference.favorites or graphic.favorites or 0
+	graphic.views = reference.views or graphic.views or 0
+	if reference.isListed ~= nil then
+		graphic.isListed = reference.isListed == true
+		graphic.listingPriceRobux = reference.listingPriceRobux
+	end
+	return graphic, self:_OwnerName(reference.ownerUserId)
 end
 
 function CommunityService:GetLeaderboard(_player: Player): (boolean, any)
@@ -277,6 +416,67 @@ function CommunityService:GetMarketplace(player: Player, payload: any): (boolean
 		end
 	end
 	return true, { items = items, refreshedAt = os.time() }
+end
+
+function CommunityService:GetGraphicsMarketplace(player: Player, payload: any): (boolean, any)
+	if not self.playerStates:Get(player).contentSharingAllowed then
+		return false, "CONTENT_SHARING_DISABLED"
+	end
+	local viewerProfile = self.profiles:Get(player)
+	if not viewerProfile then
+		return false, "PROFILE_UNAVAILABLE"
+	end
+	local query = ""
+	if type(payload) == "table" and type(payload.query) == "string" then
+		query = string.lower(string.sub(payload.query, 1, 60))
+	end
+	local searchByCreator = type(payload) == "table" and payload.searchBy == "CREATOR"
+	local sortMode = if type(payload) == "table" and type(payload.sortBy) == "string"
+		then payload.sortBy
+		else "TRENDING"
+	local references = {}
+	for _, entry in self:_ReadGraphicIndex().entries do
+		table.insert(references, entry)
+	end
+	if sortMode == "NEWEST" then
+		table.sort(references, function(left, right)
+			return (left.updatedAt or 0) > (right.updatedAt or 0)
+		end)
+	elseif sortMode == "PRICE_LOW" then
+		table.sort(references, function(left, right)
+			local leftPrice = if left.isListed then (left.listingPriceRobux or math.huge) else math.huge
+			local rightPrice = if right.isListed then (right.listingPriceRobux or math.huge) else math.huge
+			return leftPrice < rightPrice
+		end)
+	elseif sortMode == "MOST_LIKED" then
+		table.sort(references, function(left, right)
+			return (left.likes or 0) > (right.likes or 0)
+		end)
+	else
+		table.sort(references, function(left, right)
+			return score(left) > score(right)
+		end)
+	end
+
+	local graphics = {}
+	for _, reference in references do
+		if #graphics >= Config.Marketplace.PageSize then
+			break
+		end
+		local graphic, ownerName = self:_ResolvePublicGraphic(reference.graphicId)
+		if graphic then
+			local matches = query == ""
+			if not matches and searchByCreator then
+				matches = string.find(string.lower(ownerName or "creator"), query, 1, true) ~= nil
+			elseif not matches then
+				matches = string.find(string.lower(graphic.filteredPrompt or ""), query, 1, true) ~= nil
+			end
+			if matches then
+				table.insert(graphics, publicGraphic(graphic, ownerName or "Creator", viewerProfile))
+			end
+		end
+	end
+	return true, { graphics = graphics, refreshedAt = os.time() }
 end
 
 function CommunityService:SetVisibility(player: Player, payload: any): (boolean, any)
@@ -363,6 +563,90 @@ function CommunityService:SetListing(player: Player, payload: any): (boolean, an
 	return true, { item = item }
 end
 
+function CommunityService:SetGraphicVisibility(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" or type(payload.graphicId) ~= "string" or type(payload.isPublic) ~= "boolean" then
+		return false, "INVALID_REQUEST"
+	end
+	if payload.isPublic and not self.playerStates:Get(player).contentSharingAllowed then
+		return false, "CONTENT_SHARING_DISABLED"
+	end
+	local profile = self.profiles:Get(player)
+	local graphic = profile and profile.graphics[payload.graphicId]
+	if not graphic or graphic.ownerUserId ~= player.UserId or graphic.license ~= "ORIGINAL" then
+		return false, "GRAPHIC_NOT_SHAREABLE"
+	end
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(mutableProfile)
+		local mutableGraphic = mutableProfile.graphics[payload.graphicId]
+		mutableGraphic.visibility = if payload.isPublic then "PUBLIC" else "PRIVATE"
+		if not payload.isPublic then
+			mutableGraphic.isListed = false
+			mutableGraphic.listingPriceRobux = nil
+		end
+		mutableGraphic.updatedAt = os.time()
+	end)
+	if not mutateSuccess then
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	graphic = self.profiles:Get(player).graphics[payload.graphicId]
+	if not self:_UpdateGraphicIndex(graphic, payload.isPublic) then
+		return false, "MARKETPLACE_UNAVAILABLE"
+	end
+	self.analytics:Custom(player, "GraphicVisibilityChanged", 1, { isPublic = payload.isPublic })
+	return true, { graphic = graphic }
+end
+
+function CommunityService:SetGraphicListing(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" or type(payload.graphicId) ~= "string" or type(payload.isListed) ~= "boolean" then
+		return false, "INVALID_REQUEST"
+	end
+	local state = self.playerStates:Get(player)
+	if not state.contentSharingAllowed or not state.paidTradingAllowed then
+		return false, "COMMERCE_NOT_ALLOWED"
+	end
+	local profile = self.profiles:Get(player)
+	local graphic = profile and profile.graphics[payload.graphicId]
+	if not graphic or graphic.ownerUserId ~= player.UserId or not graphic.canList or graphic.license ~= "ORIGINAL" then
+		return false, "GRAPHIC_NOT_LISTABLE"
+	end
+	local price = math.floor(tonumber(payload.priceRobux) or 0)
+	if
+		payload.isListed
+		and (price < Config.Marketplace.MinimumTransferRobux or price > Config.Marketplace.MaximumTransferRobux)
+	then
+		return false, "PRICE_OUT_OF_RANGE"
+	end
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(mutableProfile)
+		local mutableGraphic = mutableProfile.graphics[payload.graphicId]
+		mutableGraphic.isListed = payload.isListed
+		mutableGraphic.listingPriceRobux = if payload.isListed then price else nil
+		if payload.isListed then
+			mutableGraphic.visibility = "PUBLIC"
+		end
+		mutableGraphic.updatedAt = os.time()
+	end)
+	if not mutateSuccess then
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	graphic = self.profiles:Get(player).graphics[payload.graphicId]
+	if not self:_UpdateGraphicIndex(graphic, graphic.visibility == "PUBLIC") then
+		return false, "MARKETPLACE_UNAVAILABLE"
+	end
+	self.analytics:Custom(player, "GraphicListingChanged", 1, {
+		isListed = payload.isListed,
+		price = if payload.isListed then price else 0,
+	})
+	if payload.isListed then
+		self.achievements:Unlock(player, "FIRST_LISTING")
+	end
+	return true, { graphic = graphic }
+end
+
 function CommunityService:_ToggleReaction(
 	player: Player,
 	itemId: string,
@@ -429,6 +713,67 @@ function CommunityService:ToggleFavorite(player: Player, payload: any): (boolean
 	return self:_ToggleReaction(player, payload.itemId, "favoriteItems", "favorites")
 end
 
+function CommunityService:_ToggleGraphicReaction(
+	player: Player,
+	graphicId: string,
+	profileField: string,
+	countField: string
+): (boolean, any)
+	if not self.playerStates:Get(player).contentSharingAllowed then
+		return false, "CONTENT_SHARING_DISABLED"
+	end
+	local graphic = self:_ResolvePublicGraphic(graphicId)
+	if not graphic then
+		return false, "GRAPHIC_NOT_FOUND"
+	end
+	local enabled = false
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(profile)
+		enabled = profile[profileField][graphicId] ~= true
+		profile[profileField][graphicId] = if enabled then true else nil
+	end)
+	if not mutateSuccess then
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
+	local delta = if enabled then 1 else -1
+	self:_AdjustGraphicIndex(graphicId, countField, delta)
+	local newLikesTotal = nil :: number?
+	self.profiles:MutateUser(graphic.ownerUserId, function(ownerProfile)
+		local ownerGraphic = ownerProfile.graphics[graphicId]
+		if ownerGraphic then
+			ownerGraphic[countField] = math.max(0, (ownerGraphic[countField] or 0) + delta)
+		end
+		if countField == "likes" then
+			ownerProfile.stats.likesReceived = math.max(0, (ownerProfile.stats.likesReceived or 0) + delta)
+			newLikesTotal = ownerProfile.stats.likesReceived
+		end
+	end)
+	if newLikesTotal then
+		self.leaderboard:SetScore(graphic.ownerUserId, newLikesTotal)
+	end
+	self.analytics:Custom(player, if countField == "likes" then "GraphicLikeToggled" else "GraphicFavoriteToggled", 1, {
+		enabled = enabled,
+	})
+	return true, { enabled = enabled }
+end
+
+function CommunityService:ToggleGraphicLike(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" or type(payload.graphicId) ~= "string" then
+		return false, "INVALID_REQUEST"
+	end
+	local success, result = self:_ToggleGraphicReaction(player, payload.graphicId, "likedGraphics", "likes")
+	if success and type(result) == "table" and result.enabled then
+		self.achievements:Unlock(player, "FIRST_LIKE_GIVEN")
+	end
+	return success, result
+end
+
+function CommunityService:ToggleGraphicFavorite(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" or type(payload.graphicId) ~= "string" then
+		return false, "INVALID_REQUEST"
+	end
+	return self:_ToggleGraphicReaction(player, payload.graphicId, "favoriteGraphics", "favorites")
+end
+
 function CommunityService:ResolveAccessibleItem(player: Player, itemId: string): ({ [string]: any }?, string?)
 	local profile = self.profiles:Get(player)
 	local own = profile and profile.items[itemId]
@@ -449,6 +794,28 @@ function CommunityService:ResolveAccessibleItem(player: Player, itemId: string):
 		end)
 	end
 	return item, ownerName
+end
+
+function CommunityService:ResolveAccessibleGraphic(player: Player, graphicId: string): ({ [string]: any }?, string?)
+	local profile = self.profiles:Get(player)
+	local own = profile and profile.graphics[graphicId]
+	if own then
+		return own, player.Name
+	end
+	if not self.playerStates:Get(player).contentSharingAllowed then
+		return nil, nil
+	end
+	local graphic, ownerName = self:_ResolvePublicGraphic(graphicId)
+	if graphic then
+		self:_AdjustGraphicIndex(graphicId, "views", 1)
+		self.profiles:MutateUser(graphic.ownerUserId, function(ownerProfile)
+			local ownerGraphic = ownerProfile.graphics[graphicId]
+			if ownerGraphic then
+				ownerGraphic.views = (ownerGraphic.views or 0) + 1
+			end
+		end)
+	end
+	return graphic, ownerName
 end
 
 function CommunityService:BeginPurchase(player: Player, payload: any): (boolean, any)
@@ -507,6 +874,7 @@ function CommunityService:BeginPurchase(player: Player, payload: any): (boolean,
 		profile.pendingTransfers[preliminaryId] = {
 			transferRequestId = preliminaryId,
 			status = "PROMPTING",
+			contentType = "ITEM",
 			itemId = item.id,
 			sellerUserId = item.ownerUserId,
 			amount = amount,
@@ -528,7 +896,7 @@ function CommunityService:BeginPurchase(player: Player, payload: any): (boolean,
 
 	if studioMock then
 		releasePrompt()
-		local granted, result = self:_GrantCopy(player, preliminaryId)
+		local granted, result = self:_GrantItemCopy(player, preliminaryId)
 		return granted, if granted then { mocked = true, item = result } else result
 	end
 
@@ -546,6 +914,7 @@ function CommunityService:BeginPurchase(player: Player, payload: any): (boolean,
 	local recoveryPending = {
 		transferRequestId = transferId,
 		status = "AWAITING_RECEIPT",
+		contentType = "ITEM",
 		itemId = item.id,
 		sellerUserId = item.ownerUserId,
 		amount = amount,
@@ -580,7 +949,140 @@ function CommunityService:BeginPurchase(player: Player, payload: any): (boolean,
 	return true, { transferRequestId = transferId, prompted = true }
 end
 
-function CommunityService:_GrantCopy(player: Player, transferId: string): (boolean, any)
+-- Same purchase flow as BeginPurchase above (single-active-prompt mutex,
+-- pre-receipt PROMPTING record, claimStore recovery marker keyed by
+-- transferId) but for a listed graphic instead of an item. Both content
+-- types share one bound MarketplaceService:BindReceiptHandler (Roblox only
+-- allows one per Enum.ReceiptType), so contentType = "GRAPHIC" on the
+-- pending record is what tells _ProcessSenderReceipt which grant path to run.
+function CommunityService:BeginGraphicPurchase(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" or type(payload.graphicId) ~= "string" then
+		return false, "INVALID_REQUEST"
+	end
+	local state = self.playerStates:Get(player)
+	local studioMock = RunService:IsStudio() and Config.Studio.AllowMockPurchases
+	if not state.plusSubscriber and not studioMock then
+		return false, "PLUS_REQUIRED"
+	end
+	if not state.contentSharingAllowed or not state.paidTradingAllowed then
+		return false, "COMMERCE_NOT_ALLOWED"
+	end
+	local graphic = self:_ResolvePublicGraphic(payload.graphicId, true)
+	if not graphic or not graphic.isListed or graphic.ownerUserId == player.UserId then
+		return false, "LISTING_UNAVAILABLE"
+	end
+	local amount = math.floor(tonumber(graphic.listingPriceRobux) or 0)
+	if amount < Config.Marketplace.MinimumTransferRobux or amount > Config.Marketplace.MaximumTransferRobux then
+		return false, "PRICE_OUT_OF_RANGE"
+	end
+	local now = os.time()
+	local snapshot = deepCopy(graphic)
+	local preliminaryId = self.profiles:GenerateId("transfer")
+	if self.activeTransferPrompts[player.UserId] then
+		return false, "TRANSFER_ALREADY_PENDING"
+	end
+	self.activeTransferPrompts[player.UserId] = preliminaryId
+	local function releasePrompt()
+		if self.activeTransferPrompts[player.UserId] == preliminaryId then
+			self.activeTransferPrompts[player.UserId] = nil
+		end
+	end
+	local cleanupSuccess, cleanupProblem = self.profiles:Mutate(player, function(profile)
+		for transferId, pending in profile.pendingTransfers do
+			local createdAt = if type(pending) == "table" then tonumber(pending.createdAt) or 0 else 0
+			local status = if type(pending) == "table" then pending.status else nil
+			local expired = createdAt <= 0 or createdAt + Config.Marketplace.TransferIntentLifetimeSeconds < now
+			if type(pending) ~= "table" or expired or (status ~= "PROMPTING" and status ~= "AWAITING_RECEIPT") then
+				profile.pendingTransfers[transferId] = nil
+			elseif status == "PROMPTING" then
+				profile.pendingTransfers[transferId] = nil
+			end
+		end
+	end)
+	if not cleanupSuccess then
+		releasePrompt()
+		return false, cleanupProblem or "PROFILE_UNAVAILABLE"
+	end
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(profile)
+		profile.pendingTransfers[preliminaryId] = {
+			transferRequestId = preliminaryId,
+			status = "PROMPTING",
+			contentType = "GRAPHIC",
+			itemId = graphic.id,
+			sellerUserId = graphic.ownerUserId,
+			amount = amount,
+			sourceItem = snapshot,
+			createdAt = now,
+		}
+	end)
+	if not mutateSuccess then
+		releasePrompt()
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
+	if not self.profiles:Save(player) then
+		releasePrompt()
+		self.profiles:Mutate(player, function(profile)
+			profile.pendingTransfers[preliminaryId] = nil
+		end)
+		return false, "SAVE_FAILED"
+	end
+
+	if studioMock then
+		releasePrompt()
+		local granted, result = self:_GrantGraphicCopy(player, preliminaryId)
+		return granted, if granted then { mocked = true, graphic = result } else result
+	end
+
+	local success, transferId = pcall(function()
+		return MarketplaceService:PromptRobuxTransferAsync(player, graphic.ownerUserId, amount)
+	end)
+	releasePrompt()
+	if not success or type(transferId) ~= "string" then
+		self.profiles:Mutate(player, function(profile)
+			profile.pendingTransfers[preliminaryId] = nil
+		end)
+		self.profiles:Save(player)
+		return false, "TRANSFER_PROMPT_FAILED"
+	end
+	local recoveryPending = {
+		transferRequestId = transferId,
+		status = "AWAITING_RECEIPT",
+		contentType = "GRAPHIC",
+		itemId = graphic.id,
+		sellerUserId = graphic.ownerUserId,
+		amount = amount,
+		sourceItem = snapshot,
+		createdAt = now,
+	}
+	local recoverySaved, recoveryProblem = pcall(function()
+		self.claimStore:UpdateAsync(transferId, function(stored)
+			if type(stored) == "table" and stored.state == "PROCESSED" then
+				return stored
+			end
+			return {
+				state = "PENDING",
+				buyerUserId = player.UserId,
+				preliminaryId = preliminaryId,
+				pending = recoveryPending,
+				createdAt = now,
+			}
+		end)
+	end)
+	if not recoverySaved then
+		warn(string.format("[CommunityService] Graphic transfer recovery marker failed: %s", tostring(recoveryProblem)))
+	end
+	self.profiles:Mutate(player, function(profile)
+		profile.pendingTransfers[preliminaryId] = nil
+		profile.pendingTransfers[transferId] = deepCopy(recoveryPending)
+	end)
+	if not self.profiles:Save(player) then
+		warn(string.format("[CommunityService] Graphic transfer %s is awaiting a persistence retry", transferId))
+	end
+	self.analytics:Funnel(player, "marketplace", 3, "Graphic transfer prompted", { price = amount })
+	return true, { transferRequestId = transferId, prompted = true }
+end
+
+function CommunityService:_GrantItemCopy(player: Player, transferId: string): (boolean, any)
 	local profile = self.profiles:Get(player)
 	local pending = profile and profile.pendingTransfers[transferId]
 	if not pending then
@@ -654,6 +1156,80 @@ function CommunityService:_GrantCopy(player: Player, transferId: string): (boole
 	return true, copy
 end
 
+-- Same idempotent-grant shape as _GrantItemCopy above (receiptKey guard,
+-- deterministic copyId derived from transferId, claimStore PROCESSED marker)
+-- but writes into profile.graphics instead of profile.items.
+function CommunityService:_GrantGraphicCopy(player: Player, transferId: string): (boolean, any)
+	local profile = self.profiles:Get(player)
+	local pending = profile and profile.pendingTransfers[transferId]
+	if not pending then
+		return false, "TRANSFER_NOT_FOUND"
+	end
+	local receiptKey = "transfer:" .. transferId
+	local copyId = "graphiccopy_" .. string.sub(string.gsub(transferId, "%W", ""), 1, 54)
+	if profile.processedReceipts[receiptKey] then
+		return true, profile.graphics[copyId]
+	end
+	local source = pending.sourceItem
+	if type(source) ~= "table" then
+		return false, "SOURCE_ITEM_UNAVAILABLE"
+	end
+	self.profiles:Mutate(player, function(mutableProfile)
+		if not mutableProfile.graphics[copyId] then
+			local now = os.time()
+			mutableProfile.graphics[copyId] = {
+				id = copyId,
+				ownerUserId = player.UserId,
+				originalOwnerUserId = source.originalOwnerUserId or source.ownerUserId,
+				sourceGraphicId = source.id,
+				license = "PERSONAL_COPY",
+				canList = false,
+				kind = source.kind or "AVATAR_GRAPHIC",
+				filteredPrompt = source.filteredPrompt,
+				stylePreset = source.stylePreset or "AUTO",
+				avatarView = source.avatarView,
+				previewAssetId = source.previewAssetId,
+				backendJobId = source.backendJobId or "",
+				visibility = "PRIVATE",
+				isListed = false,
+				listingPriceRobux = nil,
+				likes = 0,
+				favorites = 0,
+				views = 0,
+				createdAt = now,
+				updatedAt = now,
+			}
+			table.insert(mutableProfile.graphicOrder, 1, copyId)
+			mutableProfile.stats.marketplacePurchases += 1
+		end
+		mutableProfile.processedReceipts[receiptKey] = os.time()
+		mutableProfile.pendingTransfers[transferId] = nil
+	end)
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	pcall(function()
+		self.claimStore:UpdateAsync(transferId, function()
+			return {
+				state = "PROCESSED",
+				buyerUserId = player.UserId,
+				itemId = copyId,
+				processedAt = os.time(),
+			}
+		end)
+	end)
+	local copy = self.profiles:Get(player).graphics[copyId]
+	self.push(player, Network.PushEvents.Graphic, { graphicId = copyId, graphic = copy })
+	self.push(player, Network.PushEvents.Transfer, { status = "COMPLETED", itemId = copyId })
+	self.push(player, Network.PushEvents.Toast, {
+		tone = "ready",
+		message = "Purchase verified. Your personal, non-resellable copy is ready to view.",
+	})
+	self.analytics:Funnel(player, "marketplace", 4, "Personal graphic copy granted", { price = pending.amount })
+	self.achievements:Unlock(player, "FIRST_MARKETPLACE_PURCHASE")
+	return true, copy
+end
+
 function CommunityService:_ProcessSenderReceipt(receiptInfo: { [string]: any }): Enum.ReceiptDecision
 	local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
 	if not player or not self.profiles:Get(player) then
@@ -710,7 +1286,12 @@ function CommunityService:_ProcessSenderReceipt(receiptInfo: { [string]: any }):
 		warn(string.format("[CommunityService] Transfer %s amount did not match the stored listing", transferId))
 		return Enum.ReceiptDecision.NotProcessedYet
 	end
-	local success = self:_GrantCopy(player, transferId)
+	-- Defaults to the item grant path for any pending record written before
+	-- contentType existed -- see the matching comment on PendingTransfer in
+	-- Types.luau.
+	local success = if pending.contentType == "GRAPHIC"
+		then self:_GrantGraphicCopy(player, transferId)
+		else self:_GrantItemCopy(player, transferId)
 	return if success then Enum.ReceiptDecision.Processed else Enum.ReceiptDecision.NotProcessedYet
 end
 

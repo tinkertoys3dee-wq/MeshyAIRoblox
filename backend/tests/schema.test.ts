@@ -59,7 +59,7 @@ describe("createJobSchema", () => {
     expect(createJobSchema.safeParse({ ...base, kind: "AVATAR_TO_3D", avatarView: "PROFILE" }).success).toBe(false);
   });
 
-  it("accepts an image quality tier only for IMAGE_PREVIEW or AVATAR_GRAPHIC", () => {
+  it("accepts an image quality tier only for IMAGE_PREVIEW, AVATAR_GRAPHIC, or TEXT_TO_IMAGE", () => {
     expect(createJobSchema.safeParse({ ...base, kind: "IMAGE_PREVIEW", imageQuality: "medium" }).success).toBe(true);
     expect(createJobSchema.safeParse({ ...base, kind: "IMAGE_PREVIEW", imageQuality: "high" }).success).toBe(true);
     expect(createJobSchema.safeParse({ ...base, kind: "TEXT_TO_3D", imageQuality: "high" }).success).toBe(false);
@@ -68,6 +68,8 @@ describe("createJobSchema", () => {
     ).toBe(false);
     const graphic = { ...base, accessoryType: undefined, kind: "AVATAR_GRAPHIC", avatarView: "BUST" };
     expect(createJobSchema.safeParse({ ...graphic, imageQuality: "high" }).success).toBe(true);
+    const textToImage = { ...base, accessoryType: undefined, kind: "TEXT_TO_IMAGE" };
+    expect(createJobSchema.safeParse({ ...textToImage, imageQuality: "high" }).success).toBe(true);
   });
 
   it("requires an avatar view for AVATAR_GRAPHIC and forbids an accessory type", () => {
@@ -77,5 +79,12 @@ describe("createJobSchema", () => {
     expect(createJobSchema.safeParse({ ...graphic, avatarView: "FULL_BODY", accessoryType: "Hat" }).success).toBe(
       false,
     );
+  });
+
+  it("accepts TEXT_TO_IMAGE with no avatar view and no accessory type", () => {
+    const textToImage = { ...base, accessoryType: undefined, kind: "TEXT_TO_IMAGE" };
+    expect(createJobSchema.safeParse(textToImage).success).toBe(true);
+    expect(createJobSchema.safeParse({ ...textToImage, avatarView: "BUST" }).success).toBe(false);
+    expect(createJobSchema.safeParse({ ...textToImage, accessoryType: "Hat" }).success).toBe(false);
   });
 });

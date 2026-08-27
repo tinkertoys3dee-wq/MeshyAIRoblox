@@ -7,6 +7,7 @@ export const jobKindSchema = z.enum([
   "IMAGE_TO_3D",
   "AVATAR_TO_3D",
   "AVATAR_GRAPHIC",
+  "TEXT_TO_IMAGE",
 ]);
 export type JobKind = z.infer<typeof jobKindSchema>;
 
@@ -42,8 +43,8 @@ export const createJobSchema = z
     playerUserId: z.number().int().positive(),
     kind: jobKindSchema,
     filteredPrompt: z.string().trim().min(6).max(500),
-    // Optional: AVATAR_GRAPHIC produces a standalone image, never an
-    // accessory, so it has no meaningful accessory slot to record.
+    // Optional: AVATAR_GRAPHIC and TEXT_TO_IMAGE produce a standalone image,
+    // never an accessory, so they have no meaningful accessory slot to record.
     accessoryType: accessoryTypeSchema.optional(),
     stylePreset: stylePresetSchema.default("AUTO"),
     detailLevel: detailLevelSchema.default("BALANCED"),
@@ -78,11 +79,16 @@ export const createJobSchema = z
         message: "sourceImageAssetId is only valid for IMAGE_UPLOAD or IMAGE_TO_3D",
       });
     }
-    if (value.kind !== "IMAGE_PREVIEW" && value.kind !== "AVATAR_GRAPHIC" && value.imageQuality) {
+    if (
+      value.kind !== "IMAGE_PREVIEW" &&
+      value.kind !== "AVATAR_GRAPHIC" &&
+      value.kind !== "TEXT_TO_IMAGE" &&
+      value.imageQuality
+    ) {
       context.addIssue({
         code: "custom",
         path: ["imageQuality"],
-        message: "imageQuality is only valid for IMAGE_PREVIEW or AVATAR_GRAPHIC",
+        message: "imageQuality is only valid for IMAGE_PREVIEW, AVATAR_GRAPHIC, or TEXT_TO_IMAGE",
       });
     }
     if ((value.kind === "AVATAR_TO_3D" || value.kind === "AVATAR_GRAPHIC") && !value.avatarView) {
@@ -95,14 +101,14 @@ export const createJobSchema = z
         message: "avatarView is only valid for AVATAR_TO_3D or AVATAR_GRAPHIC",
       });
     }
-    if (value.kind !== "AVATAR_GRAPHIC" && !value.accessoryType) {
+    if (value.kind !== "AVATAR_GRAPHIC" && value.kind !== "TEXT_TO_IMAGE" && !value.accessoryType) {
       context.addIssue({ code: "custom", path: ["accessoryType"], message: "accessoryType is required" });
     }
-    if (value.kind === "AVATAR_GRAPHIC" && value.accessoryType) {
+    if ((value.kind === "AVATAR_GRAPHIC" || value.kind === "TEXT_TO_IMAGE") && value.accessoryType) {
       context.addIssue({
         code: "custom",
         path: ["accessoryType"],
-        message: "accessoryType is not valid for AVATAR_GRAPHIC",
+        message: "accessoryType is not valid for AVATAR_GRAPHIC or TEXT_TO_IMAGE",
       });
     }
   });

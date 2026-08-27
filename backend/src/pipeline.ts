@@ -149,6 +149,7 @@ export class JobRunner {
         else if (job.kind === "TEXT_TO_3D") await this.#runTextTo3D(job);
         else if (job.kind === "AVATAR_TO_3D") await this.#runAvatarTo3D(job);
         else if (job.kind === "AVATAR_GRAPHIC") await this.#runAvatarGraphic(job);
+        else if (job.kind === "TEXT_TO_IMAGE") await this.#runTextToImage(job);
         else await this.#runImageTo3D(job);
       }
       this.#logger.info({ jobId }, "Generation job completed");
@@ -371,6 +372,42 @@ export class JobRunner {
     });
   }
 
+  // Like #runAvatarGraphic, this never produces a mesh and finishes at
+  // SUCCEEDED directly -- but unlike it, there is no avatar reference to
+  // fetch first: the image comes from the prompt alone.
+  async #runTextToImage(job: Job): Promise<void> {
+    let image = job.imageArtifact;
+    if (!image) {
+      await this.#set(job.id, "GENERATING_IMAGE", "Painting your image", 15);
+      image = await this.#images.generateTextImage(
+        job.filteredPrompt,
+        job.id,
+        job.stylePreset,
+        job.detailLevel,
+        job.imageQuality,
+      );
+      image = await sharp(image).resize(1024, 1024, { fit: "cover" }).png({ compressionLevel: 9 }).toBuffer();
+      await this.#images.assertImageSafe(image);
+      await this.#repository.update(job.id, { imageArtifact: image, progress: 80, stage: "Image ready" });
+    }
+
+    const current = await this.#requiredJob(job.id);
+    let previewAssetId = current.output.previewAssetId;
+    if (!previewAssetId) {
+      await this.#set(job.id, "UPLOADING", "Uploading your image to Roblox", 90);
+      previewAssetId = await this.#roblox.uploadImage(image, job.id, "graphic");
+      await this.#mergeOutput(job.id, { previewAssetId });
+    }
+
+    await this.#repository.update(job.id, {
+      status: "SUCCEEDED",
+      stage: "Your image is ready",
+      progress: 100,
+      output: { ...(await this.#requiredJob(job.id)).output, previewAssetId },
+      imageArtifact: image,
+    });
+  }
+
   async #finishModel(job: Job, modelUrl: string | undefined, thumbnailUrl: string | undefined): Promise<void> {
     if (!modelUrl) throw new PipelineError("MISSING_MODEL", "Meshy returned no GLB model", true);
     await this.#set(job.id, "VALIDATING", "Downloading the finished Meshy model", 76);
@@ -435,14 +472,14 @@ export class JobRunner {
       });
       return;
     }
-    if (job.kind === "AVATAR_GRAPHIC") {
+    if (job.kind === "AVATAR_GRAPHIC" || job.kind === "TEXT_TO_IMAGE") {
       const image = Buffer.from(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFhQGAWvBFPQAAAABJRU5ErkJggg==",
         "base64",
       );
       await this.#repository.update(job.id, {
         status: "SUCCEEDED",
-        stage: "Mock avatar graphic ready",
+        stage: job.kind === "AVATAR_GRAPHIC" ? "Mock avatar graphic ready" : "Mock image ready",
         progress: 100,
         output: { previewAssetId: 0 },
         imageArtifact: image,

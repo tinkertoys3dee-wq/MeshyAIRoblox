@@ -213,6 +213,19 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		return success, result
 	end,
+	[Network.Actions.CreateTextImage] = function(player, payload)
+		analytics:BeginFunnel(player, "generation", "Text-to-image creation started", {
+			method = "TEXT_TO_IMAGE",
+		})
+		analytics:Funnel(player, "generation", 2, "Prompt submitted", {
+			method = "TEXT_TO_IMAGE",
+		})
+		local success, result = generations:CreateTextImage(player, payload)
+		if success then
+			retention:MarkQuest(player, "GENERATE")
+		end
+		return success, result
+	end,
 	[Network.Actions.DeleteGraphic] = function(player, payload)
 		return generations:DeleteGraphic(player, payload)
 	end,
@@ -299,6 +312,23 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		return success, result
 	end,
+	[Network.Actions.SaveOutfit] = function(player, payload)
+		local success, result = items:SaveOutfit(player, payload)
+		if success then
+			analytics:Custom(player, "OutfitSaved", 1, {})
+		end
+		return success, result
+	end,
+	[Network.Actions.EquipOutfit] = function(player, payload)
+		local success, result = items:EquipOutfit(player, payload)
+		if success then
+			analytics:Custom(player, "OutfitEquipped", 1, {})
+		end
+		return success, result
+	end,
+	[Network.Actions.DeleteOutfit] = function(player, payload)
+		return items:DeleteOutfit(player, payload)
+	end,
 	[Network.Actions.EquipItem] = function(player, payload)
 		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
 			return false, "INVALID_REQUEST"
@@ -360,6 +390,30 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	end,
 	[Network.Actions.BeginMarketplacePurchase] = function(player, payload)
 		return community:BeginPurchase(player, payload)
+	end,
+	[Network.Actions.SetGraphicVisibility] = function(player, payload)
+		return community:SetGraphicVisibility(player, payload)
+	end,
+	[Network.Actions.SetGraphicListing] = function(player, payload)
+		return community:SetGraphicListing(player, payload)
+	end,
+	[Network.Actions.GetGraphicsMarketplace] = function(player, payload)
+		return community:GetGraphicsMarketplace(player, payload)
+	end,
+	[Network.Actions.ToggleGraphicLike] = function(player, payload)
+		if not reactionLimiter:consume(player.UserId) then
+			return false, "RATE_LIMITED"
+		end
+		return community:ToggleGraphicLike(player, payload)
+	end,
+	[Network.Actions.ToggleGraphicFavorite] = function(player, payload)
+		if not reactionLimiter:consume(player.UserId) then
+			return false, "RATE_LIMITED"
+		end
+		return community:ToggleGraphicFavorite(player, payload)
+	end,
+	[Network.Actions.BeginGraphicPurchase] = function(player, payload)
+		return community:BeginGraphicPurchase(player, payload)
 	end,
 	[Network.Actions.RequestPrivateModel] = function(player, payload)
 		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then

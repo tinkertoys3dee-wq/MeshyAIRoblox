@@ -95,17 +95,18 @@ export async function buildServer(config: AppConfig, repository: JobRepository):
 
   // Deliberately unauthenticated: this is the shareable link a player opens
   // in their own browser (outside Roblox entirely) to view or save their
-  // avatar graphic, so it can't require the Roblox-server-only shared
+  // generated graphic, so it can't require the Roblox-server-only shared
   // secret or a Roblox identity header. The job ID is an unguessable UUID,
   // same trust model as any other unlisted share link; only a SUCCEEDED
-  // AVATAR_GRAPHIC job's own artifact is ever served, never an
-  // in-progress reference image from another job kind.
+  // AVATAR_GRAPHIC or TEXT_TO_IMAGE job's own artifact is ever served, never
+  // an in-progress reference image from another job kind.
   app.get<{ Params: { jobId: string } }>("/v1/graphics/:jobId/image", async (request, reply) => {
     if (!consumeRateLimit(imageWindows, request.ip, 60, 5 * 60_000)) {
       return reply.code(429).send({ error: "RATE_LIMITED" });
     }
     const job = await repository.get(request.params.jobId);
-    if (!job || job.kind !== "AVATAR_GRAPHIC" || job.status !== "SUCCEEDED" || !job.imageArtifact) {
+    const isGraphicKind = job?.kind === "AVATAR_GRAPHIC" || job?.kind === "TEXT_TO_IMAGE";
+    if (!job || !isGraphicKind || job.status !== "SUCCEEDED" || !job.imageArtifact) {
       return reply.code(404).send({ error: "NOT_FOUND" });
     }
     reply.header("Cache-Control", "public, max-age=31536000, immutable");

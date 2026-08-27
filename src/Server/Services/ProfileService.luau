@@ -31,6 +31,8 @@ local function defaultProfile(userId: number): { [string]: any }
 		graphicOrder = {},
 		likedItems = {},
 		favoriteItems = {},
+		likedGraphics = {},
+		favoriteGraphics = {},
 		pendingIntents = {},
 		pendingTransfers = {},
 		processedReceipts = {},
@@ -39,6 +41,8 @@ local function defaultProfile(userId: number): { [string]: any }
 		equippedItemIds = {},
 		fitPresets = {},
 		fitPresetOrder = {},
+		outfits = {},
+		outfitOrder = {},
 		-- Two separate Forge Tokens pools, deliberately never merged into one
 		-- balance: `tokens` is backed by real money (a rewarded ad or a
 		-- direct Robux purchase of AdRewardTokens) and may fund generation
