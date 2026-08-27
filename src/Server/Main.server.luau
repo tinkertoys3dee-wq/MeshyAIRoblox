@@ -213,6 +213,19 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		return success, result
 	end,
+	[Network.Actions.CreateTextImage] = function(player, payload)
+		analytics:BeginFunnel(player, "generation", "Text-to-image creation started", {
+			method = "TEXT_TO_IMAGE",
+		})
+		analytics:Funnel(player, "generation", 2, "Prompt submitted", {
+			method = "TEXT_TO_IMAGE",
+		})
+		local success, result = generations:CreateTextImage(player, payload)
+		if success then
+			retention:MarkQuest(player, "GENERATE")
+		end
+		return success, result
+	end,
 	[Network.Actions.DeleteGraphic] = function(player, payload)
 		return generations:DeleteGraphic(player, payload)
 	end,

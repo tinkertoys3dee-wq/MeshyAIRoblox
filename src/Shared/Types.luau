@@ -18,6 +18,7 @@ export type GenerationMethod =
 	| "IMAGE_TO_3D"
 	| "AVATAR_TO_3D"
 	| "AVATAR_GRAPHIC"
+	| "TEXT_TO_IMAGE"
 
 export type ItemRecord = {
 	id: string,
@@ -86,9 +87,21 @@ export type GenerationRecord = {
 export type GraphicRecord = {
 	id: string,
 	ownerUserId: number,
+	originalOwnerUserId: number,
+	sourceGraphicId: string?,
+	-- ORIGINAL: this player generated it, and it can be listed for sale like
+	-- an original item. PERSONAL_COPY: bought from another player's public
+	-- gallery -- theirs to keep and view, never resold, mirroring
+	-- ItemRecord's license split above.
+	license: "ORIGINAL" | "PERSONAL_COPY",
+	canList: boolean,
+	-- AVATAR_GRAPHIC is sourced from the player's own current avatar;
+	-- TEXT_TO_IMAGE is generated purely from the prompt, with no avatar
+	-- reference at all.
+	kind: "AVATAR_GRAPHIC" | "TEXT_TO_IMAGE",
 	filteredPrompt: string,
 	stylePreset: string,
-	avatarView: string,
+	avatarView: string?,
 	previewAssetId: number,
 	-- The backend job that produced this graphic. The backend serves the
 	-- full-resolution PNG it already generated at GET /v1/graphics/{backendJobId}/image
@@ -96,6 +109,12 @@ export type GraphicRecord = {
 	-- open in their own browser to view or save it -- Roblox itself has no
 	-- API for an experience to save a file to the player's device.
 	backendJobId: string,
+	visibility: "PRIVATE" | "PUBLIC",
+	isListed: boolean,
+	listingPriceRobux: number?,
+	likes: number,
+	favorites: number,
+	views: number,
 	createdAt: number,
 	updatedAt: number,
 }
@@ -130,10 +149,14 @@ export type OutfitRecord = {
 export type PendingTransfer = {
 	transferRequestId: string,
 	status: "PROMPTING" | "AWAITING_RECEIPT",
+	-- Defaults to "ITEM" for any record written before this field existed
+	-- (see CommunityService._ProcessSenderReceipt), since every transfer was
+	-- an item transfer before graphics could be sold too.
+	contentType: ("ITEM" | "GRAPHIC")?,
 	itemId: string,
 	sellerUserId: number,
 	amount: number,
-	sourceItem: ItemRecord,
+	sourceItem: ItemRecord | GraphicRecord,
 	createdAt: number,
 }
 
@@ -148,6 +171,8 @@ export type PlayerProfile = {
 	graphicOrder: { string },
 	likedItems: { [string]: boolean },
 	favoriteItems: { [string]: boolean },
+	likedGraphics: { [string]: boolean },
+	favoriteGraphics: { [string]: boolean },
 	pendingIntents: { [string]: PendingIntent },
 	pendingTransfers: { [string]: PendingTransfer },
 	processedReceipts: { [string]: number },

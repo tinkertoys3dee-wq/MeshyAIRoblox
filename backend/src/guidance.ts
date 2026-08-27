@@ -58,6 +58,26 @@ export function composeAvatarGraphicPrompt(filteredPrompt: string, stylePreset: 
   ].join("\n");
 }
 
+// TEXT_TO_IMAGE has no avatar reference and produces no 3D mesh -- it is a
+// pure prompt-to-image request, so this only needs style/detail direction,
+// unlike composeAvatarGraphicPrompt (which must also preserve an attached
+// reference's identity) or composeMeshyPrompt (which must isolate a single
+// wearable accessory).
+export function composeTextToImagePrompt(
+  filteredPrompt: string,
+  stylePreset: StylePreset,
+  detailLevel: DetailLevel,
+): string {
+  return [
+    "Create a single polished piece of key art from the description below.",
+    "Compose it as one image, not a grid, collage, or multiple panels.",
+    "Do not add any text, logos, watermarks, or UI elements anywhere in the image.",
+    `Visual style: ${styleGuidance(stylePreset)}.`,
+    `Detail direction: ${detailGuidance(detailLevel)}.`,
+    `Description: <description>${filteredPrompt}</description>`,
+  ].join("\n");
+}
+
 // Meshy's text-to-3D models don't support a dedicated negative-prompt field
 // (Meshy's own guidance for this case is to lead with a strong positive
 // description of what to generate, rather than rely on a single "don't

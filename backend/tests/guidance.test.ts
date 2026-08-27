@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { accessoryIsolationGuidance, composeMeshyPrompt, detailGuidance, styleGuidance } from "../src/guidance.js";
+import {
+  accessoryIsolationGuidance,
+  composeMeshyPrompt,
+  composeTextToImagePrompt,
+  detailGuidance,
+  styleGuidance,
+} from "../src/guidance.js";
 
 describe("generation guidance", () => {
   it("adds deterministic style and detail guidance", () => {
@@ -53,5 +59,14 @@ describe("generation guidance", () => {
 
   it("falls back to a generic accessory description when the type is missing", () => {
     expect(accessoryIsolationGuidance(undefined)).toContain("a single wearable accessory");
+  });
+
+  it("builds a text-to-image prompt with style/detail guidance and the player's description", () => {
+    const prompt = composeTextToImagePrompt("a neon city skyline at dusk", "ANIME", "INTRICATE");
+    expect(prompt).toContain("anime-inspired");
+    expect(prompt).toContain("rich perceived surface detail");
+    expect(prompt).toContain("a neon city skyline at dusk");
+    expect(prompt).not.toContain("isolated 3D asset");
+    expect(prompt).not.toContain("reference image");
   });
 });

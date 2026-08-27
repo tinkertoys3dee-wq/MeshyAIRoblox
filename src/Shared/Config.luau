@@ -357,6 +357,7 @@ return table.freeze({
 	DataStores = {
 		Player = "ForgeUGC_Player_v1",
 		ItemIndex = "ForgeUGC_ItemIndex_v1",
+		GraphicIndex = "ForgeUGC_GraphicIndex_v1",
 		ReceiptClaims = "ForgeUGC_ReceiptClaims_v1",
 		LikesLeaderboard = "ForgeUGC_LikesLeaderboard_v1",
 		-- Single-key store: which week's arcade payout has already been

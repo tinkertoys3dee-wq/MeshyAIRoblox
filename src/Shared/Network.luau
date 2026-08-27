@@ -12,6 +12,7 @@ Network.Actions = table.freeze({
 	CreateUploadedImage = "CreateUploadedImage",
 	CreateFromAvatar = "CreateFromAvatar",
 	CreateAvatarGraphic = "CreateAvatarGraphic",
+	CreateTextImage = "CreateTextImage",
 	DeleteGraphic = "DeleteGraphic",
 	ConvertImage = "ConvertImage",
 	PromptCustomImagePass = "PromptCustomImagePass",

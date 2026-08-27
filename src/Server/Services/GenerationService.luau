@@ -97,7 +97,7 @@ local function productKeyFor(method: string): string
 		return "CustomImageUpload"
 	elseif method == "AVATAR_TO_3D" then
 		return "AvatarConversion"
-	elseif method == "AVATAR_GRAPHIC" then
+	elseif method == "AVATAR_GRAPHIC" or method == "TEXT_TO_IMAGE" then
 		return "ImagePreviewLow"
 	end
 	return "DirectGeneration"
@@ -517,6 +517,61 @@ function GenerationService:CreateAvatarGraphic(player: Player, payload: any): (b
 	})
 end
 
+-- Unlike CreateAvatarGraphic above, this has no avatar reference at all: the
+-- prompt is the only description of what to paint, so (unlike
+-- AVATAR_DEFAULT_PROMPT/AVATAR_GRAPHIC_DEFAULT_PROMPT) there is no fixed
+-- fallback to substitute for a blank prompt -- ModerationService.FilterPrompt
+-- enforces Config.Generation.PromptMinLength on it directly. Priced and paid
+-- for through the same image-quality tiers as CreateAvatarGraphic, since both
+-- are a single OpenAI image call with no Meshy pipeline cost behind them.
+function GenerationService:CreateTextImage(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" then
+		return false, "INVALID_REQUEST"
+	end
+	local guidanceSuccess, stylePreset, detailLevel = readGuidance(payload)
+	if not guidanceSuccess then
+		return false, stylePreset
+	end
+	local requestedTier = if type(payload.imageQuality) == "string" then payload.imageQuality else "LOW"
+	if not IMAGE_QUALITY_TIERS[requestedTier] then
+		return false, "INVALID_IMAGE_QUALITY"
+	end
+	if not self.playerStates:Get(player).contentSharingAllowed then
+		return false, "CONTENT_SHARING_DISABLED"
+	end
+
+	local rawPrompt = if type(payload.prompt) == "string" then payload.prompt else ""
+	local filterSuccess, filteredPrompt, filterError = ModerationService.FilterPrompt(player, rawPrompt)
+	if not filterSuccess then
+		return false, filterError
+	end
+	local studioMock = RunService:IsStudio() and Config.Studio.AllowMockBackend and not self.backend:IsConfigured()
+	if not studioMock then
+		local moderationSuccess, moderationResult = self.backend:ModeratePrompt(player, filteredPrompt)
+		if not moderationSuccess then
+			return false, moderationResult
+		end
+	end
+	if not self:_HasQueueSpace(player) then
+		return false, "QUEUE_FULL"
+	end
+	if not self.backend:IsConfigured() and not studioMock then
+		return false, "BACKEND_NOT_CONFIGURED"
+	end
+
+	local productKey = IMAGE_QUALITY_TIERS[requestedTier].ProductKey
+	return self:_UseCreditOrPrompt(player, productKey, {
+		kind = "TEXT_TO_IMAGE",
+		filteredPrompt = filteredPrompt,
+		stylePreset = stylePreset,
+		detailLevel = detailLevel,
+		imageQuality = requestedTier,
+		usePriority = false,
+		-- See the matching comment in Create() above.
+		paymentMethod = if payload.paymentMethod == "TOKENS" then "TOKENS" else "ROBUX",
+	})
+end
+
 function GenerationService:ConvertImage(player: Player, payload: any): (boolean, any)
 	if type(payload) ~= "table" or type(payload.generationId) ~= "string" then
 		return false, "INVALID_REQUEST"
@@ -811,8 +866,11 @@ function GenerationService:_Launch(player: Player, generationId: string)
 		requestPayload.avatarView = generation.avatarView
 	end
 	if
-		(generation.method == "IMAGE_PREVIEW" or generation.method == "AVATAR_GRAPHIC")
-		and type(generation.imageQuality) == "string"
+		(
+			generation.method == "IMAGE_PREVIEW"
+			or generation.method == "AVATAR_GRAPHIC"
+			or generation.method == "TEXT_TO_IMAGE"
+		) and type(generation.imageQuality) == "string"
 	then
 		local tier = IMAGE_QUALITY_TIERS[generation.imageQuality]
 		requestPayload.imageQuality = if tier then tier.OpenAIQuality else "low"
@@ -912,10 +970,16 @@ function GenerationService:_Poll(player: Player, generationId: string, backendJo
 					local output = if type(job.output) == "table" then job.output else {}
 					local currentProfile = self.profiles:Get(player)
 					local currentGeneration = currentProfile and currentProfile.generations[generationId]
-					if currentGeneration and currentGeneration.method == "AVATAR_GRAPHIC" then
+					if
+						currentGeneration
+						and (
+							currentGeneration.method == "AVATAR_GRAPHIC"
+							or currentGeneration.method == "TEXT_TO_IMAGE"
+						)
+					then
 						-- Never produces a model, so it skips the modelAssetId
 						-- check and the model queue-time gate entirely (see
-						-- computeMinReadyAt: AVATAR_GRAPHIC isn't in
+						-- computeMinReadyAt: neither method is in
 						-- MODEL_PRODUCING_METHODS) and hands the graphic over
 						-- the moment the backend reports it ready.
 						if
@@ -1136,14 +1200,26 @@ function GenerationService:_CompleteGraphic(player: Player, generationId: string
 			return
 		end
 		local now = os.time()
+		local isTextToImage = generation.method == "TEXT_TO_IMAGE"
 		profile.graphics[graphicId] = {
 			id = graphicId,
 			ownerUserId = player.UserId,
+			originalOwnerUserId = player.UserId,
+			sourceGraphicId = nil,
+			license = "ORIGINAL",
+			canList = true,
+			kind = if isTextToImage then "TEXT_TO_IMAGE" else "AVATAR_GRAPHIC",
 			filteredPrompt = generation.filteredPrompt,
 			stylePreset = generation.stylePreset or "AUTO",
-			avatarView = generation.avatarView or "BUST",
+			avatarView = if isTextToImage then nil else (generation.avatarView or "BUST"),
 			previewAssetId = output.previewAssetId,
 			backendJobId = generation.backendJobId or "",
+			visibility = "PRIVATE",
+			isListed = false,
+			listingPriceRobux = nil,
+			likes = 0,
+			favorites = 0,
+			views = 0,
 			createdAt = now,
 			updatedAt = now,
 		}
@@ -1249,7 +1325,7 @@ function GenerationService:_RunStudioMock(player: Player, generationId: string, 
 				Network.PushEvents.Generation,
 				{ generationId = generationId, stage = "IMAGE_READY", progress = 100 }
 			)
-		elseif kind == "AVATAR_GRAPHIC" then
+		elseif kind == "AVATAR_GRAPHIC" or kind == "TEXT_TO_IMAGE" then
 			self:_CompleteGraphic(player, generationId, { previewAssetId = 0 })
 		else
 			self:_CompleteModel(player, generationId, { modelAssetId = 0, thumbnailAssetId = 0 })

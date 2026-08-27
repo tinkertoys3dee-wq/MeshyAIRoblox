@@ -206,8 +206,46 @@ describe("backend HTTP boundary", () => {
     expect(image.headers["content-type"]).toBe("image/png");
     expect(image.rawPayload.length).toBeGreaterThan(0);
 
-    // A job that isn't a succeeded AVATAR_GRAPHIC (the earlier TEXT_TO_3D
-    // job from this same test) must never be served through this route.
+    const textToImage = await app.inject({
+      method: "POST",
+      url: "/v1/jobs",
+      headers: {
+        "x-forge-secret": "test-shared-secret",
+        "x-roblox-user-id": "12345",
+      },
+      payload: {
+        ...bodyWithoutAccessory,
+        requestId: "text_image_request_12345",
+        kind: "TEXT_TO_IMAGE",
+        filteredPrompt: "a neon city skyline at dusk",
+      },
+    });
+    expect(textToImage.statusCode).toBe(202);
+    expect(textToImage.json().job).not.toHaveProperty("accessoryType");
+    const textToImageId = textToImage.json().job.id as string;
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    const textToImageReady = await app.inject({
+      method: "GET",
+      url: "/v1/jobs/" + textToImageId,
+      headers: {
+        "x-forge-secret": "test-shared-secret",
+        "x-roblox-user-id": "12345",
+      },
+    });
+    expect(textToImageReady.json().job).toMatchObject({
+      status: "SUCCEEDED",
+      output: { previewAssetId: 0 },
+    });
+
+    // TEXT_TO_IMAGE shares the same unauthenticated shareable-link route as
+    // AVATAR_GRAPHIC -- both are standalone images, never a 3D model.
+    const textToImageServed = await app.inject({ method: "GET", url: `/v1/graphics/${textToImageId}/image` });
+    expect(textToImageServed.statusCode).toBe(200);
+    expect(textToImageServed.headers["content-type"]).toBe("image/png");
+    expect(textToImageServed.rawPayload.length).toBeGreaterThan(0);
+
+    // A job that isn't a succeeded AVATAR_GRAPHIC/TEXT_TO_IMAGE (the earlier
+    // TEXT_TO_3D job from this same test) must never be served through this route.
     const wrongKind = await app.inject({ method: "GET", url: `/v1/graphics/${id}/image` });
     expect(wrongKind.statusCode).toBe(404);
 

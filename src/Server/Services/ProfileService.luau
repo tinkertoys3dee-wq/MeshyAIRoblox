@@ -31,6 +31,8 @@ local function defaultProfile(userId: number): { [string]: any }
 		graphicOrder = {},
 		likedItems = {},
 		favoriteItems = {},
+		likedGraphics = {},
+		favoriteGraphics = {},
 		pendingIntents = {},
 		pendingTransfers = {},
 		processedReceipts = {},
