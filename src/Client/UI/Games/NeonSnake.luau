@@ -9,6 +9,7 @@
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Parent.Factory)
@@ -70,6 +71,15 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	})
 	Factory.Gradient(backdrop, { Colors.Panel, Colors.Ink }, 90)
 
+	-- A single soft glow centered behind the arena, the same "spotlight
+	-- behind the panel" depth trick GamesHub's tiles and App's own page
+	-- backgrounds use -- purely ambient, so it's a no-op decoration under
+	-- reduceMotion rather than gated (it never moves, so there's nothing to
+	-- suppress).
+	local glowBlob = Factory.Blob(canvas, math.max(boardWidth, boardHeight) * 0.85, UDim2.new(), Colors.Violet, 0.88)
+	glowBlob.AnchorPoint = Vector2.new(0.5, 0.5)
+	glowBlob.Position = UDim2.fromOffset(originX + boardWidth / 2, originY + boardHeight / 2)
+
 	local arena = Factory.New("Frame", {
 		Name = "Arena",
 		Position = UDim2.fromOffset(originX - 4, originY - 4),
@@ -81,7 +91,16 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		Parent = canvas,
 	})
 	Factory.Corner(arena, 10)
-	Factory.Stroke(arena, Colors.Violet, 0.55, 1.5)
+	local arenaStroke = Factory.Stroke(arena, Colors.Violet, 0.55, 1.5)
+	-- A slow neon-buzz pulse on the border transparency -- purely cosmetic,
+	-- so it's the first thing skipped under reduceMotion.
+	if not api.reduceMotion then
+		TweenService:Create(
+			arenaStroke,
+			TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+			{ Transparency = 0.15 }
+		):Play()
+	end
 
 	-- A sparse, faint tile grid within the arena -- purely a texture cue for
 	-- "this is a grid game", drawn as widely spaced dots rather than a full
@@ -379,6 +398,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		swipeBeganConn:Disconnect()
 		swipeEndedConn:Disconnect()
 		backdrop:Destroy()
+		glowBlob:Destroy()
 		arena:Destroy()
 		foodFrame:Destroy()
 		eyeLeft:Destroy()

@@ -65,6 +65,39 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	})
 	Factory.Gradient(backdrop, { Colors.Ink, Colors.Panel }, 90)
 
+	-- A soft glow behind the drop zone -- the same "spotlight" depth trick
+	-- used throughout the Arcade -- so the row you're actually placing
+	-- blocks into reads as the visual focus rather than just wherever the
+	-- moving block happens to be.
+	local dropGlow = Factory.Blob(canvas, 220, UDim2.new(), Colors.Gold, 0.92)
+	dropGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+	dropGlow.Position = UDim2.fromOffset(canvasWidth / 2, TOP_Y - ROW_HEIGHT / 2)
+
+	-- A dark vignette at the bottom, where completed floors sink away as the
+	-- tower rises -- reinforces "that part of the tower is behind you now"
+	-- without needing any text to say so. Purely cosmetic, so it's skipped
+	-- under reduceMotion like every other decoration here.
+	if not api.reduceMotion then
+		local vignette = Factory.New("Frame", {
+			Name = "Vignette",
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.fromScale(0, 1),
+			Size = UDim2.new(1, 0, 0, math.floor(canvasHeight * 0.4)),
+			BackgroundColor3 = Colors.Ink,
+			BorderSizePixel = 0,
+			ZIndex = 3,
+			Parent = canvas,
+		})
+		Factory.New("UIGradient", {
+			Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1),
+				NumberSequenceKeypoint.new(1, 0.35),
+			}),
+			Rotation = 90,
+			Parent = vignette,
+		})
+	end
+
 	-- A faint vertical guide beneath the drop zone -- purely a sight-line
 	-- cue for lining the moving block up with the tower, so it's skipped
 	-- under reduceMotion along with every other pure decoration here.
@@ -366,6 +399,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		inputConn:Disconnect()
 		tapConn:Disconnect()
 		backdrop:Destroy()
+		dropGlow:Destroy()
 		comboLabel:Destroy()
 		if movingFrame then
 			movingFrame:Destroy()
@@ -375,7 +409,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		end
 		table.clear(placed)
 		for _, child in canvas:GetChildren() do
-			if child.Name == "DropGuide" or child.Name == "Debris" then
+			if child.Name == "DropGuide" or child.Name == "Debris" or child.Name == "Vignette" then
 				child:Destroy()
 			end
 		end
