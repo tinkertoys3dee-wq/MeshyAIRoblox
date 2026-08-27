@@ -169,6 +169,8 @@ end
 
 local MAX_FIT_PRESETS = 20
 local MAX_PRESET_NAME_LENGTH = 24
+local MAX_OUTFITS = 12
+local MAX_OUTFIT_NAME_LENGTH = 24
 
 -- Fit presets are purely a personal convenience: saved names are never shown
 -- to another player, so (unlike an item name or listing) they do not need
@@ -322,6 +324,130 @@ function ItemService:Unequip(player: Player, itemId: string): (boolean, any)
 		return false, "SAVE_FAILED"
 	end
 	return true, { unequipped = true }
+end
+
+-- Outfits are a snapshot of profile.equippedItemIds at save time -- purely a
+-- list of item IDs, not a copy of each item's own fit (an item already
+-- remembers its own saved fit, so there's nothing else to capture). This is
+-- deliberately a different concept from a fit preset above: a fit preset is
+-- one item's position/rotation/scale, reusable on a different item of the
+-- same accessory type; an outfit is "wear exactly these items together
+-- again later," regardless of type.
+function ItemService:SaveOutfit(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" then
+		return false, "INVALID_REQUEST"
+	end
+	local rawName = if type(payload.name) == "string" then payload.name else ""
+	local name = string.match(rawName, "^%s*(.-)%s*$") or ""
+	if name == "" then
+		name = "Untitled outfit"
+	elseif #name > MAX_OUTFIT_NAME_LENGTH then
+		name = string.sub(name, 1, MAX_OUTFIT_NAME_LENGTH)
+	end
+	local profile = self.profiles:Get(player)
+	if not profile then
+		return false, "PROFILE_UNAVAILABLE"
+	end
+	local equippedItemIds = profile.equippedItemIds or {}
+	if #equippedItemIds == 0 then
+		return false, "NOTHING_EQUIPPED"
+	end
+	if #(profile.outfitOrder or {}) >= MAX_OUTFITS then
+		return false, "OUTFIT_LIMIT_REACHED"
+	end
+	local id = self.profiles:GenerateId("outfit")
+	local record = {
+		id = id,
+		name = name,
+		itemIds = table.clone(equippedItemIds),
+		createdAt = os.time(),
+		updatedAt = os.time(),
+	}
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(mutableProfile)
+		mutableProfile.outfits[id] = record
+		table.insert(mutableProfile.outfitOrder, 1, id)
+	end)
+	if not mutateSuccess then
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	return true, { outfit = record }
+end
+
+function ItemService:DeleteOutfit(player: Player, payload: any): (boolean, any)
+	local outfitId = if type(payload) == "table" then payload.outfitId else payload
+	if type(outfitId) ~= "string" then
+		return false, "INVALID_REQUEST"
+	end
+	local profile = self.profiles:Get(player)
+	if not profile or not profile.outfits[outfitId] then
+		return false, "OUTFIT_NOT_FOUND"
+	end
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(mutableProfile)
+		mutableProfile.outfits[outfitId] = nil
+		local index = table.find(mutableProfile.outfitOrder, outfitId)
+		if index then
+			table.remove(mutableProfile.outfitOrder, index)
+		end
+	end)
+	if not mutateSuccess then
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	return true, { deleted = true }
+end
+
+-- Re-equipping an outfit reproduces exactly the look it was saved with:
+-- anything currently worn that the outfit doesn't include gets unequipped
+-- first, rather than layering the outfit's items on top of whatever else
+-- happens to be equipped right now. Best-effort on the outfit's own items --
+-- one since-deleted or since-unpublished item does not block the rest.
+function ItemService:EquipOutfit(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" or type(payload.outfitId) ~= "string" then
+		return false, "INVALID_REQUEST"
+	end
+	local profile = self.profiles:Get(player)
+	local outfit = profile and profile.outfits[payload.outfitId]
+	if not outfit then
+		return false, "OUTFIT_NOT_FOUND"
+	end
+	local character = player.Character
+	if not character or not character:FindFirstChildOfClass("Humanoid") then
+		return false, "CHARACTER_UNAVAILABLE"
+	end
+	local target: { [string]: boolean } = {}
+	for _, itemId in outfit.itemIds do
+		target[itemId] = true
+	end
+	for _, itemId in table.clone(profile.equippedItemIds or {}) do
+		if not target[itemId] then
+			self:Unequip(player, itemId)
+		end
+	end
+	local equippedCount = 0
+	local skipped = 0
+	for _, itemId in outfit.itemIds do
+		local currentProfile = self.profiles:Get(player)
+		local alreadyEquipped = currentProfile ~= nil and table.find(currentProfile.equippedItemIds, itemId) ~= nil
+		if alreadyEquipped then
+			equippedCount += 1
+		else
+			local success = self:Equip(player, itemId)
+			if success then
+				equippedCount += 1
+			else
+				skipped += 1
+			end
+		end
+	end
+	if equippedCount == 0 then
+		return false, "OUTFIT_ITEMS_UNAVAILABLE"
+	end
+	return true, { equippedCount = equippedCount, skipped = skipped }
 end
 
 function ItemService:RestoreEquipped(player: Player)

@@ -116,6 +116,17 @@ export type FitPreset = {
 	createdAt: number,
 }
 
+-- A saved list of item IDs to re-equip together -- "wear exactly these
+-- items again later" -- distinct from FitPreset above, which saves one
+-- item's transform for reuse on a different item of the same type.
+export type OutfitRecord = {
+	id: string,
+	name: string,
+	itemIds: { string },
+	createdAt: number,
+	updatedAt: number,
+}
+
 export type PendingTransfer = {
 	transferRequestId: string,
 	status: "PROMPTING" | "AWAITING_RECEIPT",
@@ -145,6 +156,8 @@ export type PlayerProfile = {
 	equippedItemIds: { string },
 	fitPresets: { [string]: FitPreset },
 	fitPresetOrder: { string },
+	outfits: { [string]: OutfitRecord },
+	outfitOrder: { string },
 	-- Real-money-backed (ads, direct Robux purchase) — may fund generation
 	-- products. See ProfileService.defaultProfile for why this stays apart
 	-- from bonusTokens.

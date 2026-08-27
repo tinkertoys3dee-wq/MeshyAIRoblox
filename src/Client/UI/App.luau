@@ -3012,9 +3012,123 @@ function App:_RenderStudio()
 	end
 	local selected = profile.items[self.selectedItemId]
 
+	-- Outfits: a snapshot of every currently-equipped item, saved together
+	-- under one name and re-equipped as a set later -- distinct from a fit
+	-- preset below (one item's transform, reusable on a different item).
+	local outfitsHeight = 100
+	local outfits =
+		Factory.Card(self.content, UDim2.new(0.95, 0, 0, outfitsHeight), UDim2.new(0.025, 0, 0, 100), "Outfits")
+	Factory.Label(outfits, "OUTFITS", UDim2.new(0.4, 0, 0, 24), {
+		Position = UDim2.fromOffset(14, 10),
+		Font = Theme.Fonts.Bold,
+		TextSize = 12,
+		Color = Colors.Mint,
+	})
+	local outfitNameBox =
+		self:_TextBox(outfits, "Name this outfit", UDim2.new(1, -134, 0, 30), UDim2.fromOffset(14, 36), false)
+	local saveOutfitButton =
+		Factory.Button(outfits, "Save current look", UDim2.fromOffset(110, 30), UDim2.new(1, -122, 0, 36), "mint")
+	self:_BindButton(saveOutfitButton)
+	saveOutfitButton.Activated:Connect(function()
+		saveOutfitButton.Active = false
+		task.spawn(function()
+			local success, data = self:_Invoke(Network.Actions.SaveOutfit, { name = outfitNameBox.Text })
+			if success then
+				self.state.profile.outfits[data.outfit.id] = data.outfit
+				table.insert(self.state.profile.outfitOrder, 1, data.outfit.id)
+				self.sounds:Play("Success")
+				self:_Toast("success", "Outfit saved.")
+				self:_RenderActivePage()
+				return
+			end
+			if saveOutfitButton.Parent then
+				saveOutfitButton.Active = true
+			end
+		end)
+	end)
+	local outfitList = Factory.New("ScrollingFrame", {
+		Position = UDim2.fromOffset(14, 70),
+		Size = UDim2.new(1, -28, 0, 24),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 3,
+		ScrollBarImageColor3 = Colors.Mint,
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(),
+		ScrollingDirection = Enum.ScrollingDirection.X,
+		Parent = outfits,
+	})
+	Factory.List(outfitList, Enum.FillDirection.Horizontal, 8)
+	local outfitOrder = profile.outfitOrder or {}
+	if #outfitOrder == 0 then
+		Factory.Label(
+			outfitList,
+			"No saved outfits yet -- equip a look, then save it above.",
+			UDim2.fromOffset(340, 24),
+			{
+				AlignY = Enum.TextYAlignment.Center,
+				Color = Colors.TextMuted,
+				TextSize = 11,
+			}
+		)
+	else
+		for _, outfitId in outfitOrder do
+			local record = profile.outfits[outfitId]
+			if record then
+				local nameWidth = math.clamp(#record.name * 7 + 40, 90, 150)
+				local chip = Factory.New("Frame", {
+					Size = UDim2.fromOffset(nameWidth + 34, 24),
+					BackgroundTransparency = 1,
+					Parent = outfitList,
+				})
+				local apply =
+					Factory.Button(chip, record.name, UDim2.fromOffset(nameWidth, 24), UDim2.fromOffset(0, 0), nil)
+				apply.TextTruncate = Enum.TextTruncate.AtEnd
+				self:_BindButton(apply)
+				apply.Activated:Connect(function()
+					apply.Active = false
+					task.spawn(function()
+						local success = self:_Invoke(Network.Actions.EquipOutfit, { outfitId = outfitId })
+						if success then
+							self.sounds:Play("Success")
+							self:_Toast("success", string.format('Wearing "%s".', record.name))
+							self:_RefreshBootstrap()
+							return
+						end
+						if apply.Parent then
+							apply.Active = true
+						end
+					end)
+				end)
+				local remove =
+					Factory.Button(chip, "×", UDim2.fromOffset(26, 24), UDim2.fromOffset(nameWidth + 8, 0), "danger")
+				self:_BindButton(remove)
+				remove.Activated:Connect(function()
+					task.spawn(function()
+						local success = self:_Invoke(Network.Actions.DeleteOutfit, { outfitId = outfitId })
+						if success then
+							self.state.profile.outfits[outfitId] = nil
+							local index = table.find(self.state.profile.outfitOrder, outfitId)
+							if index then
+								table.remove(self.state.profile.outfitOrder, index)
+							end
+							self:_RenderActivePage()
+						end
+					end)
+				end)
+			end
+		end
+	end
+
+	local topOffset = 100 + outfitsHeight + 14
 	local collection = if self.compact
-		then Factory.Card(self.content, UDim2.new(0.95, 0, 0, 164), UDim2.new(0.025, 0, 0, 100), "Collection")
-		else Factory.Card(self.content, UDim2.new(0.39, 0, 1, -118), UDim2.new(0.02, 0, 0, 100), "Collection")
+		then Factory.Card(self.content, UDim2.new(0.95, 0, 0, 164), UDim2.new(0.025, 0, 0, topOffset), "Collection")
+		else Factory.Card(
+			self.content,
+			UDim2.new(0.39, 0, 1, -18 - topOffset),
+			UDim2.new(0.02, 0, 0, topOffset),
+			"Collection"
+		)
 	Factory.Label(collection, string.format("COLLECTION · %d", #profile.itemOrder), UDim2.new(1, -28, 0, 30), {
 		Position = UDim2.fromOffset(14, 12),
 		Font = Theme.Fonts.Bold,
@@ -3120,8 +3234,18 @@ function App:_RenderStudio()
 	end
 
 	local inspector = if self.compact
-		then Factory.Card(self.content, UDim2.new(0.95, 0, 1, -284), UDim2.new(0.025, 0, 0, 274), "Inspector")
-		else Factory.Card(self.content, UDim2.new(0.56, 0, 1, -118), UDim2.new(0.42, 0, 0, 100), "Inspector")
+		then Factory.Card(
+			self.content,
+			UDim2.new(0.95, 0, 1, -10 - (topOffset + 164 + 10)),
+			UDim2.new(0.025, 0, 0, topOffset + 164 + 10),
+			"Inspector"
+		)
+		else Factory.Card(
+			self.content,
+			UDim2.new(0.56, 0, 1, -18 - topOffset),
+			UDim2.new(0.42, 0, 0, topOffset),
+			"Inspector"
+		)
 
 	-- Name, pills, and the viewport live in a fixed header that never
 	-- scrolls, separate from the controls/presets/actions below -- they used
