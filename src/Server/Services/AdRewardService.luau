@@ -134,10 +134,19 @@ function AdRewardService:RequestAd(player: Player): (boolean, any)
 		warn(string.format("[AdRewardService] Could not show rewarded ad: %s", tostring(showResult)))
 		return false, "AD_UNAVAILABLE"
 	end
+	if showResult == Enum.ShowAdResult.AdNotReady then
+		-- Distinct from a genuinely interrupted/closed-early watch: this
+		-- means Roblox had no ad ready to show at all, most often right
+		-- after a previous watch used up the available inventory. Reusing
+		-- AD_UNAVAILABLE here (the same code CreateAdRewardFromDevProductId
+		-- failing above already returns) gives the player an accurate
+		-- reason instead of the misleading "closed before it finished".
+		return false, "AD_UNAVAILABLE"
+	end
 	if showResult ~= Enum.ShowAdResult.ShowCompleted then
 		-- Roblox's own guidance: don't grant off this result, only use it for
-		-- user-facing failure messaging. AdNotReady/AdAlreadyShowing/
-		-- ShowInterrupted/InternalError/InsufficientMemory all land here.
+		-- user-facing failure messaging. AdAlreadyShowing/ShowInterrupted/
+		-- InternalError/InsufficientMemory all land here.
 		return false, "AD_NOT_COMPLETED"
 	end
 	-- Unlocked here rather than in the shared AdRewardTokens grant handler:

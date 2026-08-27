@@ -198,6 +198,23 @@ local function thumbnail(assetId: any, size: number?): string
 	return string.format("rbxthumb://type=Asset&id=%d&w=%d&h=%d", id, pixels, pixels)
 end
 
+-- rbxthumb://type=Asset requests a RENDERED THUMBNAIL of an asset -- the
+-- right choice for a genuine catalog item (a hat, a 3D model) where there's
+-- no raw 2D image to show directly. Every image this game generates and
+-- uploads itself (a reference image, a Meshy model thumbnail, an avatar
+-- graphic) is already a flat PNG Image asset, not something needing a
+-- separate render step, so it should be referenced directly instead --
+-- rbxthumb's extra render/caching layer for an asset that's already just an
+-- image is a plausible reason it can stay blank far longer than the asset
+-- itself takes to become viewable.
+local function directImage(assetId: any): string
+	local id = tonumber(assetId) or 0
+	if id <= 0 then
+		return ""
+	end
+	return string.format("rbxassetid://%d", id)
+end
+
 -- Cheap, instant client-side avatar preview. `thumbType` is one of
 -- Config.Generation.AvatarViews' ThumbType values (AvatarHeadShot/
 -- AvatarBust/Avatar) -- the engine resolves this locally, no HTTP call
@@ -1725,8 +1742,29 @@ function App:_RenderCreate()
 	self:_BindButton(watchAd)
 	watchAd.Activated:Connect(function()
 		watchAd.Active = false
-		watchAd.Text = "Loading ad…"
+		watchAd.Text = "Checking for an ad…"
 		task.spawn(function()
+			-- Re-check availability right before showing, per Roblox's own
+			-- guidance, instead of trusting whatever self.adAvailable was
+			-- left at from when this page first loaded. Skipping this was
+			-- the actual bug behind "closed before it finished" repeating
+			-- on every later click: the first watch succeeds, but this
+			-- button then stayed enabled indefinitely off that stale flag,
+			-- so every next click re-showed an ad Roblox had no fresh
+			-- inventory for yet and failed with a misleading message.
+			local checkSuccess, checkResult = pcall(function()
+				return AdService:GetAdAvailabilityNowAsync(Enum.AdFormat.RewardedVideo)
+			end)
+			local nowAvailable = checkSuccess
+				and type(checkResult) == "table"
+				and checkResult.AdAvailabilityResult == Enum.AdAvailabilityResult.IsAvailable
+			self.adAvailable = nowAvailable
+			if not nowAvailable then
+				self:_Toast("error", "No ad is available right now. Try again in a few minutes.")
+				self:_RenderActivePage()
+				return
+			end
+			watchAd.Text = "Loading ad…"
 			local success, result = self:_Invoke(Network.Actions.RequestRewardedAd, {})
 			if success then
 				self.adWatchesToday = result.watchesToday
@@ -2350,7 +2388,7 @@ function App:_RenderCreate()
 			Position = if self.compact then UDim2.new(0.5, -66, 0, 16) else UDim2.fromOffset(18, 19),
 			BackgroundColor3 = Colors.Ink,
 			BorderSizePixel = 0,
-			Image = thumbnail(readyImage.previewAssetId, 420),
+			Image = directImage(readyImage.previewAssetId),
 			ScaleType = Enum.ScaleType.Crop,
 			Parent = reference,
 		})
@@ -3026,7 +3064,7 @@ function App:_RenderStudio()
 				Position = UDim2.fromOffset(9, 9),
 				BackgroundColor3 = Colors.Panel,
 				BorderSizePixel = 0,
-				Image = thumbnail(item.thumbnailAssetId, 150),
+				Image = directImage(item.thumbnailAssetId),
 				ScaleType = Enum.ScaleType.Crop,
 				Parent = row,
 			})
@@ -3084,39 +3122,32 @@ function App:_RenderStudio()
 	local inspector = if self.compact
 		then Factory.Card(self.content, UDim2.new(0.95, 0, 1, -284), UDim2.new(0.025, 0, 0, 274), "Inspector")
 		else Factory.Card(self.content, UDim2.new(0.56, 0, 1, -118), UDim2.new(0.42, 0, 0, 100), "Inspector")
-	local inspectScroll = Factory.New("ScrollingFrame", {
-		Size = UDim2.new(1, -12, 1, -12),
+
+	-- Name, pills, and the viewport live in a fixed header that never
+	-- scrolls, separate from the controls/presets/actions below -- they used
+	-- to share one scrolling body, so reaching the sliders scrolled the
+	-- viewport out of view right along with them.
+	local header = Factory.New("Frame", {
+		Size = UDim2.new(1, -12, 0, 380),
 		Position = UDim2.fromOffset(6, 6),
 		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		CanvasSize = UDim2.new(),
-		ScrollBarThickness = 3,
-		ScrollBarImageColor3 = Colors.Cyan,
 		Parent = inspector,
 	})
-	self:_TrackScroll(inspectScroll, "StudioInspect")
-	Factory.ScalePadding(inspectScroll, 0.012, 0.012)
-	local body = Factory.New("Frame", {
-		Size = UDim2.new(1, -8, 0, 1240),
-		BackgroundTransparency = 1,
-		Parent = inspectScroll,
-	})
-	Factory.Label(body, selected.name, UDim2.new(1, -32, 0, 32), {
+	Factory.Label(header, selected.name, UDim2.new(1, -32, 0, 32), {
 		Position = UDim2.fromOffset(16, 10),
 		Font = Theme.Fonts.Black,
 		TextSize = 20,
 		Truncate = Enum.TextTruncate.AtEnd,
 	})
 	Factory.Pill(
-		body,
+		header,
 		if selected.license == "PERSONAL_COPY" then "PERSONAL COPY" else "ORIGINAL",
 		if selected.license == "PERSONAL_COPY" then Colors.Gold else Colors.Mint,
 		106
 	).Position =
 		UDim2.fromOffset(16, 47)
 	Factory.Pill(
-		body,
+		header,
 		string.format(
 			"%s · %s",
 			string.gsub(selected.stylePreset or "AUTO", "_", " "),
@@ -3131,7 +3162,7 @@ function App:_RenderStudio()
 		Size = UDim2.new(1, -32, 0, 292),
 		BackgroundColor3 = Color3.fromRGB(62, 72, 108),
 		BorderSizePixel = 0,
-		Parent = body,
+		Parent = header,
 	})
 	Factory.Corner(viewport, 14)
 	Factory.Stroke(viewport, Colors.Violet, 0.45)
@@ -3168,8 +3199,26 @@ function App:_RenderStudio()
 		end
 	end)
 
+	local inspectScroll = Factory.New("ScrollingFrame", {
+		Size = UDim2.new(1, -12, 1, -392),
+		Position = UDim2.fromOffset(6, 392),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		ScrollBarThickness = 3,
+		ScrollBarImageColor3 = Colors.Cyan,
+		Parent = inspector,
+	})
+	self:_TrackScroll(inspectScroll, "StudioInspect")
+	Factory.ScalePadding(inspectScroll, 0.012, 0.012)
+	local body = Factory.New("Frame", {
+		Size = UDim2.new(1, -8, 0, 856),
+		BackgroundTransparency = 1,
+		Parent = inspectScroll,
+	})
 	local controls = Factory.New("Frame", {
-		Position = UDim2.fromOffset(16, 392),
+		Position = UDim2.fromOffset(16, 8),
 		Size = UDim2.new(1, -32, 0, 414),
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.08,
@@ -3352,7 +3401,7 @@ function App:_RenderStudio()
 	-- Fit presets: save the current position/rotation/scale under a name so it
 	-- can be reapplied later, without touching whatever fit is currently being
 	-- drafted for a different item.
-	local presetsY = 822
+	local presetsY = 438
 	local presetsHeight = 140
 	local presets = Factory.New("Frame", {
 		Position = UDim2.fromOffset(16, presetsY),
@@ -3906,7 +3955,7 @@ function App:_RenderDiscover()
 			Position = UDim2.fromOffset(10, 10),
 			BackgroundColor3 = Colors.Ink,
 			BorderSizePixel = 0,
-			Image = thumbnail(item.thumbnailAssetId, 420),
+			Image = directImage(item.thumbnailAssetId),
 			ScaleType = Enum.ScaleType.Crop,
 			Parent = card,
 		})
@@ -4945,7 +4994,7 @@ function App:_RenderAvatarGraphics()
 				Position = UDim2.fromOffset(10, 10),
 				BackgroundColor3 = Colors.Ink,
 				BorderSizePixel = 0,
-				Image = thumbnail(graphic.previewAssetId, 420),
+				Image = directImage(graphic.previewAssetId),
 				ScaleType = Enum.ScaleType.Crop,
 				Parent = card,
 			})
@@ -5230,7 +5279,7 @@ function App:_RenderSettings()
 					Position = UDim2.fromOffset(6, 6),
 					BackgroundColor3 = Colors.Panel,
 					BorderSizePixel = 0,
-					Image = thumbnail(item.thumbnailAssetId, 120),
+					Image = directImage(item.thumbnailAssetId),
 					ScaleType = Enum.ScaleType.Crop,
 					Parent = row,
 				})
