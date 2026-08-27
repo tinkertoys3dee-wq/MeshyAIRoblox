@@ -3351,13 +3351,17 @@ function App:_RenderStudio()
 	self:_TrackScroll(inspectScroll, "StudioInspect")
 	Factory.ScalePadding(inspectScroll, 0.012, 0.012)
 	local body = Factory.New("Frame", {
-		Size = UDim2.new(1, -8, 0, 856),
+		Size = UDim2.new(1, -8, 0, 1120),
 		BackgroundTransparency = 1,
 		Parent = inspectScroll,
 	})
+	-- Sized ~1.6x its original dials/labels/track/knob so the fit sliders are
+	-- actually legible and easy to grab, not just the item name/pills above
+	-- them -- everything below (presets/actions/note/social) keeps its
+	-- original size and simply shifts down to sit under the taller card.
 	local controls = Factory.New("Frame", {
 		Position = UDim2.fromOffset(16, 8),
-		Size = UDim2.new(1, -32, 0, 414),
+		Size = UDim2.new(1, -32, 0, 664),
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.08,
 		BorderSizePixel = 0,
@@ -3365,32 +3369,32 @@ function App:_RenderStudio()
 	})
 	Factory.Corner(controls, 13)
 	Factory.Stroke(controls, Colors.Line, 0.5)
-	Factory.Label(controls, "FIT CONTROLS", UDim2.new(0.5, -14, 0, 24), {
-		Position = UDim2.fromOffset(14, 10),
+	Factory.Label(controls, "FIT CONTROLS", UDim2.new(0.5, -14, 0, 38), {
+		Position = UDim2.fromOffset(14, 16),
 		Font = Theme.Fonts.Bold,
-		TextSize = 12,
+		TextSize = 19,
 		Color = Colors.Cyan,
 	})
-	Factory.Label(controls, "Drag a dial or tap − / +", UDim2.new(0.5, -24, 0, 24), {
-		Position = UDim2.new(0.5, 8, 0, 10),
+	Factory.Label(controls, "Drag a dial or tap − / +", UDim2.new(0.5, -24, 0, 38), {
+		Position = UDim2.new(0.5, 8, 0, 16),
 		AlignX = Enum.TextXAlignment.Right,
 		Color = Colors.TextMuted,
-		TextSize = 10,
+		TextSize = 16,
 	})
 
 	local function sliderRow(field: string, axis: string, y: number, minimum: number, maximum: number, step: number)
-		Factory.Label(controls, string.upper(axis), UDim2.new(0.06, 0, 0, 28), {
+		Factory.Label(controls, string.upper(axis), UDim2.new(0.06, 0, 0, 45), {
 			Position = UDim2.new(0.015, 0, 0, y),
 			AlignX = Enum.TextXAlignment.Center,
 			Font = Theme.Fonts.Bold,
-			TextSize = 11,
+			TextSize = 18,
 			Color = if axis == "x" then Colors.Rose elseif axis == "y" then Colors.Mint else Colors.Cyan,
 		})
-		local minus = Factory.Button(controls, "−", UDim2.new(0.075, -4, 0, 28), UDim2.new(0.08, 0, 0, y), nil)
-		Factory.New("UISizeConstraint", { MinSize = Vector2.new(26, 28), Parent = minus })
+		local minus = Factory.Button(controls, "−", UDim2.new(0.075, -4, 0, 45), UDim2.new(0.08, 0, 0, y), nil)
+		Factory.New("UISizeConstraint", { MinSize = Vector2.new(42, 45), Parent = minus })
 		local track = Factory.New("TextButton", {
-			Position = UDim2.new(0.17, 0, 0, y + 4),
-			Size = UDim2.new(0.55, 0, 0, 20),
+			Position = UDim2.new(0.17, 0, 0, y + 6),
+			Size = UDim2.new(0.55, 0, 0, 32),
 			BackgroundColor3 = Colors.PanelSoft,
 			BorderSizePixel = 0,
 			AutoButtonColor = false,
@@ -3409,20 +3413,20 @@ function App:_RenderStudio()
 		local knob = Factory.New("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0, 0.5),
-			Size = UDim2.fromOffset(16, 16),
+			Size = UDim2.fromOffset(26, 26),
 			BackgroundColor3 = Color3.fromRGB(248, 250, 255),
 			BorderSizePixel = 0,
 			Parent = track,
 		})
 		Factory.Corner(knob, 99)
 		Factory.Stroke(knob, Colors.Cyan, 0.15)
-		local plus = Factory.Button(controls, "+", UDim2.new(0.075, -4, 0, 28), UDim2.new(0.735, 0, 0, y), nil)
-		Factory.New("UISizeConstraint", { MinSize = Vector2.new(26, 28), Parent = plus })
-		local valueLabel = Factory.Label(controls, "", UDim2.new(0.17, -10, 0, 28), {
+		local plus = Factory.Button(controls, "+", UDim2.new(0.075, -4, 0, 45), UDim2.new(0.735, 0, 0, y), nil)
+		Factory.New("UISizeConstraint", { MinSize = Vector2.new(42, 45), Parent = plus })
+		local valueLabel = Factory.Label(controls, "", UDim2.new(0.17, -10, 0, 45), {
 			Position = UDim2.new(0.82, 0, 0, y),
 			AlignX = Enum.TextXAlignment.Right,
 			Font = Theme.Fonts.Bold,
-			TextSize = 11,
+			TextSize = 18,
 			Color = Colors.Text,
 		})
 
@@ -3497,7 +3501,7 @@ function App:_RenderStudio()
 		refresh()
 	end
 
-	local dialY = 64
+	local dialY = 102
 	for _, group in
 		{
 			{
@@ -3523,23 +3527,23 @@ function App:_RenderStudio()
 			},
 		}
 	do
-		Factory.Label(controls, group.title, UDim2.new(1, -28, 0, 20), {
-			Position = UDim2.fromOffset(14, dialY - 22),
+		Factory.Label(controls, group.title, UDim2.new(1, -28, 0, 32), {
+			Position = UDim2.fromOffset(14, dialY - 35),
 			Font = Theme.Fonts.Bold,
-			TextSize = 10,
+			TextSize = 16,
 			Color = Colors.TextMuted,
 		})
 		for _, axis in { "x", "y", "z" } do
 			sliderRow(group.field, axis, dialY, group.minimum, group.maximum, group.step)
-			dialY += 30
+			dialY += 48
 		end
-		dialY += 23
+		dialY += 37
 	end
 
 	-- Fit presets: save the current position/rotation/scale under a name so it
 	-- can be reapplied later, without touching whatever fit is currently being
 	-- drafted for a different item.
-	local presetsY = 438
+	local presetsY = 702
 	local presetsHeight = 140
 	local presets = Factory.New("Frame", {
 		Position = UDim2.fromOffset(16, presetsY),
