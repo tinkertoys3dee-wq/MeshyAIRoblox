@@ -308,6 +308,16 @@ function App.new()
 		customImageAssetId = "",
 		draftPrompt = "",
 		avatarGraphicPrompt = "",
+		-- "AVATAR" (existing Avatar Graphics flow) or "TEXT" (pure text-to-image,
+		-- no avatar reference). Kept as its own prompt field below since the two
+		-- modes have different defaults/requirements -- an avatar graphic prompt
+		-- is optional scene direction, a text-to-image prompt is the only
+		-- description of the image and required.
+		graphicMode = "AVATAR",
+		textImagePrompt = "",
+		-- "CREATE" (composer + personal gallery) or "DISCOVER" (public gallery),
+		-- mirroring the item Discover page's search/sort/like/buy pattern.
+		graphicsTab = "CREATE",
 		selectedItemId = nil :: string?,
 		fitDrafts = {} :: { [string]: { [string]: any } },
 		pageConnections = {} :: { RBXScriptConnection },
@@ -315,6 +325,10 @@ function App.new()
 		marketplaceQuery = "",
 		marketplaceSearchBy = "NAME",
 		marketplaceSortBy = "TRENDING",
+		graphicsMarketplaceItems = nil :: { any }?,
+		graphicsMarketplaceQuery = "",
+		graphicsMarketplaceSearchBy = "CREATOR",
+		graphicsMarketplaceSortBy = "TRENDING",
 		catalogResults = nil :: { any }?,
 		catalogSearching = false,
 		catalogAccess = nil :: boolean?,
@@ -4696,24 +4710,306 @@ end
 -- (Config.Generation.ImageQualityTiers) since both are a single OpenAI image
 -- call with no Meshy pipeline cost behind them -- see
 -- GenerationService:CreateAvatarGraphic.
+function App:_RefreshGraphicsMarketplace(query: string?)
+	self.graphicsMarketplaceQuery = query or self.graphicsMarketplaceQuery or ""
+	task.spawn(function()
+		local success, data = self:_Invoke(Network.Actions.GetGraphicsMarketplace, {
+			query = self.graphicsMarketplaceQuery,
+			searchBy = self.graphicsMarketplaceSearchBy,
+			sortBy = self.graphicsMarketplaceSortBy,
+		})
+		if success then
+			self.graphicsMarketplaceItems = data.graphics
+			if self.activePage == "Avatar Graphics" and self.graphicsTab == "DISCOVER" then
+				self:_RenderActivePage()
+			end
+		end
+	end)
+end
+
+-- Mirrors _RenderDiscover's search/sort/grid pattern (see that function for
+-- the item-marketplace original this was mirrored from), scoped to graphics:
+-- no "try on" concept (graphics aren't wearable), and search matches the
+-- prompt text since graphics have no separate name field.
+function App:_RenderGraphicsDiscoverBody()
+	if not self.state.policy.contentSharingAllowed then
+		local blocked = Factory.Card(self.content, UDim2.new(0.95, 0, 0, 200), UDim2.new(0.025, 0, 0, 150))
+		Factory.Label(blocked, "Shared graphics are unavailable", UDim2.new(1, -40, 0, 32), {
+			Position = UDim2.fromOffset(20, 30),
+			AlignX = Enum.TextXAlignment.Center,
+			Font = Theme.Fonts.Black,
+			TextSize = 20,
+		})
+		Factory.Label(
+			blocked,
+			"Forge respects Roblox PolicyService. Community sharing is hidden for this account.",
+			UDim2.new(1, -70, 0, 60),
+			{
+				Position = UDim2.fromOffset(35, 68),
+				AlignX = Enum.TextXAlignment.Center,
+				Color = Colors.TextMuted,
+				TextSize = 13,
+				Wrapped = true,
+			}
+		)
+		return
+	end
+	local tools = Factory.New("Frame", {
+		Position = UDim2.new(0.025, 0, 0, 144),
+		Size = UDim2.new(0.95, 0, 0, if self.compact then 98 else 48),
+		BackgroundTransparency = 1,
+		Parent = self.content,
+	})
+	local search = self:_TextBox(
+		tools,
+		if self.graphicsMarketplaceSearchBy == "CREATOR" then "Search by creator username" else "Search prompts",
+		if self.compact then UDim2.new(1, 0, 0, 42) else UDim2.new(1, -140, 0, 42),
+		UDim2.new(),
+		false
+	)
+	search.Text = self.graphicsMarketplaceQuery
+	local refresh = Factory.Button(
+		tools,
+		"Search",
+		if self.compact then UDim2.new(1, 0, 0, 40) else UDim2.fromOffset(96, 42),
+		if self.compact then UDim2.fromOffset(0, 50) else UDim2.new(1, -96, 0, 0),
+		"primary"
+	)
+	self:_BindButton(refresh)
+	refresh.Activated:Connect(function()
+		self:_RefreshGraphicsMarketplace(search.Text)
+	end)
+	search.FocusLost:Connect(function(enterPressed)
+		if enterPressed then
+			self:_RefreshGraphicsMarketplace(search.Text)
+		end
+	end)
+
+	local filters = Factory.New("ScrollingFrame", {
+		Position = UDim2.new(0.025, 0, 0, if self.compact then 248 else 198),
+		Size = UDim2.new(0.95, 0, 0, 34),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 0,
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(),
+		ScrollingDirection = Enum.ScrollingDirection.X,
+		Parent = self.content,
+	})
+	Factory.List(filters, Enum.FillDirection.Horizontal, 7)
+	for _, mode in { { Id = "PROMPT", Label = "By prompt" }, { Id = "CREATOR", Label = "By creator" } } do
+		local selected = self.graphicsMarketplaceSearchBy == mode.Id
+		local chip =
+			Factory.Button(filters, mode.Label, UDim2.fromOffset(96, 30), nil, if selected then "primary" else nil)
+		self:_BindButton(chip)
+		chip.Activated:Connect(function()
+			self.graphicsMarketplaceSearchBy = mode.Id
+			self:_RefreshGraphicsMarketplace(search.Text)
+			self:_RenderActivePage()
+		end)
+	end
+	Factory.New("Frame", {
+		Size = UDim2.fromOffset(1, 22),
+		BackgroundColor3 = Colors.Line,
+		BackgroundTransparency = 0.4,
+		BorderSizePixel = 0,
+		Parent = filters,
+	})
+	for _, sort in
+		{
+			{ Id = "TRENDING", Label = "Trending" },
+			{ Id = "NEWEST", Label = "Newest" },
+			{ Id = "PRICE_LOW", Label = "Price ↑" },
+			{ Id = "MOST_LIKED", Label = "Most liked" },
+		}
+	do
+		local selected = self.graphicsMarketplaceSortBy == sort.Id
+		local chip =
+			Factory.Button(filters, sort.Label, UDim2.fromOffset(94, 30), nil, if selected then "primary" else nil)
+		self:_BindButton(chip)
+		chip.Activated:Connect(function()
+			self.graphicsMarketplaceSortBy = sort.Id
+			self:_RefreshGraphicsMarketplace(search.Text)
+			self:_RenderActivePage()
+		end)
+	end
+
+	if self.graphicsMarketplaceItems == nil then
+		Factory.Label(self.content, "Loading trending graphics…", UDim2.new(1, -52, 0, 60), {
+			Position = UDim2.fromOffset(26, if self.compact then 330 else 260),
+			AlignX = Enum.TextXAlignment.Center,
+			Color = Colors.TextMuted,
+			Font = Theme.Fonts.Bold,
+		})
+		self:_RefreshGraphicsMarketplace(self.graphicsMarketplaceQuery)
+		return
+	end
+	local grid = Factory.New("ScrollingFrame", {
+		Position = UDim2.new(0.02, 0, 0, if self.compact then 306 else 256),
+		Size = UDim2.new(0.96, 0, 1, if self.compact then -322 else -272),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = Colors.Mint,
+		Parent = self.content,
+	})
+	self:_TrackScroll(grid, "GraphicsDiscoverGrid")
+	Factory.ScalePadding(grid, 0.008, 0.008)
+	Factory.New("UIGridLayout", {
+		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 300),
+		CellPadding = UDim2.fromOffset(12, 12),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = grid,
+	})
+	for index, graphic in self.graphicsMarketplaceItems do
+		local card = Factory.Card(grid, UDim2.fromScale(1, 1), nil, "CommunityGraphic")
+		card.LayoutOrder = index
+		local image = Factory.New("ImageLabel", {
+			Size = UDim2.new(1, -20, 0, 150),
+			Position = UDim2.fromOffset(10, 10),
+			BackgroundColor3 = Colors.Ink,
+			BorderSizePixel = 0,
+			Image = directImage(graphic.previewAssetId),
+			ScaleType = Enum.ScaleType.Crop,
+			Parent = card,
+		})
+		Factory.Corner(image, 11)
+		if graphic.isListed then
+			Factory.Pill(card, string.format("R$ %d", graphic.listingPriceRobux), Colors.Mint, 68).Position =
+				UDim2.fromOffset(156, 18)
+		end
+		Factory.Label(card, string.sub(graphic.filteredPrompt or "Graphic", 1, 60), UDim2.new(1, -20, 0, 30), {
+			Position = UDim2.fromOffset(10, 168),
+			Font = Theme.Fonts.Medium,
+			TextSize = 11,
+			Wrapped = true,
+		})
+		Factory.Label(card, string.format("by @%s", tostring(graphic.ownerName)), UDim2.new(1, -20, 0, 16), {
+			Position = UDim2.fromOffset(10, 200),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Truncate = Enum.TextTruncate.AtEnd,
+		})
+		local buy = Factory.Button(
+			card,
+			if graphic.isListed then "Buy copy" else "Not for sale",
+			UDim2.new(1, -20, 0, 34),
+			UDim2.fromOffset(10, 222),
+			if graphic.isListed then "mint" else nil
+		)
+		self:_BindButton(buy)
+		buy.Active = graphic.isListed == true
+		buy.Activated:Connect(function()
+			buy.Active = false
+			buy.Text = "Checking listing…"
+			task.spawn(function()
+				local success, errorCode =
+					self:_Invoke(Network.Actions.BeginGraphicPurchase, { graphicId = graphic.id })
+				if success then
+					self:_Toast("success", "Confirm the verified creator transfer in Roblox.")
+				elseif errorCode == "PLUS_REQUIRED" then
+					self:_ShowPlus()
+				elseif errorCode == "LISTING_UNAVAILABLE" then
+					self.graphicsMarketplaceItems = nil
+					self:_RefreshGraphicsMarketplace(search.Text)
+				end
+				if buy.Parent then
+					buy.Active = graphic.isListed == true
+					buy.Text = if graphic.isListed then "Buy copy" else "Not for sale"
+				end
+			end)
+		end)
+		local like = Factory.Button(
+			card,
+			string.format("%s %s", if graphic.viewerLiked then "♥" else "♡", formatNumber(graphic.likes)),
+			UDim2.new(0.5, -15, 0, 30),
+			UDim2.fromOffset(10, 260),
+			nil
+		)
+		local favorite = Factory.Button(
+			card,
+			string.format("%s %s", if graphic.viewerFavorited then "★" else "☆", formatNumber(graphic.favorites)),
+			UDim2.new(0.5, -15, 0, 30),
+			UDim2.new(0.5, 5, 0, 260),
+			nil
+		)
+		self:_BindButton(like)
+		self:_BindButton(favorite)
+		like.Activated:Connect(function()
+			task.spawn(function()
+				local success = self:_Invoke(Network.Actions.ToggleGraphicLike, { graphicId = graphic.id })
+				if success then
+					self.sounds:Play("Like")
+					self:_RefreshGraphicsMarketplace(search.Text)
+				end
+			end)
+		end)
+		favorite.Activated:Connect(function()
+			task.spawn(function()
+				local success = self:_Invoke(Network.Actions.ToggleGraphicFavorite, { graphicId = graphic.id })
+				if success then
+					self:_RefreshGraphicsMarketplace(search.Text)
+				end
+			end)
+		end)
+	end
+	if #self.graphicsMarketplaceItems == 0 then
+		Factory.Label(
+			grid,
+			"No public graphics match yet. Be the first creator to share one.",
+			if self.compact then UDim2.new(1, -8, 0, 100) else UDim2.fromOffset(520, 100),
+			{
+				Color = Colors.TextMuted,
+				Wrapped = true,
+				TextSize = 14,
+			}
+		)
+	end
+end
+
 function App:_RenderAvatarGraphics()
 	self:_PageHeader(
 		"Avatar Graphics",
-		"Turn your current Roblox avatar into a standalone piece of art -- no accessory, no 3D model, just a picture worth keeping."
+		"Turn your current Roblox avatar -- or just a prompt -- into a standalone piece of art -- no accessory, no 3D model, just a picture worth keeping."
 	)
 
+	local tabs = Factory.New("Frame", {
+		Position = UDim2.new(0.02, 0, 0, 96),
+		Size = UDim2.new(0.96, 0, 0, 38),
+		BackgroundTransparency = 1,
+		Parent = self.content,
+	})
+	Factory.List(tabs, Enum.FillDirection.Horizontal, 8)
+	for _, tab in { { Id = "CREATE", Label = "Create" }, { Id = "DISCOVER", Label = "Discover" } } do
+		local selected = self.graphicsTab == tab.Id
+		local chip =
+			Factory.Button(tabs, tab.Label, UDim2.fromOffset(120, 34), nil, if selected then "primary" else nil)
+		self:_BindButton(chip)
+		chip.Activated:Connect(function()
+			self.graphicsTab = tab.Id
+			self:_RenderActivePage()
+		end)
+	end
+
+	if self.graphicsTab == "DISCOVER" then
+		self:_RenderGraphicsDiscoverBody()
+		return
+	end
+
 	-- Everything below -- the composer, any in-progress activity, and the
-	-- full gallery -- lives inside one scrolling stack, the same pattern the
-	-- Create page uses. A fixed-height controls-card-plus-scrolling-grid
-	-- split (like Avatar Lab's catalog) only works when the controls card is
-	-- short; this page's composer alone can run past 450px, which left the
-	-- gallery with zero or negative remaining height on smaller screens --
-	-- exactly why some options were unreachable. One scroll that grows with
-	-- its content is reachable at any screen size.
+	-- full personal gallery -- lives inside one scrolling stack, the same
+	-- pattern the Create page uses. A fixed-height controls-card-plus-
+	-- scrolling-grid split (like Avatar Lab's catalog) only works when the
+	-- controls card is short; this page's composer alone can run past
+	-- 450px, which left the gallery with zero or negative remaining height
+	-- on smaller screens -- exactly why some options were unreachable. One
+	-- scroll that grows with its content is reachable at any screen size.
 	local page = Factory.New("ScrollingFrame", {
 		Name = "AvatarGraphicsScroll",
-		Position = UDim2.new(0.02, 0, 0, 96),
-		Size = UDim2.new(0.96, 0, 1, -112),
+		Position = UDim2.new(0.02, 0, 0, 144),
+		Size = UDim2.new(0.96, 0, 1, -160),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 4,
@@ -4732,17 +5028,49 @@ function App:_RenderAvatarGraphics()
 	})
 	Factory.List(stack, Enum.FillDirection.Vertical, 14)
 
+	local isTextMode = self.graphicMode == "TEXT"
 	local composer = Factory.Card(stack, UDim2.new(1, 0, 0, 460), nil, "GraphicComposer")
 	composer.LayoutOrder = 1
 	local cursorY = 16
 
-	Factory.Label(composer, "1  CHOOSE YOUR AVATAR VIEW", UDim2.new(1, -32, 0, 22), {
+	Factory.Label(composer, "SOURCE", UDim2.new(1, -32, 0, 18), {
 		Position = UDim2.fromOffset(16, cursorY),
 		Font = Theme.Fonts.Bold,
-		TextSize = 12,
-		Color = Colors.Mint,
+		TextSize = 11,
+		Color = Colors.TextMuted,
 	})
-	cursorY += 27
+	cursorY += 22
+	local sourceRow = Factory.New("Frame", {
+		Position = UDim2.fromOffset(16, cursorY),
+		Size = UDim2.new(1, -32, 0, 36),
+		BackgroundTransparency = 1,
+		Parent = composer,
+	})
+	local fromAvatar = Factory.Button(
+		sourceRow,
+		"🧑 From My Avatar",
+		UDim2.new(0.5, -5, 1, 0),
+		nil,
+		if isTextMode then nil else "primary"
+	)
+	local fromText = Factory.Button(
+		sourceRow,
+		"✍ Text Prompt",
+		UDim2.new(0.5, -5, 1, 0),
+		UDim2.new(0.5, 5, 0, 0),
+		if isTextMode then "primary" else nil
+	)
+	self:_BindButton(fromAvatar)
+	self:_BindButton(fromText)
+	fromAvatar.Activated:Connect(function()
+		self.graphicMode = "AVATAR"
+		self:_RenderActivePage()
+	end)
+	fromText.Activated:Connect(function()
+		self.graphicMode = "TEXT"
+		self:_RenderActivePage()
+	end)
+	cursorY += 48
 
 	local function chipRow(
 		options: { any },
@@ -4777,44 +5105,55 @@ function App:_RenderAvatarGraphics()
 		end
 	end
 
-	chipRow(Config.Generation.AvatarViews, self.selectedAvatarView, cursorY, Colors.Mint, function(value)
-		self.selectedAvatarView = value
-		self:_RenderActivePage()
-	end)
-	cursorY += 46
+	if not isTextMode then
+		Factory.Label(composer, "1  CHOOSE YOUR AVATAR VIEW", UDim2.new(1, -32, 0, 22), {
+			Position = UDim2.fromOffset(16, cursorY),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = Colors.Mint,
+		})
+		cursorY += 27
 
-	local previewThumbType = "AvatarBust"
-	for _, view in Config.Generation.AvatarViews do
-		if view.Id == self.selectedAvatarView then
-			previewThumbType = view.ThumbType
-			break
+		chipRow(Config.Generation.AvatarViews, self.selectedAvatarView, cursorY, Colors.Mint, function(value)
+			self.selectedAvatarView = value
+			self:_RenderActivePage()
+		end)
+		cursorY += 46
+
+		local previewThumbType = "AvatarBust"
+		for _, view in Config.Generation.AvatarViews do
+			if view.Id == self.selectedAvatarView then
+				previewThumbType = view.ThumbType
+				break
+			end
 		end
+		local avatarPreview = Factory.New("ImageLabel", {
+			Size = UDim2.fromOffset(64, 64),
+			Position = UDim2.fromOffset(16, cursorY),
+			BackgroundColor3 = Colors.Ink,
+			BorderSizePixel = 0,
+			Image = avatarThumbnail(player.UserId, previewThumbType, 150),
+			ScaleType = Enum.ScaleType.Crop,
+			Parent = composer,
+		})
+		Factory.Corner(avatarPreview, 12)
+		Factory.Label(
+			composer,
+			"Fetched automatically from your current Roblox avatar -- nothing to upload",
+			UDim2.new(1, -32 - 76, 0, 64),
+			{
+				Position = UDim2.fromOffset(16 + 64 + 12, cursorY),
+				Color = Colors.TextMuted,
+				TextSize = 11,
+				Wrapped = true,
+				AlignY = Enum.TextYAlignment.Center,
+			}
+		)
+		cursorY += 74
 	end
-	local avatarPreview = Factory.New("ImageLabel", {
-		Size = UDim2.fromOffset(64, 64),
-		Position = UDim2.fromOffset(16, cursorY),
-		BackgroundColor3 = Colors.Ink,
-		BorderSizePixel = 0,
-		Image = avatarThumbnail(player.UserId, previewThumbType, 150),
-		ScaleType = Enum.ScaleType.Crop,
-		Parent = composer,
-	})
-	Factory.Corner(avatarPreview, 12)
-	Factory.Label(
-		composer,
-		"Fetched automatically from your current Roblox avatar -- nothing to upload",
-		UDim2.new(1, -32 - 76, 0, 64),
-		{
-			Position = UDim2.fromOffset(16 + 64 + 12, cursorY),
-			Color = Colors.TextMuted,
-			TextSize = 11,
-			Wrapped = true,
-			AlignY = Enum.TextYAlignment.Center,
-		}
-	)
-	cursorY += 74
 
-	Factory.Label(composer, "2  CHOOSE A VISUAL STYLE", UDim2.new(1, -32, 0, 22), {
+	local styleStepLabel = if isTextMode then "1  CHOOSE A VISUAL STYLE" else "2  CHOOSE A VISUAL STYLE"
+	Factory.Label(composer, styleStepLabel, UDim2.new(1, -32, 0, 22), {
 		Position = UDim2.fromOffset(16, cursorY),
 		Font = Theme.Fonts.Bold,
 		TextSize = 12,
@@ -4827,7 +5166,8 @@ function App:_RenderAvatarGraphics()
 	end)
 	cursorY += 46
 
-	Factory.Label(composer, "3  CHOOSE IMAGE QUALITY", UDim2.new(1, -32, 0, 22), {
+	local qualityStepLabel = if isTextMode then "2  CHOOSE IMAGE QUALITY" else "3  CHOOSE IMAGE QUALITY"
+	Factory.Label(composer, qualityStepLabel, UDim2.new(1, -32, 0, 22), {
 		Position = UDim2.fromOffset(16, cursorY),
 		Font = Theme.Fonts.Bold,
 		TextSize = 12,
@@ -4866,7 +5206,10 @@ function App:_RenderAvatarGraphics()
 	end
 	cursorY += 46
 
-	Factory.Label(composer, "4  DESCRIBE A SCENE OR THEME (OPTIONAL)", UDim2.new(1, -32, 0, 22), {
+	local promptStepLabel = if isTextMode
+		then "3  DESCRIBE YOUR IMAGE (REQUIRED)"
+		else "4  DESCRIBE A SCENE OR THEME (OPTIONAL)"
+	Factory.Label(composer, promptStepLabel, UDim2.new(1, -32, 0, 22), {
 		Position = UDim2.fromOffset(16, cursorY),
 		Font = Theme.Fonts.Bold,
 		TextSize = 12,
@@ -4875,15 +5218,17 @@ function App:_RenderAvatarGraphics()
 	cursorY += 27
 	local prompt = self:_TextBox(
 		composer,
-		"For example: a heroic fantasy portrait bathed in golden light",
+		if isTextMode
+			then "For example: a neon-lit cyberpunk city skyline at dusk, reflections on wet streets"
+			else "For example: a heroic fantasy portrait bathed in golden light",
 		UDim2.new(1, -32, 0, 64),
 		UDim2.fromOffset(16, cursorY),
 		true
 	)
-	prompt.Text = self.avatarGraphicPrompt
+	prompt.Text = if isTextMode then self.textImagePrompt else self.avatarGraphicPrompt
 	local count = Factory.Label(
 		composer,
-		string.format("%d / %d", #self.avatarGraphicPrompt, Config.Generation.PromptMaxLength),
+		string.format("%d / %d", #prompt.Text, Config.Generation.PromptMaxLength),
 		UDim2.fromOffset(120, 20),
 		{
 			AnchorPoint = Vector2.new(1, 0),
@@ -4894,7 +5239,12 @@ function App:_RenderAvatarGraphics()
 		}
 	)
 	prompt:GetPropertyChangedSignal("Text"):Connect(function()
-		self.avatarGraphicPrompt = string.sub(prompt.Text, 1, Config.Generation.PromptMaxLength)
+		local trimmed = string.sub(prompt.Text, 1, Config.Generation.PromptMaxLength)
+		if isTextMode then
+			self.textImagePrompt = trimmed
+		else
+			self.avatarGraphicPrompt = trimmed
+		end
 		count.Text = string.format("%d / %d", #prompt.Text, Config.Generation.PromptMaxLength)
 	end)
 	cursorY += 72
@@ -4904,7 +5254,9 @@ function App:_RenderAvatarGraphics()
 	composer.Size = UDim2.new(1, 0, 0, buttonY + 58)
 	Factory.Label(
 		composer,
-		"Your avatar is fetched automatically · Roblox TextService + provider moderation · never becomes a 3D model or accessory",
+		if isTextMode
+			then "Roblox TextService + provider moderation · never becomes a 3D model or accessory"
+			else "Your avatar is fetched automatically · Roblox TextService + provider moderation · never becomes a 3D model or accessory",
 		if self.compact then UDim2.new(1, -32, 0, 34) else UDim2.new(1, -300, 0, 42),
 		{
 			Position = UDim2.fromOffset(16, safetyY),
@@ -4927,7 +5279,8 @@ function App:_RenderAvatarGraphics()
 	local priceText = if payWithTokens
 		then string.format("%d ad tokens", tokenPrice(price, graphicProductKey))
 		else string.format("R$ %d", price)
-	local actionText = string.format("Create avatar graphic · %s", priceText)
+	local actionText =
+		string.format(if isTextMode then "Create image · %s" else "Create avatar graphic · %s", priceText)
 	local generate = Factory.Button(
 		composer,
 		actionText,
@@ -4937,31 +5290,44 @@ function App:_RenderAvatarGraphics()
 	)
 	self:_BindButton(generate)
 	generate.Activated:Connect(function()
+		if isTextMode and #string.gsub(prompt.Text, "%s", "") == 0 then
+			self:_Toast("error", "Describe what you want to see first.")
+			return
+		end
 		generate.Active = false
-		generate.Text = "Fetching your avatar…"
+		generate.Text = if isTextMode then "Painting…" else "Fetching your avatar…"
 		task.spawn(function()
-			local request = {
-				avatarView = self.selectedAvatarView,
-				stylePreset = self.selectedStylePreset,
-				imageQuality = self.selectedImageQuality,
-				prompt = prompt.Text,
-				paymentMethod = self.paymentMethod,
-			}
-			local success, result = self:_Invoke(Network.Actions.CreateAvatarGraphic, request)
+			local success, result
+			if isTextMode then
+				success, result = self:_Invoke(Network.Actions.CreateTextImage, {
+					stylePreset = self.selectedStylePreset,
+					imageQuality = self.selectedImageQuality,
+					prompt = prompt.Text,
+					paymentMethod = self.paymentMethod,
+				})
+			else
+				success, result = self:_Invoke(Network.Actions.CreateAvatarGraphic, {
+					avatarView = self.selectedAvatarView,
+					stylePreset = self.selectedStylePreset,
+					imageQuality = self.selectedImageQuality,
+					prompt = prompt.Text,
+					paymentMethod = self.paymentMethod,
+				})
+			end
 			generate.Active = true
 			generate.Text = actionText
 			if success then
 				if result.usedRetryCredit then
-					self:_Toast("success", "Retry credit applied. Your avatar graphic is entering the queue.")
+					self:_Toast("success", "Retry credit applied. Your image is entering the queue.")
 				elseif result.mocked then
-					self:_Toast("success", "Studio mock purchase confirmed. Your avatar graphic is entering the queue.")
+					self:_Toast("success", "Studio mock purchase confirmed. Your image is entering the queue.")
 				elseif result.tokensSpent then
 					self.state.profile.tokens = result.tokens
 					self.state.profile.bonusTokens = result.bonusTokens
 					self.sounds:Play("Success")
 					self:_Toast(
 						"success",
-						string.format("%d tokens spent. Your avatar graphic is entering the queue.", result.tokensSpent)
+						string.format("%d tokens spent. Your image is entering the queue.", result.tokensSpent)
 					)
 				else
 					self.sounds:Play("PurchasePrompt")
@@ -4974,7 +5340,11 @@ function App:_RenderAvatarGraphics()
 	local inFlightCount = 0
 	for _, generationId in self.state.profile.generationOrder do
 		local generation = self.state.profile.generations[generationId]
-		if generation and generation.method == "AVATAR_GRAPHIC" and generation.stage ~= "SUCCEEDED" then
+		if
+			generation
+			and (generation.method == "AVATAR_GRAPHIC" or generation.method == "TEXT_TO_IMAGE")
+			and generation.stage ~= "SUCCEEDED"
+		then
 			inFlightCount += 1
 			if inFlightCount >= 3 then
 				break
@@ -5075,7 +5445,7 @@ function App:_RenderAvatarGraphics()
 		end
 	end
 
-	local galleryHeader = Factory.Label(stack, "YOUR AVATAR GRAPHICS", UDim2.new(1, 0, 0, 24), {
+	local galleryHeader = Factory.Label(stack, "YOUR GRAPHICS", UDim2.new(1, 0, 0, 24), {
 		Font = Theme.Fonts.Bold,
 		TextSize = 13,
 		Color = Colors.TextMuted,
@@ -5086,7 +5456,7 @@ function App:_RenderAvatarGraphics()
 	if graphicCount == 0 then
 		local empty = Factory.Label(
 			stack,
-			"No avatar graphics yet. Create one above to see it here.",
+			"No graphics yet. Create one above to see it here.",
 			UDim2.new(1, 0, 0, 100),
 			{ AlignX = Enum.TextXAlignment.Center, Color = Colors.TextMuted, Wrapped = true, TextSize = 13 }
 		)
@@ -5103,7 +5473,7 @@ function App:_RenderAvatarGraphics()
 		Parent = stack,
 	})
 	Factory.New("UIGridLayout", {
-		CellSize = UDim2.new(1 / gridColumns, -12 * (gridColumns - 1) / gridColumns, 0, 332),
+		CellSize = UDim2.new(1 / gridColumns, -12 * (gridColumns - 1) / gridColumns, 0, 380),
 		CellPadding = UDim2.fromOffset(12, 12),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = gallery,
@@ -5114,7 +5484,7 @@ function App:_RenderAvatarGraphics()
 			local card = Factory.Card(gallery, UDim2.fromScale(1, 1), nil, "GraphicItem")
 			card.LayoutOrder = index
 			local image = Factory.New("ImageLabel", {
-				Size = UDim2.new(1, -20, 0, 160),
+				Size = UDim2.new(1, -20, 0, 132),
 				Position = UDim2.fromOffset(10, 10),
 				BackgroundColor3 = Colors.Ink,
 				BorderSizePixel = 0,
@@ -5125,22 +5495,83 @@ function App:_RenderAvatarGraphics()
 			Factory.Corner(image, 11)
 			Factory.Label(
 				card,
-				string.sub(graphic.filteredPrompt or "Avatar graphic", 1, 60),
-				UDim2.new(1, -20, 0, 32),
-				{ Position = UDim2.fromOffset(10, 176), Font = Theme.Fonts.Medium, TextSize = 11, Wrapped = true }
+				string.sub(graphic.filteredPrompt or "Graphic", 1, 60),
+				UDim2.new(1, -20, 0, 28),
+				{ Position = UDim2.fromOffset(10, 148), Font = Theme.Fonts.Medium, TextSize = 11, Wrapped = true }
 			)
-			local avatarViewLabel = "Bust"
-			for _, view in Config.Generation.AvatarViews do
-				if view.Id == graphic.avatarView then
-					avatarViewLabel = view.Label
-					break
+			local kindLabel = "Text prompt"
+			if graphic.kind ~= "TEXT_TO_IMAGE" then
+				kindLabel = "Bust"
+				for _, view in Config.Generation.AvatarViews do
+					if view.Id == graphic.avatarView then
+						kindLabel = view.Label
+						break
+					end
 				end
 			end
-			Factory.Label(card, avatarViewLabel, UDim2.new(1, -20, 0, 16), {
-				Position = UDim2.fromOffset(10, 210),
+			Factory.Label(card, kindLabel, UDim2.new(1, -20, 0, 14), {
+				Position = UDim2.fromOffset(10, 178),
 				Color = Colors.TextMuted,
 				TextSize = 10,
 			})
+			if graphic.license == "PERSONAL_COPY" then
+				Factory.Label(card, "Personal copy · yours to keep, never resellable", UDim2.new(1, -20, 0, 60), {
+					Position = UDim2.fromOffset(10, 196),
+					Color = Colors.Gold,
+					TextSize = 11,
+					Wrapped = true,
+					AlignY = Enum.TextYAlignment.Top,
+				})
+			else
+				local visibility = Factory.Button(
+					card,
+					if graphic.visibility == "PUBLIC" then "Private" else "Share",
+					UDim2.new(0.48, -5, 0, 32),
+					UDim2.fromOffset(10, 196),
+					nil
+				)
+				self:_BindButton(visibility)
+				visibility.Activated:Connect(function()
+					task.spawn(function()
+						local success, data = self:_Invoke(Network.Actions.SetGraphicVisibility, {
+							graphicId = graphic.id,
+							isPublic = graphic.visibility ~= "PUBLIC",
+						})
+						if success then
+							self.state.profile.graphics[graphic.id] = data.graphic
+							self:_RenderActivePage()
+						end
+					end)
+				end)
+				local priceBox =
+					self:_TextBox(card, "R$ 10–500", UDim2.new(0.52, -5, 0, 32), UDim2.new(0.48, 5, 0, 196), false)
+				priceBox.Text = tostring(graphic.listingPriceRobux or 50)
+				priceBox.TextXAlignment = Enum.TextXAlignment.Center
+				priceBox.FocusLost:Connect(function()
+					priceBox.Text = tostring(math.clamp(math.floor(tonumber(priceBox.Text) or 50), 10, 500))
+				end)
+				local list = Factory.Button(
+					card,
+					if graphic.isListed then "End listing" else "List for sale",
+					UDim2.new(1, -20, 0, 32),
+					UDim2.fromOffset(10, 232),
+					"primary"
+				)
+				self:_BindButton(list)
+				list.Activated:Connect(function()
+					task.spawn(function()
+						local success, data = self:_Invoke(Network.Actions.SetGraphicListing, {
+							graphicId = graphic.id,
+							isListed = not graphic.isListed,
+							priceRobux = tonumber(priceBox.Text),
+						})
+						if success then
+							self.state.profile.graphics[graphic.id] = data.graphic
+							self:_RenderActivePage()
+						end
+					end)
+				end)
+			end
 			-- Roblox experiences cannot save a file to the player's device --
 			-- there is no such API in the client sandbox, for any experience.
 			-- This is the closest honest substitute: the backend already has
@@ -5154,11 +5585,11 @@ function App:_RenderAvatarGraphics()
 				card,
 				if hasLink then "SHAREABLE LINK · TAP, THEN CTRL+C" else "LINK UNAVAILABLE (STUDIO MOCK)",
 				UDim2.new(1, -20, 0, 12),
-				{ Position = UDim2.fromOffset(10, 228), Color = Colors.TextMuted, TextSize = 8 }
+				{ Position = UDim2.fromOffset(10, 270), Color = Colors.TextMuted, TextSize = 8 }
 			)
 			local linkBox = Factory.New("TextBox", {
-				Size = UDim2.new(1, -20, 0, 40),
-				Position = UDim2.fromOffset(10, 241),
+				Size = UDim2.new(1, -20, 0, 34),
+				Position = UDim2.fromOffset(10, 283),
 				BackgroundColor3 = Colors.Ink,
 				BackgroundTransparency = 0.12,
 				BorderSizePixel = 0,
@@ -5177,7 +5608,7 @@ function App:_RenderAvatarGraphics()
 			})
 			Factory.Corner(linkBox, 8)
 			Factory.Padding(linkBox, 6, 4)
-			local delete = Factory.Button(card, "Delete", UDim2.new(1, -20, 0, 32), UDim2.fromOffset(10, 286), nil)
+			local delete = Factory.Button(card, "Delete", UDim2.new(1, -20, 0, 30), UDim2.fromOffset(10, 326), nil)
 			self:_BindButton(delete)
 			delete.Activated:Connect(function()
 				delete.Active = false
