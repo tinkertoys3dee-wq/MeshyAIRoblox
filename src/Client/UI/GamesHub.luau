@@ -340,10 +340,15 @@ function GamesHub.Show(app: any)
 		ZIndex = 212,
 		Parent = modal,
 	})
+	-- Starts 38px higher than hubView (reclaiming the reward banner's row,
+	-- which showHub/playGame/showLeaderboardTab below hide outside the
+	-- picker) so an actual game or the standings list gets more room than
+	-- the tile picker needs to spend on a banner that's only relevant while
+	-- choosing what to play.
 	local gameView = Factory.New("Frame", {
 		Name = "GameView",
-		Position = UDim2.fromOffset(12, 116),
-		Size = UDim2.new(1, -24, 1, -128),
+		Position = UDim2.fromOffset(12, 78),
+		Size = UDim2.new(1, -24, 1, -90),
 		BackgroundTransparency = 1,
 		Visible = false,
 		ZIndex = 212,
@@ -351,8 +356,8 @@ function GamesHub.Show(app: any)
 	})
 	local leaderboardView = Factory.New("Frame", {
 		Name = "LeaderboardView",
-		Position = UDim2.fromOffset(12, 116),
-		Size = UDim2.new(1, -24, 1, -128),
+		Position = UDim2.fromOffset(12, 78),
+		Size = UDim2.new(1, -24, 1, -90),
 		BackgroundTransparency = 1,
 		Visible = false,
 		ZIndex = 212,
@@ -363,11 +368,13 @@ function GamesHub.Show(app: any)
 	-- which stays interactive throughout) whenever the picker/game/
 	-- leaderboard views swap -- cheaper and more robust than trying to
 	-- cross-fade dozens of individual descendants across three very
-	-- different view layouts.
+	-- different view layouts. Sized to the taller of the two footprints
+	-- (gameView/leaderboardView's, which start higher than hubView's) so it
+	-- fully covers whichever view is swapping in or out.
 	local transitionOverlay = Factory.New("Frame", {
 		Name = "ViewTransition",
-		Position = UDim2.fromOffset(12, 116),
-		Size = UDim2.new(1, -24, 1, -128),
+		Position = UDim2.fromOffset(12, 78),
+		Size = UDim2.new(1, -24, 1, -90),
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
@@ -439,6 +446,9 @@ function GamesHub.Show(app: any)
 			hubView.Visible = true
 			gameView.Visible = false
 			leaderboardView.Visible = false
+			-- Only relevant while picking what to play; hiding it elsewhere
+			-- gives gameView/leaderboardView the extra row they're sized for.
+			rewardBanner.Visible = true
 			if shell then
 				shell:Stop()
 			end
@@ -450,6 +460,7 @@ function GamesHub.Show(app: any)
 			hubView.Visible = false
 			leaderboardView.Visible = false
 			gameView.Visible = true
+			rewardBanner.Visible = false
 			if not shell then
 				shell = GameShell.new(gameView, app.sounds, showHub, submitScore, fetchWeeklyTop, reduceMotion)
 			end
@@ -872,6 +883,7 @@ function GamesHub.Show(app: any)
 			hubView.Visible = false
 			gameView.Visible = false
 			leaderboardView.Visible = true
+			rewardBanner.Visible = false
 			if shell then
 				shell:Stop()
 			end
