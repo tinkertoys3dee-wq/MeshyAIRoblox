@@ -10,6 +10,8 @@ local ViewportController = {}
 ViewportController.__index = ViewportController
 
 local DEFAULT_FOCUS = Vector3.new(0, 1.15, 0)
+local MIN_CAMERA_DISTANCE = 4.25
+local MAX_CAMERA_DISTANCE = 20
 
 local function stripUnsafe(instance: Instance)
 	if instance:IsA("LuaSourceContainer") then
@@ -207,7 +209,8 @@ function ViewportController.new(viewport: ViewportFrame, excludedForgeItemId: st
 			local point = Vector2.new(input.Position.X, input.Position.Y)
 			if not self.destroyed and pointInsideVisibleBounds(viewport, point) then
 				setPageScrollLocked(true)
-				self.distance = math.clamp(self.distance - input.Position.Z * 0.85, 4.25, 14)
+				self.distance =
+					math.clamp(self.distance - input.Position.Z * 0.85, MIN_CAMERA_DISTANCE, MAX_CAMERA_DISTANCE)
 				self:_UpdateCamera()
 			end
 		end
