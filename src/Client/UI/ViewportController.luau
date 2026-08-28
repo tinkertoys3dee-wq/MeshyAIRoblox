@@ -11,7 +11,7 @@ ViewportController.__index = ViewportController
 
 local DEFAULT_FOCUS = Vector3.new(0, 1.15, 0)
 local MIN_CAMERA_DISTANCE = 4.25
-local MAX_CAMERA_DISTANCE = 20
+local MAX_CAMERA_DISTANCE = 14
 
 local function stripUnsafe(instance: Instance)
 	if instance:IsA("LuaSourceContainer") then
