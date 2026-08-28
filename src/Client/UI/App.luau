@@ -6452,7 +6452,15 @@ function App:_ShowLeaderboard()
 		MaxSize = Vector2.new(440, 480),
 		Parent = modal,
 	})
-	Factory.Pill(modal, "TOP CREATORS", Colors.Gold, 130).Position = UDim2.fromOffset(16, 16)
+	local topCreatorsPill = Factory.Pill(modal, "TOP CREATORS", Colors.Gold, 130)
+	topCreatorsPill.Position = UDim2.fromOffset(16, 16)
+	-- Every other element in this modal explicitly escalates ZIndex past the
+	-- overlay/modal's own (210/211) since this app's ScreenGui compares
+	-- ZIndex globally, not just among siblings -- this pill was left at
+	-- Factory.Pill's un-overridden default of 1, so it was painting behind
+	-- the Discover page's own cards (ZIndex >= 1) showing through the
+	-- semi-transparent backdrop behind the modal instead of on top of it.
+	topCreatorsPill.ZIndex = 212
 	Factory.Label(
 		modal,
 		"Ranked by likes received across every published and listed creation.",
@@ -6651,8 +6659,11 @@ function App:_ShowContentDetail(descriptor: { [string]: any })
 	glow.AnchorPoint = Vector2.new(0.5, 0.5)
 	glow.ZIndex = ZBASE
 
-	local closeButton = Factory.Button(modal, "×", UDim2.fromOffset(34, 34), UDim2.new(1, -50, 0, 14), nil)
-	closeButton.ZIndex = ZBASE + 3
+	-- Top-left instead of top-right (and above the preview image's own
+	-- ZIndex, since it now sits over that image's corner rather than beside
+	-- it) per the user's request to move this one specifically.
+	local closeButton = Factory.Button(modal, "×", UDim2.fromOffset(34, 34), UDim2.fromOffset(14, 14), nil)
+	closeButton.ZIndex = ZBASE + 4
 	self:_BindButton(closeButton)
 	closeButton.Activated:Connect(function()
 		self.sounds:Play("PanelClose")
