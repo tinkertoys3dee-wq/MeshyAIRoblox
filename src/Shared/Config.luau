@@ -354,6 +354,19 @@ return table.freeze({
 		SellerShare = 0.90,
 		PageSize = 24,
 		TransferIntentLifetimeSeconds = 30 * 60,
+		-- Fixed tip amounts a viewer can send a creator straight from a
+		-- Discover item/graphic, no listing required. A fixed allowlist
+		-- (checked server-side, never trusting a client-supplied amount)
+		-- keeps this on the same MarketplaceService:PromptRobuxTransferAsync
+		-- primitive SetListing-backed purchases already use, just without a
+		-- listing or a copy grant behind it. All four sit inside
+		-- Minimum/MaximumTransferRobux above.
+		TipTiers = { 10, 25, 50, 100 },
+		-- Bounds for the owner-set title/description shown on a Discover
+		-- item/graphic and its detail overlay. Both fields are optional
+		-- (an owner can clear either), unlike a generation prompt.
+		TitleMaxLength = 40,
+		DescriptionMaxLength = 240,
 	},
 
 	DataStores = {

@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
+local ModerationService = require(script.Parent.ModerationService)
 
 local CommunityService = {}
 CommunityService.__index = CommunityService
@@ -45,6 +46,8 @@ local function publicItem(
 		ownerUserId = item.ownerUserId,
 		ownerName = ownerName,
 		name = item.name,
+		title = item.title,
+		description = item.description,
 		method = item.method,
 		stylePreset = item.stylePreset or "AUTO",
 		detailLevel = item.detailLevel or "BALANCED",
@@ -73,6 +76,8 @@ local function publicGraphic(
 		ownerUserId = graphic.ownerUserId,
 		ownerName = ownerName,
 		kind = graphic.kind or "AVATAR_GRAPHIC",
+		title = graphic.title,
+		description = graphic.description,
 		filteredPrompt = graphic.filteredPrompt,
 		stylePreset = graphic.stylePreset or "AUTO",
 		createdAt = graphic.createdAt,
@@ -563,6 +568,52 @@ function CommunityService:SetListing(player: Player, payload: any): (boolean, an
 	return true, { item = item }
 end
 
+-- Owner-only title/description edit for an item, shown on its Discover card
+-- and detail overlay. Both fields are optional -- omitting one from the
+-- payload leaves it unchanged; sending an explicit empty string clears it.
+-- No marketplace-index update needed: _ResolvePublic already re-reads the
+-- full item straight from the owner's profile on every call, only
+-- overlaying the fast-changing index fields (likes/favorites/views/listing
+-- state) on top, so title/description are current the moment they're saved.
+function CommunityService:SetItemDetails(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
+		return false, "INVALID_REQUEST"
+	end
+	local profile = self.profiles:Get(player)
+	local item = profile and profile.items[payload.itemId]
+	if not item or item.ownerUserId ~= player.UserId then
+		return false, "ITEM_NOT_SHAREABLE"
+	end
+	local titleOk, title, titleError =
+		ModerationService.FilterOptionalText(player, payload.title, Config.Marketplace.TitleMaxLength)
+	if not titleOk then
+		return false, titleError or "TEXT_INVALID"
+	end
+	local descriptionOk, description, descriptionError =
+		ModerationService.FilterOptionalText(player, payload.description, Config.Marketplace.DescriptionMaxLength)
+	if not descriptionOk then
+		return false, descriptionError or "TEXT_INVALID"
+	end
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(mutableProfile)
+		local mutableItem = mutableProfile.items[payload.itemId]
+		if payload.title ~= nil then
+			mutableItem.title = title
+		end
+		if payload.description ~= nil then
+			mutableItem.description = description
+		end
+		mutableItem.updatedAt = os.time()
+	end)
+	if not mutateSuccess then
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	self.analytics:Custom(player, "ItemDetailsChanged", 1, {})
+	return true, { item = self.profiles:Get(player).items[payload.itemId] }
+end
+
 function CommunityService:SetGraphicVisibility(player: Player, payload: any): (boolean, any)
 	if type(payload) ~= "table" or type(payload.graphicId) ~= "string" or type(payload.isPublic) ~= "boolean" then
 		return false, "INVALID_REQUEST"
@@ -645,6 +696,47 @@ function CommunityService:SetGraphicListing(player: Player, payload: any): (bool
 		self.achievements:Unlock(player, "FIRST_LISTING")
 	end
 	return true, { graphic = graphic }
+end
+
+-- Same owner-only, optional-field, no-index-update shape as SetItemDetails
+-- above, for a graphic instead of an item.
+function CommunityService:SetGraphicDetails(player: Player, payload: any): (boolean, any)
+	if type(payload) ~= "table" or type(payload.graphicId) ~= "string" then
+		return false, "INVALID_REQUEST"
+	end
+	local profile = self.profiles:Get(player)
+	local graphic = profile and profile.graphics[payload.graphicId]
+	if not graphic or graphic.ownerUserId ~= player.UserId then
+		return false, "GRAPHIC_NOT_SHAREABLE"
+	end
+	local titleOk, title, titleError =
+		ModerationService.FilterOptionalText(player, payload.title, Config.Marketplace.TitleMaxLength)
+	if not titleOk then
+		return false, titleError or "TEXT_INVALID"
+	end
+	local descriptionOk, description, descriptionError =
+		ModerationService.FilterOptionalText(player, payload.description, Config.Marketplace.DescriptionMaxLength)
+	if not descriptionOk then
+		return false, descriptionError or "TEXT_INVALID"
+	end
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(mutableProfile)
+		local mutableGraphic = mutableProfile.graphics[payload.graphicId]
+		if payload.title ~= nil then
+			mutableGraphic.title = title
+		end
+		if payload.description ~= nil then
+			mutableGraphic.description = description
+		end
+		mutableGraphic.updatedAt = os.time()
+	end)
+	if not mutateSuccess then
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	self.analytics:Custom(player, "GraphicDetailsChanged", 1, {})
+	return true, { graphic = self.profiles:Get(player).graphics[payload.graphicId] }
 end
 
 function CommunityService:_ToggleReaction(
@@ -1082,6 +1174,156 @@ function CommunityService:BeginGraphicPurchase(player: Player, payload: any): (b
 	return true, { transferRequestId = transferId, prompted = true }
 end
 
+-- Same PromptRobuxTransferAsync primitive, single-active-prompt mutex, and
+-- claimStore recovery marker as BeginPurchase/BeginGraphicPurchase above --
+-- a tip is a creator-support transfer with no listing and no copy to grant,
+-- so it skips the isListed/canList checks those two require and goes
+-- straight from "does this public item/graphic exist and is it someone
+-- else's" to prompting. contentType = "TIP" on the pending record is what
+-- routes _ProcessSenderReceipt to _ProcessTip below instead of a grant.
+function CommunityService:BeginTip(player: Player, payload: any): (boolean, any)
+	if
+		type(payload) ~= "table"
+		or (payload.contentType ~= "ITEM" and payload.contentType ~= "GRAPHIC")
+		or type(payload.contentId) ~= "string"
+	then
+		return false, "INVALID_REQUEST"
+	end
+	local amount = math.floor(tonumber(payload.amount) or 0)
+	local validAmount = false
+	for _, tier in Config.Marketplace.TipTiers do
+		if tier == amount then
+			validAmount = true
+			break
+		end
+	end
+	if not validAmount then
+		return false, "INVALID_TIP_AMOUNT"
+	end
+	local state = self.playerStates:Get(player)
+	local studioMock = RunService:IsStudio() and Config.Studio.AllowMockPurchases
+	if not state.plusSubscriber and not studioMock then
+		return false, "PLUS_REQUIRED"
+	end
+	if not state.contentSharingAllowed or not state.paidTradingAllowed then
+		return false, "COMMERCE_NOT_ALLOWED"
+	end
+	local content = if payload.contentType == "ITEM"
+		then self:_ResolvePublic(payload.contentId, true)
+		else self:_ResolvePublicGraphic(payload.contentId, true)
+	if not content then
+		return false, "CONTENT_NOT_FOUND"
+	end
+	if content.ownerUserId == player.UserId then
+		return false, "CANNOT_TIP_SELF"
+	end
+	local now = os.time()
+	local snapshot = deepCopy(content)
+	local preliminaryId = self.profiles:GenerateId("transfer")
+	if self.activeTransferPrompts[player.UserId] then
+		return false, "TRANSFER_ALREADY_PENDING"
+	end
+	self.activeTransferPrompts[player.UserId] = preliminaryId
+	local function releasePrompt()
+		if self.activeTransferPrompts[player.UserId] == preliminaryId then
+			self.activeTransferPrompts[player.UserId] = nil
+		end
+	end
+	local cleanupSuccess, cleanupProblem = self.profiles:Mutate(player, function(profile)
+		for transferId, pending in profile.pendingTransfers do
+			local createdAt = if type(pending) == "table" then tonumber(pending.createdAt) or 0 else 0
+			local status = if type(pending) == "table" then pending.status else nil
+			local expired = createdAt <= 0 or createdAt + Config.Marketplace.TransferIntentLifetimeSeconds < now
+			if type(pending) ~= "table" or expired or (status ~= "PROMPTING" and status ~= "AWAITING_RECEIPT") then
+				profile.pendingTransfers[transferId] = nil
+			elseif status == "PROMPTING" then
+				profile.pendingTransfers[transferId] = nil
+			end
+		end
+	end)
+	if not cleanupSuccess then
+		releasePrompt()
+		return false, cleanupProblem or "PROFILE_UNAVAILABLE"
+	end
+	local mutateSuccess, mutateProblem = self.profiles:Mutate(player, function(profile)
+		profile.pendingTransfers[preliminaryId] = {
+			transferRequestId = preliminaryId,
+			status = "PROMPTING",
+			contentType = "TIP",
+			itemId = content.id,
+			sellerUserId = content.ownerUserId,
+			amount = amount,
+			sourceItem = snapshot,
+			createdAt = now,
+		}
+	end)
+	if not mutateSuccess then
+		releasePrompt()
+		return false, mutateProblem or "PROFILE_UNAVAILABLE"
+	end
+	if not self.profiles:Save(player) then
+		releasePrompt()
+		self.profiles:Mutate(player, function(profile)
+			profile.pendingTransfers[preliminaryId] = nil
+		end)
+		return false, "SAVE_FAILED"
+	end
+
+	if studioMock then
+		releasePrompt()
+		local processed = self:_ProcessTip(player, preliminaryId)
+		return processed, if processed then { mocked = true } else "GRANT_FAILED"
+	end
+
+	local success, transferId = pcall(function()
+		return MarketplaceService:PromptRobuxTransferAsync(player, content.ownerUserId, amount)
+	end)
+	releasePrompt()
+	if not success or type(transferId) ~= "string" then
+		self.profiles:Mutate(player, function(profile)
+			profile.pendingTransfers[preliminaryId] = nil
+		end)
+		self.profiles:Save(player)
+		return false, "TRANSFER_PROMPT_FAILED"
+	end
+	local recoveryPending = {
+		transferRequestId = transferId,
+		status = "AWAITING_RECEIPT",
+		contentType = "TIP",
+		itemId = content.id,
+		sellerUserId = content.ownerUserId,
+		amount = amount,
+		sourceItem = snapshot,
+		createdAt = now,
+	}
+	local recoverySaved, recoveryProblem = pcall(function()
+		self.claimStore:UpdateAsync(transferId, function(stored)
+			if type(stored) == "table" and stored.state == "PROCESSED" then
+				return stored
+			end
+			return {
+				state = "PENDING",
+				buyerUserId = player.UserId,
+				preliminaryId = preliminaryId,
+				pending = recoveryPending,
+				createdAt = now,
+			}
+		end)
+	end)
+	if not recoverySaved then
+		warn(string.format("[CommunityService] Tip recovery marker failed: %s", tostring(recoveryProblem)))
+	end
+	self.profiles:Mutate(player, function(profile)
+		profile.pendingTransfers[preliminaryId] = nil
+		profile.pendingTransfers[transferId] = deepCopy(recoveryPending)
+	end)
+	if not self.profiles:Save(player) then
+		warn(string.format("[CommunityService] Tip %s is awaiting a persistence retry", transferId))
+	end
+	self.analytics:Funnel(player, "tip", 1, "Tip prompted", { price = amount })
+	return true, { transferRequestId = transferId, prompted = true }
+end
+
 function CommunityService:_GrantItemCopy(player: Player, transferId: string): (boolean, any)
 	local profile = self.profiles:Get(player)
 	local pending = profile and profile.pendingTransfers[transferId]
@@ -1230,6 +1472,63 @@ function CommunityService:_GrantGraphicCopy(player: Player, transferId: string):
 	return true, copy
 end
 
+-- Same idempotent-receipt guard as _GrantItemCopy/_GrantGraphicCopy above
+-- (receiptKey stored on profile.processedReceipts), but there is no copy to
+-- grant -- a tip is pure support, not a purchase -- so this just retires the
+-- pending record, credits both sides' stats, and toasts both players (the
+-- recipient only if they're currently online; the tip itself already landed
+-- either way once Roblox confirms the transfer).
+function CommunityService:_ProcessTip(player: Player, transferId: string): boolean
+	local profile = self.profiles:Get(player)
+	local pending = profile and profile.pendingTransfers[transferId]
+	if not pending then
+		return false
+	end
+	local receiptKey = "transfer:" .. transferId
+	if profile.processedReceipts[receiptKey] then
+		return true
+	end
+	local sellerUserId = pending.sellerUserId
+	local amount = pending.amount
+	self.profiles:Mutate(player, function(mutableProfile)
+		mutableProfile.processedReceipts[receiptKey] = os.time()
+		mutableProfile.pendingTransfers[transferId] = nil
+		mutableProfile.stats.tipsSent = (mutableProfile.stats.tipsSent or 0) + 1
+		mutableProfile.stats.tipRobuxSent = (mutableProfile.stats.tipRobuxSent or 0) + amount
+	end)
+	if not self.profiles:Save(player) then
+		return false
+	end
+	pcall(function()
+		self.claimStore:UpdateAsync(transferId, function()
+			return {
+				state = "PROCESSED",
+				buyerUserId = player.UserId,
+				itemId = "tip",
+				processedAt = os.time(),
+			}
+		end)
+	end)
+	self.push(player, Network.PushEvents.Transfer, { status = "COMPLETED", itemId = "tip" })
+	self.push(player, Network.PushEvents.Toast, {
+		tone = "ready",
+		message = string.format("Tip sent -- thanks for supporting this creator! (R$ %d)", amount),
+	})
+	self.profiles:MutateUser(sellerUserId, function(ownerProfile)
+		ownerProfile.stats.tipsReceived = (ownerProfile.stats.tipsReceived or 0) + 1
+		ownerProfile.stats.tipRobuxReceived = (ownerProfile.stats.tipRobuxReceived or 0) + amount
+	end)
+	local sellerPlayer = Players:GetPlayerByUserId(sellerUserId)
+	if sellerPlayer then
+		self.push(sellerPlayer, Network.PushEvents.Toast, {
+			tone = "ready",
+			message = string.format("You received a R$ %d tip from a fan!", amount),
+		})
+	end
+	self.analytics:Funnel(player, "tip", 2, "Tip completed", { price = amount })
+	return true
+end
+
 function CommunityService:_ProcessSenderReceipt(receiptInfo: { [string]: any }): Enum.ReceiptDecision
 	local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
 	if not player or not self.profiles:Get(player) then
@@ -1288,9 +1587,10 @@ function CommunityService:_ProcessSenderReceipt(receiptInfo: { [string]: any }):
 	end
 	-- Defaults to the item grant path for any pending record written before
 	-- contentType existed -- see the matching comment on PendingTransfer in
-	-- Types.luau.
-	local success = if pending.contentType == "GRAPHIC"
-		then self:_GrantGraphicCopy(player, transferId)
+	-- Types.luau. A tip has no copy to grant, just a receipt to clear.
+	local success = if pending.contentType == "TIP"
+		then self:_ProcessTip(player, transferId)
+		elseif pending.contentType == "GRAPHIC" then self:_GrantGraphicCopy(player, transferId)
 		else self:_GrantItemCopy(player, transferId)
 	return if success then Enum.ReceiptDecision.Processed else Enum.ReceiptDecision.NotProcessedYet
 end
