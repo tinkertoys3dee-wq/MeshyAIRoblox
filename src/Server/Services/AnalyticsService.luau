@@ -1,10 +1,17 @@
 --!strict
 
+local Players = game:GetService("Players")
 local RobloxAnalytics = game:GetService("AnalyticsService")
 local HttpService = game:GetService("HttpService")
 
 local AnalyticsService = {}
 AnalyticsService.__index = AnalyticsService
+
+-- One funnel step per whole minute of session playtime, 1-15: how many
+-- players are still around after 1 minute, 2 minutes, ... 15 minutes. Read
+-- as a retention/drop-off curve on the dashboard, distinct from
+-- ForgeSessionEnded's single final duration.
+local PLAYTIME_FUNNEL_MINUTES = 15
 
 local CLIENT_EVENTS = {
 	AppOpenedTab = true,
@@ -84,6 +91,7 @@ function AnalyticsService:PlayerJoined(player: Player, returning: boolean)
 		generation = HttpService:GenerateGUID(false),
 		reference = HttpService:GenerateGUID(false),
 		marketplace = HttpService:GenerateGUID(false),
+		playtime = HttpService:GenerateGUID(false),
 		startedAt = os.time(),
 	}
 	safeCall(function()
@@ -94,6 +102,28 @@ function AnalyticsService:PlayerJoined(player: Player, returning: boolean)
 	if not returning then
 		self:Onboarding(player, 1, "Entered Forge")
 	end
+	self:_TrackPlaytimeFunnel(player)
+end
+
+-- Fires the "playtime" funnel's 15 minute-by-minute steps for this player's
+-- session, one per elapsed minute, stopping early the moment they leave (the
+-- session table is nil'd out by Remove below) so a player who leaves after 4
+-- minutes only ever registers steps 1-4, never the later ones.
+function AnalyticsService:_TrackPlaytimeFunnel(player: Player)
+	task.spawn(function()
+		for minute = 1, PLAYTIME_FUNNEL_MINUTES do
+			task.wait(60)
+			if player.Parent ~= Players or not self.sessions[player] then
+				return
+			end
+			self:Funnel(
+				player,
+				"playtime",
+				minute,
+				string.format("%d minute%s played", minute, if minute == 1 then "" else "s")
+			)
+		end
+	end)
 end
 
 function AnalyticsService:Onboarding(player: Player, step: number, stepName: string)
