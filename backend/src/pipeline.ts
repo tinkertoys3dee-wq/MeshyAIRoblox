@@ -423,6 +423,7 @@ export class JobRunner {
       textureHeight: validated.textureHeight,
     });
 
+    const current = await this.#requiredJob(job.id);
     let preparedThumbnail: Buffer | undefined;
     if (thumbnailUrl) {
       const thumbnail = await this.#meshy.download(thumbnailUrl);
@@ -430,11 +431,24 @@ export class JobRunner {
         .resize(512, 512, { fit: "cover" })
         .png({ compressionLevel: 9 })
         .toBuffer();
+    } else if (current.imageArtifact) {
+      // Meshy doesn't return a thumbnail_url for every task kind -- notably
+      // image-to-3D routinely omits it, which used to leave the item with no
+      // outer preview at all even though the model itself came through fine.
+      // The reference image that was actually converted is already
+      // downloaded and moderated earlier in this same job, and is a
+      // reasonable stand-in preview (it's literally what the model was built
+      // from), so fall back to it instead of leaving thumbnailAssetId unset.
+      preparedThumbnail = await sharp(current.imageArtifact)
+        .resize(512, 512, { fit: "cover" })
+        .png({ compressionLevel: 9 })
+        .toBuffer();
+    }
+    if (preparedThumbnail) {
       await this.#images.assertImageSafe(preparedThumbnail);
     }
 
     await this.#set(job.id, "UPLOADING", "Uploading the validated model to Roblox", 88);
-    const current = await this.#requiredJob(job.id);
     let modelAssetId = current.output.modelAssetId;
     if (!modelAssetId) {
       modelAssetId = await this.#roblox.uploadModel(validated.glb, job.id);
