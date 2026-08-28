@@ -117,7 +117,7 @@ return table.freeze({
 		-- exactly one token, while this deliberately stronger 10-Robux offer
 		-- gives paying players a useful amount at once. Create this repeatable
 		-- developer product in Creator Hub and replace 0 with its ID.
-		TokenPack70 = { Id = 0, SuggestedPrice = 10 },
+		TokenPack70 = { Id = 3710290071, SuggestedPrice = 10 },
 		-- Rewarded-video wrapper product. Roblox recommends an ad reward worth
 		-- 3-10 Robux and its official flow wraps a normal developer product, so
 		-- this stays a separate one-token product rather than overloading the
