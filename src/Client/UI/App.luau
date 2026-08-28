@@ -354,6 +354,17 @@ function App.new()
 		-- ScrollingFrame instances themselves) -- see _TrackScroll.
 		scrollPositions = {} :: { [string]: Vector2 },
 		triedOnAssetIds = {} :: { [number]: boolean },
+		-- Display metadata for the avatar preview panel's "TRIED ON" list
+		-- (name + accessory type per assetId) -- triedOnAssetIds alone is
+		-- just a set, with nothing to show besides the asset ID itself.
+		triedOnAssetInfo = {} :: { [number]: { name: string, assetType: string } },
+		-- True whenever the player's actual applied avatar description may
+		-- have changed since the panel's ViewportController last snapshotted
+		-- it (see ViewportController.new), so the panel knows to rebuild the
+		-- 3D mannequin. Left true after Try/Untry/Reset; never set for
+		-- unrelated re-renders (search, filters, sort) so those don't pay for
+		-- an avatar rebuild that wouldn't show anything different.
+		avatarPreviewDirty = true,
 		usePriority = false,
 		paymentMethod = "ROBUX",
 		adAvailable = nil :: boolean?,
@@ -805,6 +816,9 @@ function App:_BuildChrome()
 		table.insert(self.ambientBlobs, { instance = blob, restPosition = spec.position })
 	end
 
+	self.backdrop = backdrop
+	self:_BuildAvatarPreviewPanel(backdrop)
+
 	self.toastHost = Factory.New("Frame", {
 		Name = "Toasts",
 		AnchorPoint = Vector2.new(1, 0),
@@ -866,6 +880,238 @@ function App:_BuildChrome()
 	end
 	self:_ApplyResponsiveLayout()
 	self:_HighlightNavigation()
+end
+
+-- Builds the Avatar Lab side panel's chrome once: a live viewport of the
+-- player's own avatar (so Roblox catalog items can be seen on them while
+-- browsing) with a "TRIED ON" list underneath listing what's currently
+-- applied, each with a Remove button. A sibling of `shell` under `backdrop`
+-- -- like AmbientBackground above -- rather than a child of `shell`, since
+-- `shell` has ClipsDescendants and this panel needs to sit outside its
+-- bounds, to its right. Its own geometry is recomputed live off `shell`'s
+-- AbsolutePosition/AbsoluteSize (see _LayoutAvatarPreviewPanel) because
+-- `shell` is scale-sized but clamped by a UISizeConstraint, so no fixed
+-- scale/offset formula tracks its edges exactly. Its content (the 3D
+-- mannequin and the list rows) is filled in later by _SyncAvatarPreviewPanel,
+-- called once per _RenderActivePage rather than here.
+function App:_BuildAvatarPreviewPanel(backdrop: Frame)
+	local panel = Factory.New("Frame", {
+		Name = "AvatarPreviewPanel",
+		BackgroundColor3 = Colors.Panel,
+		BackgroundTransparency = 0.03,
+		BorderSizePixel = 0,
+		ClipsDescendants = true,
+		Visible = false,
+		ZIndex = 2,
+		Parent = backdrop,
+	})
+	Factory.Corner(panel, 22)
+	Factory.Stroke(panel, Color3.fromRGB(101, 113, 170), 0.35, 1.2)
+	self.avatarPreviewPanel = panel
+
+	Factory.Label(panel, "YOUR AVATAR", UDim2.new(1, -28, 0, 18), {
+		Position = UDim2.fromOffset(16, 14),
+		Font = Theme.Fonts.Bold,
+		TextSize = 12,
+		Color = Colors.TextMuted,
+	})
+
+	-- Split the panel's height 50/50 between the viewport and the list below
+	-- it, in scale rather than fixed offsets, since the panel's own height
+	-- (== shell's) ranges anywhere from 450 to 860px depending on the
+	-- player's window size.
+	local viewport = Factory.New("ViewportFrame", {
+		Name = "PreviewViewport",
+		Position = UDim2.fromOffset(14, 40),
+		Size = UDim2.new(1, -28, 0.5, -44),
+		BackgroundColor3 = Color3.fromRGB(62, 72, 108),
+		BorderSizePixel = 0,
+		Parent = panel,
+	})
+	Factory.Corner(viewport, 14)
+	Factory.Stroke(viewport, Colors.Violet, 0.45)
+	self.avatarPreviewViewport = viewport
+
+	local resetCameraButton = Factory.Button(viewport, "↺", UDim2.fromOffset(32, 28), UDim2.new(1, -42, 0, 8), nil)
+	resetCameraButton.Name = "ResetCamera"
+	resetCameraButton.TextSize = 15
+	resetCameraButton.ZIndex = 5
+	self:_BindButton(resetCameraButton)
+	resetCameraButton.Activated:Connect(function()
+		if self.avatarPreviewViewportController then
+			self.avatarPreviewViewportController:ResetCamera()
+		end
+	end)
+
+	Factory.New("Frame", {
+		Name = "Divider",
+		Position = UDim2.new(0, 14, 0.5, 4),
+		Size = UDim2.new(1, -28, 0, 1),
+		BackgroundColor3 = Colors.Line,
+		BackgroundTransparency = 0.5,
+		BorderSizePixel = 0,
+		Parent = panel,
+	})
+	Factory.Label(panel, "TRIED ON", UDim2.new(1, -32, 0, 16), {
+		Position = UDim2.new(0, 16, 0.5, 14),
+		Font = Theme.Fonts.Bold,
+		TextSize = 11,
+		Color = Colors.TextMuted,
+	})
+
+	local list = Factory.New("ScrollingFrame", {
+		Name = "TriedOnList",
+		Position = UDim2.new(0, 14, 0.5, 40),
+		Size = UDim2.new(1, -28, 0.5, -54),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = Colors.Cyan,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		Parent = panel,
+	})
+	Factory.List(list, Enum.FillDirection.Vertical, 8)
+	self.avatarPreviewList = list
+
+	self.avatarPreviewEmptyLabel =
+		Factory.Label(list, "Try on catalog items below and they'll show up here.", UDim2.new(1, 0, 0, 40), {
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
+		})
+
+	local function relayout()
+		self:_LayoutAvatarPreviewPanel()
+	end
+	self.shell:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
+	self.shell:GetPropertyChangedSignal("AbsolutePosition"):Connect(relayout)
+end
+
+-- Cheap, purely geometric: positions/sizes the panel against `shell`'s
+-- current on-screen rect and decides whether it's allowed to show at all
+-- (only on the Avatar Lab page, only when there's real room to its right).
+-- Safe to call often -- driven by `shell`'s AbsoluteSize/AbsolutePosition
+-- signals above, and once per _RenderActivePage via _SyncAvatarPreviewPanel
+-- -- since it never touches the viewport avatar or the try-on list.
+function App:_LayoutAvatarPreviewPanel()
+	local panel = self.avatarPreviewPanel
+	if not panel then
+		return
+	end
+	local shell = self.shell
+	local backdrop = self.backdrop
+	local camera = Workspace.CurrentCamera
+	local viewportWidth = if camera then camera.ViewportSize.X else 1200
+	local gap = 18
+	local minWidth = 240
+	local maxWidth = 340
+	local shellLeft = shell.AbsolutePosition.X - backdrop.AbsolutePosition.X
+	local shellRight = shellLeft + shell.AbsoluteSize.X
+	local available = viewportWidth - shellRight - gap * 2
+	local wanted = self.activePage == "Avatar Lab" and not self.compact and shell.Visible
+	if not wanted or available < minWidth or shell.AbsoluteSize.Y <= 0 then
+		panel.Visible = false
+		return
+	end
+	local shellTop = shell.AbsolutePosition.Y - backdrop.AbsolutePosition.Y
+	panel.Position = UDim2.fromOffset(shellRight + gap, shellTop)
+	panel.Size = UDim2.fromOffset(math.clamp(available, minWidth, maxWidth), shell.AbsoluteSize.Y)
+	panel.Visible = true
+end
+
+-- Rebuilds the try-on list's rows every call (cheap: a handful of local
+-- table reads and small labels, no network round trip) and rebuilds the 3D
+-- mannequin only when avatarPreviewDirty says the player's applied avatar
+-- description may actually have changed since it was last snapshotted --
+-- ViewportController.new() reads that description once at construction and
+-- never again, so cheaply-triggered re-renders (search, sort, filters) on
+-- the Avatar Lab page must not treat that as a reason to rebuild it. Called
+-- once at the end of every _RenderActivePage.
+function App:_SyncAvatarPreviewPanel()
+	self:_LayoutAvatarPreviewPanel()
+	local panel = self.avatarPreviewPanel
+	if not panel or not panel.Visible then
+		if self.avatarPreviewViewportController then
+			self.avatarPreviewViewportController:Destroy()
+			self.avatarPreviewViewportController = nil
+		end
+		return
+	end
+	for _, child in self.avatarPreviewList:GetChildren() do
+		if child.Name == "TriedOnItemRow" then
+			child:Destroy()
+		end
+	end
+	local count = 0
+	for assetId, info in self.triedOnAssetInfo do
+		if self.triedOnAssetIds[assetId] then
+			count += 1
+			self:_BuildTriedOnRow(assetId, info)
+		end
+	end
+	self.avatarPreviewEmptyLabel.Visible = count == 0
+	if self.avatarPreviewDirty or not self.avatarPreviewViewportController then
+		if self.avatarPreviewViewportController then
+			self.avatarPreviewViewportController:Destroy()
+		end
+		self.avatarPreviewViewportController = ViewportController.new(self.avatarPreviewViewport)
+		self.avatarPreviewDirty = false
+	end
+end
+
+-- One row in the panel's "TRIED ON" list: a small thumbnail, the item's
+-- name, and a Remove button that unequips it the same way the catalog
+-- grid's own "Unequip" button does (Network.Actions.UntryCatalogAsset),
+-- just from this side panel instead.
+function App:_BuildTriedOnRow(assetId: number, info: { name: string, assetType: string })
+	local row = Factory.New("Frame", {
+		Name = "TriedOnItemRow",
+		Size = UDim2.new(1, 0, 0, 52),
+		BackgroundColor3 = Colors.PanelSoft,
+		BorderSizePixel = 0,
+		Parent = self.avatarPreviewList,
+	})
+	Factory.Corner(row, Theme.SmallCorner)
+	local icon = Factory.New("ImageLabel", {
+		Size = UDim2.fromOffset(40, 40),
+		Position = UDim2.fromOffset(6, 6),
+		BackgroundColor3 = Colors.Ink,
+		BorderSizePixel = 0,
+		Image = thumbnail(assetId, 100),
+		ScaleType = Enum.ScaleType.Crop,
+		Parent = row,
+	})
+	Factory.Corner(icon, 8)
+	Factory.Label(row, info.name, UDim2.new(1, -104, 0, 34), {
+		Position = UDim2.fromOffset(52, 6),
+		Font = Theme.Fonts.Bold,
+		TextSize = 12,
+		Truncate = Enum.TextTruncate.AtEnd,
+		AlignY = Enum.TextYAlignment.Top,
+	})
+	local removeButton = Factory.Button(row, "Remove", UDim2.fromOffset(72, 26), UDim2.new(1, -78, 1, -32), "danger")
+	removeButton.TextSize = 11
+	self:_BindButton(removeButton)
+	removeButton.Activated:Connect(function()
+		removeButton.Active = false
+		removeButton.Text = "Removing…"
+		task.spawn(function()
+			local success =
+				self:_Invoke(Network.Actions.UntryCatalogAsset, { assetId = assetId, avatarAssetType = info.assetType })
+			if success then
+				self.triedOnAssetIds[assetId] = nil
+				self.triedOnAssetInfo[assetId] = nil
+				self.avatarPreviewDirty = true
+				self:_Toast("success", "Catalog item removed.")
+				self:_RenderActivePage()
+			elseif removeButton.Parent then
+				removeButton.Active = true
+				removeButton.Text = "Remove"
+			end
+		end)
+	end)
 end
 
 -- One ember: fades in, drifts upward with a little horizontal wander while
@@ -1008,6 +1254,12 @@ function App:_ApplyResponsiveLayout()
 		tip.Visible = not compact and height >= 620
 	end
 	self.statusArea.Visible = width >= 1120
+	-- Belt-and-suspenders alongside the AbsoluteSize/AbsolutePosition signals
+	-- wired up in _BuildAvatarPreviewPanel: those cover shell's rect actually
+	-- moving/resizing, but self.compact (read by _LayoutAvatarPreviewPanel)
+	-- can flip without either changing, e.g. when shell is already pinned to
+	-- its UISizeConstraint's clamped size on both sides of the resize.
+	self:_LayoutAvatarPreviewPanel()
 	if layoutChanged and self.state then
 		task.defer(function()
 			self:_RenderActivePage()
@@ -1358,6 +1610,16 @@ function App:_SetHighContrast(enabled: boolean)
 	local wasOpen = self.shell.Visible
 	local motionWasEnabled = self.ambientMotionEnabled
 	Theme.SetHighContrast(enabled)
+	-- _BuildAvatarPreviewPanel wires connections (relayout, ResetCamera) and
+	-- ViewportController owns its own (drag/zoom input) that gui:Destroy()
+	-- below won't tear down on its own -- only destroying the Instance tree,
+	-- not running our Lua-side :Destroy() cleanup -- so the controller has to
+	-- go first, same as _RenderActivePage already does for activeViewport.
+	if self.avatarPreviewViewportController then
+		self.avatarPreviewViewportController:Destroy()
+		self.avatarPreviewViewportController = nil
+	end
+	self.avatarPreviewDirty = true
 	self.gui:Destroy()
 	self:_BuildChrome()
 	self.loading:Destroy()
@@ -1564,6 +1826,7 @@ function App:_RenderActivePage()
 	end
 	clear(self.content)
 	if not self.state then
+		self:_SyncAvatarPreviewPanel()
 		return
 	end
 	if self.activePage == "Create" then
@@ -1579,6 +1842,7 @@ function App:_RenderActivePage()
 	else
 		self:_RenderSettings()
 	end
+	self:_SyncAvatarPreviewPanel()
 end
 
 function App:_PageHeader(title: string, subtitle: string)
@@ -4530,6 +4794,8 @@ function App:_RenderAvatarLab()
 				-- discarding every catalog try-on at once, so the client's
 				-- per-item tracking must be cleared to match.
 				self.triedOnAssetIds = {}
+				self.triedOnAssetInfo = {}
+				self.avatarPreviewDirty = true
 				self:_RenderActivePage()
 			end
 		end)
@@ -4809,11 +5075,15 @@ function App:_RenderAvatarLab()
 					if success then
 						if removing then
 							self.triedOnAssetIds[assetId] = nil
+							self.triedOnAssetInfo[assetId] = nil
 							self:_Toast("success", "Catalog item removed.")
 						else
 							self.triedOnAssetIds[assetId] = true
+							self.triedOnAssetInfo[assetId] =
+								{ name = tostring(item.Name or "Catalog item"), assetType = self.catalogType }
 							self:_Toast("success", "Catalog item applied. Keep browsing to build your look.")
 						end
+						self.avatarPreviewDirty = true
 						self:_RenderActivePage()
 					elseif try.Parent then
 						try.Active = true
