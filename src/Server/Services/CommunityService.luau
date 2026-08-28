@@ -1369,6 +1369,7 @@ function CommunityService:_GrantItemCopy(player: Player, transferId: string): (b
 			}
 			table.insert(mutableProfile.itemOrder, 1, copyId)
 			mutableProfile.stats.marketplacePurchases += 1
+			mutableProfile.stats.purchaseRobuxSent = (mutableProfile.stats.purchaseRobuxSent or 0) + pending.amount
 		end
 		mutableProfile.processedReceipts[receiptKey] = os.time()
 		mutableProfile.pendingTransfers[transferId] = nil
@@ -1443,6 +1444,7 @@ function CommunityService:_GrantGraphicCopy(player: Player, transferId: string):
 			}
 			table.insert(mutableProfile.graphicOrder, 1, copyId)
 			mutableProfile.stats.marketplacePurchases += 1
+			mutableProfile.stats.purchaseRobuxSent = (mutableProfile.stats.purchaseRobuxSent or 0) + pending.amount
 		end
 		mutableProfile.processedReceipts[receiptKey] = os.time()
 		mutableProfile.pendingTransfers[transferId] = nil

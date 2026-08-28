@@ -126,6 +126,7 @@ function ProfileService.new()
 		profiles = {} :: { [Player]: { [string]: any } },
 		dirty = {} :: { [Player]: boolean },
 		closing = false,
+		onMutate = nil :: ((Player, { [string]: any }) -> ())?,
 	}, ProfileService)
 
 	task.spawn(function()
@@ -182,6 +183,11 @@ function ProfileService:Get(player: Player): { [string]: any }?
 	return self.profiles[player]
 end
 
+-- Every stats.* change in the whole app (generation completed, marketplace
+-- purchase, tip, ...) happens inside a Mutate/MutateUser call for an online
+-- player, and MutateUser itself delegates to this same function when its
+-- target is online -- so this is the one place a leaderstats refresh can
+-- hook into instead of every individual call site remembering to trigger one.
 function ProfileService:Mutate(player: Player, mutator: ({ [string]: any }) -> ()): (boolean, string?)
 	local profile = self.profiles[player]
 	if not profile then
@@ -194,7 +200,14 @@ function ProfileService:Mutate(player: Player, mutator: ({ [string]: any }) -> (
 	end
 	profile.updatedAt = os.time()
 	self.dirty[player] = true
+	if self.onMutate then
+		self.onMutate(player, profile)
+	end
 	return true
+end
+
+function ProfileService:OnMutate(callback: (Player, { [string]: any }) -> ())
+	self.onMutate = callback
 end
 
 function ProfileService:Save(player: Player): boolean
