@@ -203,6 +203,7 @@ export type PlayerProfile = {
 	-- only ever buy the Priority Pass.
 	bonusTokens: number,
 	adWatch: { day: number, count: number },
+	afk: { day: number, earned: number },
 	achievements: { [string]: number },
 	settings: { soundsEnabled: boolean, reduceMotion: boolean, highContrast: boolean, uiScale: number },
 	stats: { [string]: number },

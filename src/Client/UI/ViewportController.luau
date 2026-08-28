@@ -11,22 +11,50 @@ ViewportController.__index = ViewportController
 
 local DEFAULT_FOCUS = Vector3.new(0, 1.15, 0)
 
-local function prepareInstance(instance: Instance)
+local function stripUnsafe(instance: Instance)
 	if instance:IsA("LuaSourceContainer") then
 		instance:Destroy()
-	elseif instance:IsA("BasePart") then
-		instance.Anchored = true
-		instance.CanCollide = false
-		instance.CanQuery = false
-		instance.CanTouch = false
 	end
 end
 
-local function prepare(root: Instance)
-	prepareInstance(root)
+local function prepareAvatar(root: Model)
+	stripUnsafe(root)
 	for _, descendant in root:GetDescendants() do
-		prepareInstance(descendant)
+		stripUnsafe(descendant)
+		if descendant:IsA("BasePart") then
+			-- Multiple anchored parts split a welded character into independent
+			-- assemblies. Anchor only the root so Motor6Ds and AccessoryWelds keep
+			-- every pre-existing hat/back accessory in its real worn position.
+			descendant.Anchored = descendant.Name == "HumanoidRootPart"
+			descendant.CanCollide = false
+			descendant.CanQuery = false
+			descendant.CanTouch = false
+		end
 	end
+end
+
+local function prepareStandalonePart(part: BasePart)
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+end
+
+local function cloneCurrentCharacter(player: Player): Model?
+	local character = player.Character
+	if not character then
+		return nil
+	end
+	local wasArchivable = character.Archivable
+	character.Archivable = true
+	local success, clone = pcall(function()
+		return character:Clone()
+	end)
+	character.Archivable = wasArchivable
+	if success and clone and clone:IsA("Model") then
+		return clone
+	end
+	return nil
 end
 
 local function clampFocus(focus: Vector3): Vector3
@@ -57,7 +85,7 @@ local function pointInsideVisibleBounds(gui: GuiObject, point: Vector2): boolean
 	return point.X >= minimum.X and point.X <= maximum.X and point.Y >= minimum.Y and point.Y <= maximum.Y
 end
 
-function ViewportController.new(viewport: ViewportFrame)
+function ViewportController.new(viewport: ViewportFrame, excludedForgeItemId: string?)
 	local world = Instance.new("WorldModel")
 	world.Name = "ForgePreviewWorld"
 	world.Parent = viewport
@@ -219,6 +247,10 @@ function ViewportController.new(viewport: ViewportFrame)
 	task.spawn(function()
 		local player = Players.LocalPlayer
 		local success, avatar = pcall(function()
+			local current = cloneCurrentCharacter(player)
+			if current then
+				return current
+			end
 			local character = player.Character
 			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 			if humanoid then
@@ -231,7 +263,17 @@ function ViewportController.new(viewport: ViewportFrame)
 		end)
 		if success and avatar then
 			if not self.destroyed and viewport.Parent then
-				prepare(avatar)
+				-- The fitting handle is rendered separately so its draft transform
+				-- can move live. If this exact Forge item is already worn, remove its
+				-- cloned runtime copy first or the viewport would show two of it.
+				if excludedForgeItemId then
+					for _, child in avatar:GetChildren() do
+						if child:IsA("Accessory") and child:GetAttribute("ForgeItemId") == excludedForgeItemId then
+							child:Destroy()
+						end
+					end
+				end
+				prepareAvatar(avatar)
 				avatar.Name = "AvatarReference"
 				avatar:PivotTo(CFrame.new())
 				avatar.Parent = world
@@ -283,7 +325,7 @@ function ViewportController:SetAccessory(source: Model, fit: { [string]: any })
 		end
 	end
 	handle.Name = "Handle"
-	prepare(handle)
+	prepareStandalonePart(handle)
 	-- Match the runtime accessory's untinted appearance; imported MeshParts often
 	-- retain Roblox's gray default Color even when their texture is full-color.
 	handle.Material = Enum.Material.Plastic

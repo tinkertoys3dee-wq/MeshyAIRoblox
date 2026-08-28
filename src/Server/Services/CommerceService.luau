@@ -355,7 +355,7 @@ end
 -- price steep enough that even the worst measured ad — 0.12 Robux — still
 -- leaves Forge ahead: ceil(robuxPrice * markup / worstCaseAdRevenue) tokens,
 -- which for the 159 Robux Direct Forge generation is 1590 tokens (with
--- TokenGrantPerPurchase at 1 token per ad, 1590 completed ad watches).
+-- TokenGrantPerAd at 1 token per ad, 1590 completed ad watches).
 -- bonusTokens can never reach this branch: no free grant, no matter how
 -- large, is allowed to fund a real-cost product.
 local GENERATION_TOKEN_PRODUCTS = {

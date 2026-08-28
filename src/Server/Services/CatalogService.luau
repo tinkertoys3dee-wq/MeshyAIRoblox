@@ -23,7 +23,48 @@ function CatalogService.new(profileService: any, playerStateService: any, analyt
 		profiles = profileService,
 		playerStates = playerStateService,
 		analytics = analyticsService,
+		assetNameCache = {} :: { [number]: string },
 	}, CatalogService)
+end
+
+function CatalogService:GetEquippedAccessories(player: Player): (boolean, any)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return false, "CHARACTER_UNAVAILABLE"
+	end
+	local descriptionSuccess, accessoriesOrProblem = pcall(function()
+		return humanoid:GetAppliedDescription():GetAccessories(true)
+	end)
+	if not descriptionSuccess or type(accessoriesOrProblem) ~= "table" then
+		warn(string.format("[CatalogService] Could not read equipped accessories: %s", tostring(accessoriesOrProblem)))
+		return false, "AVATAR_UNAVAILABLE"
+	end
+
+	local result = {}
+	local seen = {} :: { [number]: boolean }
+	for _, accessory in accessoriesOrProblem do
+		local assetId = math.floor(tonumber(accessory.AssetId) or 0)
+		if assetId > 0 and not seen[assetId] then
+			seen[assetId] = true
+			local name = self.assetNameCache[assetId]
+			if not name then
+				local infoSuccess, info = pcall(function()
+					return MarketplaceService:GetProductInfoAsync(assetId, Enum.InfoType.Asset)
+				end)
+				name = if infoSuccess
+						and type(info) == "table"
+						and type(info.Name) == "string"
+					then info.Name
+					else string.format("Avatar accessory %d", assetId)
+				self.assetNameCache[assetId] = name
+			end
+			local assetType = tostring(accessory.AccessoryType or "Accessory")
+			assetType = string.gsub(assetType, "Enum%.AccessoryType%.", "")
+			table.insert(result, { assetId = assetId, name = name, assetType = assetType })
+		end
+	end
+	return true, { accessories = result }
 end
 
 function CatalogService:TryOn(player: Player, payload: any): (boolean, any)
@@ -49,6 +90,11 @@ function CatalogService:TryOn(player: Player, payload: any): (boolean, any)
 	local success, problem = pcall(function()
 		local description = humanoid:GetAppliedDescription()
 		local accessories = description:GetAccessories(true)
+		for _, accessory in accessories do
+			if accessory.AssetId == assetId then
+				return
+			end
+		end
 		table.insert(accessories, {
 			AssetId = assetId,
 			AccessoryType = AvatarEditorService:GetAccessoryType(avatarAssetType),

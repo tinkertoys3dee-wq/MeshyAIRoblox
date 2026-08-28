@@ -49,12 +49,16 @@ Network.Actions = table.freeze({
 	PromptPlus = "PromptPlus",
 	TryCatalogAsset = "TryCatalogAsset",
 	UntryCatalogAsset = "UntryCatalogAsset",
+	GetEquippedAvatarAccessories = "GetEquippedAvatarAccessories",
+	ClearCommunityTryOn = "ClearCommunityTryOn",
 	ResetAvatar = "ResetAvatar",
 	UpdateSettings = "UpdateSettings",
 	CompleteOnboarding = "CompleteOnboarding",
 	Track = "Track",
 	RequestRewardedAd = "RequestRewardedAd",
 	BuyTokens = "BuyTokens",
+	EnterAfkLounge = "EnterAfkLounge",
+	LeaveAfkLounge = "LeaveAfkLounge",
 	ReportInviteSent = "ReportInviteSent",
 	SubmitArcadeScore = "SubmitArcadeScore",
 	GetArcadeLeaderboard = "GetArcadeLeaderboard",
@@ -70,6 +74,7 @@ Network.PushEvents = table.freeze({
 	Transfer = "Transfer",
 	Entitlements = "Entitlements",
 	Quests = "Quests",
+	Afk = "Afk",
 })
 
 return table.freeze(Network)

@@ -49,6 +49,7 @@ local AchievementService = require(script.Parent.Services.AchievementService)
 local LeaderboardService = require(script.Parent.Services.LeaderboardService)
 local ArcadeService = require(script.Parent.Services.ArcadeService)
 local LeaderstatsService = require(script.Parent.Services.LeaderstatsService)
+local AfkRewardService = require(script.Parent.Services.AfkRewardService)
 
 local function push(player: Player, eventName: string, payload: any)
 	if player.Parent == Players then
@@ -69,6 +70,7 @@ local generations =
 	GenerationService.new(profiles, playerStates, backend, commerce, push, analytics, achievements, items)
 local leaderboard = LeaderboardService.new()
 local arcade = ArcadeService.new(profiles, playerStates, push, analytics)
+local afkRewards = AfkRewardService.new(profiles, push, analytics)
 local community = CommunityService.new(profiles, playerStates, push, analytics, achievements, leaderboard)
 local catalog = CatalogService.new(profiles, playerStates, analytics)
 local leaderstats = LeaderstatsService.new()
@@ -280,7 +282,13 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	-- purchase path and the way to test token spending in Studio without a
 	-- live ad.
 	[Network.Actions.BuyTokens] = function(player)
-		return commerce:BeginIntent(player, "AdRewardTokens", {})
+		return commerce:BeginIntent(player, "TokenPack70", {})
+	end,
+	[Network.Actions.EnterAfkLounge] = function(player)
+		return afkRewards:Enter(player)
+	end,
+	[Network.Actions.LeaveAfkLounge] = function(player)
+		return afkRewards:Leave(player)
 	end,
 	[Network.Actions.GetGeneration] = function(player, payload)
 		if type(payload) ~= "table" or type(payload.generationId) ~= "string" then
@@ -455,6 +463,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		analytics:Funnel(player, "marketplace", 2, "Community item tried", {})
 		return items:TryOn(player, item)
 	end,
+	[Network.Actions.ClearCommunityTryOn] = function(player)
+		return items:ClearCommunityTryOn(player)
+	end,
 	[Network.Actions.PromptPlus] = function(player)
 		return community:PromptPlus(player)
 	end,
@@ -462,14 +473,32 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		local success, result = catalog:TryOn(player, payload)
 		if success then
 			achievements:Unlock(player, "FIRST_TRY_ON")
+			task.defer(function()
+				items:RestoreEquipped(player)
+			end)
 		end
 		return success, result
 	end,
 	[Network.Actions.UntryCatalogAsset] = function(player, payload)
-		return catalog:Untry(player, payload)
+		local success, result = catalog:Untry(player, payload)
+		if success then
+			task.defer(function()
+				items:RestoreEquipped(player)
+			end)
+		end
+		return success, result
+	end,
+	[Network.Actions.GetEquippedAvatarAccessories] = function(player)
+		return catalog:GetEquippedAccessories(player)
 	end,
 	[Network.Actions.ResetAvatar] = function(player)
-		return catalog:Reset(player)
+		local success, result = catalog:Reset(player)
+		if success then
+			task.defer(function()
+				items:RestoreEquipped(player)
+			end)
+		end
+		return success, result
 	end,
 	[Network.Actions.UpdateSettings] = function(player, payload)
 		if type(payload) ~= "table" then
@@ -601,6 +630,7 @@ Players.PlayerRemoving:Connect(function(player)
 	retention:Remove(player)
 	playerStates:Remove(player)
 	commerce:Remove(player)
+	afkRewards:Remove(player)
 	profiles:Remove(player)
 end)
 

@@ -17,7 +17,8 @@ Review these by new/returning player, device class, creation method, group membe
 | Fit preset adoption | save-to-reuse rate; presets saved per player; deletion rate | `FitPresetSaved`, `FitPresetApplied`, `FitPresetDeleted` |
 | Catalog search quality | filter adoption (sort/creator/price); zero-result rate by filter combination | `CatalogSearch` (`sortType`, `hasCreatorFilter`, `hasPriceFilter`, `resultCount`) |
 | Accessibility adoption | high-contrast/reduce-motion/UI-scale opt-in rate; page reach including Settings | `SettingsChanged`, `AppOpenedTab` (`page = "Settings"`) |
-| Forge Tokens / ad engagement | rewarded-ad completion rate; tokens earned vs. spent; token-vs-Robux purchase mix; ARPDAU contribution from ad revenue | `AdRewardGranted`, `TokenPurchase` (`product`), economy events for `AdRewardTokens` |
+| Forge Tokens / ad engagement | rewarded-ad completion rate; 70-token pack conversion; tokens earned vs. spent; token-vs-Robux purchase mix | `AdRewardGranted`, `TokenPackGranted`, `TokenPurchase` (`product`), economy events for `AdRewardTokens`/`TokenPack70` |
+| AFK / login retention | lounge entries and duration; passive tokens per session/day; seven-day reward-day return rate | `AfkLoungeEntered`, `AfkLoungeLeft`, `AfkTokensGranted`, `DailyStudioCheckIn` (`tokensGranted`) |
 | Feature reach / virality | achievement completion rate per milestone; daily-bonus claim rate; invite-sent rate | `AchievementUnlocked` (`achievement`), `DailyStudioCheckIn` (`tokensGranted`), `GameInviteSent` |
 | Community health | discovery visits; try-on rate; likes/favorites per view; leaderboard engagement | marketplace funnel, reaction and view counters, `CommunityLikeToggled` |
 | Monetization | payer conversion; ARPDAU; revenue per completed model; priority-pass attach rate | economy events by SKU plus completion events |

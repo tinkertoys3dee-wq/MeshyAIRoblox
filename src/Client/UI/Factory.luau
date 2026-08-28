@@ -25,6 +25,17 @@ function Factory.New(className: string, properties: { [string]: any }?, children
 			child.Parent = instance
 		end
 	end
+	-- Vertical scrollbars draw inside their ScrollingFrame by default, which
+	-- lets cards and text sit underneath the thumb. Reserve that strip for
+	-- every vertical/bidirectional scrolling region; horizontal chip rows are
+	-- intentionally excluded because they have no visible vertical bar.
+	if
+		instance:IsA("ScrollingFrame")
+		and instance.ScrollingDirection ~= Enum.ScrollingDirection.X
+		and (not properties or properties.VerticalScrollBarInset == nil)
+	then
+		instance.VerticalScrollBarInset = Enum.ScrollBarInset.Always
+	end
 	return instance
 end
 
@@ -71,9 +82,13 @@ end
 
 function Factory.ScalePadding(parent: Instance, horizontal: number, vertical: number?): UIPadding
 	local y = vertical or horizontal
+	local rightOffset = if parent:IsA("ScrollingFrame")
+			and parent.ScrollingDirection ~= Enum.ScrollingDirection.X
+		then 12
+		else 0
 	return Factory.New("UIPadding", {
 		PaddingLeft = UDim.new(horizontal, 0),
-		PaddingRight = UDim.new(horizontal, 0),
+		PaddingRight = UDim.new(horizontal, rightOffset),
 		PaddingTop = UDim.new(y, 0),
 		PaddingBottom = UDim.new(y, 0),
 		Parent = parent,

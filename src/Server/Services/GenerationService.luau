@@ -1312,19 +1312,23 @@ function GenerationService:_RunStudioMock(player: Player, generationId: string, 
 			return
 		end
 		if kind == "IMAGE_PREVIEW" or kind == "IMAGE_UPLOAD" then
+			local previewAssetId = 0
 			self.profiles:Mutate(player, function(profile)
 				local generation = profile.generations[generationId]
 				generation.stage = "IMAGE_READY"
 				generation.stageText = "Studio mock reference ready"
 				generation.progress = 100
 				generation.previewAssetId = generation.sourceImageAssetId or 0
+				previewAssetId = generation.previewAssetId
 				generation.backendJobId = `00000000-0000-0000-0000-{string.sub(generationId, -12)}`
 			end)
-			self.push(
-				player,
-				Network.PushEvents.Generation,
-				{ generationId = generationId, stage = "IMAGE_READY", progress = 100 }
-			)
+			self.push(player, Network.PushEvents.Generation, {
+				generationId = generationId,
+				stage = "IMAGE_READY",
+				stageText = "Studio mock reference ready",
+				progress = 100,
+				previewAssetId = previewAssetId,
+			})
 		elseif kind == "AVATAR_GRAPHIC" or kind == "TEXT_TO_IMAGE" then
 			self:_CompleteGraphic(player, generationId, { previewAssetId = 0 })
 		else
@@ -1401,8 +1405,11 @@ function GenerationService:DeleteGraphic(player: Player, payload: any): (boolean
 	if not removed then
 		return false, "NOT_FOUND"
 	end
-	self.profiles:Save(player)
-	return true, {}
+	if not self.profiles:Save(player) then
+		return false, "SAVE_FAILED"
+	end
+	self.push(player, Network.PushEvents.Graphic, { graphicId = graphicId, deleted = true })
+	return true, { graphicId = graphicId }
 end
 
 return GenerationService

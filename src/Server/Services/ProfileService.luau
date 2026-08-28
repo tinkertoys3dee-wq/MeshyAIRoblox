@@ -56,6 +56,7 @@ local function defaultProfile(userId: number): { [string]: any }
 		tokens = 0,
 		bonusTokens = 0,
 		adWatch = { day = 0, count = 0 },
+		afk = { day = 0, earned = 0 },
 		achievements = {},
 		settings = { soundsEnabled = true, reduceMotion = false, highContrast = false, uiScale = 1 },
 		stats = {

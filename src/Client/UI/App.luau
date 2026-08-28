@@ -85,7 +85,7 @@ local ERROR_MESSAGES = {
 	ITEM_NOT_PUBLISHABLE = "This model cannot be published as a wearable.",
 	MARKETPLACE_UNAVAILABLE = "The creator marketplace could not update. Your saved item is unchanged; try again.",
 	PRICE_OUT_OF_RANGE = "Choose a sale price from R$ 10 to R$ 500.",
-	CREATION_TOKEN_NOT_CONFIGURED = "Add the Avatar Creation Token for this accessory type in Config.luau.",
+	CREATION_TOKEN_NOT_CONFIGURED = "Add the Avatar Creation Token for this type to ServerStorage/ForgeUGCSecrets.",
 	MODEL_UNAVAILABLE = "The model asset is not available yet.",
 	ASSET_STILL_PROCESSING = "Roblox is still processing this new model. Wait a few seconds and try again.",
 	ASSET_LOAD_FAILED = "Roblox could not load this model. Check that the uploaded asset belongs to this experience's creator.",
@@ -358,6 +358,10 @@ function App.new()
 		-- (name + accessory type per assetId) -- triedOnAssetIds alone is
 		-- just a set, with nothing to show besides the asset ID itself.
 		triedOnAssetInfo = {} :: { [number]: { name: string, assetType: string } },
+		avatarAccessoriesLoaded = false,
+		avatarAccessoriesLoading = false,
+		avatarAccessoriesDirty = true,
+		communityTryOnItem = nil :: { [string]: any }?,
 		-- True whenever the player's actual applied avatar description may
 		-- have changed since the panel's ViewportController last snapshotted
 		-- it (see ViewportController.new), so the panel knows to rebuild the
@@ -369,10 +373,15 @@ function App.new()
 		paymentMethod = "ROBUX",
 		adAvailable = nil :: boolean?,
 		adAvailabilityChecking = false,
+		afkAdChecking = false,
 		adWatchesToday = nil :: number?,
+		afkSnapshot = nil :: { [string]: any }?,
+		afkOverlay = nil :: Frame?,
+		afkRunId = 0,
 		pageVersion = 0,
 		toastVersion = 0,
 		queuedSoundIds = {} :: { [string]: boolean },
+		completionShownIds = {} :: { [string]: boolean },
 		navButtons = {} :: { [string]: TextButton },
 		activeViewport = nil :: any,
 		ambientMotionEnabled = false,
@@ -428,6 +437,22 @@ function App.new()
 		if self.state then
 			self:_RefreshBootstrap()
 		end
+	end)
+	player.CharacterAdded:Connect(function()
+		self.communityTryOnItem = nil
+		self.avatarPreviewDirty = true
+		self.avatarAccessoriesDirty = true
+		-- ItemService restores saved Forge accessories shortly after spawn. Wait
+		-- until that pass has run before snapshotting the live mannequin.
+		task.delay(1.1, function()
+			if self.state then
+				self.avatarPreviewDirty = true
+				self.avatarAccessoriesDirty = true
+				if self.activePage == "Avatar Lab" or self.activePage == "Discover" then
+					self:_RenderActivePage()
+				end
+			end
+		end)
 	end)
 	-- Keyboard/gamepad accessibility: Tab, or a gamepad's Y button, hands
 	-- focus to the nav rail so the whole studio becomes reachable without a
@@ -634,6 +659,25 @@ function App:_BuildChrome()
 		GamesHub.Show(self)
 	end)
 	self.arcadeLauncher = arcadeLauncher
+
+	local afkLauncher = buildLauncher(
+		"✧",
+		"Tokens for AFK",
+		"Passive bonus tokens · optional ads",
+		-214,
+		Color3.fromRGB(54, 44, 112),
+		Color3.fromRGB(105, 86, 212),
+		Color3.fromRGB(22, 19, 54),
+		Colors.Text
+	)
+	afkLauncher.Name = "AfkLauncher"
+	self:_BindButton(afkLauncher)
+	afkLauncher.Activated:Connect(function()
+		task.spawn(function()
+			self:_OpenAfkLounge()
+		end)
+	end)
+	self.afkLauncher = afkLauncher
 
 	local topbar = Factory.New("Frame", {
 		Name = "Topbar",
@@ -952,7 +996,7 @@ function App:_BuildAvatarPreviewPanel(backdrop: Frame)
 		BorderSizePixel = 0,
 		Parent = panel,
 	})
-	Factory.Label(panel, "TRIED ON", UDim2.new(1, -32, 0, 16), {
+	Factory.Label(panel, "WORN NOW", UDim2.new(1, -32, 0, 16), {
 		Position = UDim2.new(0, 16, 0.5, 14),
 		Font = Theme.Fonts.Bold,
 		TextSize = 11,
@@ -969,13 +1013,15 @@ function App:_BuildAvatarPreviewPanel(backdrop: Frame)
 		ScrollBarImageColor3 = Colors.Cyan,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		CanvasSize = UDim2.new(),
+		VerticalScrollBarInset = Enum.ScrollBarInset.Always,
 		Parent = panel,
 	})
 	Factory.List(list, Enum.FillDirection.Vertical, 8)
+	Factory.Padding(list, 0, 0).PaddingRight = UDim.new(0, 10)
 	self.avatarPreviewList = list
 
 	self.avatarPreviewEmptyLabel =
-		Factory.Label(list, "Try on catalog items below and they'll show up here.", UDim2.new(1, 0, 0, 40), {
+		Factory.Label(list, "Your Roblox and Forge accessories will show up here.", UDim2.new(1, 0, 0, 40), {
 			Color = Colors.TextMuted,
 			TextSize = 11,
 			Wrapped = true,
@@ -1017,7 +1063,7 @@ function App:_LayoutAvatarPreviewPanel()
 	local backdrop = self.backdrop
 	local camera = Workspace.CurrentCamera
 	local viewportWidth = if camera then camera.ViewportSize.X else 1200
-	local wanted = self.activePage == "Avatar Lab"
+	local wanted = (self.activePage == "Avatar Lab" or self.activePage == "Discover")
 		and not self.compact
 		and shell.Visible
 		and viewportWidth >= MIN_VIEWPORT_FOR_PANEL
@@ -1047,6 +1093,43 @@ function App:_LayoutAvatarPreviewPanel()
 	panel.Visible = true
 end
 
+-- Reads the avatar's actual HumanoidDescription on the server, including
+-- accessories the player arrived wearing. This is deliberately separate
+-- from profile.equippedItemIds because Forge accessories are physical
+-- Accessory instances and are not written into the player's saved Roblox
+-- HumanoidDescription.
+function App:_RefreshAvatarAccessories()
+	if self.avatarAccessoriesLoading then
+		return
+	end
+	self.avatarAccessoriesLoading = true
+	task.spawn(function()
+		local success, data = self:_Invoke(Network.Actions.GetEquippedAvatarAccessories, {})
+		self.avatarAccessoriesLoading = false
+		if success then
+			local equipped = {} :: { [number]: boolean }
+			local info = {} :: { [number]: { name: string, assetType: string } }
+			for _, accessory in data.accessories or {} do
+				local assetId = tonumber(accessory.assetId)
+				if assetId and assetId > 0 then
+					equipped[assetId] = true
+					info[assetId] = {
+						name = tostring(accessory.name or string.format("Avatar accessory %d", assetId)),
+						assetType = tostring(accessory.assetType or "Accessory"),
+					}
+				end
+			end
+			self.triedOnAssetIds = equipped
+			self.triedOnAssetInfo = info
+			self.avatarAccessoriesLoaded = true
+			self.avatarAccessoriesDirty = false
+		end
+		if self.activePage == "Avatar Lab" or self.activePage == "Discover" then
+			self:_SyncAvatarPreviewPanel()
+		end
+	end)
+end
+
 -- Rebuilds the try-on list's rows every call (cheap: a handful of local
 -- table reads and small labels, no network round trip) and rebuilds the 3D
 -- mannequin only when avatarPreviewDirty says the player's applied avatar
@@ -1065,19 +1148,64 @@ function App:_SyncAvatarPreviewPanel()
 		end
 		return
 	end
+	if (not self.avatarAccessoriesLoaded or self.avatarAccessoriesDirty) and not self.avatarAccessoriesLoading then
+		self:_RefreshAvatarAccessories()
+	end
 	for _, child in self.avatarPreviewList:GetChildren() do
 		if child.Name == "TriedOnItemRow" then
 			child:Destroy()
 		end
 	end
-	local count = 0
+	local rows = {}
 	for assetId, info in self.triedOnAssetInfo do
 		if self.triedOnAssetIds[assetId] then
-			count += 1
-			self:_BuildTriedOnRow(assetId, info)
+			table.insert(rows, {
+				key = string.format("catalog:%d", assetId),
+				source = "CATALOG",
+				assetId = assetId,
+				name = info.name,
+				assetType = info.assetType,
+				image = thumbnail(assetId, 100),
+			})
 		end
 	end
-	self.avatarPreviewEmptyLabel.Visible = count == 0
+	table.sort(rows, function(left, right)
+		return string.lower(left.name) < string.lower(right.name)
+	end)
+	local profile = self.state and self.state.profile
+	if profile then
+		for _, itemId in profile.equippedItemIds or {} do
+			local item = profile.items[itemId]
+			if item then
+				table.insert(rows, {
+					key = "forge:" .. itemId,
+					source = "FORGE",
+					itemId = itemId,
+					name = item.name or "Forge accessory",
+					assetType = item.fit and item.fit.accessoryType or "Accessory",
+					image = directImage(item.thumbnailAssetId),
+				})
+			end
+		end
+	end
+	if self.communityTryOnItem then
+		local item = self.communityTryOnItem
+		table.insert(rows, {
+			key = "community:" .. tostring(item.id),
+			source = "COMMUNITY",
+			itemId = item.id,
+			name = item.title or item.name or "Community accessory",
+			assetType = item.fit and item.fit.accessoryType or "Accessory",
+			image = directImage(item.thumbnailAssetId),
+		})
+	end
+	for _, entry in rows do
+		self:_BuildWornRow(entry)
+	end
+	self.avatarPreviewEmptyLabel.Visible = #rows == 0
+	self.avatarPreviewEmptyLabel.Text = if self.avatarAccessoriesLoading
+		then "Reading your current avatar…"
+		else "No accessories are currently equipped."
 	if self.avatarPreviewDirty or not self.avatarPreviewViewportController then
 		if self.avatarPreviewViewportController then
 			self.avatarPreviewViewportController:Destroy()
@@ -1087,11 +1215,10 @@ function App:_SyncAvatarPreviewPanel()
 	end
 end
 
--- One row in the panel's "TRIED ON" list: a small thumbnail, the item's
--- name, and a Remove button that unequips it the same way the catalog
--- grid's own "Unequip" button does (Network.Actions.UntryCatalogAsset),
--- just from this side panel instead.
-function App:_BuildTriedOnRow(assetId: number, info: { name: string, assetType: string })
+-- One row in the shared "WORN NOW" list. Each source has its own server
+-- removal path: Roblox avatar-description assets, saved Forge accessories,
+-- and the temporary community try-on are intentionally not conflated.
+function App:_BuildWornRow(entry: { [string]: any })
 	local row = Factory.New("Frame", {
 		Name = "TriedOnItemRow",
 		Size = UDim2.new(1, 0, 0, 52),
@@ -1105,17 +1232,26 @@ function App:_BuildTriedOnRow(assetId: number, info: { name: string, assetType: 
 		Position = UDim2.fromOffset(6, 6),
 		BackgroundColor3 = Colors.Ink,
 		BorderSizePixel = 0,
-		Image = thumbnail(assetId, 100),
+		Image = entry.image,
 		ScaleType = Enum.ScaleType.Crop,
 		Parent = row,
 	})
 	Factory.Corner(icon, 8)
-	Factory.Label(row, info.name, UDim2.new(1, -104, 0, 34), {
+	Factory.Label(row, tostring(entry.name), UDim2.new(1, -104, 0, 22), {
 		Position = UDim2.fromOffset(52, 6),
 		Font = Theme.Fonts.Bold,
 		TextSize = 12,
 		Truncate = Enum.TextTruncate.AtEnd,
 		AlignY = Enum.TextYAlignment.Top,
+	})
+	Factory.Label(row, string.upper(tostring(entry.source)), UDim2.new(1, -132, 0, 14), {
+		Position = UDim2.fromOffset(52, 29),
+		Color = if entry.source == "FORGE"
+			then Colors.Cyan
+			elseif entry.source == "COMMUNITY" then Colors.Gold
+			else Colors.TextMuted,
+		Font = Theme.Fonts.Bold,
+		TextSize = 8,
 	})
 	local removeButton = Factory.Button(row, "Remove", UDim2.fromOffset(72, 26), UDim2.new(1, -78, 1, -32), "danger")
 	removeButton.TextSize = 11
@@ -1124,13 +1260,31 @@ function App:_BuildTriedOnRow(assetId: number, info: { name: string, assetType: 
 		removeButton.Active = false
 		removeButton.Text = "Removing…"
 		task.spawn(function()
-			local success =
-				self:_Invoke(Network.Actions.UntryCatalogAsset, { assetId = assetId, avatarAssetType = info.assetType })
+			local action = if entry.source == "CATALOG"
+				then Network.Actions.UntryCatalogAsset
+				elseif entry.source == "FORGE" then Network.Actions.UnequipItem
+				else Network.Actions.ClearCommunityTryOn
+			local payload = if entry.source == "CATALOG"
+				then { assetId = entry.assetId, avatarAssetType = entry.assetType }
+				elseif entry.source == "FORGE" then { itemId = entry.itemId }
+				else {}
+			local success = self:_Invoke(action, payload)
 			if success then
-				self.triedOnAssetIds[assetId] = nil
-				self.triedOnAssetInfo[assetId] = nil
+				if entry.source == "CATALOG" then
+					self.triedOnAssetIds[entry.assetId] = nil
+					self.triedOnAssetInfo[entry.assetId] = nil
+					self.avatarAccessoriesDirty = true
+					self.communityTryOnItem = nil
+				elseif entry.source == "FORGE" then
+					local equippedIndex = table.find(self.state.profile.equippedItemIds, entry.itemId)
+					if equippedIndex then
+						table.remove(self.state.profile.equippedItemIds, equippedIndex)
+					end
+				else
+					self.communityTryOnItem = nil
+				end
 				self.avatarPreviewDirty = true
-				self:_Toast("success", "Catalog item removed.")
+				self:_Toast("success", "Accessory removed from your current look.")
 				self:_RenderActivePage()
 			elseif removeButton.Parent then
 				removeButton.Active = true
@@ -1231,8 +1385,10 @@ end
 function App:_SetStudioOpen(open: boolean)
 	local changed = self.shell.Visible ~= open
 	self.shell.Visible = open
-	self.launcher.Visible = not open
-	self.arcadeLauncher.Visible = not open
+	local showLaunchers = not open and self.afkOverlay == nil
+	self.launcher.Visible = showLaunchers
+	self.arcadeLauncher.Visible = showLaunchers
+	self.afkLauncher.Visible = showLaunchers
 	if changed and open then
 		self.sounds:Play("PanelOpen")
 	elseif changed then
@@ -1491,6 +1647,335 @@ function App:_RefreshAdAvailability()
 	end)
 end
 
+function App:_RefreshAfkDisplay()
+	local snapshot = self.afkSnapshot
+	if not snapshot or not self.afkOverlay or not self.afkOverlay.Parent then
+		return
+	end
+	local profile = self.state and self.state.profile
+	local tokens = if profile then (profile.tokens or 0) else (snapshot.tokens or 0)
+	local bonusTokens = if profile then (profile.bonusTokens or 0) else (snapshot.bonusTokens or 0)
+	local total = tokens + bonusTokens
+	local gained = math.max(0, total - (self.afkStartingTotal or total))
+	local remaining = math.max(0, (snapshot.nextRewardAt or os.time()) - os.time())
+	if self.afkGainLabel and self.afkGainLabel.Parent then
+		self.afkGainLabel.Text = string.format("+%d TOKEN%s THIS VISIT", gained, if gained == 1 then "" else "S")
+	end
+	if self.afkBalanceLabel and self.afkBalanceLabel.Parent then
+		self.afkBalanceLabel.Text = string.format("%s total Forge Tokens", formatNumber(total))
+	end
+	if self.afkCountdownLabel and self.afkCountdownLabel.Parent then
+		self.afkCountdownLabel.Text = if (snapshot.dailyEarned or 0) >= (snapshot.dailyCap or 0)
+			then "Daily passive limit reached · rewarded ads remain available"
+			else string.format("Next passive token in %ds", remaining)
+	end
+	if self.afkDailyLabel and self.afkDailyLabel.Parent then
+		self.afkDailyLabel.Text = string.format(
+			"Passive today: %d / %d · Session: +%d",
+			snapshot.dailyEarned or 0,
+			snapshot.dailyCap or 0,
+			snapshot.sessionEarned or 0
+		)
+	end
+end
+
+function App:_RefreshAfkAdAvailability()
+	if self.afkAdChecking or not self.afkOverlay or not self.afkOverlay.Parent then
+		return
+	end
+	self.afkAdChecking = true
+	if self.afkAdButton and self.afkAdButton.Parent then
+		self.afkAdButton.Active = false
+		self.afkAdButton.Text = "Checking ad availability…"
+	end
+	task.spawn(function()
+		local success, result = pcall(function()
+			return AdService:GetAdAvailabilityNowAsync(Enum.AdFormat.RewardedVideo)
+		end)
+		self.afkAdChecking = false
+		if not self.afkOverlay or not self.afkOverlay.Parent then
+			return
+		end
+		local available = success
+			and type(result) == "table"
+			and result.AdAvailabilityResult == Enum.AdAvailabilityResult.IsAvailable
+		self.adAvailable = available
+		if self.afkAdButton and self.afkAdButton.Parent then
+			self.afkAdButton.Active = available
+			self.afkAdButton.Text = if available
+				then string.format("Watch next ad · +%d token", Config.Ads.TokenGrantPerAd)
+				else "No rewarded ad available yet"
+		end
+		if self.afkAdStatusLabel and self.afkAdStatusLabel.Parent then
+			self.afkAdStatusLabel.Text = if available
+				then "AD READY · each ad starts only when you press the button"
+				else "AUTO-CHECKING · we'll keep looking while you relax"
+			self.afkAdStatusLabel.TextColor3 = if available then Colors.Mint else Colors.TextMuted
+		end
+	end)
+end
+
+function App:_CloseAfkLounge()
+	if not self.afkOverlay then
+		return
+	end
+	self.afkRunId += 1
+	if self.afkInputConnection then
+		self.afkInputConnection:Disconnect()
+		self.afkInputConnection = nil
+	end
+	local overlay = self.afkOverlay
+	self.afkOverlay = nil
+	overlay:Destroy()
+	self.launcher.Visible = not self.shell.Visible
+	self.arcadeLauncher.Visible = not self.shell.Visible
+	self.afkLauncher.Visible = not self.shell.Visible
+	self.afkSnapshot = nil
+	task.spawn(function()
+		self:_Invoke(Network.Actions.LeaveAfkLounge, {})
+	end)
+end
+
+function App:_OpenAfkLounge()
+	if self.afkOverlay then
+		return
+	end
+	local success, snapshot = self:_Invoke(Network.Actions.EnterAfkLounge, {})
+	if not success then
+		return
+	end
+
+	self.afkSnapshot = snapshot
+	self.afkStartingTotal = (self.state.profile.tokens or 0) + (self.state.profile.bonusTokens or 0)
+	self.afkRunId += 1
+	local runId = self.afkRunId
+	self.launcher.Visible = false
+	self.arcadeLauncher.Visible = false
+	self.afkLauncher.Visible = false
+
+	local overlay = Factory.New("Frame", {
+		Name = "AfkTokenLounge",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.fromRGB(2, 3, 10),
+		BorderSizePixel = 0,
+		ClipsDescendants = true,
+		ZIndex = 240,
+		Parent = self.gui,
+	})
+	self.afkOverlay = overlay
+	Factory.Gradient(overlay, {
+		Color3.fromRGB(1, 2, 8),
+		Color3.fromRGB(10, 6, 28),
+		Color3.fromRGB(2, 9, 19),
+	}, 135)
+
+	for _ = 1, 46 do
+		local diameter = math.random(2, 5)
+		local star = Factory.New("Frame", {
+			Name = "Star",
+			Position = UDim2.fromScale(math.random(10, 990) / 1000, math.random(10, 990) / 1000),
+			Size = UDim2.fromOffset(diameter, diameter),
+			BackgroundColor3 = if math.random() > 0.7 then Colors.Cyan else Color3.new(1, 1, 1),
+			BackgroundTransparency = math.random(30, 75) / 100,
+			BorderSizePixel = 0,
+			ZIndex = 241,
+			Parent = overlay,
+		})
+		Factory.Corner(star, diameter)
+		if not self.state.profile.settings.reduceMotion then
+			TweenService:Create(
+				star,
+				TweenInfo.new(math.random(12, 30) / 10, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+				{ BackgroundTransparency = 0.08 }
+			):Play()
+		end
+	end
+	local violetCloud = Factory.Blob(overlay, 520, UDim2.new(0.15, -260, 0.35, -260), Color3.fromRGB(87, 56, 210), 0.84)
+	violetCloud.ZIndex = 241
+	local cyanCloud = Factory.Blob(overlay, 420, UDim2.new(0.88, -210, 0.72, -210), Color3.fromRGB(24, 145, 188), 0.9)
+	cyanCloud.ZIndex = 241
+	if not self.state.profile.settings.reduceMotion then
+		TweenService:Create(
+			violetCloud,
+			TweenInfo.new(8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+			{ Position = violetCloud.Position + UDim2.fromOffset(44, 24) }
+		):Play()
+		TweenService:Create(
+			cyanCloud,
+			TweenInfo.new(10, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+			{ Position = cyanCloud.Position + UDim2.fromOffset(-36, -22) }
+		):Play()
+	end
+
+	local leave = Factory.Button(overlay, "← Leave lounge", UDim2.fromOffset(154, 42), UDim2.fromOffset(24, 22), nil)
+	leave.ZIndex = 246
+	self:_BindButton(leave)
+	leave.Activated:Connect(function()
+		self:_CloseAfkLounge()
+	end)
+
+	local center = Factory.New("Frame", {
+		Name = "LoungeCenter",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.46),
+		Size = if self.compact then UDim2.new(0.9, 0, 0.78, 0) else UDim2.new(0.62, 0, 0.58, 0),
+		BackgroundColor3 = Color3.fromRGB(9, 9, 22),
+		BackgroundTransparency = 0.14,
+		BorderSizePixel = 0,
+		ZIndex = 243,
+		Parent = overlay,
+	})
+	Factory.Corner(center, 28)
+	Factory.Stroke(center, Colors.Violet, 0.24, 2)
+	Factory.New("UISizeConstraint", {
+		MinSize = Vector2.new(300, 380),
+		MaxSize = Vector2.new(780, 590),
+		Parent = center,
+	})
+	local orbit = Factory.New("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 18),
+		Size = UDim2.fromOffset(70, 70),
+		BackgroundColor3 = Colors.Violet,
+		BorderSizePixel = 0,
+		ZIndex = 244,
+		Parent = center,
+	})
+	Factory.Corner(orbit, 35)
+	Factory.Gradient(orbit, { Colors.Violet, Colors.Cyan, Colors.Rose }, 45)
+	Factory.Label(orbit, "✧", UDim2.fromScale(1, 1), {
+		Font = Theme.Fonts.Black,
+		TextSize = 34,
+		AlignX = Enum.TextXAlignment.Center,
+		AlignY = Enum.TextYAlignment.Center,
+		ZIndex = 245,
+	})
+	Factory.Label(center, "ORBITAL TOKEN LOUNGE", UDim2.new(1, -40, 0, 38), {
+		Position = UDim2.fromOffset(20, 96),
+		Font = Theme.Fonts.Black,
+		TextSize = if self.compact then 21 else 27,
+		AlignX = Enum.TextXAlignment.Center,
+		ZIndex = 244,
+	})
+	self.afkBalanceLabel = Factory.Label(center, "", UDim2.new(1, -40, 0, 26), {
+		Position = UDim2.fromOffset(20, 132),
+		Color = Colors.Gold,
+		Font = Theme.Fonts.Bold,
+		TextSize = 15,
+		AlignX = Enum.TextXAlignment.Center,
+		ZIndex = 244,
+	})
+	self.afkCountdownLabel = Factory.Label(center, "", UDim2.new(1, -48, 0, 28), {
+		Position = UDim2.fromOffset(24, 169),
+		Color = Colors.Text,
+		Font = Theme.Fonts.Bold,
+		TextSize = 14,
+		AlignX = Enum.TextXAlignment.Center,
+		Wrapped = true,
+		ZIndex = 244,
+	})
+	self.afkDailyLabel = Factory.Label(center, "", UDim2.new(1, -48, 0, 22), {
+		Position = UDim2.fromOffset(24, 201),
+		Color = Colors.TextMuted,
+		TextSize = 11,
+		AlignX = Enum.TextXAlignment.Center,
+		ZIndex = 244,
+	})
+	local adButton = Factory.Button(
+		center,
+		"Checking ad availability…",
+		UDim2.new(1, -70, 0, 48),
+		UDim2.fromOffset(35, 235),
+		"mint"
+	)
+	adButton.ZIndex = 244
+	adButton.Active = false
+	self:_BindButton(adButton)
+	self.afkAdButton = adButton
+	self.afkAdStatusLabel = Factory.Label(center, "", UDim2.new(1, -48, 0, 34), {
+		Position = UDim2.fromOffset(24, 291),
+		Color = Colors.TextMuted,
+		TextSize = 10,
+		AlignX = Enum.TextXAlignment.Center,
+		Wrapped = true,
+		ZIndex = 244,
+	})
+	Factory.Label(
+		center,
+		"Passive rewards are bonus tokens for Priority Passes. Roblox may disconnect fully idle players, so check in occasionally.",
+		UDim2.new(1, -48, 0, 48),
+		{
+			Position = UDim2.fromOffset(24, 329),
+			Color = Colors.TextMuted,
+			TextSize = 10,
+			AlignX = Enum.TextXAlignment.Center,
+			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
+			ZIndex = 244,
+		}
+	)
+	adButton.Activated:Connect(function()
+		adButton.Active = false
+		adButton.Text = "Checking ad availability…"
+		task.spawn(function()
+			local checkSuccess, checkResult = pcall(function()
+				return AdService:GetAdAvailabilityNowAsync(Enum.AdFormat.RewardedVideo)
+			end)
+			local available = checkSuccess
+				and type(checkResult) == "table"
+				and checkResult.AdAvailabilityResult == Enum.AdAvailabilityResult.IsAvailable
+			if not available then
+				self:_Toast("error", "No ad is available right now. The lounge will keep checking.")
+				self:_RefreshAfkAdAvailability()
+				return
+			end
+			adButton.Text = "Playing rewarded ad…"
+			local adSuccess, result = self:_Invoke(Network.Actions.RequestRewardedAd, {})
+			if adSuccess then
+				self.adWatchesToday = result.watchesToday
+				self:_Toast("ready", "Ad completed. Roblox is delivering your token.")
+			end
+			task.delay(2, function()
+				self:_RefreshAfkAdAvailability()
+			end)
+		end)
+	end)
+
+	self.afkGainLabel = Factory.Label(overlay, "+0 TOKENS THIS VISIT", UDim2.new(0.8, 0, 0, 48), {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -28),
+		Font = Theme.Fonts.Black,
+		TextSize = if self.compact then 20 else 25,
+		Color = Colors.Mint,
+		AlignX = Enum.TextXAlignment.Center,
+		ZIndex = 246,
+	})
+
+	self.afkInputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed or self.afkOverlay ~= overlay then
+			return
+		end
+		if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
+			self:_CloseAfkLounge()
+		end
+	end)
+	GuiService.SelectedObject = leave
+	self:_RefreshAfkDisplay()
+	self:_RefreshAfkAdAvailability()
+	self:_Track({ event = "AfkLoungeOpened", fields = {} })
+	task.spawn(function()
+		local lastAdCheck = os.clock()
+		while self.afkRunId == runId and self.afkOverlay == overlay and overlay.Parent do
+			task.wait(1)
+			self:_RefreshAfkDisplay()
+			if os.clock() - lastAdCheck >= 30 and not self.afkAdChecking and self.adAvailable ~= true then
+				lastAdCheck = os.clock()
+				self:_RefreshAfkAdAvailability()
+			end
+		end
+	end)
+end
+
 function App:_RefreshLocalizedPrices()
 	local state = self.state
 	if not state then
@@ -1577,7 +2062,14 @@ function App:_Bootstrap()
 				)
 			end
 			if (data.dailyBrief.tokensGranted or 0) > 0 then
-				table.insert(parts, string.format("+%d Forge Tokens for returning", data.dailyBrief.tokensGranted))
+				table.insert(
+					parts,
+					string.format(
+						"Day %d login: +%d bonus Forge Tokens",
+						data.dailyBrief.rewardDay or 1,
+						data.dailyBrief.tokensGranted
+					)
+				)
 			end
 			if data.dailyBrief.rewardGranted then
 				table.insert(
@@ -1587,16 +2079,16 @@ function App:_Bootstrap()
 			end
 			if data.dailyBrief.milestoneReward then
 				local milestone = data.dailyBrief.milestoneReward
-				table.insert(
-					parts,
-					string.format(
-						"🏆 %d-day milestone: +%d tokens, +%d Priority Pass%s",
-						milestone.day,
-						milestone.tokens,
-						milestone.priorityPasses,
-						if milestone.priorityPasses == 1 then "" else "es"
-					)
+				local milestoneText = string.format(
+					"🏆 %d-day milestone: +%d Priority Pass%s",
+					milestone.day,
+					milestone.priorityPasses,
+					if milestone.priorityPasses == 1 then "" else "es"
 				)
+				if (milestone.tokens or 0) > 0 then
+					milestoneText ..= string.format(" and +%d tokens", milestone.tokens)
+				end
+				table.insert(parts, milestoneText)
 			end
 			self:_Toast("success", table.concat(parts, " · "))
 		elseif data.dailyBrief and data.dailyBrief.streak > 0 then
@@ -1651,6 +2143,8 @@ function App:_SetHighContrast(enabled: boolean)
 	self.loading:Destroy()
 	self.shell.Visible = wasOpen
 	self.launcher.Visible = not wasOpen
+	self.arcadeLauncher.Visible = not wasOpen
+	self.afkLauncher.Visible = not wasOpen
 	self:_UpdateSoundButton()
 	-- _BuildChrome creates fresh blob/ember instances but doesn't itself
 	-- know whether ambient motion should be running -- carry the previous
@@ -1658,6 +2152,176 @@ function App:_SetHighContrast(enabled: boolean)
 	self:_SetAmbientMotion(motionWasEnabled)
 	self:_RenderStatus()
 	self:_RenderActivePage()
+end
+
+function App:_ShowCreationComplete(kind: string, record: { [string]: any }, completionId: string)
+	if self.completionShownIds[completionId] then
+		return
+	end
+	self.completionShownIds[completionId] = true
+	if self.completionOverlay then
+		self.completionOverlay:Destroy()
+	end
+
+	local title = if kind == "MODEL"
+		then "YOUR MODEL IS READY"
+		elseif kind == "REFERENCE" then "REFERENCE IMAGE READY"
+		else "YOUR IMAGE IS READY"
+	local subtitle = if kind == "MODEL"
+		then "The forge cooled perfectly. Fit it, equip it, and make it yours."
+		elseif kind == "REFERENCE" then "Your concept has arrived. Review it, then send it into the 3D forge."
+		else "Fresh from the renderer and saved in your Avatar Graphics gallery."
+	local imageId = record.thumbnailAssetId or record.previewAssetId
+	local overlay = Factory.New("Frame", {
+		Name = "CreationComplete",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.fromRGB(4, 4, 15),
+		BackgroundTransparency = 0.08,
+		BorderSizePixel = 0,
+		ZIndex = 300,
+		Parent = self.gui,
+	})
+	self.completionOverlay = overlay
+	local glow = Factory.Blob(
+		overlay,
+		620,
+		UDim2.new(0.5, -310, 0.5, -310),
+		if kind == "MODEL" then Colors.Violet else Colors.Cyan,
+		0.78
+	)
+	glow.ZIndex = 301
+	local card = Factory.New("Frame", {
+		Name = "CelebrationCard",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = if self.compact then UDim2.new(0.9, 0, 0.78, 0) else UDim2.fromOffset(570, 600),
+		BackgroundColor3 = Colors.Panel,
+		BackgroundTransparency = 0.04,
+		BorderSizePixel = 0,
+		ZIndex = 303,
+		Parent = overlay,
+	})
+	Factory.Corner(card, 28)
+	Factory.Stroke(card, if kind == "MODEL" then Colors.Violet else Colors.Cyan, 0.12, 2)
+	Factory.New("UISizeConstraint", {
+		MinSize = Vector2.new(300, 430),
+		MaxSize = Vector2.new(570, 600),
+		Parent = card,
+	})
+	local badge = Factory.Pill(card, if kind == "MODEL" then "FORGED" else "CREATED", Colors.Mint, 112)
+	badge.AnchorPoint = Vector2.new(0.5, 0)
+	badge.Position = UDim2.new(0.5, 0, 0, 25)
+	badge.ZIndex = 304
+	Factory.Label(card, title, UDim2.new(1, -40, 0, 40), {
+		Position = UDim2.fromOffset(20, 62),
+		Font = Theme.Fonts.Black,
+		TextSize = if self.compact then 22 else 28,
+		AlignX = Enum.TextXAlignment.Center,
+		ZIndex = 304,
+	})
+	Factory.Label(card, subtitle, UDim2.new(1, -56, 0, 48), {
+		Position = UDim2.fromOffset(28, 102),
+		Color = Colors.TextMuted,
+		TextSize = 12,
+		Wrapped = true,
+		AlignX = Enum.TextXAlignment.Center,
+		AlignY = Enum.TextYAlignment.Top,
+		ZIndex = 304,
+	})
+	local preview = Factory.New("ImageLabel", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 162),
+		Size = if self.compact then UDim2.new(0.68, 0, 0.42, 0) else UDim2.fromOffset(300, 300),
+		BackgroundColor3 = Colors.Ink,
+		BorderSizePixel = 0,
+		Image = directImage(imageId),
+		ScaleType = Enum.ScaleType.Fit,
+		ZIndex = 304,
+		Parent = card,
+	})
+	Factory.Corner(preview, 22)
+	Factory.Stroke(preview, Colors.Cyan, 0.3, 1.5)
+	if tonumber(imageId) == nil or tonumber(imageId) <= 0 then
+		Factory.Label(preview, if kind == "MODEL" then "◇" else "❑", UDim2.fromScale(1, 1), {
+			Font = Theme.Fonts.Black,
+			TextSize = 76,
+			Color = if kind == "MODEL" then Colors.Violet else Colors.Cyan,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			ZIndex = 305,
+		})
+	end
+	local close = Factory.Button(card, "×", UDim2.fromOffset(38, 38), UDim2.new(1, -50, 0, 12), nil)
+	close.TextSize = 20
+	close.ZIndex = 305
+	self:_BindButton(close)
+	local view = Factory.Button(
+		card,
+		if kind == "MODEL" then "Fit this model" elseif kind == "REFERENCE" then "Review reference" else "Open gallery",
+		UDim2.new(0.5, -27, 0, 46),
+		UDim2.new(0, 18, 1, -64),
+		"primary"
+	)
+	view.ZIndex = 305
+	self:_BindButton(view)
+	local another =
+		Factory.Button(card, "Create another", UDim2.new(0.5, -27, 0, 46), UDim2.new(0.5, 9, 1, -64), "mint")
+	another.ZIndex = 305
+	self:_BindButton(another)
+
+	local function dismiss()
+		if self.completionOverlay == overlay then
+			self.completionOverlay = nil
+		end
+		overlay:Destroy()
+	end
+	close.Activated:Connect(dismiss)
+	view.Activated:Connect(function()
+		dismiss()
+		self:_SetStudioOpen(true)
+		if kind == "MODEL" then
+			self.selectedItemId = record.id
+			self:_OpenPage("My Studio")
+		elseif kind == "GRAPHIC" then
+			self.graphicsTab = "CREATE"
+			self:_OpenPage("Avatar Graphics")
+		else
+			self:_OpenPage("Create")
+		end
+	end)
+	another.Activated:Connect(function()
+		dismiss()
+		self:_SetStudioOpen(true)
+		self:_OpenPage("Create")
+	end)
+	self.sounds:Play("GenerationReady")
+	self:_AnimateModalIn(overlay, card)
+	if self.state.profile.settings.reduceMotion ~= true then
+		for _ = 1, 24 do
+			local particle = Factory.New("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.48),
+				Size = UDim2.fromOffset(math.random(5, 11), math.random(5, 11)),
+				BackgroundColor3 = ({ Colors.Gold, Colors.Cyan, Colors.Rose, Colors.Mint })[math.random(1, 4)],
+				BorderSizePixel = 0,
+				Rotation = math.random(0, 180),
+				ZIndex = 302,
+				Parent = overlay,
+			})
+			Factory.Corner(particle, 3)
+			local target = UDim2.fromScale(math.random(8, 92) / 100, math.random(8, 92) / 100)
+			local tween = TweenService:Create(
+				particle,
+				TweenInfo.new(math.random(8, 16) / 10, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+				{ Position = target, BackgroundTransparency = 1, Rotation = particle.Rotation + math.random(90, 300) }
+			)
+			tween:Play()
+			tween.Completed:Connect(function()
+				particle:Destroy()
+			end)
+		end
+	end
+	GuiService.SelectedObject = view
 end
 
 function App:_ConnectPush()
@@ -1677,6 +2341,7 @@ function App:_ConnectPush()
 			end
 			self:_RenderStatus()
 			self:_RenderActivePage()
+			self:_RefreshAfkDisplay()
 		elseif eventName == Network.PushEvents.Generation then
 			if payload.stage == "QUEUED" and not self.queuedSoundIds[payload.generationId] then
 				self.queuedSoundIds[payload.generationId] = true
@@ -1690,6 +2355,13 @@ function App:_ConnectPush()
 						generation[key] = value
 					end
 				end
+				if
+					generation.stage == "IMAGE_READY"
+					and generation.previewAssetId ~= nil
+					and generation.itemId == nil
+				then
+					self:_ShowCreationComplete("REFERENCE", generation, "reference:" .. payload.generationId)
+				end
 				if self.activePage == "Create" then
 					self:_RenderActivePage()
 				end
@@ -1698,14 +2370,48 @@ function App:_ConnectPush()
 					self:_RefreshBootstrap()
 				end)
 			end
-		elseif
-			eventName == Network.PushEvents.Item
-			or eventName == Network.PushEvents.Transfer
-			or eventName == Network.PushEvents.Graphic
-		then
+		elseif eventName == Network.PushEvents.Item then
+			local profile = self.state.profile
+			local isNew = payload.item and profile.items[payload.itemId] == nil
+			if payload.item then
+				profile.items[payload.itemId] = payload.item
+				if not table.find(profile.itemOrder, payload.itemId) then
+					table.insert(profile.itemOrder, 1, payload.itemId)
+				end
+				if isNew then
+					self:_ShowCreationComplete("MODEL", payload.item, "item:" .. payload.itemId)
+				end
+			end
+			self:_RenderActivePage()
+			task.delay(0.5, function()
+				self:_RefreshBootstrap()
+			end)
+		elseif eventName == Network.PushEvents.Graphic then
+			local profile = self.state.profile
+			if payload.deleted then
+				profile.graphics[payload.graphicId] = nil
+				local index = table.find(profile.graphicOrder, payload.graphicId)
+				if index then
+					table.remove(profile.graphicOrder, index)
+				end
+			elseif payload.graphic then
+				local isNew = profile.graphics[payload.graphicId] == nil
+				profile.graphics[payload.graphicId] = payload.graphic
+				if not table.find(profile.graphicOrder, payload.graphicId) then
+					table.insert(profile.graphicOrder, 1, payload.graphicId)
+				end
+				if isNew then
+					self:_ShowCreationComplete("GRAPHIC", payload.graphic, "graphic:" .. payload.graphicId)
+				end
+			end
+			self:_RenderActivePage()
+		elseif eventName == Network.PushEvents.Transfer then
 			task.delay(0.2, function()
 				self:_RefreshBootstrap()
 			end)
+		elseif eventName == Network.PushEvents.Afk then
+			self.afkSnapshot = payload
+			self:_RefreshAfkDisplay()
 		elseif eventName == Network.PushEvents.Entitlements then
 			for key, value in payload do
 				self.state.benefits[key] = value
@@ -2047,8 +2753,8 @@ function App:_RenderCreate()
 			elseif self.adAvailable == false then "No ad available right now"
 			else string.format(
 				"Watch ad · +%d token%s%s",
-				Config.Ads.TokenGrantPerPurchase,
-				if Config.Ads.TokenGrantPerPurchase == 1 then "" else "s",
+				Config.Ads.TokenGrantPerAd,
+				if Config.Ads.TokenGrantPerAd == 1 then "" else "s",
 				if watchesToday > 0 then string.format(" (%d today)", watchesToday) else ""
 			),
 		UDim2.new(rightWidth, -2 * inset, 0, 34),
@@ -2094,9 +2800,9 @@ function App:_RenderCreate()
 		tokensCard,
 		string.format(
 			"Buy %d token%s · R$ %d",
-			Config.Ads.TokenGrantPerPurchase,
-			if Config.Ads.TokenGrantPerPurchase == 1 then "" else "s",
-			self.state.prices.AdRewardTokens
+			Config.Ads.TokenPackGrant,
+			if Config.Ads.TokenPackGrant == 1 then "" else "s",
+			self.state.prices.TokenPack70
 		),
 		UDim2.new(rightWidth, -2 * inset, 0, 30),
 		UDim2.new(rightX, inset, 0, buyTokensY),
@@ -3009,7 +3715,7 @@ function App:_RenderCreate()
 	local brief = self.state.dailyBrief
 	if brief then
 		local hasMilestoneBanner = brief.milestoneReward ~= nil
-		local cardHeight = 156 + (if hasMilestoneBanner then 36 else 0)
+		local cardHeight = 222 + (if hasMilestoneBanner then 36 else 0)
 		local daily = Factory.Card(stack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyBrief")
 		daily.LayoutOrder = 5
 
@@ -3058,13 +3764,20 @@ function App:_RenderCreate()
 			Factory.Stroke(banner, Colors.Gold, 0.4, 1)
 			Factory.Label(
 				banner,
-				string.format(
-					"🏆 %d-day milestone! +%d Forge Tokens · +%d Priority Pass%s",
-					milestone.day,
-					milestone.tokens,
-					milestone.priorityPasses,
-					if milestone.priorityPasses == 1 then "" else "es"
-				),
+				if (milestone.tokens or 0) > 0
+					then string.format(
+						"🏆 %d-day milestone! +%d Forge Tokens · +%d Priority Pass%s",
+						milestone.day,
+						milestone.tokens,
+						milestone.priorityPasses,
+						if milestone.priorityPasses == 1 then "" else "es"
+					)
+					else string.format(
+						"🏆 %d-day milestone! +%d Priority Pass%s",
+						milestone.day,
+						milestone.priorityPasses,
+						if milestone.priorityPasses == 1 then "" else "es"
+					),
 				UDim2.new(1, -20, 1, 0),
 				{
 					Position = UDim2.fromOffset(10, 0),
@@ -3076,6 +3789,48 @@ function App:_RenderCreate()
 			)
 			briefY += 36
 		end
+
+		local calendar = Factory.New("Frame", {
+			Name = "LoginCalendar",
+			Position = UDim2.fromOffset(15, briefY),
+			Size = UDim2.new(1, -30, 0, 54),
+			BackgroundTransparency = 1,
+			Parent = daily,
+		})
+		Factory.New("UIGridLayout", {
+			CellSize = UDim2.new(1 / 7, -6, 1, 0),
+			CellPadding = UDim2.fromOffset(7, 0),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Parent = calendar,
+		})
+		for dayNumber, reward in Config.Retention.DailyStreakTokens do
+			local current = dayNumber == (brief.rewardDay or 1)
+			local dayCard = Factory.New("Frame", {
+				Name = string.format("Day%d", dayNumber),
+				LayoutOrder = dayNumber,
+				BackgroundColor3 = if current then Colors.Gold else Colors.Ink,
+				BackgroundTransparency = if current then 0.08 else 0.28,
+				BorderSizePixel = 0,
+				Parent = calendar,
+			})
+			Factory.Corner(dayCard, 9)
+			Factory.Stroke(dayCard, if current then Colors.Gold else Colors.Line, if current then 0.2 else 0.7, 1)
+			Factory.Label(dayCard, string.format("D%d", dayNumber), UDim2.new(1, 0, 0, 19), {
+				Position = UDim2.fromOffset(0, 4),
+				Font = Theme.Fonts.Bold,
+				TextSize = 9,
+				Color = if current then Colors.Ink else Colors.TextMuted,
+				AlignX = Enum.TextXAlignment.Center,
+			})
+			Factory.Label(dayCard, string.format("+%d", reward), UDim2.new(1, 0, 0, 22), {
+				Position = UDim2.fromOffset(0, 24),
+				Font = Theme.Fonts.Black,
+				TextSize = if reward >= 40 then 11 else 12,
+				Color = if current then Colors.Ink else Colors.Mint,
+				AlignX = Enum.TextXAlignment.Center,
+			})
+		end
+		briefY += 66
 
 		-- A real journey bar toward the next streak milestone (7/14/30, then
 		-- every 30 days after), not just the existing "next check-in" line --
@@ -3620,7 +4375,7 @@ function App:_RenderStudio()
 	})
 	Factory.Corner(viewport, 14)
 	Factory.Stroke(viewport, Colors.Violet, 0.45)
-	local controller = ViewportController.new(viewport)
+	local controller = ViewportController.new(viewport, selected.id)
 	self.activeViewport = controller
 	local orbitHint = Factory.Pill(viewport, "DRAG ORBIT · RIGHT/SHIFT DRAG PAN", Colors.Cyan, 234)
 	orbitHint.Position = UDim2.fromOffset(12, 12)
@@ -4038,6 +4793,7 @@ function App:_RenderStudio()
 					if index then
 						table.remove(self.state.profile.equippedItemIds, index)
 					end
+					self.avatarPreviewDirty = true
 					self:_Toast("success", "Unequipped.")
 					self:_RenderActivePage()
 					return
@@ -4057,6 +4813,7 @@ function App:_RenderStudio()
 						if not table.find(self.state.profile.equippedItemIds, selected.id) then
 							table.insert(self.state.profile.equippedItemIds, selected.id)
 						end
+						self.avatarPreviewDirty = true
 						self:_Toast("success", "Equipped on your in-game avatar.")
 						self:_RenderActivePage()
 						return
@@ -4549,7 +5306,14 @@ function App:_RenderDiscover()
 		-- The old -5/-15 split left "Buy copy" only ~5px from the card's own
 		-- right edge (and an equally cramped 5px between the two buttons);
 		-- widened both gaps to a real ~10px.
-		local try = Factory.Button(card, "Try on", UDim2.new(0.48, -14, 0, 38), UDim2.fromOffset(10, 250), "primary")
+		local isCommunityTryOn = self.communityTryOnItem ~= nil and self.communityTryOnItem.id == item.id
+		local try = Factory.Button(
+			card,
+			if isCommunityTryOn then "Remove" else "Try on",
+			UDim2.new(0.48, -14, 0, 38),
+			UDim2.fromOffset(10, 250),
+			if isCommunityTryOn then "danger" else "primary"
+		)
 		local buy = Factory.Button(
 			card,
 			if item.isListed then "Buy copy" else "Not for sale",
@@ -4561,16 +5325,27 @@ function App:_RenderDiscover()
 		self:_BindButton(buy)
 		buy.Active = item.isListed == true
 		try.Activated:Connect(function()
+			local removing = self.communityTryOnItem ~= nil and self.communityTryOnItem.id == item.id
 			try.Active = false
-			try.Text = "Applying…"
+			try.Text = if removing then "Removing…" else "Applying…"
 			task.spawn(function()
-				local success = self:_Invoke(Network.Actions.TryOnCommunityItem, { itemId = item.id })
+				local success = self:_Invoke(
+					if removing then Network.Actions.ClearCommunityTryOn else Network.Actions.TryOnCommunityItem,
+					if removing then {} else { itemId = item.id }
+				)
 				if success then
-					self:_Toast("success", "Trying this creator's model on your avatar.")
+					self.communityTryOnItem = if removing then nil else item
+					self.avatarPreviewDirty = true
+					self:_Toast(
+						"success",
+						if removing then "Community model removed." else "Trying this creator's model on your avatar."
+					)
+					self:_RenderActivePage()
+					return
 				end
 				if try.Parent then
 					try.Active = true
-					try.Text = "Try on"
+					try.Text = if removing then "Remove" else "Try on"
 				end
 			end)
 		end)
@@ -4821,6 +5596,8 @@ function App:_RenderAvatarLab()
 				-- per-item tracking must be cleared to match.
 				self.triedOnAssetIds = {}
 				self.triedOnAssetInfo = {}
+				self.avatarAccessoriesDirty = true
+				self.communityTryOnItem = nil
 				self.avatarPreviewDirty = true
 				self:_RenderActivePage()
 			end
@@ -5099,14 +5876,20 @@ function App:_RenderAvatarLab()
 						{ assetId = assetId, avatarAssetType = self.catalogType }
 					)
 					if success then
+						-- Applying a HumanoidDescription replaces temporary physical
+						-- try-ons. Forge-owned equipped items are restored server-side;
+						-- a community preview is intentionally cleared.
+						self.communityTryOnItem = nil
 						if removing then
 							self.triedOnAssetIds[assetId] = nil
 							self.triedOnAssetInfo[assetId] = nil
+							self.avatarAccessoriesDirty = true
 							self:_Toast("success", "Catalog item removed.")
 						else
 							self.triedOnAssetIds[assetId] = true
 							self.triedOnAssetInfo[assetId] =
 								{ name = tostring(item.Name or "Catalog item"), assetType = self.catalogType }
+							self.avatarAccessoriesLoaded = true
 							self:_Toast("success", "Catalog item applied. Keep browsing to build your look.")
 						end
 						self.avatarPreviewDirty = true
@@ -6089,7 +6872,7 @@ function App:_RenderAvatarGraphics()
 			local hasLink = graphic.backendJobId ~= nil and graphic.backendJobId ~= ""
 			Factory.Label(
 				card,
-				if hasLink then "SHAREABLE LINK · TAP, THEN CTRL+C" else "LINK UNAVAILABLE (STUDIO MOCK)",
+				if hasLink then "FULL-RES DOWNLOAD LINK · COPY INTO BROWSER" else "LINK UNAVAILABLE (STUDIO MOCK)",
 				UDim2.new(1, -20, 0, 12),
 				{ Position = UDim2.fromOffset(10, 350), Color = Colors.TextMuted, TextSize = 8 }
 			)
@@ -6122,6 +6905,12 @@ function App:_RenderAvatarGraphics()
 				task.spawn(function()
 					local success = self:_Invoke(Network.Actions.DeleteGraphic, { graphicId = graphicId })
 					if success then
+						self.state.profile.graphics[graphicId] = nil
+						local orderIndex = table.find(self.state.profile.graphicOrder, graphicId)
+						if orderIndex then
+							table.remove(self.state.profile.graphicOrder, orderIndex)
+						end
+						self:_Toast("success", "Graphic deleted.")
 						self:_RenderActivePage()
 					elseif delete.Parent then
 						delete.Active = true
@@ -6368,6 +7157,7 @@ function App:_RenderSettings()
 							if index then
 								table.remove(self.state.profile.equippedItemIds, index)
 							end
+							self.avatarPreviewDirty = true
 							self:_Toast("success", "Unequipped.")
 							self:_RenderActivePage()
 							return

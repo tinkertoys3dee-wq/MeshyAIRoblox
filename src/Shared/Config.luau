@@ -112,34 +112,22 @@ return table.freeze({
 		-- uploaded/generated reference) -- so it's priced identically.
 		AvatarConversion = { Id = 3709863858, SuggestedPrice = 159 },
 		PriorityPass = { Id = 3709322304, SuggestedPrice = 29 },
-		-- The Forge Tokens pack: a normal Robux-purchasable product AND the
-		-- product Roblox's rewarded-video-ad reward is created from
-		-- (AdService:CreateAdRewardFromDevProductId). Roblox requires an ad
-		-- reward to be "a developer product which would normally be available
-		-- to purchase with Robux" worth 3-10 Robux, and forbids rewarding
-		-- Robux directly — see docs/PRICING.md "Forge Tokens" section before
-		-- changing this price or Ads.TokenGrantPerPurchase. Priced at Roblox's
-		-- allowed floor: a completed rewarded ad measures at only ~0.12-0.44
-		-- Robux of real revenue (see Ads.TokenGrantPerPurchase below), nowhere
-		-- close to what an 8 Robux anchor implied, so there is no case for
-		-- pricing this above the minimum.
+		-- Dedicated 70-token Robux pack. Keep this separate from the developer
+		-- product wrapped by rewarded video below: a completed ad remains worth
+		-- exactly one token, while this deliberately stronger 10-Robux offer
+		-- gives paying players a useful amount at once. Create this repeatable
+		-- developer product in Creator Hub and replace 0 with its ID.
+		TokenPack70 = { Id = 0, SuggestedPrice = 10 },
+		-- Rewarded-video wrapper product. Roblox recommends an ad reward worth
+		-- 3-10 Robux and its official flow wraps a normal developer product, so
+		-- this stays a separate one-token product rather than overloading the
+		-- 70-token store pack above.
 		AdRewardTokens = { Id = 3709706813, SuggestedPrice = 3 },
 	},
 
 	Passes = {
 		-- Permanent access to player- or creator-group-owned Image/Decal references.
 		CustomImageUpload = { Id = 1955130723, SuggestedPrice = 249 },
-	},
-
-	AvatarCreationTokens = {
-		Hat = "",
-		HairAccessory = "",
-		FaceAccessory = "",
-		NeckAccessory = "",
-		ShoulderAccessory = "",
-		FrontAccessory = "",
-		BackAccessory = "3e34e666-3680-419a-9a11-46b38a8664c3",
-		WaistAccessory = "",
 	},
 
 	-- Forge Tokens: an ad-earned (or directly Robux-purchased) alternative to
@@ -171,14 +159,11 @@ return table.freeze({
 	-- stays ahead even in the least profitable case. See docs/PRICING.md
 	-- "Forge Tokens" for the full derivation.
 	Ads = {
-		-- Tokens granted both when a player buys AdRewardTokens directly with
-		-- Robux and when they complete a rewarded video ad for it (Roblox
-		-- requires both paths grant the identical benefit). 1 token per ad —
-		-- see WorstCaseAdRevenuePerAd below for why this needs to be a small,
-		-- clean unit rather than a larger batch: each token stands in for one
-		-- ad's worth of real revenue, and CommerceService's generation-token
-		-- price is derived directly from that equivalence.
-		TokenGrantPerPurchase = 1,
+		-- The AdRewardTokens product grants this same benefit whether acquired
+		-- from a completed rewarded video or bought directly from its Roblox
+		-- product page. The in-game Robux store instead sells TokenPack70.
+		TokenGrantPerAd = 1,
+		TokenPackGrant = 70,
 		-- The conservative floor of the measured ~0.12-0.44 Robux-per-ad
 		-- range (see the note above) — deliberately the *worst* case, not the
 		-- average, so generation-token pricing stays safe even on the least
@@ -204,15 +189,17 @@ return table.freeze({
 	},
 
 	Retention = {
-		-- Granted every day RetentionService:CheckIn sees a new UTC day,
-		-- independent of the existing every-3rd-day Priority Pass reward.
-		DailyCheckInTokens = 2,
+		-- Seven-day repeating login calendar. Missing a UTC day resets the
+		-- streak and therefore returns the next claim to day 1. These are free
+		-- bonusTokens (Priority-Pass eligible, never provider-cost generation
+		-- spend), which keeps the generous day-7 payoff economically bounded.
+		DailyStreakTokens = { 3, 6, 10, 20, 40, 50, 70 },
 		-- A lapsed player's streak already resets to 1 on any gap (see
 		-- RetentionService:CheckIn), but that alone doesn't distinguish
 		-- "away one day" from "away a month" -- the second player is the one
 		-- actually at risk of not coming back, and is worth a specifically
 		-- warmer welcome. A gap of at least this many UTC days on top of the
-		-- normal DailyCheckInTokens reward grants WinBackBonusTokens once.
+		-- normal DailyStreakTokens reward grants WinBackBonusTokens once.
 		WinBackGapDays = 3,
 		-- Free (bonusTokens, no revenue behind it, same as every other
 		-- retention grant) top-up for a returning lapsed player. Kept modest
@@ -239,14 +226,24 @@ return table.freeze({
 		-- occasion rather than another routine check-in. bonusTokens, same
 		-- restriction as every other grant here (Priority Pass only).
 		StreakMilestones = {
-			[7] = { tokens = 10, priorityPasses = 1 },
-			[14] = { tokens = 18, priorityPasses = 1 },
-			[30] = { tokens = 40, priorityPasses = 2 },
+			[7] = { tokens = 0, priorityPasses = 1 },
+			[14] = { tokens = 0, priorityPasses = 1 },
+			[30] = { tokens = 0, priorityPasses = 2 },
 		},
 		-- Once a streak passes the highest configured milestone, that same
 		-- tier repeats every this-many days instead of the table needing an
 		-- entry for every future day forever.
 		StreakMilestoneRepeatDay = 30,
+	},
+
+	AFK = {
+		-- Server-authoritative lounge reward. Free AFK earnings stay in the
+		-- bonusTokens pool, so they can buy queue acceleration without exposing
+		-- OpenAI/Meshy spend. A daily cap prevents unattended farms from growing
+		-- without bound while still making a normal lounge session feel active.
+		IntervalSeconds = 60,
+		TokensPerInterval = 1,
+		DailyTokenCap = 70,
 	},
 
 	Commerce = {

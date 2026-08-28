@@ -31,6 +31,11 @@ local function nextMilestoneDay(streak: number): number
 	return (math.floor(streak / repeatDay) + 1) * repeatDay
 end
 
+local function calendarDay(streak: number): number
+	local rewards = Config.Retention.DailyStreakTokens
+	return ((math.max(streak, 1) - 1) % #rewards) + 1
+end
+
 local QUEST_BY_KEY = {} :: { [string]: { key: string, label: string, icon: string, tokens: number } }
 for _, quest in Config.Retention.Quests do
 	QUEST_BY_KEY[quest.key] = quest
@@ -61,6 +66,7 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 	local tokensGranted = 0
 	local winBackTokensGranted = 0
 	local daysAway = 0
+	local rewardDay = 1
 	local milestoneReward = nil :: { day: number, tokens: number, priorityPasses: number }?
 	self.profiles:Mutate(player, function(profile)
 		if profile.daily.lastDay ~= day then
@@ -79,7 +85,8 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 			end
 			profile.daily.lastDay = day
 			profile.daily.best = math.max(profile.daily.best, profile.daily.streak)
-			tokensGranted = Config.Retention.DailyCheckInTokens
+			rewardDay = calendarDay(profile.daily.streak)
+			tokensGranted = Config.Retention.DailyStreakTokens[rewardDay]
 			-- bonusTokens, not tokens: this reward has no ad revenue or Robux
 			-- payment behind it, so it may only ever buy the Priority Pass —
 			-- see the matching comment on ProfileService.defaultProfile.
@@ -116,6 +123,9 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 		self.profiles:Save(player)
 	end
 	local profile = self.profiles:Get(player)
+	if not changed then
+		rewardDay = calendarDay(profile.daily.streak)
+	end
 	self.analytics:Custom(player, "DailyStudioCheckIn", profile.daily.streak, {
 		reward = rewardGranted,
 		tokensGranted = tokensGranted,
@@ -133,12 +143,14 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 	local brief = {
 		streak = profile.daily.streak,
 		best = profile.daily.best,
+		rewardDay = rewardDay,
 		rewardGranted = rewardGranted,
 		tokensGranted = tokensGranted,
 		winBackTokensGranted = winBackTokensGranted,
 		daysAway = daysAway,
 		theme = THEMES[(day % #THEMES) + 1],
 		nextRewardIn = 3 - (profile.daily.streak % 3),
+		nextDailyTokens = Config.Retention.DailyStreakTokens[(rewardDay % #Config.Retention.DailyStreakTokens) + 1],
 		milestoneReward = milestoneReward,
 		nextMilestoneDay = nextMilestoneDay(profile.daily.streak),
 	}
@@ -152,11 +164,14 @@ function RetentionService:GetBrief(player: Player): { [string]: any }
 	end
 	local day = math.floor(os.time() / 86400)
 	local profile = self.profiles:Get(player)
+	local rewardDay = calendarDay(profile.daily.streak)
 	return {
 		streak = profile.daily.streak,
 		best = profile.daily.best,
+		rewardDay = rewardDay,
 		theme = THEMES[(day % #THEMES) + 1],
 		nextRewardIn = 3 - (profile.daily.streak % 3),
+		nextDailyTokens = Config.Retention.DailyStreakTokens[(rewardDay % #Config.Retention.DailyStreakTokens) + 1],
 		nextMilestoneDay = nextMilestoneDay(profile.daily.streak),
 	}
 end

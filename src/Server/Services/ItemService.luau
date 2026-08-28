@@ -5,6 +5,7 @@ local AvatarCreationService = game:GetService("AvatarCreationService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
 
 local AccessoryFit = require(ReplicatedStorage:WaitForChild("AccessoryFit"))
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
@@ -39,6 +40,28 @@ local AVATAR_ASSET_ENUMS = {
 -- produced by CreateMeshPartAsync. Runtime accessories can remain massless,
 -- but the instance passed to the creation prompt must retain upload-safe data.
 local AVATAR_CREATION_HANDLE_COLOR = Color3.fromRGB(163, 162, 165)
+
+-- Avatar Creation Tokens authorize paid publishing and should never be
+-- replicated to every client through Config. Studio owners keep them in an
+-- unsynced ServerStorage folder, which default.project.json preserves via
+-- $keepUnknowns. Attributes and StringValues are both supported for easy
+-- Creator Studio setup.
+local function getCreationToken(accessoryType: string): string?
+	local secrets = ServerStorage:FindFirstChild("ForgeUGCSecrets")
+	if not secrets then
+		return nil
+	end
+	local valueName = `AvatarCreationToken_{accessoryType}`
+	local attribute = secrets:GetAttribute(valueName)
+	if type(attribute) == "string" and attribute ~= "" then
+		return attribute
+	end
+	local value = secrets:FindFirstChild(valueName)
+	if value and value:IsA("StringValue") and value.Value ~= "" then
+		return value.Value
+	end
+	return nil
+end
 
 local function finite(value: any): boolean
 	return type(value) == "number" and value == value and value > -math.huge and value < math.huge
@@ -517,6 +540,21 @@ function ItemService:TryOn(player: Player, item: { [string]: any }): (boolean, a
 	return true, { triedOn = true }
 end
 
+function ItemService:ClearCommunityTryOn(player: Player): (boolean, any)
+	local character = player.Character
+	if not character then
+		return false, "CHARACTER_UNAVAILABLE"
+	end
+	local removed = false
+	for _, child in character:GetChildren() do
+		if child:IsA("Accessory") and child:GetAttribute("ForgeCommunityTryOn") then
+			child:Destroy()
+			removed = true
+		end
+	end
+	return true, { removed = removed }
+end
+
 function ItemService:RequestPrivateModel(player: Player, item: { [string]: any }): (boolean, any)
 	if type(item.modelAssetId) ~= "number" or item.modelAssetId <= 0 then
 		return false, "MODEL_UNAVAILABLE"
@@ -559,7 +597,7 @@ function ItemService:Publish(player: Player, itemId: string): (boolean, any)
 		return true, { assetId = item.publishedAssetId, alreadyPublished = true }
 	end
 	local accessoryType = item.fit.accessoryType
-	local tokenId = Config.AvatarCreationTokens[accessoryType]
+	local tokenId = getCreationToken(accessoryType)
 	local avatarAssetType = AVATAR_ASSET_ENUMS[accessoryType]
 	if type(tokenId) ~= "string" or tokenId == "" or not avatarAssetType then
 		return false, "CREATION_TOKEN_NOT_CONFIGURED"

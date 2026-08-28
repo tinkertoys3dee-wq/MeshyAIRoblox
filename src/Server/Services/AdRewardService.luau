@@ -44,42 +44,47 @@ function AdRewardService.new(
 		achievements = achievementService,
 	}, AdRewardService)
 
-	-- Roblox requires the ad reward to be a developer product that is also
-	-- normally purchasable with Robux; buying it directly and completing a
-	-- rewarded ad for it must grant the identical benefit, so both paths are
-	-- registered through this one handler.
-	commerceService:Register("AdRewardTokens", function(player: Player, _payload: any, intentId: string)
-		local granted = false
-		local mutateSuccess = self.profiles:Mutate(player, function(profile)
-			if not profile.grantedIntents[intentId] then
-				profile.grantedIntents[intentId] = { kind = "AD_REWARD_TOKENS", grantedAt = os.time() }
-				profile.tokens = (profile.tokens or 0) + Config.Ads.TokenGrantPerPurchase
-				granted = true
+	local function registerTokenGrant(productKey: string, amount: number, analyticsEvent: string)
+		commerceService:Register(productKey, function(player: Player, _payload: any, intentId: string)
+			local granted = false
+			local mutateSuccess = self.profiles:Mutate(player, function(profile)
+				if not profile.grantedIntents[intentId] then
+					profile.grantedIntents[intentId] = {
+						kind = "FORGE_TOKENS",
+						productKey = productKey,
+						amount = amount,
+						grantedAt = os.time(),
+					}
+					profile.tokens = (profile.tokens or 0) + amount
+					granted = true
+				end
+			end)
+			if not mutateSuccess then
+				error("PROFILE_MUTATION_FAILED")
+			end
+			if not granted then
+				return nil
+			end
+			return function()
+				local profile = self.profiles:Get(player)
+				if not profile or player.Parent == nil then
+					return
+				end
+				self.push(player, Network.PushEvents.Profile, { tokens = profile.tokens })
+				self.push(player, Network.PushEvents.Toast, {
+					tone = "success",
+					message = string.format("+%d Forge Token%s", amount, if amount == 1 then "" else "s"),
+				})
+				self.analytics:Custom(player, analyticsEvent, amount, { product = productKey })
 			end
 		end)
-		if not mutateSuccess then
-			error("PROFILE_MUTATION_FAILED")
-		end
-		if not granted then
-			return nil
-		end
-		return function()
-			local profile = self.profiles:Get(player)
-			if not profile or player.Parent == nil then
-				return
-			end
-			self.push(player, Network.PushEvents.Profile, { tokens = profile.tokens })
-			self.push(player, Network.PushEvents.Toast, {
-				tone = "success",
-				message = string.format(
-					"+%d Forge Token%s",
-					Config.Ads.TokenGrantPerPurchase,
-					if Config.Ads.TokenGrantPerPurchase == 1 then "" else "s"
-				),
-			})
-			self.analytics:Custom(player, "AdRewardGranted", Config.Ads.TokenGrantPerPurchase, {})
-		end
-	end)
+	end
+
+	-- Rewarded ads stay 1:1 as requested. The 70-token Robux offer is a
+	-- separate product so an ad-wrapped developer product does not silently
+	-- change its benefit depending on where its receipt came from.
+	registerTokenGrant("AdRewardTokens", Config.Ads.TokenGrantPerAd, "AdRewardGranted")
+	registerTokenGrant("TokenPack70", Config.Ads.TokenPackGrant, "TokenPackGranted")
 
 	return self
 end
@@ -106,19 +111,6 @@ function AdRewardService:RequestAd(player: Player): (boolean, any)
 	if type(product.Id) ~= "number" or product.Id <= 0 then
 		return false, "PRODUCT_ID_NOT_CONFIGURED"
 	end
-	local today = currentDay()
-	-- Tracked for the WatchesToday stat above, not to gate anything -- see
-	-- its comment for why there's deliberately no daily cap here.
-	local mutateSuccess = self.profiles:Mutate(player, function(profile)
-		local watch = profile.adWatch or { day = 0, count = 0 }
-		local count = if watch.day == today then watch.count else 0
-		profile.adWatch = { day = today, count = count + 1 }
-	end)
-	if not mutateSuccess then
-		return false, "PROFILE_UNAVAILABLE"
-	end
-	self.profiles:Save(player)
-
 	local rewardSuccess, rewardOrProblem = pcall(function()
 		return AdService:CreateAdRewardFromDevProductId(product.Id)
 	end)
@@ -154,6 +146,23 @@ function AdRewardService:RequestAd(player: Player): (boolean, any)
 	-- product, which shouldn't count as "watched an ad". ShowCompleted is
 	-- specific to this path.
 	self.achievements:Unlock(player, "FIRST_AD_WATCHED")
+	local today = currentDay()
+	-- Count completed playback, not button presses or unavailable/interrupted
+	-- attempts. This remains a display stat only and never gates another ad.
+	local mutateSuccess = self.profiles:Mutate(player, function(profile)
+		local watch = profile.adWatch or { day = 0, count = 0 }
+		local count = if watch.day == today then watch.count else 0
+		profile.adWatch = { day = today, count = count + 1 }
+	end)
+	if mutateSuccess then
+		self.profiles:Save(player)
+	else
+		-- The player already completed the ad, and Roblox will still deliver
+		-- its developer-product receipt. A temporary profile/display-counter
+		-- failure must not turn that successful watch into a false error or
+		-- encourage the player to watch again before the receipt arrives.
+		warn(string.format("[AdRewardService] Could not update ad-watch display count for %d", player.UserId))
+	end
 
 	-- The actual token grant is asynchronous: Roblox fires the same
 	-- MarketplaceService.ProcessReceipt callback CommerceService already
