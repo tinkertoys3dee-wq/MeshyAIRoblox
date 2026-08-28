@@ -237,6 +237,18 @@ function Factory.Pill(parent: Instance, text: string, color: Color3?, width: num
 	})
 	Factory.Corner(pill, 99)
 	Factory.Stroke(pill, color or Colors.Line, 0.5)
+	-- The same top-highlight overlay Button uses, so pills read with a touch
+	-- of the same glassy depth instead of sitting perfectly flat.
+	local gloss = Factory.New("Frame", {
+		Name = "Gloss",
+		Size = UDim2.new(1, -2, 0.5, 0),
+		Position = UDim2.fromOffset(1, 1),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = 0.88,
+		BorderSizePixel = 0,
+		Parent = pill,
+	})
+	Factory.Corner(gloss, 99)
 	return pill
 end
 
