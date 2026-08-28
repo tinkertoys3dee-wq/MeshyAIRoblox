@@ -213,7 +213,10 @@ function GameShell.new(
 		Parent = hud,
 	})
 	Factory.Corner(scoreBadge, 13)
-	self.scoreLabel = Factory.Label(scoreBadge, "0", UDim2.new(1, -14, 1, 0), {
+	-- Width used to reach the badge's own right edge (0 right padding) since
+	-- it's right-aligned text -- the score number sat flush against the
+	-- pill's curve. Trimmed 14px off the right to match the left inset.
+	self.scoreLabel = Factory.Label(scoreBadge, "0", UDim2.new(1, -28, 1, 0), {
 		Position = UDim2.fromOffset(14, 0),
 		Font = Theme.Fonts.Black,
 		TextSize = 14,

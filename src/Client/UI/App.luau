@@ -2864,7 +2864,7 @@ function App:_RenderCreate()
 			end
 		end
 		local allDone = doneCount >= #quests
-		local cardHeight = #quests * 46 + (if allDone then 104 else 46)
+		local cardHeight = #quests * 46 + (if allDone then 122 else 46)
 		local questCard = Factory.Card(stack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyQuests")
 		questCard.LayoutOrder = 6
 		Factory.Label(questCard, "DAILY QUESTS", UDim2.new(1, -100, 0, 20), {
@@ -2945,9 +2945,13 @@ function App:_RenderCreate()
 		end
 
 		if allDone then
+			-- 50 tall used to give the label and the invite pill below it only
+			-- ~2px of daylight between them (and ~4px above the card's own
+			-- bottom edge); grown to 68 with the label/pill/bottom-edge gaps
+			-- each opened to a real ~10px.
 			local banner = Factory.New("Frame", {
 				Position = UDim2.fromOffset(16, qy),
-				Size = UDim2.new(1, -32, 0, 50),
+				Size = UDim2.new(1, -32, 0, 68),
 				BackgroundColor3 = Colors.Gold,
 				BackgroundTransparency = 0.82,
 				BorderSizePixel = 0,
@@ -2960,7 +2964,7 @@ function App:_RenderCreate()
 				string.format("🏆 All quests cleared! +%d bonus tokens", Config.Retention.QuestClearBonusTokens),
 				UDim2.new(1, -20, 0, 16),
 				{
-					Position = UDim2.fromOffset(10, 6),
+					Position = UDim2.fromOffset(10, 8),
 					Font = Theme.Fonts.Bold,
 					Color = Colors.Gold,
 					TextSize = 12,
@@ -2972,9 +2976,9 @@ function App:_RenderCreate()
 			-- already offers, since a player enjoying the studio enough to
 			-- clear every quest is the one most likely to say yes.
 			local inviteRow = Factory.New("TextButton", {
-				Size = UDim2.fromOffset(150, 22),
+				Size = UDim2.fromOffset(150, 24),
 				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0, 24),
+				Position = UDim2.new(0.5, 0, 0, 34),
 				BackgroundColor3 = Colors.Gold,
 				BorderSizePixel = 0,
 				AutoButtonColor = false,
@@ -2984,7 +2988,7 @@ function App:_RenderCreate()
 				TextSize = 11,
 				Parent = banner,
 			})
-			Factory.Corner(inviteRow, 11)
+			Factory.Corner(inviteRow, 12)
 			self:_BindButton(inviteRow)
 			inviteRow.Activated:Connect(function()
 				self:_PromptFriendInvite()
@@ -3043,9 +3047,13 @@ function App:_RenderStudio()
 		Color = Colors.Mint,
 	})
 	local outfitNameBox =
-		self:_TextBox(outfits, "Name this outfit", UDim2.new(1, -134, 0, 30), UDim2.fromOffset(14, 36), false)
+		self:_TextBox(outfits, "Name this outfit", UDim2.new(1, -208, 0, 30), UDim2.fromOffset(14, 36), false)
 	local saveOutfitButton =
-		Factory.Button(outfits, "Save current look", UDim2.fromOffset(110, 30), UDim2.new(1, -122, 0, 36), "mint")
+		-- 110px used to leave almost no room around "Save current look" at
+		-- Bold 14px -- the label nearly touched the pill's own edges. Widened
+		-- to fit the text with real breathing room and a clean 10px gap from
+		-- the name box.
+		Factory.Button(outfits, "Save current look", UDim2.fromOffset(170, 30), UDim2.new(1, -184, 0, 36), "mint")
 	self:_BindButton(saveOutfitButton)
 	saveOutfitButton.Activated:Connect(function()
 		saveOutfitButton.Active = false
@@ -4093,7 +4101,9 @@ function App:_RenderDiscover()
 	self:_TrackScroll(grid, "DiscoverGrid")
 	Factory.ScalePadding(grid, 0.008, 0.008)
 	Factory.New("UIGridLayout", {
-		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 336),
+		-- 336 left only 8px between the Try on/Buy copy row (bottom at 288)
+		-- and the like/favorite row below it; both gaps opened to ~10px.
+		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 338),
 		CellPadding = UDim2.fromOffset(12, 12),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = grid,
@@ -4137,12 +4147,15 @@ function App:_RenderDiscover()
 				Truncate = Enum.TextTruncate.AtEnd,
 			}
 		)
-		local try = Factory.Button(card, "Try on", UDim2.new(0.48, -5, 0, 38), UDim2.fromOffset(10, 250), "primary")
+		-- The old -5/-15 split left "Buy copy" only ~5px from the card's own
+		-- right edge (and an equally cramped 5px between the two buttons);
+		-- widened both gaps to a real ~10px.
+		local try = Factory.Button(card, "Try on", UDim2.new(0.48, -14, 0, 38), UDim2.fromOffset(10, 250), "primary")
 		local buy = Factory.Button(
 			card,
 			if item.isListed then "Buy copy" else "Not for sale",
-			UDim2.new(0.52, -15, 0, 38),
-			UDim2.new(0.48, 10, 0, 250),
+			UDim2.new(0.52, -14, 0, 38),
+			UDim2.new(0.48, 4, 0, 250),
 			if item.isListed then "mint" else nil
 		)
 		self:_BindButton(try)
@@ -4185,14 +4198,14 @@ function App:_RenderDiscover()
 			card,
 			string.format("%s %s", if item.viewerLiked then "♥" else "♡", formatNumber(item.likes)),
 			UDim2.new(0.5, -15, 0, 30),
-			UDim2.fromOffset(10, 296),
+			UDim2.fromOffset(10, 298),
 			nil
 		)
 		local favorite = Factory.Button(
 			card,
 			string.format("%s %s", if item.viewerFavorited then "★" else "☆", formatNumber(item.favorites)),
 			UDim2.new(0.5, -15, 0, 30),
-			UDim2.new(0.5, 5, 0, 296),
+			UDim2.new(0.5, 5, 0, 298),
 			nil
 		)
 		self:_BindButton(like)
@@ -4622,7 +4635,9 @@ function App:_RenderAvatarLab()
 	self:_TrackScroll(grid, "AvatarLabGrid")
 	Factory.ScalePadding(grid, 0.008, 0.008)
 	Factory.New("UIGridLayout", {
-		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 292),
+		-- 292 left only 6px between the Try/Buy row (bottom at 286) and the
+		-- card's own bottom edge; grown 4px so that's a real ~10px.
+		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 296),
 		CellPadding = UDim2.fromOffset(12, 12),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = grid,
@@ -4660,14 +4675,17 @@ function App:_RenderAvatarLab()
 					TextSize = 11,
 				}
 			)
+			-- The old -12/-8 split left "Buy" only ~4px from the card's own
+			-- right edge; widened both the outer and inter-button gaps to a
+			-- real ~10px (matching the CellSize bump above).
 			local try = Factory.Button(
 				card,
 				if self.triedOnAssetIds[assetId] then "Unequip" else "Try",
-				UDim2.new(0.45, -12, 0, 38),
+				UDim2.new(0.45, -14, 0, 38),
 				UDim2.fromOffset(10, 248),
 				if self.triedOnAssetIds[assetId] then "danger" else "primary"
 			)
-			local buy = Factory.Button(card, "Buy", UDim2.new(0.55, -8, 0, 38), UDim2.new(0.45, 4, 0, 248), "mint")
+			local buy = Factory.Button(card, "Buy", UDim2.new(0.55, -14, 0, 38), UDim2.new(0.45, 4, 0, 248), "mint")
 			self:_BindButton(try)
 			self:_BindButton(buy)
 			try.Activated:Connect(function()
@@ -4871,7 +4889,10 @@ function App:_RenderGraphicsDiscoverBody()
 	self:_TrackScroll(grid, "GraphicsDiscoverGrid")
 	Factory.ScalePadding(grid, 0.008, 0.008)
 	Factory.New("UIGridLayout", {
-		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 300),
+		-- 300 left only 4px between the Buy row (bottom at 256) and the
+		-- like/favorite row below it (top at 260); grown 6px alongside that
+		-- row's own move so both gaps read as a real ~10px.
+		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 306),
 		CellPadding = UDim2.fromOffset(12, 12),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = grid,
@@ -4938,14 +4959,14 @@ function App:_RenderGraphicsDiscoverBody()
 			card,
 			string.format("%s %s", if graphic.viewerLiked then "♥" else "♡", formatNumber(graphic.likes)),
 			UDim2.new(0.5, -15, 0, 30),
-			UDim2.fromOffset(10, 260),
+			UDim2.fromOffset(10, 266),
 			nil
 		)
 		local favorite = Factory.Button(
 			card,
 			string.format("%s %s", if graphic.viewerFavorited then "★" else "☆", formatNumber(graphic.favorites)),
 			UDim2.new(0.5, -15, 0, 30),
-			UDim2.new(0.5, 5, 0, 260),
+			UDim2.new(0.5, 5, 0, 266),
 			nil
 		)
 		self:_BindButton(like)

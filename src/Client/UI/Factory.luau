@@ -135,6 +135,29 @@ function Factory.Card(parent: Instance, size: UDim2, position: UDim2?, name: str
 		Parent = card,
 	})
 	Factory.Corner(gloss, Theme.Corner - 1)
+	-- A soft ground shadow cast just below the card -- a child (not a
+	-- sibling) so it can't become a phantom cell in a caller's
+	-- UIGridLayout/UIListLayout, the way an extra sibling Frame would.
+	-- Fades via transparency rather than sitting at one flat value, so it
+	-- reads as a soft falloff instead of a hard second rectangle.
+	local dropShadow = Factory.New("Frame", {
+		Name = "DropShadow",
+		Position = UDim2.new(0, 6, 1, 0),
+		Size = UDim2.new(1, -12, 0, 10),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.45,
+		BorderSizePixel = 0,
+		ZIndex = 0,
+		Parent = card,
+	})
+	Factory.New("UIGradient", {
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+		Rotation = 90,
+		Parent = dropShadow,
+	})
 	return card
 end
 
@@ -168,6 +191,34 @@ function Factory.Button(parent: Instance, text: string, size: UDim2, position: U
 	if kind == "primary" then
 		Factory.Gradient(button, { Colors.Violet, Color3.fromRGB(91, 94, 255), Colors.Cyan }, 12)
 	end
+	-- A soft top highlight and bottom shade -- alpha-blended white/black
+	-- overlays rather than a second UIGradient, so a button whose caller
+	-- reassigns BackgroundColor3 later (the Settings sound toggle, selected
+	-- quality chips, ...) still shows its real color instead of whatever a
+	-- gradient was baked with at creation time. Every kind gets this, not
+	-- just primary, so flat fills read as raised pills too.
+	local glossRadius = math.max(Theme.SmallCorner - 1, 0)
+	local gloss = Factory.New("Frame", {
+		Name = "Gloss",
+		Size = UDim2.new(1, -2, 0.45, 0),
+		Position = UDim2.fromOffset(1, 1),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = 0.85,
+		BorderSizePixel = 0,
+		Parent = button,
+	})
+	Factory.Corner(gloss, glossRadius)
+	local shade = Factory.New("Frame", {
+		Name = "Shade",
+		AnchorPoint = Vector2.new(0, 1),
+		Size = UDim2.new(1, -2, 0.4, 0),
+		Position = UDim2.new(0, 1, 1, -1),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.86,
+		BorderSizePixel = 0,
+		Parent = button,
+	})
+	Factory.Corner(shade, glossRadius)
 	return button
 end
 
@@ -186,6 +237,18 @@ function Factory.Pill(parent: Instance, text: string, color: Color3?, width: num
 	})
 	Factory.Corner(pill, 99)
 	Factory.Stroke(pill, color or Colors.Line, 0.5)
+	-- The same top-highlight overlay Button uses, so pills read with a touch
+	-- of the same glassy depth instead of sitting perfectly flat.
+	local gloss = Factory.New("Frame", {
+		Name = "Gloss",
+		Size = UDim2.new(1, -2, 0.5, 0),
+		Position = UDim2.fromOffset(1, 1),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = 0.88,
+		BorderSizePixel = 0,
+		Parent = pill,
+	})
+	Factory.Corner(gloss, 99)
 	return pill
 end
 
