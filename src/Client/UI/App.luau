@@ -1385,6 +1385,11 @@ end
 function App:_SetStudioOpen(open: boolean)
 	local changed = self.shell.Visible ~= open
 	self.shell.Visible = open
+	-- AvatarPreviewPanel is a sibling of the studio shell so it can sit to
+	-- the shell's right without being clipped. That also means hiding the
+	-- shell does not hide the panel automatically; recompute its visibility
+	-- in the same frame as every open/close transition.
+	self:_LayoutAvatarPreviewPanel()
 	local showLaunchers = not open and self.afkOverlay == nil
 	self.launcher.Visible = showLaunchers
 	self.arcadeLauncher.Visible = showLaunchers

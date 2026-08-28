@@ -241,9 +241,9 @@ return table.freeze({
 		-- bonusTokens pool, so they can buy queue acceleration without exposing
 		-- OpenAI/Meshy spend. A daily cap prevents unattended farms from growing
 		-- without bound while still making a normal lounge session feel active.
-		IntervalSeconds = 60,
+		IntervalSeconds = 180,
 		TokensPerInterval = 1,
-		DailyTokenCap = 70,
+		DailyTokenCap = 140,
 	},
 
 	Commerce = {
