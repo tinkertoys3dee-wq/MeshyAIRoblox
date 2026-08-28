@@ -138,6 +138,15 @@ local ERROR_MESSAGES = {
 	INVALID_AVATAR_VIEW = "Choose one of the available avatar views.",
 	BACKEND_GRAPHIC_MISSING = "The generator finished without returning a usable image. A retry credit was added.",
 	NOT_FOUND = "That could not be found. It may have already been removed.",
+	GRAPHIC_NOT_FOUND = "That graphic is no longer available. Refresh the page and try again.",
+	GRAPHIC_NOT_SHAREABLE = "Only original creations can be shared publicly.",
+	GRAPHIC_NOT_LISTABLE = "Only an original creation can be listed for sale.",
+	TEXT_INVALID = "That text could not be read.",
+	TEXT_TOO_LONG = "Keep that within the character limit.",
+	TEXT_BLOCKED = "That text could not pass Roblox text filtering. Try different wording.",
+	CONTENT_NOT_FOUND = "That creation is no longer available. Refresh and try again.",
+	CANNOT_TIP_SELF = "You can't tip your own creation.",
+	INVALID_TIP_AMOUNT = "Choose one of the available tip amounts.",
 }
 
 local CATALOG_TYPES = {
@@ -3368,7 +3377,11 @@ function App:_RenderStudio()
 	self:_TrackScroll(inspectScroll, "StudioInspect")
 	Factory.ScalePadding(inspectScroll, 0.012, 0.012)
 	local body = Factory.New("Frame", {
-		Size = UDim2.new(1, -8, 0, 1120),
+		-- +184 (168 card + 16 gap) for the Title & Description card inserted
+		-- above SHARING & SALES below -- only present for an original (a
+		-- personal copy has nothing to title/describe, so it keeps the base
+		-- height instead of an empty 184px gap at the bottom of the panel).
+		Size = UDim2.new(1, -8, 0, if selected.license == "PERSONAL_COPY" then 1120 else 1304),
 		BackgroundTransparency = 1,
 		Parent = inspectScroll,
 	})
@@ -3820,7 +3833,62 @@ function App:_RenderStudio()
 		}
 	)
 
+	-- Title/description editing only makes sense for an original -- a
+	-- personal copy shows its own static license note below instead, same
+	-- scope as the SHARING & SALES card just under it.
 	local socialY = noteY + 26
+	if selected.license ~= "PERSONAL_COPY" then
+		local details = Factory.New("Frame", {
+			Position = UDim2.fromOffset(16, socialY),
+			Size = UDim2.new(1, -32, 0, 168),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 0.12,
+			BorderSizePixel = 0,
+			Parent = body,
+		})
+		Factory.Corner(details, 12)
+		Factory.Stroke(details, Colors.Line, 0.55)
+		Factory.Label(details, "TITLE & DESCRIPTION", UDim2.new(1, -28, 0, 25), {
+			Position = UDim2.fromOffset(14, 10),
+			Font = Theme.Fonts.Bold,
+			Color = Colors.Cyan,
+			TextSize = 11,
+		})
+		local titleBox =
+			self:_TextBox(details, "Untitled creation", UDim2.new(1, -28, 0, 36), UDim2.fromOffset(14, 40), false)
+		titleBox.Text = selected.title or ""
+		local descriptionBox = self:_TextBox(
+			details,
+			"Tell people about this creation…",
+			UDim2.new(1, -28, 0, 62),
+			UDim2.fromOffset(14, 82),
+			true
+		)
+		descriptionBox.Text = selected.description or ""
+		local saveDetails =
+			Factory.Button(details, "Save details", UDim2.fromOffset(120, 32), UDim2.new(1, -134, 0, 152), "primary")
+		self:_BindButton(saveDetails)
+		saveDetails.Activated:Connect(function()
+			saveDetails.Active = false
+			task.spawn(function()
+				local success, data = self:_Invoke(Network.Actions.SetItemDetails, {
+					itemId = selected.id,
+					title = titleBox.Text,
+					description = descriptionBox.Text,
+				})
+				if success then
+					self.state.profile.items[selected.id] = data.item
+					self.sounds:Play("Success")
+					self:_Toast("success", "Details saved.")
+					self:_RenderActivePage()
+				end
+				if saveDetails.Parent then
+					saveDetails.Active = true
+				end
+			end)
+		end)
+		socialY = socialY + 184
+	end
 	local social = Factory.New("Frame", {
 		Position = UDim2.fromOffset(16, socialY),
 		Size = UDim2.new(1, -32, 0, 154),
@@ -4125,20 +4193,20 @@ function App:_RenderDiscover()
 			Factory.Pill(card, string.format("R$ %d", item.listingPriceRobux), Colors.Mint, 68).Position =
 				UDim2.fromOffset(156, 18)
 		end
-		Factory.Label(card, item.name, UDim2.new(1, -20, 0, 27), {
+		Factory.Label(card, item.title or item.name, UDim2.new(1, -20, 0, 27), {
 			Position = UDim2.fromOffset(10, 194),
 			Font = Theme.Fonts.Bold,
 			TextSize = 14,
 			Truncate = Enum.TextTruncate.AtEnd,
 		})
+		local itemMeta = string.format(
+			"%s / %s",
+			string.gsub(item.stylePreset or "AUTO", "_", " "),
+			string.gsub(item.detailLevel or "BALANCED", "_", " ")
+		)
 		Factory.Label(
 			card,
-			string.format(
-				"by @%s · %s / %s",
-				tostring(item.ownerName),
-				string.gsub(item.stylePreset or "AUTO", "_", " "),
-				string.gsub(item.detailLevel or "BALANCED", "_", " ")
-			),
+			string.format("by @%s · %s", tostring(item.ownerName), itemMeta),
 			UDim2.new(1, -20, 0, 22),
 			{
 				Position = UDim2.fromOffset(10, 221),
@@ -4147,6 +4215,47 @@ function App:_RenderDiscover()
 				Truncate = Enum.TextTruncate.AtEnd,
 			}
 		)
+		-- Invisible hit target over the preview/title/subtitle area (everything
+		-- above where Try on/Buy copy start) so clicking the card opens the
+		-- full detail overlay -- sized to stop exactly at y=250 so it can never
+		-- steal a click from either button below it.
+		local expand = Factory.New("TextButton", {
+			Name = "ExpandHit",
+			Size = UDim2.new(1, 0, 0, 250),
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundTransparency = 1,
+			AutoButtonColor = false,
+			Text = "",
+			Parent = card,
+		})
+		self.sounds:Bind(expand)
+		expand.MouseEnter:Connect(function()
+			self:_Animate(expand, TweenInfo.new(0.14), { BackgroundTransparency = 0.94 })
+		end)
+		expand.MouseLeave:Connect(function()
+			self:_Animate(expand, TweenInfo.new(0.14), { BackgroundTransparency = 1 })
+		end)
+		expand.Activated:Connect(function()
+			self:_ShowContentDetail({
+				kind = "ITEM",
+				id = item.id,
+				ownerUserId = item.ownerUserId,
+				ownerName = item.ownerName,
+				title = item.title or item.name,
+				meta = itemMeta,
+				description = item.description,
+				imageId = item.thumbnailAssetId,
+				isListed = item.isListed,
+				listingPriceRobux = item.listingPriceRobux,
+				likes = item.likes,
+				favorites = item.favorites,
+				viewerLiked = item.viewerLiked,
+				viewerFavorited = item.viewerFavorited,
+				refresh = function()
+					self:_RefreshMarketplace(search.Text)
+				end,
+			})
+		end)
 		-- The old -5/-15 split left "Buy copy" only ~5px from the card's own
 		-- right edge (and an equally cramped 5px between the two buttons);
 		-- widened both gaps to a real ~10px.
@@ -4914,7 +5023,10 @@ function App:_RenderGraphicsDiscoverBody()
 			Factory.Pill(card, string.format("R$ %d", graphic.listingPriceRobux), Colors.Mint, 68).Position =
 				UDim2.fromOffset(156, 18)
 		end
-		Factory.Label(card, string.sub(graphic.filteredPrompt or "Graphic", 1, 60), UDim2.new(1, -20, 0, 30), {
+		local graphicTitle = if type(graphic.title) == "string" and graphic.title ~= ""
+			then graphic.title
+			else string.sub(graphic.filteredPrompt or "Graphic", 1, 60)
+		Factory.Label(card, graphicTitle, UDim2.new(1, -20, 0, 30), {
 			Position = UDim2.fromOffset(10, 168),
 			Font = Theme.Fonts.Medium,
 			TextSize = 11,
@@ -4926,6 +5038,44 @@ function App:_RenderGraphicsDiscoverBody()
 			TextSize = 11,
 			Truncate = Enum.TextTruncate.AtEnd,
 		})
+		-- Same invisible-hit-target pattern as the item card above, stopping
+		-- exactly at y=222 where Buy copy starts.
+		local expand = Factory.New("TextButton", {
+			Name = "ExpandHit",
+			Size = UDim2.new(1, 0, 0, 222),
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundTransparency = 1,
+			AutoButtonColor = false,
+			Text = "",
+			Parent = card,
+		})
+		self.sounds:Bind(expand)
+		expand.MouseEnter:Connect(function()
+			self:_Animate(expand, TweenInfo.new(0.14), { BackgroundTransparency = 0.94 })
+		end)
+		expand.MouseLeave:Connect(function()
+			self:_Animate(expand, TweenInfo.new(0.14), { BackgroundTransparency = 1 })
+		end)
+		expand.Activated:Connect(function()
+			self:_ShowContentDetail({
+				kind = "GRAPHIC",
+				id = graphic.id,
+				ownerUserId = graphic.ownerUserId,
+				ownerName = graphic.ownerName,
+				title = graphicTitle,
+				description = graphic.description,
+				imageId = graphic.previewAssetId,
+				isListed = graphic.isListed,
+				listingPriceRobux = graphic.listingPriceRobux,
+				likes = graphic.likes,
+				favorites = graphic.favorites,
+				viewerLiked = graphic.viewerLiked,
+				viewerFavorited = graphic.viewerFavorited,
+				refresh = function()
+					self:_RefreshGraphicsMarketplace(search.Text)
+				end,
+			})
+		end)
 		local buy = Factory.Button(
 			card,
 			if graphic.isListed then "Buy copy" else "Not for sale",
@@ -5507,7 +5657,11 @@ function App:_RenderAvatarGraphics()
 		Parent = stack,
 	})
 	Factory.New("UIGridLayout", {
-		CellSize = UDim2.new(1 / gridColumns, -12 * (gridColumns - 1) / gridColumns, 0, 380),
+		-- +80 for the title/description editor inserted below the kind
+		-- label; every card in the grid shares one CellSize, so this height
+		-- covers both license branches even though only the shared content
+		-- (link/delete) below the editor visually differs by license.
+		CellSize = UDim2.new(1 / gridColumns, -12 * (gridColumns - 1) / gridColumns, 0, 460),
 		CellPadding = UDim2.fromOffset(12, 12),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = gallery,
@@ -5548,9 +5702,31 @@ function App:_RenderAvatarGraphics()
 				Color = Colors.TextMuted,
 				TextSize = 10,
 			})
+			-- Never shown publicly for a private/personal copy (its
+			-- visibility can never go public -- see the license branch
+			-- below), but harmless to let the owner keep one anyway, and
+			-- keeping this block unconditional means every card in the grid
+			-- shares the same layout below it regardless of license.
+			local titleBox =
+				self:_TextBox(card, "Untitled graphic", UDim2.new(1, -20, 0, 28), UDim2.fromOffset(10, 196), false)
+			titleBox.Text = graphic.title or ""
+			local descriptionBox =
+				self:_TextBox(card, "Add a description…", UDim2.new(1, -20, 0, 40), UDim2.fromOffset(10, 228), true)
+			descriptionBox.Text = graphic.description or ""
+			local function saveGraphicDetails()
+				task.spawn(function()
+					self:_Invoke(Network.Actions.SetGraphicDetails, {
+						graphicId = graphic.id,
+						title = titleBox.Text,
+						description = descriptionBox.Text,
+					})
+				end)
+			end
+			titleBox.FocusLost:Connect(saveGraphicDetails)
+			descriptionBox.FocusLost:Connect(saveGraphicDetails)
 			if graphic.license == "PERSONAL_COPY" then
 				Factory.Label(card, "Personal copy · yours to keep, never resellable", UDim2.new(1, -20, 0, 60), {
-					Position = UDim2.fromOffset(10, 196),
+					Position = UDim2.fromOffset(10, 276),
 					Color = Colors.Gold,
 					TextSize = 11,
 					Wrapped = true,
@@ -5561,7 +5737,7 @@ function App:_RenderAvatarGraphics()
 					card,
 					if graphic.visibility == "PUBLIC" then "Private" else "Share",
 					UDim2.new(0.48, -5, 0, 32),
-					UDim2.fromOffset(10, 196),
+					UDim2.fromOffset(10, 276),
 					nil
 				)
 				self:_BindButton(visibility)
@@ -5578,7 +5754,7 @@ function App:_RenderAvatarGraphics()
 					end)
 				end)
 				local priceBox =
-					self:_TextBox(card, "R$ 10–500", UDim2.new(0.52, -5, 0, 32), UDim2.new(0.48, 5, 0, 196), false)
+					self:_TextBox(card, "R$ 10–500", UDim2.new(0.52, -5, 0, 32), UDim2.new(0.48, 5, 0, 276), false)
 				priceBox.Text = tostring(graphic.listingPriceRobux or 50)
 				priceBox.TextXAlignment = Enum.TextXAlignment.Center
 				priceBox.FocusLost:Connect(function()
@@ -5588,7 +5764,7 @@ function App:_RenderAvatarGraphics()
 					card,
 					if graphic.isListed then "End listing" else "List for sale",
 					UDim2.new(1, -20, 0, 32),
-					UDim2.fromOffset(10, 232),
+					UDim2.fromOffset(10, 312),
 					"primary"
 				)
 				self:_BindButton(list)
@@ -5619,11 +5795,11 @@ function App:_RenderAvatarGraphics()
 				card,
 				if hasLink then "SHAREABLE LINK · TAP, THEN CTRL+C" else "LINK UNAVAILABLE (STUDIO MOCK)",
 				UDim2.new(1, -20, 0, 12),
-				{ Position = UDim2.fromOffset(10, 270), Color = Colors.TextMuted, TextSize = 8 }
+				{ Position = UDim2.fromOffset(10, 350), Color = Colors.TextMuted, TextSize = 8 }
 			)
 			local linkBox = Factory.New("TextBox", {
 				Size = UDim2.new(1, -20, 0, 34),
-				Position = UDim2.fromOffset(10, 283),
+				Position = UDim2.fromOffset(10, 363),
 				BackgroundColor3 = Colors.Ink,
 				BackgroundTransparency = 0.12,
 				BorderSizePixel = 0,
@@ -5642,7 +5818,7 @@ function App:_RenderAvatarGraphics()
 			})
 			Factory.Corner(linkBox, 8)
 			Factory.Padding(linkBox, 6, 4)
-			local delete = Factory.Button(card, "Delete", UDim2.new(1, -20, 0, 30), UDim2.fromOffset(10, 326), nil)
+			local delete = Factory.Button(card, "Delete", UDim2.new(1, -20, 0, 30), UDim2.fromOffset(10, 406), nil)
 			self:_BindButton(delete)
 			delete.Activated:Connect(function()
 				delete.Active = false
@@ -6429,6 +6605,298 @@ function App:_ShowLeaderboard()
 			end
 		end
 	end)
+end
+
+-- Shared "blown up" detail overlay for a Discover-tab item or graphic --
+-- built from a normalized descriptor rather than the raw item/graphic
+-- record so one function covers both content types. Their card-building
+-- loops differ (an item has a style/detail readout, a graphic doesn't; the
+-- purchase and like/favorite actions are different Network.Actions), but
+-- everything laid out here -- preview, title, description, like/favorite,
+-- buy, tip -- is identical in shape once resolved to a content id/owner.
+--
+-- descriptor: {
+--   kind: "ITEM" | "GRAPHIC", id: string, ownerUserId: number, ownerName: string,
+--   title: string, meta: string, description: string?, imageId: number?,
+--   isListed: boolean, listingPriceRobux: number?,
+--   likes: number, favorites: number, viewerLiked: boolean, viewerFavorited: boolean,
+--   refresh: () -> (),
+-- }
+function App:_ShowContentDetail(descriptor: { [string]: any })
+	local ZBASE = 150
+	local overlay = Factory.New("Frame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.25,
+		BorderSizePixel = 0,
+		ZIndex = ZBASE,
+		Parent = self.gui,
+	})
+	local isOwnContent = descriptor.ownerUserId == Players.LocalPlayer.UserId
+	local showTip = not isOwnContent
+	local modalHeight = if showTip then 606 else 522
+	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, modalHeight), UDim2.fromScale(0.5, 0.5), "ContentDetail")
+	modal.AnchorPoint = Vector2.new(0.5, 0.5)
+	modal.ClipsDescendants = false
+	modal.ZIndex = ZBASE + 1
+	Factory.New("UISizeConstraint", {
+		MaxSize = Vector2.new(460, modalHeight + 60),
+		Parent = modal,
+	})
+
+	-- Soft accent glow behind the modal, the same "spotlight" trick Plus's
+	-- gold badge glow uses -- violet here to read as the app's own brand
+	-- accent rather than borrowing Plus's upsell gold.
+	local glow = Factory.Blob(modal, 340, UDim2.new(0.5, 0, 0, 40), Colors.Violet, 0.9)
+	glow.AnchorPoint = Vector2.new(0.5, 0.5)
+	glow.ZIndex = ZBASE
+
+	local closeButton = Factory.Button(modal, "×", UDim2.fromOffset(34, 34), UDim2.new(1, -50, 0, 14), nil)
+	closeButton.ZIndex = ZBASE + 3
+	self:_BindButton(closeButton)
+	closeButton.Activated:Connect(function()
+		self.sounds:Play("PanelClose")
+		overlay:Destroy()
+	end)
+
+	local previewFrame = Factory.New("Frame", {
+		Name = "Preview",
+		Position = UDim2.fromOffset(14, 14),
+		Size = UDim2.new(1, -28, 0, 230),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.1,
+		BorderSizePixel = 0,
+		ZIndex = ZBASE + 2,
+		Parent = modal,
+	})
+	Factory.Corner(previewFrame, 14)
+	Factory.New("ImageLabel", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Image = directImage(descriptor.imageId),
+		ScaleType = Enum.ScaleType.Fit,
+		ZIndex = ZBASE + 3,
+		Parent = previewFrame,
+	})
+	if descriptor.isListed then
+		local pricePill = Factory.Pill(modal, string.format("R$ %d", descriptor.listingPriceRobux), Colors.Mint, 76)
+		pricePill.Position = UDim2.new(1, -90, 0, 24)
+		pricePill.ZIndex = ZBASE + 3
+	end
+
+	Factory.Label(modal, tostring(descriptor.title), UDim2.new(1, -28, 0, 26), {
+		Position = UDim2.fromOffset(14, 254),
+		Font = Theme.Fonts.Black,
+		TextSize = 19,
+		Truncate = Enum.TextTruncate.AtEnd,
+		ZIndex = ZBASE + 2,
+	})
+	local bylineText = string.format("by @%s", tostring(descriptor.ownerName))
+	if type(descriptor.meta) == "string" and descriptor.meta ~= "" then
+		bylineText = bylineText .. " · " .. descriptor.meta
+	end
+	Factory.Label(modal, bylineText, UDim2.new(1, -28, 0, 16), {
+		Position = UDim2.fromOffset(14, 282),
+		Color = Colors.TextMuted,
+		TextSize = 11,
+		Truncate = Enum.TextTruncate.AtEnd,
+		ZIndex = ZBASE + 2,
+	})
+	local hasDescription = type(descriptor.description) == "string" and descriptor.description ~= ""
+	Factory.Label(
+		modal,
+		if hasDescription then descriptor.description else "No description yet.",
+		UDim2.new(1, -28, 0, 70),
+		{
+			Position = UDim2.fromOffset(14, 302),
+			Color = if hasDescription then Colors.Text else Colors.TextMuted,
+			TextSize = 12,
+			Wrapped = true,
+			Truncate = Enum.TextTruncate.AtEnd,
+			AlignY = Enum.TextYAlignment.Top,
+			ZIndex = ZBASE + 2,
+		}
+	)
+
+	Factory.New("Frame", {
+		Position = UDim2.fromOffset(14, 380),
+		Size = UDim2.new(1, -28, 0, 1),
+		BackgroundColor3 = Colors.Line,
+		BackgroundTransparency = 0.6,
+		BorderSizePixel = 0,
+		ZIndex = ZBASE + 2,
+		Parent = modal,
+	})
+
+	local likeAction = if descriptor.kind == "ITEM"
+		then Network.Actions.ToggleLike
+		else Network.Actions.ToggleGraphicLike
+	local favoriteAction = if descriptor.kind == "ITEM"
+		then Network.Actions.ToggleFavorite
+		else Network.Actions.ToggleGraphicFavorite
+	local idField = if descriptor.kind == "ITEM" then "itemId" else "graphicId"
+
+	local like = Factory.Button(
+		modal,
+		string.format("%s %s", if descriptor.viewerLiked then "♥" else "♡", formatNumber(descriptor.likes)),
+		UDim2.new(0.5, -18, 0, 36),
+		UDim2.fromOffset(14, 392),
+		nil
+	)
+	like.ZIndex = ZBASE + 2
+	local favorite = Factory.Button(
+		modal,
+		string.format("%s %s", if descriptor.viewerFavorited then "★" else "☆", formatNumber(descriptor.favorites)),
+		UDim2.new(0.5, -18, 0, 36),
+		UDim2.new(0.5, 4, 0, 392),
+		nil
+	)
+	favorite.ZIndex = ZBASE + 2
+	self:_BindButton(like)
+	self:_BindButton(favorite)
+	like.Activated:Connect(function()
+		task.spawn(function()
+			local success = self:_Invoke(likeAction, { [idField] = descriptor.id })
+			if success then
+				self.sounds:Play("Like")
+				descriptor.viewerLiked = not descriptor.viewerLiked
+				descriptor.likes += if descriptor.viewerLiked then 1 else -1
+				if like.Parent then
+					like.Text = string.format(
+						"%s %s",
+						if descriptor.viewerLiked then "♥" else "♡",
+						formatNumber(descriptor.likes)
+					)
+				end
+				if descriptor.refresh then
+					descriptor.refresh()
+				end
+			end
+		end)
+	end)
+	favorite.Activated:Connect(function()
+		task.spawn(function()
+			local success = self:_Invoke(favoriteAction, { [idField] = descriptor.id })
+			if success then
+				descriptor.viewerFavorited = not descriptor.viewerFavorited
+				descriptor.favorites += if descriptor.viewerFavorited then 1 else -1
+				if favorite.Parent then
+					favorite.Text = string.format(
+						"%s %s",
+						if descriptor.viewerFavorited then "★" else "☆",
+						formatNumber(descriptor.favorites)
+					)
+				end
+				if descriptor.refresh then
+					descriptor.refresh()
+				end
+			end
+		end)
+	end)
+
+	if descriptor.isListed and not isOwnContent then
+		local buy = Factory.Button(
+			modal,
+			string.format("Buy copy · R$ %d", descriptor.listingPriceRobux),
+			UDim2.new(1, -28, 0, 40),
+			UDim2.fromOffset(14, 436),
+			"mint"
+		)
+		buy.ZIndex = ZBASE + 2
+		self:_BindButton(buy)
+		buy.Activated:Connect(function()
+			buy.Active = false
+			buy.Text = "Checking listing…"
+			task.spawn(function()
+				local purchaseAction = if descriptor.kind == "ITEM"
+					then Network.Actions.BeginMarketplacePurchase
+					else Network.Actions.BeginGraphicPurchase
+				local success, errorCode = self:_Invoke(purchaseAction, { [idField] = descriptor.id })
+				if success then
+					self.sounds:Play("PurchasePrompt")
+					self:_Toast("success", "Confirm the verified creator transfer in Roblox.")
+				elseif errorCode == "PLUS_REQUIRED" then
+					self:_ShowPlus()
+				elseif errorCode == "LISTING_UNAVAILABLE" and descriptor.refresh then
+					descriptor.refresh()
+				end
+				if buy.Parent then
+					buy.Active = true
+					buy.Text = string.format("Buy copy · R$ %d", descriptor.listingPriceRobux)
+				end
+			end)
+		end)
+	elseif not isOwnContent then
+		Factory.Label(modal, "Not currently listed for sale.", UDim2.new(1, -28, 0, 20), {
+			Position = UDim2.fromOffset(14, 446),
+			Color = Colors.TextMuted,
+			TextSize = 12,
+			AlignX = Enum.TextXAlignment.Center,
+			ZIndex = ZBASE + 2,
+		})
+	end
+
+	if showTip then
+		Factory.Label(modal, "💛  TIP THE CREATOR", UDim2.new(1, -28, 0, 18), {
+			Position = UDim2.fromOffset(14, 490),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = Colors.Gold,
+			ZIndex = ZBASE + 2,
+		})
+		local tipRow = Factory.New("Frame", {
+			Position = UDim2.fromOffset(14, 512),
+			Size = UDim2.new(1, -28, 0, 40),
+			BackgroundTransparency = 1,
+			ZIndex = ZBASE + 2,
+			Parent = modal,
+		})
+		Factory.List(tipRow, Enum.FillDirection.Horizontal, 8)
+		local tierButtons: { TextButton } = {}
+		for _, amount in Config.Marketplace.TipTiers do
+			local tier = Factory.Button(tipRow, string.format("R$ %d", amount), UDim2.fromOffset(84, 40), nil, nil)
+			tier.ZIndex = ZBASE + 2
+			self:_BindButton(tier)
+			table.insert(tierButtons, tier)
+			tier.Activated:Connect(function()
+				for _, sibling in tierButtons do
+					sibling.Active = false
+				end
+				local originalText = tier.Text
+				tier.Text = "…"
+				task.spawn(function()
+					local success, errorCode = self:_Invoke(Network.Actions.BeginTip, {
+						contentType = descriptor.kind,
+						contentId = descriptor.id,
+						amount = amount,
+					})
+					if success then
+						self.sounds:Play("PurchasePrompt")
+						self:_Toast("success", "Confirm the tip in Roblox.")
+					elseif errorCode == "PLUS_REQUIRED" then
+						self:_ShowPlus()
+					end
+					if tier.Parent then
+						tier.Text = originalText
+					end
+					for _, sibling in tierButtons do
+						if sibling.Parent then
+							sibling.Active = true
+						end
+					end
+				end)
+			end)
+		end
+		Factory.Label(modal, "Requires Roblox Plus. Sends Robux straight to the creator.", UDim2.new(1, -28, 0, 16), {
+			Position = UDim2.fromOffset(14, 558),
+			Color = Colors.TextMuted,
+			TextSize = 10,
+			AlignX = Enum.TextXAlignment.Center,
+			ZIndex = ZBASE + 2,
+		})
+	end
+
+	self:_AnimateModalIn(overlay, modal)
 end
 
 function App:_Toast(tone: string, message: string)
