@@ -48,6 +48,7 @@ local AdRewardService = require(script.Parent.Services.AdRewardService)
 local AchievementService = require(script.Parent.Services.AchievementService)
 local LeaderboardService = require(script.Parent.Services.LeaderboardService)
 local ArcadeService = require(script.Parent.Services.ArcadeService)
+local LeaderstatsService = require(script.Parent.Services.LeaderstatsService)
 
 local function push(player: Player, eventName: string, payload: any)
 	if player.Parent == Players then
@@ -70,6 +71,14 @@ local leaderboard = LeaderboardService.new()
 local arcade = ArcadeService.new(profiles, playerStates, push, analytics)
 local community = CommunityService.new(profiles, playerStates, push, analytics, achievements, leaderboard)
 local catalog = CatalogService.new(profiles, playerStates, analytics)
+local leaderstats = LeaderstatsService.new()
+-- Refreshes every online player's leaderstats after ANY profile.stats
+-- change (generation completed, marketplace purchase, tip, ...) via
+-- ProfileService's single Mutate choke point, instead of every stat-writing
+-- call site remembering to trigger one itself.
+profiles:OnMutate(function(player, profile)
+	leaderstats:Refresh(player, profile)
+end)
 local remoteLimiter = RateLimiter.new(50, 10)
 local reactionLimiter = RateLimiter.new(8, 10)
 local loaded = {} :: { [Player]: boolean }
@@ -94,6 +103,7 @@ local function initializePlayer(player: Player)
 	end
 	local profile = profiles:Get(player)
 	playerStates:Initialize(player)
+	leaderstats:Init(player, profile)
 	loaded[player] = true
 	loading[player] = nil
 	if not characterConnections[player] then
