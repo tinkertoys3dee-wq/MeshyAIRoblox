@@ -370,6 +370,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	[Network.Actions.SetListing] = function(player, payload)
 		return community:SetListing(player, payload)
 	end,
+	[Network.Actions.SetItemDetails] = function(player, payload)
+		return community:SetItemDetails(player, payload)
+	end,
 	[Network.Actions.GetMarketplace] = function(player, payload)
 		return community:GetMarketplace(player, payload)
 	end,
@@ -397,6 +400,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	[Network.Actions.SetGraphicListing] = function(player, payload)
 		return community:SetGraphicListing(player, payload)
 	end,
+	[Network.Actions.SetGraphicDetails] = function(player, payload)
+		return community:SetGraphicDetails(player, payload)
+	end,
 	[Network.Actions.GetGraphicsMarketplace] = function(player, payload)
 		return community:GetGraphicsMarketplace(player, payload)
 	end,
@@ -414,6 +420,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	end,
 	[Network.Actions.BeginGraphicPurchase] = function(player, payload)
 		return community:BeginGraphicPurchase(player, payload)
+	end,
+	[Network.Actions.BeginTip] = function(player, payload)
+		return community:BeginTip(player, payload)
 	end,
 	[Network.Actions.RequestPrivateModel] = function(player, payload)
 		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then

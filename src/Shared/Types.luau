@@ -29,6 +29,11 @@ export type ItemRecord = {
 	canList: boolean,
 	canPublish: boolean,
 	name: string,
+	-- Owner-set display name shown on the Discover card and its detail
+	-- overlay in place of `name` (the internal generation label) whenever
+	-- set. Both are filtered text; see ModerationService.FilterOptionalText.
+	title: string?,
+	description: string?,
 	filteredPrompt: string,
 	method: GenerationMethod,
 	stylePreset: string,
@@ -99,6 +104,11 @@ export type GraphicRecord = {
 	-- TEXT_TO_IMAGE is generated purely from the prompt, with no avatar
 	-- reference at all.
 	kind: "AVATAR_GRAPHIC" | "TEXT_TO_IMAGE",
+	-- Owner-set display name/blurb shown on the Discover card and its detail
+	-- overlay -- graphics otherwise have no free-text label at all (the UI
+	-- substitutes a truncated filteredPrompt when title is unset).
+	title: string?,
+	description: string?,
 	filteredPrompt: string,
 	stylePreset: string,
 	avatarView: string?,
@@ -151,8 +161,10 @@ export type PendingTransfer = {
 	status: "PROMPTING" | "AWAITING_RECEIPT",
 	-- Defaults to "ITEM" for any record written before this field existed
 	-- (see CommunityService._ProcessSenderReceipt), since every transfer was
-	-- an item transfer before graphics could be sold too.
-	contentType: ("ITEM" | "GRAPHIC")?,
+	-- an item transfer before graphics could be sold too. "TIP" is a
+	-- creator-support transfer with no purchase behind it -- the receipt
+	-- handler skips granting a personal copy for that content type.
+	contentType: ("ITEM" | "GRAPHIC" | "TIP")?,
 	itemId: string,
 	sellerUserId: number,
 	amount: number,
