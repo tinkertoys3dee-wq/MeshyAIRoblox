@@ -989,12 +989,25 @@ function App:_BuildAvatarPreviewPanel(backdrop: Frame)
 	self.shell:GetPropertyChangedSignal("AbsolutePosition"):Connect(relayout)
 end
 
--- Cheap, purely geometric: positions/sizes the panel against `shell`'s
--- current on-screen rect and decides whether it's allowed to show at all
--- (only on the Avatar Lab page, only when there's real room to its right).
--- Safe to call often -- driven by `shell`'s AbsoluteSize/AbsolutePosition
--- signals above, and once per _RenderActivePage via _SyncAvatarPreviewPanel
--- -- since it never touches the viewport avatar or the try-on list.
+-- Positions the panel against `shell`'s current on-screen rect AND actively
+-- carves out room for it by shrinking/recentering `shell` itself, rather
+-- than passively hoping there happens to be leftover space to shell's
+-- right. `shell` is already sized at 90% of the full screen width (clamped
+-- 330-1440px) -- at nearly every common desktop resolution (1920x1080
+-- included) that alone already reaches the screen edge with nothing left
+-- over, which is why the panel never actually appeared: the old version of
+-- this function only ever positioned it in whatever space was left, and
+-- there wasn't any. Subtracting PANEL_RESERVE from shell's own width/
+-- position (both in the same UDim2, scale and offset combined) guarantees
+-- that much room exists on its right for any screen at least
+-- MIN_VIEWPORT_FOR_PANEL wide, regardless of how shell's own 90%-scale
+-- sizing would otherwise fill the screen. Safe to call often -- driven by
+-- `shell`'s AbsoluteSize/AbsolutePosition signals above, from
+-- _ApplyResponsiveLayout on every viewport resize, and once per
+-- _RenderActivePage via _SyncAvatarPreviewPanel.
+local PANEL_WIDTH = 280
+local PANEL_GAP = 16
+local MIN_VIEWPORT_FOR_PANEL = 1180
 function App:_LayoutAvatarPreviewPanel()
 	local panel = self.avatarPreviewPanel
 	if not panel then
@@ -1004,20 +1017,33 @@ function App:_LayoutAvatarPreviewPanel()
 	local backdrop = self.backdrop
 	local camera = Workspace.CurrentCamera
 	local viewportWidth = if camera then camera.ViewportSize.X else 1200
-	local gap = 18
-	local minWidth = 240
-	local maxWidth = 340
-	local shellLeft = shell.AbsolutePosition.X - backdrop.AbsolutePosition.X
-	local shellRight = shellLeft + shell.AbsoluteSize.X
-	local available = viewportWidth - shellRight - gap * 2
-	local wanted = self.activePage == "Avatar Lab" and not self.compact and shell.Visible
-	if not wanted or available < minWidth or shell.AbsoluteSize.Y <= 0 then
+	local wanted = self.activePage == "Avatar Lab"
+		and not self.compact
+		and shell.Visible
+		and viewportWidth >= MIN_VIEWPORT_FOR_PANEL
+	local reserve = if wanted then PANEL_WIDTH + PANEL_GAP else 0
+	-- Only ever the two hardcoded base values (no panel) or those values
+	-- minus one fixed reserve (panel) -- comparing against those computed
+	-- UDim2s (UDim2 supports ==) skips reassigning Size/Position, and
+	-- therefore skips re-firing the AbsoluteSize/AbsolutePosition signals
+	-- that call back into this same function, on every one of the many
+	-- calls that don't actually need to change anything.
+	local targetSize = UDim2.new(0.9, -reserve, 0.88, 0)
+	local targetPosition = UDim2.new(0.5, -reserve / 2, 0.5, 0)
+	if shell.Size ~= targetSize then
+		shell.Size = targetSize
+	end
+	if shell.Position ~= targetPosition then
+		shell.Position = targetPosition
+	end
+	if not wanted or shell.AbsoluteSize.Y <= 0 then
 		panel.Visible = false
 		return
 	end
+	local shellRight = (shell.AbsolutePosition.X - backdrop.AbsolutePosition.X) + shell.AbsoluteSize.X
 	local shellTop = shell.AbsolutePosition.Y - backdrop.AbsolutePosition.Y
-	panel.Position = UDim2.fromOffset(shellRight + gap, shellTop)
-	panel.Size = UDim2.fromOffset(math.clamp(available, minWidth, maxWidth), shell.AbsoluteSize.Y)
+	panel.Position = UDim2.fromOffset(shellRight + PANEL_GAP, shellTop)
+	panel.Size = UDim2.fromOffset(PANEL_WIDTH, shell.AbsoluteSize.Y)
 	panel.Visible = true
 end
 
