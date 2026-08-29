@@ -277,6 +277,13 @@ return table.freeze({
 		VoteXP = 5,
 		PlacementXP = { 100, 60, 40 },
 		DailyFirstRoundBonusTokens = 5,
+		-- Completing a second ready look on the same UTC day turns a single
+		-- round into a visible, finite encore objective. These are free
+		-- bonusTokens, so the reward can accelerate a queue but can never pay
+		-- OpenAI or Meshy provider cost.
+		DailyEncoreRounds = 2,
+		DailyEncoreBonusTokens = 10,
+		DailyEncoreXP = 50,
 		WeeklyPlacementXP = { 600, 350, 200 },
 		LeaderboardSize = 10,
 	},

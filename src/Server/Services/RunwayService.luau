@@ -185,7 +185,10 @@ function RunwayService:_FinishRound()
 		local placement = if placementValid and rank <= 3 then rank else nil
 		local placementXP = if placement then Config.Runway.PlacementXP[placement] or 0 else 0
 		local xp = Config.Runway.ParticipationXP + placementXP
-		local dailyTokens = 0
+		local firstRoundTokens = 0
+		local encoreTokens = 0
+		local encoreXP = 0
+		local dailyRounds = 0
 		if player then
 			local day = math.floor(os.time() / 86400)
 			self.profiles:Mutate(player, function(profile)
@@ -196,13 +199,34 @@ function RunwayService:_FinishRound()
 				if profile.runway.dailyDay ~= day then
 					profile.runway.dailyDay = day
 					profile.runway.dailyCompleted = false
+					profile.runway.dailyRounds = 0
+					profile.runway.dailyEncoreCompleted = false
+				elseif profile.runway.dailyCompleted and (profile.runway.dailyRounds or 0) < 1 then
+					-- Preserve a first-round claim made earlier on the deployment day
+					-- when an older profile did not yet store Encore progress.
+					profile.runway.dailyRounds = 1
 				end
+				profile.runway.dailyRounds = math.min(
+					Config.Runway.DailyEncoreRounds,
+					math.max(0, math.floor(profile.runway.dailyRounds or 0)) + 1
+				)
+				dailyRounds = profile.runway.dailyRounds
 				if not profile.runway.dailyCompleted then
 					profile.runway.dailyCompleted = true
-					dailyTokens = Config.Runway.DailyFirstRoundBonusTokens
-					profile.bonusTokens = (profile.bonusTokens or 0) + dailyTokens
+					firstRoundTokens = Config.Runway.DailyFirstRoundBonusTokens
+					profile.bonusTokens = (profile.bonusTokens or 0) + firstRoundTokens
+				end
+				if
+					profile.runway.dailyRounds >= Config.Runway.DailyEncoreRounds
+					and not profile.runway.dailyEncoreCompleted
+				then
+					profile.runway.dailyEncoreCompleted = true
+					encoreTokens = Config.Runway.DailyEncoreBonusTokens
+					encoreXP = Config.Runway.DailyEncoreXP
+					profile.bonusTokens = (profile.bonusTokens or 0) + encoreTokens
 				end
 			end)
+			xp += encoreXP
 			self.progression:Grant(player, xp, if placement then "RUNWAY_PLACE" else "RUNWAY_COMPLETE", false)
 			self.retention:MarkJourney(player, "COMPLETE_RUNWAY", false)
 			self.retention:MarkQuest(player, "RUNWAY", false)
@@ -213,7 +237,7 @@ function RunwayService:_FinishRound()
 				self.profiles:Save(player)
 			end)
 			local profile = self.profiles:Get(player)
-			if dailyTokens > 0 and profile then
+			if (firstRoundTokens > 0 or encoreTokens > 0) and profile then
 				self.push(player, Network.PushEvents.Profile, {
 					bonusTokens = profile.bonusTokens,
 					creator = profile.creator,
@@ -221,7 +245,13 @@ function RunwayService:_FinishRound()
 				})
 				self.push(player, Network.PushEvents.Toast, {
 					tone = "success",
-					message = string.format("Daily runway complete: +%d bonus tokens", dailyTokens),
+					message = if encoreTokens > 0
+						then string.format(
+							"Runway Encore complete: +%d bonus tokens · +%d Creator XP",
+							encoreTokens,
+							encoreXP
+						)
+						else string.format("Daily runway complete: +%d bonus tokens", firstRoundTokens),
 				})
 			end
 			self.analytics:Funnel(player, "runway", 4, "Style round completed", {
@@ -233,6 +263,13 @@ function RunwayService:_FinishRound()
 				votes = entry.votes,
 				theme = self.theme,
 			})
+			if encoreTokens > 0 then
+				self.analytics:Custom(player, "RunwayEncoreCompleted", encoreTokens, {
+					xp = encoreXP,
+					rounds = dailyRounds,
+					theme = self.theme,
+				})
+			end
 		end
 
 		local weeklyPoints = 1
@@ -285,6 +322,14 @@ function RunwayService:GetState(player: Player): { [string]: any }
 		return string.lower(a.name) < string.lower(b.name)
 	end)
 	local ownEntry = self.entries[player.UserId]
+	local profile = self.profiles:Get(player)
+	local day = math.floor(os.time() / 86400)
+	local dailyRounds = 0
+	local dailyEncoreCompleted = false
+	if profile and profile.runway and profile.runway.dailyDay == day then
+		dailyRounds = math.clamp(math.floor(profile.runway.dailyRounds or 0), 0, Config.Runway.DailyEncoreRounds)
+		dailyEncoreCompleted = profile.runway.dailyEncoreCompleted == true
+	end
 	return {
 		roundId = self.roundId,
 		phase = self.phase,
@@ -298,6 +343,13 @@ function RunwayService:GetState(player: Player): { [string]: any }
 		votedFor = self.votesBy[player.UserId],
 		creatorProgress = self.progression:GetSnapshot(player),
 		journeyState = self.retention:GetJourneyState(player),
+		dailyProgress = {
+			rounds = dailyRounds,
+			target = Config.Runway.DailyEncoreRounds,
+			encoreCompleted = dailyEncoreCompleted,
+			bonusTokens = Config.Runway.DailyEncoreBonusTokens,
+			xp = Config.Runway.DailyEncoreXP,
+		},
 	}
 end
 

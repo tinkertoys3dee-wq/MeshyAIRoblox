@@ -98,6 +98,8 @@ local function stateRevision(state: { [string]: any }): string
 		tostring(state.votedFor),
 		tostring(state.creatorProgress and state.creatorProgress.xp or 0),
 		tostring(state.journeyState and state.journeyState.doneCount or 0),
+		tostring(state.dailyProgress and state.dailyProgress.rounds or 0),
+		tostring(state.dailyProgress and state.dailyProgress.encoreCompleted or false),
 	}
 	for _, entry in state.entries or {} do
 		table.insert(
@@ -355,7 +357,7 @@ function RunwayHub.Show(app: any)
 		local camera = Workspace.CurrentCamera
 		local compact = (camera and camera.ViewportSize.X or 1200) < 760
 		local phase = PHASE_COPY[state.phase] or PHASE_COPY.INTERMISSION
-		local heroHeight = if compact then 570 else 356
+		local heroHeight = if compact then 590 else 376
 		local hero = Factory.Card(stack, UDim2.new(1, 0, 0, heroHeight), nil, "RoundHero")
 		hero.LayoutOrder = 1
 		local phasePill = Factory.Pill(hero, phase.label, phase.color, 116)
@@ -475,7 +477,36 @@ function RunwayHub.Show(app: any)
 			}
 		)
 
-		local actionY = statsY + 34
+		local dailyProgress = state.dailyProgress or {}
+		local encoreComplete = dailyProgress.encoreCompleted == true
+		local encoreRounds = math.min(dailyProgress.rounds or 0, dailyProgress.target or 2)
+		local encoreTarget = dailyProgress.target or 2
+		Factory.Label(
+			hero,
+			if encoreComplete
+				then string.format(
+					"DAILY ENCORE COMPLETE  ✓  +%d TOKENS · +%d XP",
+					dailyProgress.bonusTokens or 0,
+					dailyProgress.xp or 0
+				)
+				else string.format(
+					"DAILY ENCORE  %d/%d ROUNDS  ·  +%d TOKENS · +%d XP",
+					encoreRounds,
+					encoreTarget,
+					dailyProgress.bonusTokens or 0,
+					dailyProgress.xp or 0
+				),
+			UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 20),
+			{
+				Position = UDim2.new(detailScale, detailOffset, 0, statsY + 20),
+				Color = if encoreComplete then Colors.Mint else Colors.Gold,
+				Font = Theme.Fonts.Bold,
+				TextSize = 10,
+				Truncate = Enum.TextTruncate.AtEnd,
+			}
+		)
+
+		local actionY = statsY + 54
 		local primaryText = "Watch the runway"
 		local primaryAction: (() -> ())? = nil
 		if state.phase == "INTERMISSION" then

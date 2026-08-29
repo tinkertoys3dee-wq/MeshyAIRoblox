@@ -73,7 +73,7 @@ Forge Tokens are earned by watching a Roblox Rewarded Video ad (`Class.AdService
 - liked/favorited item references;
 - pending generation purchases and Plus transfers;
 - paid/ad Forge Token balance, free bonus-token balance, the daily ad counter, and AFK daily earnings;
-- First Look progress, Creator XP/level statistics, runway participation, daily runway reward state, and idempotent weekly payout state;
+- First Look progress, Creator XP/level statistics, runway participation, daily first-round/Encore reward state, and idempotent weekly payout state;
 - processed developer-product receipt IDs;
 - settings, onboarding, streak, and analytics counters.
 
@@ -87,7 +87,7 @@ The raw GLB/PNG bytes are never placed in a DataStore. Roblox DataStores are met
 
 `ProgressionService` is the single authority for Creator XP. `CreatorProgression.luau` contains pure shared level/title math for display, while every award is applied on the server after a completed action. Generation completion IDs already make creation XP idempotent; weekly runway awards additionally store `profile.runway.weeklyPaidWeek`, making cross-server payout retries safe.
 
-`RunwayService` synchronizes a server-local style round without creating Workspace instances or changing Lighting. Players join during intermission/styling, mark a look ready, inspect live character appearances inside client-only `WorldModel` viewports, and cast at most one non-self vote. In-game equip/unequip/try-on/reset routes freeze for ready entrants during voting/results, so a displayed look cannot change after ballots open. Departed entrants and their votes are removed safely. Equal vote totals use a server-authored random tie break rather than lock-in speed, so players are not incentivized to rush the styling phase. Results grant participation/placement XP, one daily `bonusTokens` reward, First Look/daily-quest progress, and weekly spotlight points. The weekly top-three payout reads an `OrderedDataStore`; per-profile idempotency permits overlapping servers, and the global completion marker advances only after every winner mutation succeeds.
+`RunwayService` synchronizes a server-local style round without creating Workspace instances or changing Lighting. Players join during intermission/styling, mark a look ready, inspect live character appearances inside client-only `WorldModel` viewports, and cast at most one non-self vote. In-game equip/unequip/try-on/reset routes freeze for ready entrants during voting/results, so a displayed look cannot change after ballots open. Departed entrants and their votes are removed safely. Equal vote totals use a server-authored random tie break rather than lock-in speed, so players are not incentivized to rush the styling phase. Results grant participation/placement XP, the first daily `bonusTokens` reward, First Look/daily-quest progress, and weekly spotlight points. `profile.runway.dailyRounds` and `dailyEncoreCompleted` make the visible two-round Daily Encore UTC-scoped and one-time, with rewards applied in the same result mutation before the profile save. The weekly top-three payout reads an `OrderedDataStore`; per-profile idempotency permits overlapping servers, and the global completion marker advances only after every winner mutation succeeds.
 
 ## Roblox asset lifecycle
 

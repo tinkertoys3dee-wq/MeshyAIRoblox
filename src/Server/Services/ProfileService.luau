@@ -68,6 +68,8 @@ local function defaultProfile(userId: number): { [string]: any }
 		runway = {
 			dailyDay = 0,
 			dailyCompleted = false,
+			dailyRounds = 0,
+			dailyEncoreCompleted = false,
 			weeklyPlacements = 0,
 			-- Makes weekly payouts safe to retry after a transient DataStore
 			-- failure or two servers racing at the UTC week boundary.

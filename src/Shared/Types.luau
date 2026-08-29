@@ -215,6 +215,8 @@ export type PlayerProfile = {
 	runway: {
 		dailyDay: number,
 		dailyCompleted: boolean,
+		dailyRounds: number,
+		dailyEncoreCompleted: boolean,
 		weeklyPlacements: number,
 		weeklyPaidWeek: number,
 		weeklyReward: { week: number, rank: number, xp: number, announced: boolean },

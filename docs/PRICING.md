@@ -84,7 +84,7 @@ There is deliberately no daily cap on rewarded-ad requests (`AdRewardService:Req
 
 ### First Look, daily quests, and Runway
 
-The First Look journey grants 2 `bonusTokens` per step plus 12 on completion (20 total), the first completed runway round of each UTC day grants 5, and the free daily try-style/runway/arcade quest trio grants 3 each plus a 6-token clear bonus. All of these are intentionally `bonusTokens`; even a player completing every free loop can only redeem the negligible-variable-cost Priority Pass, never an OpenAI/Meshy generation. Creator XP, level titles, votes, and weekly Spotlight awards have no currency value at all. Their purpose is activation, session depth, and D1/D7 return—not disguising a paid AI operation as a grind reward.
+The First Look journey grants 2 `bonusTokens` per step plus 12 on completion (20 total), the first completed runway round of each UTC day grants 5, the second completed round finishes the Daily Encore for 10 `bonusTokens` plus 50 Creator XP, and the free daily try-style/runway/arcade quest trio grants 3 each plus a 6-token clear bonus. All token rewards here are intentionally `bonusTokens`; even a player completing every free loop can only redeem the negligible-variable-cost Priority Pass, never an OpenAI/Meshy generation. Creator XP, level titles, votes, and weekly Spotlight awards have no currency value at all. Their purpose is activation, session depth, and D1/D7 return—not disguising a paid AI operation as a grind reward.
 
 ### Non-earning token budget (achievements)
 
