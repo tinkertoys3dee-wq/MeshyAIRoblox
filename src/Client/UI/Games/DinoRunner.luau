@@ -51,8 +51,8 @@ local TICK_SPACING = 70
 -- non-integer argument.
 local MIN_OBSTACLE_GAP_CENTIS = 90
 local MAX_OBSTACLE_GAP_CENTIS = 160
-local MIN_COIN_GAP_CENTIS = 150
-local MAX_COIN_GAP_CENTIS = 270
+local MIN_COIN_GAP_CENTIS = 110
+local MAX_COIN_GAP_CENTIS = 200
 local FLYING_UNLOCK_SCORE = 8 -- pterodactyls only start appearing once the run has some legs
 local FLYING_CHANCE = 0.32 -- of obstacles spawned once unlocked
 local FLY_BOTTOM_HEIGHT = 22 -- how far above the ground surface a pterodactyl's belly sits
@@ -62,6 +62,12 @@ local COIN_BONUS = 3
 local SHIELD_BONUS = 5
 local SHIELD_CHANCE = 0.22 -- of coin spawns
 local SHIELD_DURATION = 4
+local NEAR_MISS_GAP = 9 -- px of clearance under/over an obstacle that counts as a close call
+local NEAR_MISS_BONUS = 2
+local COIN_COMBO_WINDOW = 1.4 -- seconds between coin pickups to keep a streak alive
+local COIN_COMBO_MAX_BONUS = 6
+local SPEED_LINE_THRESHOLD_FACTOR = 1.25 -- fraction of BASE_SPEED before streak lines start appearing
+local SPEED_LINE_INTERVAL = 0.1
 local DAY_CYCLE_SECONDS = 45 -- full day-to-night-to-day loop
 local STAR_COUNT = 10
 local DUST_INTERVAL = 0.08 -- continuous foot-dust cadence while grounded
@@ -70,8 +76,17 @@ local SKY_NIGHT_BOTTOM = Color3.fromRGB(8, 9, 20)
 local SUN_DAY_COLOR = Colors.Gold
 local MOON_NIGHT_COLOR = Color3.fromRGB(214, 222, 240)
 
-type Obstacle = { frame: Frame, x: number, width: number, height: number, flying: boolean, deflected: boolean }
+type Obstacle = {
+	frame: Frame,
+	x: number,
+	width: number,
+	height: number,
+	flying: boolean,
+	deflected: boolean,
+	nearMissDone: boolean,
+}
 type Coin = { frame: Frame, x: number, y: number, shield: boolean }
+type SpeedLine = { instance: Frame, x: number }
 
 local Game = {} :: GameShell.GameModule
 Game.Name = "Dino Runner"
@@ -98,6 +113,10 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local timeSinceDust = 0
 	local shieldUntil = 0
 	local lastStatusText = ""
+	local coinCombo = 0
+	local coinComboExpire = 0
+	local speedLines: { SpeedLine } = {}
+	local timeSinceSpeedLine = 0
 
 	-- Floored: AbsoluteSize can be fractional (UI scaling), and math.random
 	-- errors on a non-integer argument -- spawnObstacle's width() feeds it.
@@ -420,7 +439,15 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			end
 		end
 		local x = width() + w
-		table.insert(obstacles, { frame = frame, x = x, width = w, height = h, flying = flying, deflected = false })
+		table.insert(obstacles, {
+			frame = frame,
+			x = x,
+			width = w,
+			height = h,
+			flying = flying,
+			deflected = false,
+			nearMissDone = false,
+		})
 	end
 
 	local function spawnCoin()
@@ -485,6 +512,27 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		task.delay(0.5, function()
 			puff:Destroy()
 		end)
+	end
+
+	-- Thin streaks that rocket past once the run is going fast enough --
+	-- a "how fast am I really going" cue on top of the tick marks, which
+	-- scroll at true gameplay speed and so stop reading as motion once
+	-- everything else on screen is moving that fast too. Purely cosmetic,
+	-- so skipped entirely under reduceMotion.
+	local function spawnSpeedLine()
+		local y = math.random(16, math.max(20, math.floor(groundY()) - 12))
+		local length = 26 + math.random(0, 34)
+		local line = Factory.New("Frame", {
+			Name = "SpeedLine",
+			Size = UDim2.fromOffset(length, 2),
+			Position = UDim2.fromOffset(width() + length, y),
+			BackgroundColor3 = Colors.Line,
+			BackgroundTransparency = 0.72,
+			BorderSizePixel = 0,
+			ZIndex = 2,
+			Parent = canvas,
+		})
+		table.insert(speedLines, { instance = line, x = width() + length })
 	end
 
 	-- Sky/sun/star readout for the current point in the day-night loop --
@@ -576,6 +624,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 					api.reduceMotion,
 					10
 				)
+				GameShell.Shake(canvas, api.reduceMotion, 0.35)
 				if not api.reduceMotion then
 					dinoScale.Scale = 0.8
 					TweenService:Create(
@@ -632,6 +681,23 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			timeSinceDust = 0
 		end
 
+		if not api.reduceMotion and speed >= BASE_SPEED * SPEED_LINE_THRESHOLD_FACTOR then
+			timeSinceSpeedLine += dt
+			if timeSinceSpeedLine >= SPEED_LINE_INTERVAL then
+				timeSinceSpeedLine = 0
+				spawnSpeedLine()
+			end
+		end
+		for i = #speedLines, 1, -1 do
+			local line = speedLines[i]
+			line.x -= speed * 2.2 * dt
+			line.instance.Position = UDim2.fromOffset(line.x, line.instance.Position.Y.Offset)
+			if line.x < -70 then
+				line.instance:Destroy()
+				table.remove(speedLines, i)
+			end
+		end
+
 		timeSinceObstacle += dt
 		if timeSinceObstacle >= nextObstacleGap then
 			timeSinceObstacle = 0
@@ -673,7 +739,8 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 
 			local obLeft, obRight = obstacle.x, obstacle.x + obstacle.width
 			local obTop, obBottom = obstacleTop, obstacleTop + obstacle.height
-			if dinoRight > obLeft and dinoLeft < obRight and dinoBottom > obTop and dinoTop < obBottom then
+			local horizontalOverlap = dinoRight > obLeft and dinoLeft < obRight
+			if horizontalOverlap and dinoBottom > obTop and dinoTop < obBottom then
 				if shielded then
 					if not obstacle.deflected then
 						obstacle.deflected = true
@@ -683,12 +750,30 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 							SHIELD_COLOR,
 							api.reduceMotion
 						)
+						GameShell.Shake(canvas, api.reduceMotion, 0.5)
 						obstacle.frame:Destroy()
 						table.remove(obstacles, i)
 					end
 				else
 					endGame()
 					return
+				end
+			elseif horizontalOverlap and not obstacle.nearMissDone and not onGround then
+				-- A tight clearance (jumped or ducked just barely over/under)
+				-- earns a small bonus and its own cue -- rewards precise
+				-- timing instead of only safe, wide-margin jumps.
+				local gap = math.min(math.abs(dinoBottom - obTop), math.abs(obBottom - dinoTop))
+				if gap <= NEAR_MISS_GAP then
+					obstacle.nearMissDone = true
+					bonusScore += NEAR_MISS_BONUS
+					api.sounds:Play("Hover")
+					GameShell.Ring(
+						canvas,
+						dino.Position + UDim2.fromOffset(DINO_SIZE / 2, DINO_SIZE / 2),
+						Colors.Cyan,
+						api.reduceMotion,
+						6
+					)
 				end
 			end
 		end
@@ -714,7 +799,10 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 				local isShield = coin.shield
 				coin.frame:Destroy()
 				table.remove(coins, i)
-				bonusScore += if isShield then SHIELD_BONUS else COIN_BONUS
+				coinCombo = if now <= coinComboExpire then coinCombo + 1 else 1
+				coinComboExpire = now + COIN_COMBO_WINDOW
+				local comboBonus = math.min(coinCombo - 1, COIN_COMBO_MAX_BONUS)
+				bonusScore += (if isShield then SHIELD_BONUS else COIN_BONUS) + comboBonus
 				if isShield then
 					shieldUntil = math.max(shieldUntil, now) + SHIELD_DURATION
 				end
@@ -733,6 +821,21 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 					api.reduceMotion,
 					10
 				)
+				GameShell.Shake(canvas, api.reduceMotion, if isShield then 0.5 else 0.15)
+				-- Every 5th coin in an unbroken streak earns its own bigger
+				-- flourish -- rewards keeping the streak alive, not just
+				-- individual pickups.
+				if coinCombo % 5 == 0 then
+					api.sounds:Play("Success")
+					GameShell.Shake(canvas, api.reduceMotion, 0.6)
+					GameShell.Ring(
+						canvas,
+						coinPosition + UDim2.fromOffset(COIN_SIZE / 2, COIN_SIZE / 2),
+						Colors.Gold,
+						api.reduceMotion,
+						18
+					)
+				end
 			end
 		end
 	end)
@@ -761,6 +864,10 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			coin.frame:Destroy()
 		end
 		table.clear(coins)
+		for _, line in speedLines do
+			line.instance:Destroy()
+		end
+		table.clear(speedLines)
 	end
 end
 

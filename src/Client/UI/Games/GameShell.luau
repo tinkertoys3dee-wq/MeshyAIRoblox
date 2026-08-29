@@ -148,21 +148,46 @@ function GameShell.Ring(parent: Instance, position: UDim2, color: Color3, reduce
 	strokeTween:Play()
 end
 
--- Nudges `frame` away from its current position and eases it back -- used
--- for crash/collision feedback. A no-op under reduceMotion since a sudden
--- shake is exactly the kind of motion that setting exists to suppress, and
--- the games always pair it with a sound and the game-over screen anyway.
-function GameShell.Shake(frame: Frame, reduceMotion: boolean)
+-- Weak-keyed so an entry disappears on its own once a game's canvas is
+-- destroyed (every retry/game-switch creates a fresh one) -- Shake is now
+-- called far more often than just once at game over (every game calls it on
+-- routine scoring hits too), so leaving these to accumulate for the life of
+-- the whole Arcade session, across many retries, would be a real leak.
+local shakeRestPositions: { [Instance]: UDim2 } = setmetatable({}, { __mode = "k" }) :: any
+local shakeTweens: { [Instance]: Tween } = setmetatable({}, { __mode = "k" }) :: any
+
+-- Nudges `frame` away from its resting position and eases it back -- used
+-- for crash/collision feedback and, at a smaller `intensity`, routine
+-- scoring impact. A no-op under reduceMotion since a sudden shake is exactly
+-- the kind of motion that setting exists to suppress, and every caller
+-- already pairs it with a sound and/or a score update anyway. Safe to call
+-- again before a previous shake has finished settling (it cancels the old
+-- tween and remembers the *original* resting position the first time it's
+-- ever called on a given frame, rather than re-reading frame.Position --
+-- which, mid-tween, would be some already-offset value, and every call
+-- after that would drift the frame further from where it actually started).
+function GameShell.Shake(frame: Frame, reduceMotion: boolean, intensity: number?)
 	if reduceMotion then
 		return
 	end
-	local restingPosition = frame.Position
-	frame.Position = restingPosition + UDim2.fromOffset(math.random(-7, 7), math.random(-5, 5))
-	TweenService:Create(
+	local resting = shakeRestPositions[frame]
+	if not resting then
+		resting = frame.Position
+		shakeRestPositions[frame] = resting
+	end
+	local existingTween = shakeTweens[frame]
+	if existingTween then
+		existingTween:Cancel()
+	end
+	local magnitude = intensity or 1
+	frame.Position = resting + UDim2.fromOffset(math.random(-7, 7) * magnitude, math.random(-5, 5) * magnitude)
+	local tween = TweenService:Create(
 		frame,
 		TweenInfo.new(0.3, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
-		{ Position = restingPosition }
-	):Play()
+		{ Position = resting }
+	)
+	shakeTweens[frame] = tween
+	tween:Play()
 end
 
 local CONFETTI_COLORS = { Colors.Gold, Colors.Mint, Colors.Cyan, Colors.Rose, Colors.Violet }

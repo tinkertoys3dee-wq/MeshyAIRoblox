@@ -190,6 +190,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		flashScreen(Colors.Cyan, 0.82)
 		GameShell.Burst(canvas, UDim2.fromOffset(pipeCenterX, pipeGapCenterY), Colors.Cyan, api.reduceMotion)
 		GameShell.Ring(canvas, UDim2.fromOffset(pipeCenterX, pipeGapCenterY), Colors.Cyan, api.reduceMotion)
+		GameShell.Shake(canvas, api.reduceMotion, 0.35)
 	end
 
 	local comboFadeToken = 0
@@ -235,6 +236,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		if combo > 0 and combo % 5 == 0 then
 			flashScreen(Colors.Gold, 0.75)
 			api.sounds:Play("Success")
+			GameShell.Shake(canvas, api.reduceMotion, 0.5)
 		end
 
 		if api.reduceMotion then
@@ -279,6 +281,36 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			TweenService
 				:Create(wing, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Rotation = 0 })
 				:Play()
+			-- A couple of feathers kicked loose on every flap -- distinct from
+			-- the pipe-pass Burst/Ring, this fires constantly through a run
+			-- rather than only at scoring moments, so the flap itself always
+			-- has its own visible kick.
+			for _ = 1, 2 do
+				local feather = Factory.New("Frame", {
+					Name = "Feather",
+					Size = UDim2.fromOffset(BIRD_SIZE * 0.3, BIRD_SIZE * 0.16),
+					Position = bird.Position + UDim2.fromOffset(-2, BIRD_SIZE * 0.3 + math.random(-3, 3)),
+					Rotation = math.random(-25, 25),
+					BackgroundColor3 = Color3.fromRGB(214, 158, 40),
+					BackgroundTransparency = 0.25,
+					BorderSizePixel = 0,
+					ZIndex = 4,
+					Parent = canvas,
+				})
+				Factory.Corner(feather, 4)
+				local featherTween = TweenService:Create(
+					feather,
+					TweenInfo.new(0.35 + math.random() * 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{
+						Position = feather.Position - UDim2.fromOffset(18 + math.random(0, 12), -math.random(6, 16)),
+						BackgroundTransparency = 1,
+					}
+				)
+				featherTween.Completed:Connect(function()
+					feather:Destroy()
+				end)
+				featherTween:Play()
+			end
 		end
 	end
 

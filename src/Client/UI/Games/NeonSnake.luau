@@ -26,6 +26,7 @@ local SWIPE_MIN_DISTANCE = 16
 local HEAD_COLOR = Colors.Cyan
 local BODY_COLOR = Colors.Violet
 local TAIL_COLOR = Color3.fromRGB(94, 66, 190) -- a touch darker than BODY_COLOR
+local COMBO_WINDOW = 3 -- seconds between food pickups before the streak resets
 
 type Point = { x: number, y: number }
 type Direction = { x: number, y: number }
@@ -37,6 +38,8 @@ Game.Key = "NeonSnake"
 function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local running = true
 	local score = 0
+	local comboCount = 0
+	local lastEatTime = 0
 
 	-- Floored + defaulted the same way DinoRunner's width()/groundY() are:
 	-- AbsoluteSize can be fractional or briefly zero before layout settles,
@@ -212,6 +215,96 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	Factory.Stroke(foodFrame, Colors.Ink, 0.35, 1.5)
 	local foodPulse = Factory.New("UIScale", { Scale = 1, Parent = foodFrame })
 
+	-- Full-canvas tint for streak milestones, same trick FlappyBird/ColorSwitch
+	-- use for their own near-miss/combo flashes.
+	local flashOverlay = Factory.New("Frame", {
+		Name = "FlashOverlay",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Colors.Gold,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 45,
+		Parent = canvas,
+	})
+	local comboLabel = Factory.Label(canvas, "", UDim2.fromOffset(160, 28), {
+		Name = "ComboLabel",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 8),
+		Color = Colors.Gold,
+		Font = Theme.Fonts.Black,
+		TextSize = 18,
+		AlignX = Enum.TextXAlignment.Center,
+		Transparency = 1,
+		ZIndex = 46,
+	})
+	Factory.New("UIStroke", { Color = Colors.Ink, Thickness = 2, Transparency = 0.4, Parent = comboLabel })
+
+	local function flashScreen(color: Color3, peakTransparency: number)
+		if api.reduceMotion then
+			return
+		end
+		flashOverlay.BackgroundColor3 = color
+		flashOverlay.BackgroundTransparency = peakTransparency
+		TweenService:Create(flashOverlay, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 1,
+		}):Play()
+	end
+
+	local comboFadeToken = 0
+	local function showScorePopup(position: UDim2, combo: number)
+		if not api.reduceMotion then
+			local popupText = if combo >= 2 then string.format("+1  x%d", combo) else "+1"
+			local popup = Factory.Label(canvas, popupText, UDim2.fromOffset(90, 20), {
+				Name = "ScorePopup",
+				AnchorPoint = Vector2.new(0.5, 1),
+				Position = position,
+				Color = if combo >= 5 then Colors.Gold else Colors.Mint,
+				Font = Theme.Fonts.Black,
+				TextSize = 15,
+				AlignX = Enum.TextXAlignment.Center,
+				ZIndex = 47,
+			})
+			Factory.New("UIStroke", { Color = Colors.Ink, Thickness = 1.5, Transparency = 0.5, Parent = popup })
+			local tween =
+				TweenService:Create(popup, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+					Position = position - UDim2.fromOffset(0, 26),
+					TextTransparency = 1,
+				})
+			tween.Completed:Connect(function()
+				popup:Destroy()
+			end)
+			tween:Play()
+		end
+
+		comboFadeToken += 1
+		local myToken = comboFadeToken
+		if combo >= 2 then
+			comboLabel.Text = string.format("%dx STREAK", combo)
+			comboLabel.TextTransparency = 0
+			if not api.reduceMotion then
+				local pop = Factory.New("UIScale", { Scale = 1.3, Parent = comboLabel })
+				TweenService
+					:Create(pop, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+					:Play()
+			end
+			task.delay(COMBO_WINDOW, function()
+				if myToken == comboFadeToken and comboLabel.Parent then
+					if api.reduceMotion then
+						comboLabel.TextTransparency = 1
+					else
+						TweenService:Create(comboLabel, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+					end
+				end
+			end)
+		end
+
+		if combo > 0 and combo % 5 == 0 then
+			flashScreen(Colors.Gold, 0.75)
+			api.sounds:Play("Success")
+			GameShell.Shake(canvas, api.reduceMotion, 0.55)
+		end
+	end
+
 	local function placeFood()
 		local attempt = randomCell()
 		local tries = 0
@@ -372,8 +465,14 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			score += 1
 			api.setScore(score)
 			api.sounds:Play("Success")
-			GameShell.Burst(canvas, foodFrame.Position, Colors.Gold, api.reduceMotion)
-			GameShell.Ring(canvas, foodFrame.Position, Colors.Gold, api.reduceMotion, CELL)
+			local eatenFoodPosition = foodFrame.Position
+			GameShell.Burst(canvas, eatenFoodPosition, Colors.Gold, api.reduceMotion)
+			GameShell.Ring(canvas, eatenFoodPosition, Colors.Gold, api.reduceMotion, CELL)
+			GameShell.Shake(canvas, api.reduceMotion, 0.15)
+			local now = os.clock()
+			comboCount = if now - lastEatTime <= COMBO_WINDOW then comboCount + 1 else 1
+			lastEatTime = now
+			showScorePopup(eatenFoodPosition, comboCount)
 			-- The new tail's frame gets the dedicated tail shade -- otherwise
 			-- a snake that only ever grows would never show one.
 			segmentFrames[#segmentFrames].BackgroundColor3 = TAIL_COLOR
@@ -402,6 +501,8 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		glowBlob:Destroy()
 		arena:Destroy()
 		foodFrame:Destroy()
+		flashOverlay:Destroy()
+		comboLabel:Destroy()
 		eyeLeft:Destroy()
 		eyeRight:Destroy()
 		if headGlow then

@@ -60,12 +60,14 @@ local RING_SPACING_PER_SCORE = 4
 local RING_SPIN_MIN = 90 -- deg/sec
 local RING_SPIN_MAX = 190
 local ORB_SIZE = 22
-local ORB_SPACING_MIN = 320 -- world px climbed between orb spawns
-local ORB_SPACING_MAX = 520
+local ORB_SPACING_MIN = 260 -- world px climbed between orb spawns
+local ORB_SPACING_MAX = 420
 local TRAIL_INTERVAL = 0.045
 local CEILING_FRACTION = 0.32 -- how far down the canvas the ball is pinned
 local NEAR_MISS_SEAM_DEGREES = 10 -- how close to a petal boundary counts as a close call
 local STREAK_WINDOW = 3.5 -- seconds between clean passes before the streak resets
+local SCORE_POPUP_LIFETIME = 0.5
+local AMBIENT_SPARK_INTERVAL = 0.22 -- purely decorative background drift, sells verticality even before the first climb
 
 -- Special (non-color) orbs: SHIELD stacks up to SHIELD_MAX_CHARGES free
 -- passes through a wrong-colored ring instead of ending the run, and
@@ -90,6 +92,7 @@ type Ring = {
 }
 type OrbKind = "COLOR" | "SHIELD" | "MULTIPLIER"
 type Orb = { frame: Frame, colorIndex: number?, kind: OrbKind, y: number, collected: boolean }
+type AmbientSpark = { instance: Frame, x: number, y: number, speed: number }
 
 local Game = {} :: GameShell.GameModule
 Game.Name = "Color Switch"
@@ -123,6 +126,8 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local shieldCharges = 0
 	local scoreMultiplierUntil = 0
 	local lastStatusText = ""
+	local ambientSparks: { AmbientSpark } = {}
+	local timeSinceSpark = 0
 
 	local function width(): number
 		local w = math.floor(canvas.AbsoluteSize.X)
@@ -311,6 +316,56 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		}):Play()
 	end
 
+	-- Faint drifting motes in the background, independent of the ball's own
+	-- climb -- sells depth/verticality even while just falling or sitting
+	-- idle below the ceiling, when the rings themselves aren't moving at
+	-- all. Purely cosmetic, so skipped entirely under reduceMotion.
+	local function spawnAmbientSpark()
+		local x = math.random(12, math.max(13, width() - 12))
+		local size = 2 + math.random() * 2
+		local spark = Factory.New("Frame", {
+			Name = "Spark",
+			Size = UDim2.fromOffset(size, size),
+			Position = UDim2.fromOffset(x, -10),
+			BackgroundColor3 = Colors.Line,
+			BackgroundTransparency = 0.55 + math.random() * 0.25,
+			BorderSizePixel = 0,
+			ZIndex = 2,
+			Parent = canvas,
+		})
+		Factory.Corner(spark, size / 2)
+		table.insert(ambientSparks, { instance = spark, x = x, y = -10, speed = 28 + math.random(0, 42) })
+	end
+
+	-- A quick floating "+N" at the pass point -- the score readout at the
+	-- top of the HUD already updates, but a popup right where the pass
+	-- actually happened reads far more immediately as a reward.
+	local function spawnScorePopup(text: string, position: UDim2, color: Color3)
+		if api.reduceMotion then
+			return
+		end
+		local label = Factory.Label(canvas, text, UDim2.fromOffset(50, 20), {
+			Name = "ScorePopup",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = position,
+			Color = color,
+			Font = Theme.Fonts.Black,
+			TextSize = 16,
+			AlignX = Enum.TextXAlignment.Center,
+			ZIndex = 40,
+		})
+		Factory.New("UIStroke", { Color = Colors.Ink, Thickness = 1.5, Transparency = 0.4, Parent = label })
+		local tween = TweenService:Create(
+			label,
+			TweenInfo.new(SCORE_POPUP_LIFETIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ Position = position - UDim2.fromOffset(0, 26), TextTransparency = 1 }
+		)
+		tween.Completed:Connect(function()
+			label:Destroy()
+		end)
+		tween:Play()
+	end
+
 	-- Fires when a clean pass happened close to the seam between two petals
 	-- -- a beat later or earlier and the wrong color would have been facing
 	-- the ball, so it reads as a genuine close call rather than a routine
@@ -323,6 +378,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			Colors.Cyan,
 			api.reduceMotion
 		)
+		GameShell.Shake(canvas, api.reduceMotion, 0.4)
 	end
 
 	local streakFadeToken = 0
@@ -357,6 +413,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		if streakCount > 0 and streakCount % 5 == 0 then
 			flashScreen(Colors.Gold, 0.75)
 			api.sounds:Play("Success")
+			GameShell.Shake(canvas, api.reduceMotion, 0.6)
 		end
 	end
 
@@ -645,6 +702,23 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			end
 		end
 
+		if not api.reduceMotion then
+			timeSinceSpark += dt
+			if timeSinceSpark >= AMBIENT_SPARK_INTERVAL then
+				timeSinceSpark = 0
+				spawnAmbientSpark()
+			end
+		end
+		for i = #ambientSparks, 1, -1 do
+			local spark = ambientSparks[i]
+			spark.y += spark.speed * dt + shift
+			spark.instance.Position = UDim2.fromOffset(spark.x, spark.y)
+			if spark.y > height() + 10 then
+				spark.instance:Destroy()
+				table.remove(ambientSparks, i)
+			end
+		end
+
 		if shift > 0 then
 			distanceSinceRing += shift
 			distanceSinceOrb += shift
@@ -729,6 +803,23 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 					api.reduceMotion,
 					RING_SIZE * 0.7
 				)
+				GameShell.Shake(canvas, api.reduceMotion, 0.18)
+				spawnScorePopup(
+					"+" .. tostring(scoreMultiplier),
+					ball.Position + UDim2.fromOffset(BALL_SIZE / 2, -4),
+					PALETTE_COLORS[ballColorIndex]
+				)
+				if not api.reduceMotion then
+					-- A quick bright flash on the ring itself the instant it's
+					-- cleared -- on top of the burst/ring pulse at the ball,
+					-- this is the ring's own reaction to being passed.
+					ring.backing.BackgroundTransparency = 0.05
+					TweenService:Create(
+						ring.backing,
+						TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+						{ BackgroundTransparency = 0.25 }
+					):Play()
+				end
 				registerStreak()
 				if not mismatched then
 					-- How close the current rotation is to a petal boundary:
@@ -815,6 +906,10 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			orb.frame:Destroy()
 		end
 		table.clear(orbs)
+		for _, spark in ambientSparks do
+			spark.instance:Destroy()
+		end
+		table.clear(ambientSparks)
 	end
 end
 

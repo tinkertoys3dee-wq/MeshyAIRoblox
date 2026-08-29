@@ -114,6 +114,28 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		})
 	end
 
+	-- Full-canvas tint for perfect-streak milestones, same trick used by
+	-- FlappyBird/ColorSwitch/NeonSnake for their own combo flashes.
+	local flashOverlay = Factory.New("Frame", {
+		Name = "FlashOverlay",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Colors.Gold,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 9,
+		Parent = canvas,
+	})
+	local function flashScreen(color: Color3, peakTransparency: number)
+		if api.reduceMotion then
+			return
+		end
+		flashOverlay.BackgroundColor3 = color
+		flashOverlay.BackgroundTransparency = peakTransparency
+		TweenService:Create(flashOverlay, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 1,
+		}):Play()
+	end
+
 	local comboLabel = Factory.Label(canvas, "", UDim2.fromOffset(180, 26), {
 		Name = "ComboLabel",
 		AnchorPoint = Vector2.new(0.5, 0),
@@ -321,6 +343,21 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 				api.reduceMotion,
 				math.min(finalWidth, 60)
 			)
+			GameShell.Shake(canvas, api.reduceMotion, 0.25)
+			if combo > 0 and combo % 5 == 0 then
+				-- A bigger flourish every 5th perfect in a row -- the label
+				-- above already tracks the streak text-wise, this is its
+				-- screen-wide reaction.
+				flashScreen(Colors.Gold, 0.7)
+				GameShell.Shake(canvas, api.reduceMotion, 0.65)
+				GameShell.Ring(
+					canvas,
+					UDim2.fromOffset(finalX + finalWidth / 2, TOP_Y + BLOCK_HEIGHT / 2),
+					Colors.Gold,
+					api.reduceMotion,
+					math.min(finalWidth, 60) * 1.6
+				)
+			end
 			if not api.reduceMotion then
 				landedFrame.BackgroundColor3 = Colors.Gold
 				TweenService:Create(
@@ -356,6 +393,16 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		else
 			combo = 0
 			api.sounds:Play("Press")
+			-- A dimmer, smaller thud cue on an ordinary (non-perfect) landing
+			-- -- previously only perfects got any landing reaction at all, so
+			-- a routine drop felt inert next to the gold flourish.
+			GameShell.Burst(
+				canvas,
+				UDim2.fromOffset(finalX + finalWidth / 2, TOP_Y + BLOCK_HEIGHT / 2),
+				Colors.Line,
+				api.reduceMotion
+			)
+			GameShell.Shake(canvas, api.reduceMotion, 0.12)
 		end
 
 		spawnMovingBlock()
@@ -412,6 +459,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		tapConn:Disconnect()
 		backdrop:Destroy()
 		dropGlow:Destroy()
+		flashOverlay:Destroy()
 		comboLabel:Destroy()
 		if movingFrame then
 			movingFrame:Destroy()

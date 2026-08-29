@@ -17,6 +17,12 @@
 --   FIRE     -- every ball currently in play stops bouncing off bricks and
 --               just plows straight through them for a few seconds
 --   SCOREX2  -- brick score is doubled for a few seconds
+--   LASER    -- Space (or tap) fires a bolt straight up from the paddle
+--               that pops the first brick it touches, on a short cooldown
+--   SLOWMO   -- every ball in play moves at less than half speed for a few
+--               seconds, without touching its actual velocity (see
+--               ballSpeedFactor below) -- makes multi-ball chaos or a wide
+--               spread far easier to read and control for a moment
 -- The run only ends once every ball currently in play has fallen past the
 -- paddle, not the first one -- MULTI is a real second (and third) chance,
 -- not just extra fireworks.
@@ -53,38 +59,53 @@ local BRICK_TOP_MARGIN = 54
 local COMBO_WINDOW = 1.6 -- seconds between broken bricks before the streak resets
 
 local MAX_BALLS = 6
-local POWERUP_DROP_CHANCE = 0.18
+local POWERUP_DROP_CHANCE = 0.28
 local POWERUP_SIZE = 22
 local POWERUP_FALL_SPEED = 150
 local WIDE_BONUS = 42
 local WIDE_DURATION = 10
 local FIRE_DURATION = 7
 local SCOREX2_DURATION = 9
+local LASER_DURATION = 8
+local LASER_COOLDOWN = 0.3
+local LASER_SPEED = 720
+local LASER_SIZE = Vector2.new(4, 16)
+local SLOWMO_DURATION = 5
+local SLOWMO_FACTOR = 0.45
+local LASER_COLOR = Colors.Rose
+local SLOWMO_COLOR = Colors.Violet
 
-type PowerupKind = "MULTI" | "WIDE" | "FIRE" | "SCOREX2"
-local POWERUP_KINDS: { PowerupKind } = { "MULTI", "WIDE", "FIRE", "SCOREX2" }
+type PowerupKind = "MULTI" | "WIDE" | "FIRE" | "SCOREX2" | "LASER" | "SLOWMO"
+local POWERUP_KINDS: { PowerupKind } = { "MULTI", "WIDE", "FIRE", "SCOREX2", "LASER", "SLOWMO" }
 local POWERUP_COLOR: { [PowerupKind]: Color3 } = {
 	MULTI = Colors.Cyan,
 	WIDE = Colors.Mint,
 	FIRE = FIRE_COLOR,
 	SCOREX2 = Colors.Gold,
+	LASER = LASER_COLOR,
+	SLOWMO = SLOWMO_COLOR,
 }
 local POWERUP_ICON: { [PowerupKind]: string } = {
 	MULTI = "⚡",
 	WIDE = "↔",
 	FIRE = "🔥",
 	SCOREX2 = "★",
+	LASER = "🔫",
+	SLOWMO = "🐌",
 }
 local POWERUP_LABEL: { [PowerupKind]: string } = {
 	MULTI = "MULTI-BALL",
 	WIDE = "WIDE PADDLE",
 	FIRE = "FIREBALL",
 	SCOREX2 = "SCORE x2",
+	LASER = "LASER (SPACE/TAP)",
+	SLOWMO = "SLOW-MO",
 }
 
 type Brick = { frame: Frame, x: number, y: number, width: number, height: number }
 type Ball = { frame: Frame, scale: any, x: number, y: number, vx: number, vy: number, trailTimer: number }
 type FallingPowerup = { frame: Frame, x: number, y: number, kind: PowerupKind }
+type Laser = { frame: Frame, x: number, y: number }
 
 local Game = {} :: GameShell.GameModule
 Game.Name = "Brick Breaker"
@@ -99,6 +120,9 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local fireUntil = 0
 	local scoreX2Until = 0
 	local wideUntil = 0
+	local laserUntil = 0
+	local laserCooldownUntil = 0
+	local slowUntil = 0
 	local lastEffectsText = ""
 
 	local function widthPx(): number
@@ -231,7 +255,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		Parent = canvas,
 	})
 	Factory.Corner(paddle, PADDLE_HEIGHT / 2)
-	Factory.Stroke(paddle, Colors.Ink, 0.3, 1.5)
+	local paddleStroke = Factory.Stroke(paddle, Colors.Ink, 0.3, 1.5)
 	Factory.Gradient(paddle, { Color3.fromRGB(150, 255, 210), Colors.Mint }, 90)
 	local paddleX = (widthPx() - PADDLE_WIDTH) / 2
 	local paddleWidth = PADDLE_WIDTH
@@ -242,6 +266,42 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 
 	local balls: { Ball } = {}
 	local fallingPowerups: { FallingPowerup } = {}
+	local lasers: { Laser } = {}
+
+	-- A few small tumbling fragments alongside the usual Burst -- a plain
+	-- particle puff reads as "gone", but debris that visibly scatters and
+	-- falls reads as something actually being smashed apart.
+	local function spawnDebris(x: number, y: number, color: Color3)
+		if api.reduceMotion then
+			return
+		end
+		for _ = 1, 3 do
+			local size = 3 + math.random() * 3
+			local piece = Factory.New("Frame", {
+				Name = "Debris",
+				Size = UDim2.fromOffset(size, size),
+				Position = UDim2.fromOffset(x + math.random(-6, 6), y + math.random(-4, 4)),
+				BackgroundColor3 = color,
+				BorderSizePixel = 0,
+				ZIndex = 6,
+				Parent = canvas,
+			})
+			Factory.Corner(piece, 2)
+			local tween = TweenService:Create(
+				piece,
+				TweenInfo.new(0.4 + math.random() * 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+				{
+					Position = piece.Position + UDim2.fromOffset(math.random(-30, 30), math.random(20, 55)),
+					Rotation = math.random(-180, 180),
+					BackgroundTransparency = 1,
+				}
+			)
+			tween.Completed:Connect(function()
+				piece:Destroy()
+			end)
+			tween:Play()
+		end
+	end
 
 	local function ballColor(): Color3
 		return if os.clock() < fireUntil then FIRE_COLOR else Colors.Text
@@ -293,55 +353,36 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		table.clear(fallingPowerups)
 	end
 
-	-- Continuous paddle steering: a keyboard hold sets a direction every
-	-- frame (checked live via IsKeyDown, not an edge-triggered press, since
-	-- "move while held" is the whole control scheme here); a mouse/touch drag
-	-- sets a target X instead, and the paddle eases toward whichever one was
-	-- last active. Unlike every other game in this Arcade, there's no
-	-- discrete tap/flap/drop action -- steering IS the entire input, which is
-	-- the correct, expected control scheme for this genre, not a mechanic
-	-- bolted on top of a simpler one.
-	local dragTargetX: number? = nil
-	local function clampPaddleX(x: number): number
-		return math.clamp(x, 0, math.max(0, widthPx() - paddleWidth))
+	local function clearLasers()
+		for _, laser in lasers do
+			laser.frame:Destroy()
+		end
+		table.clear(lasers)
 	end
 
-	local inputConn = UserInputService.InputChanged:Connect(function(input: InputObject)
-		if not running or not dragTargetX then
+	-- Only usable while the LASER power-up is active, and only every
+	-- LASER_COOLDOWN seconds even then -- otherwise a held key/finger would
+	-- fire a solid beam instead of a rhythm of shots.
+	local function fireLaser()
+		local now = os.clock()
+		if not running or now >= laserUntil or now < laserCooldownUntil then
 			return
 		end
-		if
-			input.UserInputType == Enum.UserInputType.MouseMovement
-			or input.UserInputType == Enum.UserInputType.Touch
-		then
-			dragTargetX = input.Position.X - canvas.AbsolutePosition.X - paddleWidth / 2
-		end
-	end)
-	local dragBeganConn = canvas.InputBegan:Connect(function(input: InputObject)
-		if
-			input.UserInputType == Enum.UserInputType.MouseButton1
-			or input.UserInputType == Enum.UserInputType.Touch
-		then
-			dragTargetX = input.Position.X - canvas.AbsolutePosition.X - paddleWidth / 2
-		end
-	end)
-	local dragEndedConn = UserInputService.InputEnded:Connect(function(input: InputObject)
-		if
-			input.UserInputType == Enum.UserInputType.MouseButton1
-			or input.UserInputType == Enum.UserInputType.Touch
-		then
-			dragTargetX = nil
-		end
-	end)
-
-	local function endGame()
-		if not running then
-			return
-		end
-		running = false
-		GameShell.Shake(canvas, api.reduceMotion)
-		GameShell.Burst(canvas, paddle.Position + UDim2.fromOffset(paddleWidth / 2, 0), Colors.Danger, api.reduceMotion)
-		api.gameOver(score)
+		laserCooldownUntil = now + LASER_COOLDOWN
+		local x = paddleX + paddleWidth / 2 - LASER_SIZE.X / 2
+		local y = paddleY() - LASER_SIZE.Y
+		local frame = Factory.New("Frame", {
+			Name = "Laser",
+			Size = UDim2.fromOffset(LASER_SIZE.X, LASER_SIZE.Y),
+			Position = UDim2.fromOffset(x, y),
+			BackgroundColor3 = LASER_COLOR,
+			BorderSizePixel = 0,
+			ZIndex = 6,
+			Parent = canvas,
+		})
+		Factory.Corner(frame, 2)
+		table.insert(lasers, { frame = frame, x = x, y = y })
+		api.sounds:Play("Press")
 	end
 
 	local function spawnFallingPowerup(x: number, y: number)
@@ -379,6 +420,117 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		)
 	end
 
+	-- Shared by both a ball breaking a brick and a laser bolt breaking one --
+	-- everything about "a brick just died" (score, particles, debris,
+	-- power-up roll, combo tracking) is identical either way; only what
+	-- caused it (and whether that cause also needs to bounce) differs.
+	local function destroyBrickAt(j: number, scoreMultiplier: number)
+		local brick = bricks[j]
+		local brickCenterX = brick.x + brick.width / 2
+		local brickCenterY = brick.y + brick.height / 2
+		local brickColorValue = brick.frame.BackgroundColor3
+		brick.frame:Destroy()
+		table.remove(bricks, j)
+		score += scoreMultiplier
+		api.setScore(score)
+		api.sounds:Play("Like")
+		GameShell.Burst(canvas, UDim2.fromOffset(brickCenterX, brickCenterY), brickColorValue, api.reduceMotion)
+		spawnDebris(brickCenterX, brickCenterY, brickColorValue)
+		GameShell.Shake(canvas, api.reduceMotion, 0.22)
+		if math.random() < POWERUP_DROP_CHANCE then
+			spawnFallingPowerup(brickCenterX, brickCenterY)
+		end
+
+		local breakTime = os.clock()
+		comboCount = if breakTime - lastBreakTime <= COMBO_WINDOW then comboCount + 1 else 1
+		lastBreakTime = breakTime
+		if comboCount >= 3 then
+			comboLabel.Text = string.format("%dx COMBO", comboCount)
+			comboLabel.TextTransparency = 0
+			if not api.reduceMotion then
+				local pop = Factory.New("UIScale", { Scale = 1.3, Parent = comboLabel })
+				TweenService
+					:Create(pop, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+					:Play()
+			end
+			local fadeToken = comboCount
+			task.delay(COMBO_WINDOW, function()
+				if comboCount == fadeToken and comboLabel.Parent then
+					if api.reduceMotion then
+						comboLabel.TextTransparency = 1
+					else
+						TweenService:Create(comboLabel, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+					end
+				end
+			end)
+		end
+		if comboCount > 0 and comboCount % 5 == 0 then
+			flashScreen(Colors.Gold, 0.75)
+			api.sounds:Play("Success")
+			GameShell.Shake(canvas, api.reduceMotion, 1.4)
+		end
+	end
+
+	-- Continuous paddle steering: a keyboard hold sets a direction every
+	-- frame (checked live via IsKeyDown, not an edge-triggered press, since
+	-- "move while held" is the whole control scheme here); a mouse/touch drag
+	-- sets a target X instead, and the paddle eases toward whichever one was
+	-- last active. Unlike every other game in this Arcade, there's no
+	-- discrete tap/flap/drop action -- steering IS the entire input, which is
+	-- the correct, expected control scheme for this genre, not a mechanic
+	-- bolted on top of a simpler one.
+	local dragTargetX: number? = nil
+	local function clampPaddleX(x: number): number
+		return math.clamp(x, 0, math.max(0, widthPx() - paddleWidth))
+	end
+
+	local inputConn = UserInputService.InputChanged:Connect(function(input: InputObject)
+		if not running or not dragTargetX then
+			return
+		end
+		if
+			input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
+			dragTargetX = input.Position.X - canvas.AbsolutePosition.X - paddleWidth / 2
+		end
+	end)
+	local dragBeganConn = canvas.InputBegan:Connect(function(input: InputObject)
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
+			dragTargetX = input.Position.X - canvas.AbsolutePosition.X - paddleWidth / 2
+			-- A no-op outside the LASER window/cooldown -- tap/click doubles
+			-- as "fire" too so touch/mouse players get the power-up without
+			-- a second dedicated control.
+			fireLaser()
+		end
+	end)
+	local dragEndedConn = UserInputService.InputEnded:Connect(function(input: InputObject)
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
+			dragTargetX = nil
+		end
+	end)
+	local laserInputConn = UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
+		if not processed and input.KeyCode == Enum.KeyCode.Space then
+			fireLaser()
+		end
+	end)
+
+	local function endGame()
+		if not running then
+			return
+		end
+		running = false
+		GameShell.Shake(canvas, api.reduceMotion)
+		GameShell.Burst(canvas, paddle.Position + UDim2.fromOffset(paddleWidth / 2, 0), Colors.Danger, api.reduceMotion)
+		api.gameOver(score)
+	end
+
 	local function applyPowerup(kind: PowerupKind, atX: number, atY: number)
 		api.sounds:Play("Success")
 		flashScreen(POWERUP_COLOR[kind], 0.8)
@@ -399,6 +551,11 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			fireUntil = os.clock() + FIRE_DURATION
 		elseif kind == "SCOREX2" then
 			scoreX2Until = os.clock() + SCOREX2_DURATION
+		elseif kind == "LASER" then
+			laserUntil = os.clock() + LASER_DURATION
+			laserCooldownUntil = 0
+		elseif kind == "SLOWMO" then
+			slowUntil = os.clock() + SLOWMO_DURATION
 		end
 	end
 
@@ -422,6 +579,12 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		if now < wideUntil then
 			table.insert(parts, POWERUP_ICON.WIDE .. " " .. POWERUP_LABEL.WIDE)
 		end
+		if now < laserUntil then
+			table.insert(parts, POWERUP_ICON.LASER .. " " .. POWERUP_LABEL.LASER)
+		end
+		if now < slowUntil then
+			table.insert(parts, POWERUP_ICON.SLOWMO .. " " .. POWERUP_LABEL.SLOWMO)
+		end
 		local effectsText = table.concat(parts, "   ")
 		if effectsText ~= lastEffectsText then
 			statusLabel.Text = effectsText
@@ -431,6 +594,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 
 		paddleWidth = if now < wideUntil then PADDLE_WIDTH + WIDE_BONUS else PADDLE_WIDTH
 		paddle.Size = UDim2.fromOffset(paddleWidth, PADDLE_HEIGHT)
+		paddleStroke.Color = if now < laserUntil then LASER_COLOR else Colors.Ink
 
 		-- Paddle: keyboard hold wins whenever it's actually pressed (it's the
 		-- more precise of the two for a player using both), otherwise ease
@@ -453,12 +617,16 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		local scoreMultiplier = if now < scoreX2Until then 2 else 1
 		local tint = ballColor()
 		local pTop = paddleY()
+		-- Scales this frame's ball movement only -- vx/vy themselves are
+		-- untouched, so SLOWMO reverting is just this factor going back to
+		-- 1 next frame, nothing to remember or restore.
+		local ballSpeedFactor = if now < slowUntil then SLOWMO_FACTOR else 1
 
 		for i = #balls, 1, -1 do
 			local ball = balls[i]
 			ball.frame.BackgroundColor3 = tint
-			ball.x += ball.vx * dt
-			ball.y += ball.vy * dt
+			ball.x += ball.vx * dt * ballSpeedFactor
+			ball.y += ball.vy * dt * ballSpeedFactor
 
 			if ball.x <= 0 then
 				ball.x = 0
@@ -567,53 +735,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 						end
 					end
 
-					local brickCenterX = brick.x + brick.width / 2
-					local brickCenterY = brick.y + brick.height / 2
-					local brickColorValue = brick.frame.BackgroundColor3
-					brick.frame:Destroy()
-					table.remove(bricks, j)
-					score += scoreMultiplier
-					api.setScore(score)
-					api.sounds:Play("Like")
-					GameShell.Burst(
-						canvas,
-						UDim2.fromOffset(brickCenterX, brickCenterY),
-						brickColorValue,
-						api.reduceMotion
-					)
-					if math.random() < POWERUP_DROP_CHANCE then
-						spawnFallingPowerup(brickCenterX, brickCenterY)
-					end
-
-					local breakTime = os.clock()
-					comboCount = if breakTime - lastBreakTime <= COMBO_WINDOW then comboCount + 1 else 1
-					lastBreakTime = breakTime
-					if comboCount >= 3 then
-						comboLabel.Text = string.format("%dx COMBO", comboCount)
-						comboLabel.TextTransparency = 0
-						if not api.reduceMotion then
-							local pop = Factory.New("UIScale", { Scale = 1.3, Parent = comboLabel })
-							TweenService:Create(
-								pop,
-								TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-								{ Scale = 1 }
-							):Play()
-						end
-						local fadeToken = comboCount
-						task.delay(COMBO_WINDOW, function()
-							if comboCount == fadeToken and comboLabel.Parent then
-								if api.reduceMotion then
-									comboLabel.TextTransparency = 1
-								else
-									TweenService:Create(comboLabel, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
-								end
-							end
-						end)
-					end
-					if comboCount > 0 and comboCount % 5 == 0 then
-						flashScreen(Colors.Gold, 0.75)
-						api.sounds:Play("Success")
-					end
+					destroyBrickAt(j, scoreMultiplier)
 
 					if not piercing then
 						break
@@ -647,15 +769,42 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			end
 		end
 
+		for i = #lasers, 1, -1 do
+			local laser = lasers[i]
+			laser.y -= LASER_SPEED * dt
+			laser.frame.Position = UDim2.fromOffset(laser.x, laser.y)
+			if laser.y < -LASER_SIZE.Y then
+				laser.frame:Destroy()
+				table.remove(lasers, i)
+				continue
+			end
+			for j = #bricks, 1, -1 do
+				local brick = bricks[j]
+				if
+					laser.x + LASER_SIZE.X > brick.x
+					and laser.x < brick.x + brick.width
+					and laser.y + LASER_SIZE.Y > brick.y
+					and laser.y < brick.y + brick.height
+				then
+					laser.frame:Destroy()
+					table.remove(lasers, i)
+					destroyBrickAt(j, scoreMultiplier)
+					break
+				end
+			end
+		end
+
 		if #bricks == 0 then
 			wave += 1
 			waveLabel.Text = string.format("WAVE %d", wave)
 			flashScreen(Colors.Mint, 0.7)
 			api.sounds:Play("Success")
+			GameShell.Shake(canvas, api.reduceMotion, 1.6)
 			GameShell.Confetti(canvas, w, 0, api.reduceMotion)
 			spawnWave()
 			clearBalls()
 			clearPowerups()
+			clearLasers()
 			launchFirstBall()
 		end
 	end)
@@ -666,6 +815,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		inputConn:Disconnect()
 		dragBeganConn:Disconnect()
 		dragEndedConn:Disconnect()
+		laserInputConn:Disconnect()
 		backdrop:Destroy()
 		flashOverlay:Destroy()
 		comboLabel:Destroy()
@@ -674,6 +824,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		paddle:Destroy()
 		clearBalls()
 		clearPowerups()
+		clearLasers()
 		clearBricks()
 	end
 end

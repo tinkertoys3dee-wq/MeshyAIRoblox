@@ -230,7 +230,36 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		if streak > 0 and streak % STREAK_FLASH_EVERY == 0 then
 			flashScreen(Colors.Gold, 0.75)
 			api.sounds:Play("Success")
+			GameShell.Shake(canvas, api.reduceMotion, 0.55)
 		end
+	end
+
+	-- A quick "+1" (or "⚡ QUICK" on a fast reaction) right at the tapped
+	-- tile -- the score readout at the top already updates, but a popup at
+	-- the point of contact reads far more immediately as a reward.
+	local function spawnScorePopup(position: UDim2, quick: boolean)
+		if api.reduceMotion then
+			return
+		end
+		local popup = Factory.Label(canvas, if quick then "⚡ QUICK" else "+1", UDim2.fromOffset(90, 20), {
+			Name = "ScorePopup",
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = position,
+			Color = if quick then Colors.Gold else Colors.Mint,
+			Font = Theme.Fonts.Black,
+			TextSize = 14,
+			AlignX = Enum.TextXAlignment.Center,
+			ZIndex = 47,
+		})
+		Factory.New("UIStroke", { Color = Colors.Ink, Thickness = 1.5, Transparency = 0.5, Parent = popup })
+		local tween = TweenService:Create(popup, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = position - UDim2.fromOffset(0, 24),
+			TextTransparency = 1,
+		})
+		tween.Completed:Connect(function()
+			popup:Destroy()
+		end)
+		tween:Play()
 	end
 
 	local function lightNextTile()
@@ -285,13 +314,16 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			api.reduceMotion,
 			tileSize * 0.6
 		)
+		GameShell.Shake(canvas, api.reduceMotion, 0.12)
 		if not api.reduceMotion then
 			local pop = Factory.New("UIScale", { Scale = 0.82, Parent = tile.button })
 			TweenService
 				:Create(pop, TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
 				:Play()
 		end
-		registerStreak(reactionTime <= hotWindow * QUICK_REACTION_FRACTION)
+		local isQuick = reactionTime <= hotWindow * QUICK_REACTION_FRACTION
+		spawnScorePopup(tile.button.Position + UDim2.fromOffset(tileSize / 2, -4), isQuick)
+		registerStreak(isQuick)
 
 		local myRound = round
 		task.delay(NEXT_TILE_DELAY, function()
