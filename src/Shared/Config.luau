@@ -368,8 +368,9 @@ return table.freeze({
 	},
 
 	-- Client-side arcade minigames (Flappy Bird, Dino Runner, Color Switch,
-	-- Neon Snake, Block Stacker, Brick Breaker, Reflex Tap) — purely for
-	-- session time and fun, not part of the Forge Tokens economy. Their
+	-- Neon Snake, Block Stacker, Brick Breaker, Reflex Tap, Prism Merge,
+	-- Meteor Rush) — purely for session time and fun, not part of the Forge
+	-- Tokens economy. Their
 	-- scores are simulated entirely on the client with no server authority
 	-- over gameplay, unlike everything else with a token reward in this
 	-- file, so ArcadeService:SubmitScore treats every submission as
@@ -384,6 +385,8 @@ return table.freeze({
 			"BlockStacker",
 			"BrickBreaker",
 			"ReflexTap",
+			"PrismMerge",
+			"MeteorRush",
 		},
 		-- Weekly reward for each game's top 3 players by that game's best
 		-- score of the week. Index = placement: [1] = 1st, [2] = 2nd,
@@ -391,15 +394,15 @@ return table.freeze({
 		-- credits these to `tokens`, not `bonusTokens` — fully spendable,
 		-- generations included. That's a deliberate, bounded exception to the
 		-- "only gain money" guarantee (approved for the engagement value):
-		-- worst case is 448/game * #Games (7) = 3136 tokens/week, worth
-		-- roughly 2.6 generations (~$0.78) at the pricing in
+		-- worst case is 448/game * #Games (9) = 4032 tokens/week, worth
+		-- roughly 3.3 generations (~$1.00) at the pricing in
 		-- Config.Generation. See ArcadeService's module header and
 		-- docs/PRICING.md for the full reasoning; raising these numbers
 		-- meaningfully needs that math re-checked, not just a game-balance
 		-- judgment call. (Lowered 30% from 360/200/80 when Brick Breaker and
-		-- Reflex Tap were added, to hold the weekly ceiling roughly flat
-		-- despite two more games paying out -- keep this comment's math in
-		-- sync with WeeklyRewards and Games if either changes again.)
+		-- Reflex Tap were added; the studio-approved per-game amount has stayed
+		-- at that level as the Arcade has grown. Keep this comment's math in sync
+		-- with WeeklyRewards and Games if either changes again.)
 		WeeklyRewards = { 252, 140, 56 },
 		-- Sanity ceiling against an obviously spoofed score reaching the
 		-- leaderboard store. Can't stop a determined cheater on a

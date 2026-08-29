@@ -1729,7 +1729,12 @@ end
 -- token: once the card re-renders (a fresh ImageLabel replaces this one) or
 -- the page navigates away, this stops on its own.
 local IMAGE_LOAD_RETRY_DELAYS = { 2, 3, 5, 8, 13, 20, 30, 45, 60 }
-function App:_WatchImageLoad(imageLabel: ImageLabel, hintLabel: TextLabel, fallbackImage: string?)
+function App:_WatchImageLoad(
+	imageLabel: ImageLabel,
+	hintLabel: TextLabel,
+	fallbackImage: string?,
+	statusContainer: GuiObject?
+)
 	task.spawn(function()
 		local switchedToFallback = false
 		for attempt, delaySeconds in IMAGE_LOAD_RETRY_DELAYS do
@@ -1748,7 +1753,14 @@ function App:_WatchImageLoad(imageLabel: ImageLabel, hintLabel: TextLabel, fallb
 				return
 			end
 			if loaded then
-				hintLabel.Visible = false
+				if statusContainer then
+					-- Destroying the gallery's whole status group also stops its
+					-- decorative spinner tween; loaded cards should carry no hidden
+					-- animation cost after the placeholder disappears.
+					statusContainer:Destroy()
+				else
+					hintLabel.Visible = false
+				end
 				return
 			end
 			if
@@ -7323,16 +7335,69 @@ function App:_RenderAvatarGraphics()
 		if graphic then
 			local card = Factory.Card(gallery, UDim2.fromScale(1, 1), nil, "GraphicItem")
 			card.LayoutOrder = index
+			local previewSource = directImage(graphic.previewAssetId)
 			local image = Factory.New("ImageLabel", {
 				Size = UDim2.new(1, -20, 0, 132),
 				Position = UDim2.fromOffset(10, 10),
 				BackgroundColor3 = Colors.Ink,
 				BorderSizePixel = 0,
-				Image = directImage(graphic.previewAssetId),
+				Image = previewSource,
 				ScaleType = Enum.ScaleType.Crop,
 				Parent = card,
 			})
 			Factory.Corner(image, 11)
+			-- This gallery used to leave the entire 132px media area blank while
+			-- Roblox processed/moderated a new Image asset. Give that state an
+			-- explicit, self-clearing explanation just like model/detail previews
+			-- already have, so a saved creation never reads as lost or broken.
+			local previewState = Factory.New("Frame", {
+				Name = "PreviewLoadingState",
+				Size = UDim2.new(1, -20, 0, 58),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				BackgroundColor3 = Colors.Panel,
+				BackgroundTransparency = 0.08,
+				BorderSizePixel = 0,
+				ZIndex = 3,
+				Parent = image,
+			})
+			Factory.Corner(previewState, 10)
+			Factory.Stroke(previewState, Colors.Cyan, 0.58, 1)
+			local spinner = Factory.Label(previewState, "◌", UDim2.fromOffset(34, 34), {
+				Position = UDim2.fromOffset(8, 12),
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = 22,
+				Color = Colors.Cyan,
+				ZIndex = 4,
+			})
+			local previewHint = Factory.Label(
+				previewState,
+				if previewSource == ""
+					then "Preview queued\nSaved safely — check again shortly"
+					else "Loading preview…\nRoblox may be processing or moderating it",
+				UDim2.new(1, -54, 1, -10),
+				{
+					Position = UDim2.fromOffset(48, 5),
+					Color = Colors.Text,
+					Font = Theme.Fonts.Medium,
+					TextSize = 10,
+					Wrapped = true,
+					AlignY = Enum.TextYAlignment.Center,
+					ZIndex = 4,
+				}
+			)
+			if self.state.profile.settings.reduceMotion ~= true then
+				TweenService:Create(
+					spinner,
+					TweenInfo.new(1.15, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+					{ Rotation = 360 }
+				):Play()
+			end
+			if previewSource ~= "" then
+				self:_WatchImageLoad(image, previewHint, nil, previewState)
+			end
 			Factory.Label(
 				card,
 				string.sub(graphic.filteredPrompt or "Graphic", 1, 60),

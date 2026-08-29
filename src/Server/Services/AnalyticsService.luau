@@ -3,6 +3,9 @@
 local Players = game:GetService("Players")
 local RobloxAnalytics = game:GetService("AnalyticsService")
 local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Config"))
 
 local AnalyticsService = {}
 AnalyticsService.__index = AnalyticsService
@@ -19,7 +22,13 @@ local CLIENT_EVENTS = {
 	CatalogSearch = true,
 	FitPresetApplied = true,
 	RunwayOpened = true,
+	ArcadeGameStarted = true,
 }
+
+local ARCADE_GAME_VALUES: { [string]: boolean } = {}
+for _, gameKey in Config.Arcade.Games do
+	ARCADE_GAME_VALUES[gameKey] = true
+end
 
 -- "Settings" was missing here for a while: every Settings-page visit was
 -- silently rejected by TrackClient below (INVALID_ANALYTICS_FIELDS) and
@@ -207,6 +216,12 @@ function AnalyticsService:TrackClient(player: Player, payload: any): (boolean, a
 		end
 		fields.hasCreatorFilter = payload.fields.hasCreatorFilter == true
 		fields.hasPriceFilter = payload.fields.hasPriceFilter == true
+	elseif payload.event == "ArcadeGameStarted" then
+		local gameKey = type(payload.fields) == "table" and payload.fields.game or nil
+		if type(gameKey) ~= "string" or not ARCADE_GAME_VALUES[gameKey] then
+			return false, "INVALID_ANALYTICS_FIELDS"
+		end
+		fields.game = gameKey
 	end
 	self:Custom(player, payload.event, 1, fields)
 	if payload.event == "OnboardingStep" then

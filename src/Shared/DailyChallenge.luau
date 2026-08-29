@@ -12,9 +12,10 @@ local DailyChallenge = {}
 -- ColorSwitch score one point per obstacle/ring cleared, DinoRunner scores
 -- ~10/second survived, NeonSnake scores one point per food eaten,
 -- BlockStacker scores one point per block successfully landed on the tower,
--- BrickBreaker scores one point per brick broken (a wave is 24 bricks), and
+-- BrickBreaker scores one point per brick broken (a wave is 24 bricks),
 -- ReflexTap scores one point per correctly-tapped tile before its window
--- expires.
+-- expires, PrismMerge adds the value of every combined prism, and MeteorRush
+-- scores distance plus pickups, deflections, and near misses.
 local BASE_TARGETS: { [string]: number } = {
 	FlappyBird = 8,
 	DinoRunner = 260,
@@ -23,6 +24,8 @@ local BASE_TARGETS: { [string]: number } = {
 	BlockStacker = 14,
 	BrickBreaker = 20,
 	ReflexTap = 14,
+	PrismMerge = 512,
+	MeteorRush = 220,
 }
 
 -- Deterministic pseudo-randomness with no storage: folds the day number and

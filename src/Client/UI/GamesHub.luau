@@ -32,6 +32,8 @@ local NeonSnake = require(script.Parent.Games.NeonSnake)
 local BlockStacker = require(script.Parent.Games.BlockStacker)
 local BrickBreaker = require(script.Parent.Games.BrickBreaker)
 local ReflexTap = require(script.Parent.Games.ReflexTap)
+local PrismMerge = require(script.Parent.Games.PrismMerge)
+local MeteorRush = require(script.Parent.Games.MeteorRush)
 
 local Colors = Theme.Colors
 
@@ -88,6 +90,18 @@ local GAMES = {
 		icon = "🎯",
 		blurb = "Tap the lit tile before it's gone.",
 	},
+	{
+		game = PrismMerge,
+		color = Color3.fromRGB(116, 92, 255),
+		icon = "🔷",
+		blurb = "Merge prisms and chase huge chains.",
+	},
+	{
+		game = MeteorRush,
+		color = Color3.fromRGB(44, 196, 255),
+		icon = "🚀",
+		blurb = "Dodge meteors, collect cores, go hyper.",
+	},
 }
 
 local TILE_SIZE = UDim2.fromOffset(248, 172)
@@ -115,7 +129,8 @@ end
 
 local GamesHub = {}
 
--- `app` needs: .gui, .sounds, .compact, .state, :_Invoke(action, payload), :_BindButton(button).
+-- `app` needs: .gui, .sounds, .compact, .state, :_Invoke(action, payload),
+-- :_Track(payload), :_BindButton(button).
 function GamesHub.Show(app: any)
 	local reduceMotion = app.state ~= nil and app.state.profile.settings.reduceMotion == true
 
@@ -131,9 +146,9 @@ function GamesHub.Show(app: any)
 
 	-- Height (702) is a target, not a hard requirement any more: hubView's
 	-- content box is modal height - 128 (see hubView's Size below), and the
-	-- wide-mode tile grid (8 tiles now: #GAMES games + 1 Leaderboard tile,
-	-- computed by wideTilePosition above) is 4 rows -- 4*TILE_SIZE.Y +
-	-- 3*TILE_GRID_GAP + a 26px bottom margin = 726, taller than the 574 a
+	-- wide-mode tile grid (10 tiles now: #GAMES games + 1 Leaderboard tile,
+	-- computed by wideTilePosition above) is 5 rows -- 5*TILE_SIZE.Y +
+	-- 4*TILE_GRID_GAP + a 26px bottom margin = 926, taller than the 574 a
 	-- 3-row grid needed when this number was first picked. Rather than
 	-- rechase this comment's math every time Config.Arcade.Games grows,
 	-- hubView is a genuine ScrollingFrame (see below): 702 (the MaxSize
@@ -498,6 +513,7 @@ function GamesHub.Show(app: any)
 			if not shell then
 				shell = GameShell.new(gameView, app.sounds, showHub, submitScore, fetchWeeklyTop, reduceMotion)
 			end
+			app:_Track({ event = "ArcadeGameStarted", fields = { game = gameModule.Key } })
 			shell:Run(gameModule)
 		end)
 	end
@@ -550,14 +566,23 @@ function GamesHub.Show(app: any)
 	app.sounds:Bind(leaderboardBack)
 	leaderboardBack.Activated:Connect(showHub)
 
-	local leaderboardTabs = Factory.New("Frame", {
+	-- Fixed-width chips inside a horizontal scroller stay readable as the
+	-- Arcade grows. Squeezing every game into one scale-divided row made long
+	-- names unreadable once the eighth and ninth games were added.
+	local leaderboardTabs = Factory.New("ScrollingFrame", {
 		Name = "Tabs",
 		Position = UDim2.fromOffset(80, 3),
 		Size = UDim2.new(1, -80, 0, 28),
 		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		ScrollingDirection = Enum.ScrollingDirection.X,
+		ScrollBarThickness = 0,
 		ZIndex = 213,
 		Parent = leaderboardView,
 	})
+	Factory.List(leaderboardTabs, Enum.FillDirection.Horizontal, 6)
 
 	-- Global vs. Friends scope toggle -- a segmented control, same visual
 	-- language as the game tabs below it (active = filled Cyan, inactive =
@@ -870,12 +895,11 @@ function GamesHub.Show(app: any)
 	end
 
 	do
-		local tabCount = #GAMES
 		for i, tile in GAMES do
 			local tab = Factory.New("TextButton", {
 				Name = tile.game.Key .. "Tab",
-				Size = UDim2.new(1 / tabCount, if i == 1 or i == tabCount then -6 else -8, 1, 0),
-				Position = UDim2.new((i - 1) / tabCount, if i == 1 then 0 else 4, 0, 0),
+				Size = UDim2.fromOffset(104, 28),
+				LayoutOrder = i,
 				BackgroundColor3 = Colors.PanelSoft,
 				BackgroundTransparency = 0.65,
 				BorderSizePixel = 0,
@@ -1016,11 +1040,22 @@ function GamesHub.Show(app: any)
 
 		-- A diagonal light streak that sweeps across on a loop, paused
 		-- between passes -- purely decorative, so it's the first thing off
-		-- under reduceMotion. UDim2's scale component (not a raw pixel
-		-- target) is what lets one tween work correctly whether this tile
-		-- is a fixed wide-mode width or a scale-based full-width compact
-		-- one.
+		-- under reduceMotion. Rotated GuiObjects do not reliably respect an
+		-- ordinary Frame's clipping rectangle in Roblox. Rendering the shine
+		-- through a CanvasGroup gives it an off-screen texture to mask first,
+		-- then the group's matching UICorner clips that texture cleanly to the
+		-- tile instead of letting the white strip flash outside the card.
 		if not reduceMotion then
+			local shineMask = Factory.New("CanvasGroup", {
+				Name = "ShineMask",
+				Size = UDim2.fromScale(1, 1),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				ClipsDescendants = true,
+				ZIndex = 214,
+				Parent = button,
+			})
+			Factory.Corner(shineMask, 20)
 			local shine = Factory.New("Frame", {
 				Name = "Shine",
 				Size = UDim2.fromOffset(34, tileHeight * 1.6),
@@ -1030,7 +1065,7 @@ function GamesHub.Show(app: any)
 				BackgroundTransparency = 0.78,
 				BorderSizePixel = 0,
 				ZIndex = 214,
-				Parent = button,
+				Parent = shineMask,
 			})
 			TweenService:Create(
 				shine,
