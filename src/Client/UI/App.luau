@@ -15,6 +15,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Achievements = require(ReplicatedStorage:WaitForChild("Achievements"))
+local AccessoryBounds = require(ReplicatedStorage:WaitForChild("AccessoryBounds"))
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
@@ -90,6 +91,7 @@ local ERROR_MESSAGES = {
 	CREATION_TOKEN_NOT_CONFIGURED = "Add the Avatar Creation Token for this type to ServerStorage/ForgeUGCSecrets.",
 	MODEL_UNAVAILABLE = "The model asset is not available yet.",
 	ASSET_STILL_PROCESSING = "Roblox is still processing this new model. Wait a few seconds and try again.",
+	MODEL_TEXTURE_PROCESSING = "Roblox is still processing or moderating this model's texture. Your item is saved; retry when the texture appears.",
 	ASSET_LOAD_FAILED = "Roblox could not load this model. Check that the uploaded asset belongs to this experience's creator.",
 	MESH_NOT_FOUND = "The uploaded model does not contain a usable MeshPart.",
 	ACCESSORY_PREPARATION_FAILED = "Roblox could not turn this model into an accessory. The server log now includes the exact failure.",
@@ -99,6 +101,7 @@ local ERROR_MESSAGES = {
 	PLAYER_GUI_UNAVAILABLE = "Your private preview cache is unavailable. Rejoin and try again.",
 	AVATAR_CREATION_UNAVAILABLE = "Roblox could not open the wearable publishing prompt. Check the creation token and asset permissions.",
 	AVATAR_CREATION_REJECTED = "Wearable publishing was cancelled or Roblox rejected the asset.",
+	AVATAR_CREATION_CANCELLED = "Wearable publishing was cancelled. Your model and fit are still saved.",
 	AVATAR_CREATION_BAD_RESPONSE = "Roblox completed the prompt but did not return a valid wearable asset ID.",
 	SAVE_FAILED = "Roblox could not safely save this transaction. Nothing new was prompted; try again.",
 	GRANT_FAILED = "The purchase benefit could not be prepared. Try again in a moment.",
@@ -128,6 +131,8 @@ local ERROR_MESSAGES = {
 	SUBSCRIPTION_PROMPT_FAILED = "Roblox could not open the Plus subscription prompt.",
 	RATE_LIMITED = "Slow down for a moment, then try again.",
 	UGC_VALIDATION_FAILED = "Roblox validation did not accept this fit. Adjust it and try again.",
+	UGC_BOUNDS_TOO_LARGE = "This wearable exceeds Roblox's size limit. Check the measured X/Y/Z bounds in Fitting and reduce the highlighted scale axes.",
+	UGC_MODERATION_PENDING = "Roblox is still processing or moderating this model or texture. Your item is saved; retry publishing later.",
 	ITEM_NOT_EQUIPPED = "That item is not currently equipped.",
 	INVALID_IMAGE_QUALITY = "Choose one of the available reference image quality tiers.",
 	FIT_PRESET_LIMIT_REACHED = "You have saved the maximum number of fit presets. Delete one to save another.",
@@ -233,6 +238,29 @@ local function directImage(assetId: any): string
 		return ""
 	end
 	return string.format("rbxassetid://%d", id)
+end
+
+-- Generated models normally have a separately uploaded flat thumbnail. If
+-- that image is absent or still propagating, Roblox's rendered model thumbnail
+-- is a useful independent fallback instead of leaving every ImageLabel blank.
+local function modelPreviewImage(item: { [string]: any }): string
+	local uploadedThumbnail = directImage(item.thumbnailAssetId)
+	if uploadedThumbnail ~= "" then
+		return uploadedThumbnail
+	end
+	return thumbnail(item.modelAssetId, 420)
+end
+
+local function vectorFromData(value: any): Vector3?
+	if
+		type(value) ~= "table"
+		or type(value.x) ~= "number"
+		or type(value.y) ~= "number"
+		or type(value.z) ~= "number"
+	then
+		return nil
+	end
+	return Vector3.new(value.x, value.y, value.z)
 end
 
 -- Cheap, instant client-side avatar preview. `thumbType` is one of
@@ -1218,7 +1246,7 @@ function App:_SyncAvatarPreviewPanel()
 					itemId = itemId,
 					name = item.name or "Forge accessory",
 					assetType = item.fit and item.fit.accessoryType or "Accessory",
-					image = directImage(item.thumbnailAssetId),
+					image = modelPreviewImage(item),
 				})
 			end
 		end
@@ -1231,7 +1259,7 @@ function App:_SyncAvatarPreviewPanel()
 			itemId = item.id,
 			name = item.title or item.name or "Community accessory",
 			assetType = item.fit and item.fit.accessoryType or "Accessory",
-			image = directImage(item.thumbnailAssetId),
+			image = modelPreviewImage(item),
 		})
 	end
 	for _, entry in rows do
@@ -1660,7 +1688,11 @@ function App:_Invoke(action: string, payload: any?): (boolean, any)
 	end
 	if response.ok ~= true then
 		local code = tostring(response.error or "SERVER_ERROR")
-		self:_Toast("error", ERROR_MESSAGES[code] or "That action could not be completed.")
+		local details = response.details
+		local detailedMessage = if type(details) == "table" and type(details.userMessage) == "string"
+			then details.userMessage
+			else nil
+		self:_Toast("error", detailedMessage or ERROR_MESSAGES[code] or "That action could not be completed.")
 		return false, code
 	end
 	if response.data == nil then
@@ -1696,10 +1728,11 @@ end
 -- delay. `imageLabel.Parent` is checked on every iteration as the life
 -- token: once the card re-renders (a fresh ImageLabel replaces this one) or
 -- the page navigates away, this stops on its own.
-local IMAGE_LOAD_RETRY_DELAYS = { 2, 3, 5, 8, 13, 13, 13 }
-function App:_WatchImageLoad(imageLabel: ImageLabel, hintLabel: TextLabel)
+local IMAGE_LOAD_RETRY_DELAYS = { 2, 3, 5, 8, 13, 20, 30, 45, 60 }
+function App:_WatchImageLoad(imageLabel: ImageLabel, hintLabel: TextLabel, fallbackImage: string?)
 	task.spawn(function()
-		for _, delaySeconds in IMAGE_LOAD_RETRY_DELAYS do
+		local switchedToFallback = false
+		for attempt, delaySeconds in IMAGE_LOAD_RETRY_DELAYS do
 			if not imageLabel.Parent then
 				return
 			end
@@ -1718,10 +1751,22 @@ function App:_WatchImageLoad(imageLabel: ImageLabel, hintLabel: TextLabel)
 				hintLabel.Visible = false
 				return
 			end
+			if
+				attempt == 4
+				and type(fallbackImage) == "string"
+				and fallbackImage ~= ""
+				and fallbackImage ~= imageLabel.Image
+			then
+				imageLabel.Image = fallbackImage
+				switchedToFallback = true
+				hintLabel.Text = "Roblox is still processing the uploaded preview — trying the model thumbnail…"
+			end
 			task.wait(delaySeconds)
 		end
 		if imageLabel.Parent then
-			hintLabel.Text = "Still awaiting Roblox moderation — this can occasionally take longer than usual."
+			hintLabel.Text = if switchedToFallback
+				then "Preview still processing/moderating on Roblox. The model is saved; open Fitting or retry later."
+				else "Still awaiting Roblox processing/moderation — this can occasionally take longer than usual."
 		end
 	end)
 end
@@ -2283,6 +2328,7 @@ function App:_ShowCreationComplete(kind: string, record: { [string]: any }, comp
 		elseif kind == "REFERENCE" then "Your concept has arrived. Review it, then send it into the 3D forge."
 		else "Fresh from the renderer and saved in your Avatar Graphics gallery."
 	local imageId = record.thumbnailAssetId or record.previewAssetId
+	local previewImage = if kind == "MODEL" then modelPreviewImage(record) else directImage(imageId)
 	local overlay = Factory.New("Frame", {
 		Name = "CreationComplete",
 		Size = UDim2.fromScale(1, 1),
@@ -2345,14 +2391,14 @@ function App:_ShowCreationComplete(kind: string, record: { [string]: any }, comp
 		Size = if self.compact then UDim2.new(0.68, 0, 0.42, 0) else UDim2.fromOffset(300, 300),
 		BackgroundColor3 = Colors.Ink,
 		BorderSizePixel = 0,
-		Image = directImage(imageId),
+		Image = previewImage,
 		ScaleType = Enum.ScaleType.Fit,
 		ZIndex = 304,
 		Parent = card,
 	})
 	Factory.Corner(preview, 22)
 	Factory.Stroke(preview, Colors.Cyan, 0.3, 1.5)
-	if tonumber(imageId) == nil or tonumber(imageId) <= 0 then
+	if previewImage == "" then
 		Factory.Label(preview, if kind == "MODEL" then "◇" else "❑", UDim2.fromScale(1, 1), {
 			Font = Theme.Fonts.Black,
 			TextSize = 76,
@@ -2361,6 +2407,29 @@ function App:_ShowCreationComplete(kind: string, record: { [string]: any }, comp
 			AlignY = Enum.TextYAlignment.Center,
 			ZIndex = 305,
 		})
+	end
+	local previewHint = Factory.Label(
+		preview,
+		if kind == "MODEL" then "Checking Roblox preview processing…" else "Checking Roblox image processing…",
+		UDim2.new(1, -20, 0, 42),
+		{
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 10, 1, -10),
+			Color = Colors.Text,
+			TextSize = 11,
+			Wrapped = true,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			ZIndex = 306,
+		}
+	)
+	previewHint.BackgroundColor3 = Colors.Ink
+	previewHint.BackgroundTransparency = 0.12
+	Factory.Corner(previewHint, 9)
+	if previewImage ~= "" then
+		self:_WatchImageLoad(preview, previewHint, if kind == "MODEL" then thumbnail(record.modelAssetId, 420) else nil)
+	else
+		previewHint.Text = "Roblox has not issued a preview yet. The creation is saved; open it again shortly."
 	end
 	local close = Factory.Button(card, "×", UDim2.fromOffset(38, 38), UDim2.new(1, -50, 0, 12), nil)
 	close.TextSize = 20
@@ -4520,11 +4589,20 @@ function App:_RenderStudio()
 				Position = UDim2.fromOffset(9, 9),
 				BackgroundColor3 = Colors.Panel,
 				BorderSizePixel = 0,
-				Image = directImage(item.thumbnailAssetId),
+				Image = modelPreviewImage(item),
 				ScaleType = Enum.ScaleType.Crop,
 				Parent = row,
 			})
 			Factory.Corner(image, 9)
+			local imageHint = Factory.Label(image, "…", UDim2.fromScale(1, 1), {
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = 18,
+				Color = Colors.Cyan,
+				ZIndex = 2,
+			})
+			self:_WatchImageLoad(image, imageHint, thumbnail(item.modelAssetId, 150))
 			if table.find(profile.equippedItemIds or {}, itemId) then
 				local badge = Factory.New("TextLabel", {
 					Size = UDim2.fromOffset(20, 20),
@@ -4653,22 +4731,31 @@ function App:_RenderStudio()
 	resetCamera.Activated:Connect(function()
 		controller:ResetCamera()
 	end)
+	local previewStatus = Factory.Label(viewport, "Loading model and generated texture…", UDim2.new(1, -128, 0, 38), {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 12, 1, -12),
+		Color = Colors.Text,
+		TextSize = 11,
+		Wrapped = true,
+		AlignY = Enum.TextYAlignment.Center,
+		ZIndex = 6,
+	})
+	previewStatus.BackgroundColor3 = Colors.Ink
+	previewStatus.BackgroundTransparency = 0.08
+	Factory.Corner(previewStatus, 8)
+	local retryPreview =
+		Factory.Button(viewport, "Retry preview", UDim2.fromOffset(104, 38), UDim2.new(1, -116, 1, -50), "primary")
+	retryPreview.ZIndex = 6
+	retryPreview.Visible = false
+	self:_BindButton(retryPreview)
 
 	if not self.fitDrafts[selected.id] then
 		self.fitDrafts[selected.id] = deepCopy(selected.fit)
 	end
 	local fit = self.fitDrafts[selected.id]
-	task.spawn(function()
-		local version = self.pageVersion
-		local success, data = self:_Invoke(Network.Actions.RequestPrivateModel, { itemId = selected.id })
-		if success and version == self.pageVersion and viewport.Parent then
-			local cache = player.PlayerGui:WaitForChild("ForgeAssetCache", 8)
-			local model = cache and cache:WaitForChild(data.cacheName, 8)
-			if model and model:IsA("Model") then
-				controller:SetAccessory(model, fit)
-			end
-		end
-	end)
+	local baseMeshSize = nil :: Vector3?
+	local textureStatus = "CHECKING"
+	local meshStats = nil :: { [string]: any }?
 
 	local inspectScroll = Factory.New("ScrollingFrame", {
 		Size = UDim2.new(1, -12, 1, -310),
@@ -4688,16 +4775,177 @@ function App:_RenderStudio()
 		-- above SHARING & SALES below -- only present for an original (a
 		-- personal copy has nothing to title/describe, so it keeps the base
 		-- height instead of an empty 184px gap at the bottom of the panel).
-		Size = UDim2.new(1, -8, 0, if selected.license == "PERSONAL_COPY" then 1120 else 1304),
+		Size = UDim2.new(1, -8, 0, if selected.license == "PERSONAL_COPY" then 1240 else 1424),
 		BackgroundTransparency = 1,
 		Parent = inspectScroll,
 	})
+	local readiness = Factory.New("Frame", {
+		Position = UDim2.fromOffset(16, 8),
+		Size = UDim2.new(1, -32, 0, 104),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.08,
+		BorderSizePixel = 0,
+		Parent = body,
+	})
+	Factory.Corner(readiness, 13)
+	local readinessStroke = Factory.Stroke(readiness, Colors.Gold, 0.35)
+	Factory.Label(readiness, "WEARABLE READINESS · RTHRO NORMAL", UDim2.new(1, -28, 0, 20), {
+		Position = UDim2.fromOffset(14, 10),
+		Font = Theme.Fonts.Bold,
+		TextSize = 12,
+		Color = Colors.Cyan,
+	})
+	local sizeStatus = Factory.Label(readiness, "Measuring the model…", UDim2.new(1, -28, 0, 24), {
+		Position = UDim2.fromOffset(14, 32),
+		Font = Theme.Fonts.Bold,
+		TextSize = 10,
+		Wrapped = true,
+	})
+	local textureStatusLabel = Factory.Label(
+		readiness,
+		"Checking whether Roblox has released the generated texture…",
+		UDim2.new(1, -28, 0, 34),
+		{
+			Position = UDim2.fromOffset(14, 57),
+			Color = Colors.Gold,
+			TextSize = 10,
+			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
+		}
+	)
+
+	local function refreshReadiness()
+		local maximum = AccessoryBounds.GetMaximum(fit.accessoryType)
+		if not baseMeshSize or not maximum then
+			sizeStatus.Text = "Measuring the model against Roblox's publishing bounds…"
+			sizeStatus.TextColor3 = Colors.Gold
+			readinessStroke.Color = Colors.Gold
+		else
+			local fittedSize = AccessoryBounds.GetFittedSize(baseMeshSize, fit)
+			local exceededAxes = AccessoryBounds.ExceededAxes(fittedSize, maximum)
+			sizeStatus.Text = string.format(
+				"%s · X %.2f/%.2f  Y %.2f/%.2f  Z %.2f/%.2f studs",
+				ACCESSORY_LABELS[fit.accessoryType] or "Accessory",
+				fittedSize.X,
+				maximum.X,
+				fittedSize.Y,
+				maximum.Y,
+				fittedSize.Z,
+				maximum.Z
+			)
+			if #exceededAxes > 0 then
+				sizeStatus.TextColor3 = Colors.Rose
+				readinessStroke.Color = Colors.Rose
+				textureStatusLabel.Text = string.format(
+					"Too large on %s. Reduce those scale axes before publishing; position can also affect Roblox's final check.",
+					table.concat(exceededAxes, ", ")
+				)
+				textureStatusLabel.TextColor3 = Colors.Rose
+				return
+			end
+			sizeStatus.TextColor3 = Colors.Mint
+			readinessStroke.Color = if textureStatus == "READY" then Colors.Mint else Colors.Gold
+		end
+
+		if textureStatus == "READY" then
+			local textureDetail = if meshStats
+					and meshStats.textureWidth
+					and meshStats.textureHeight
+				then string.format(" · %d×%d source", meshStats.textureWidth, meshStats.textureHeight)
+				else ""
+			textureStatusLabel.Text = "✓ Generated texture is available on Roblox" .. textureDetail .. "."
+			textureStatusLabel.TextColor3 = Colors.Mint
+		elseif textureStatus == "PROCESSING" or textureStatus == "FETCH_FAILED" then
+			textureStatusLabel.Text =
+				"Texture is still processing/moderating on Roblox. The model is saved; use Retry preview before publishing."
+			textureStatusLabel.TextColor3 = Colors.Gold
+		else
+			textureStatusLabel.Text = "Checking whether Roblox has released the generated texture…"
+			textureStatusLabel.TextColor3 = Colors.Gold
+		end
+	end
+	refreshReadiness()
+
+	local previewLoadId = 0
+	local function loadPrivatePreview()
+		previewLoadId += 1
+		local thisLoad = previewLoadId
+		previewStatus.Text = "Loading a fresh model and generated texture…"
+		previewStatus.Visible = true
+		retryPreview.Visible = false
+		textureStatus = "CHECKING"
+		refreshReadiness()
+		task.spawn(function()
+			local version = self.pageVersion
+			local success, dataOrCode =
+				self:_Invoke(Network.Actions.RequestPrivateModel, { itemId = selected.id, refresh = true })
+			if thisLoad ~= previewLoadId or version ~= self.pageVersion or not viewport.Parent then
+				return
+			end
+			if not success then
+				textureStatus = if dataOrCode == "ASSET_STILL_PROCESSING" then "PROCESSING" else "FETCH_FAILED"
+				previewStatus.Text = if dataOrCode == "ASSET_STILL_PROCESSING"
+					then "Roblox is still processing/moderating this model. It is saved — retry shortly."
+					else "Preview could not be loaded. Your model is saved — tap Retry preview."
+				retryPreview.Visible = true
+				refreshReadiness()
+				return
+			end
+
+			local data = dataOrCode
+			local diagnostics = if type(data.diagnostics) == "table" then data.diagnostics else {}
+			baseMeshSize = vectorFromData(diagnostics.baseSize)
+			meshStats = diagnostics
+			textureStatus = tostring(diagnostics.textureStatus or "CHECKING")
+			refreshReadiness()
+
+			local cache = player.PlayerGui:WaitForChild("ForgeAssetCache", 8)
+			local model = cache and cache:WaitForChild(data.cacheName, 8)
+			if thisLoad ~= previewLoadId or version ~= self.pageVersion or not viewport.Parent then
+				return
+			end
+			if not model or not model:IsA("Model") then
+				textureStatus = "FETCH_FAILED"
+				previewStatus.Text = "Roblox has not delivered the preview model yet. It is saved — retry shortly."
+				retryPreview.Visible = true
+				refreshReadiness()
+				return
+			end
+
+			controller:SetAccessory(model, fit)
+			local contentReady = true
+			local preloadSuccess = pcall(function()
+				ContentProvider:PreloadAsync({ model }, function(_, status)
+					if status ~= Enum.AssetFetchStatus.Success then
+						contentReady = false
+					end
+				end)
+			end)
+			if thisLoad ~= previewLoadId or version ~= self.pageVersion or not viewport.Parent then
+				return
+			end
+			if textureStatus == "READY" and preloadSuccess and contentReady then
+				previewStatus.Visible = false
+				retryPreview.Visible = false
+			else
+				textureStatus = "PROCESSING"
+				previewStatus.Text =
+					"Texture is still processing/moderating on Roblox. The model is saved — retry shortly."
+				previewStatus.Visible = true
+				retryPreview.Visible = true
+				refreshReadiness()
+			end
+		end)
+	end
+	retryPreview.Activated:Connect(loadPrivatePreview)
+	loadPrivatePreview()
+
 	-- Sized ~1.6x its original dials/labels/track/knob so the fit sliders are
 	-- actually legible and easy to grab, not just the item name/pills above
 	-- them -- everything below (presets/actions/note/social) keeps its
 	-- original size and simply shifts down to sit under the taller card.
 	local controls = Factory.New("Frame", {
-		Position = UDim2.fromOffset(16, 8),
+		Position = UDim2.fromOffset(16, 128),
 		Size = UDim2.new(1, -32, 0, 664),
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.08,
@@ -4789,6 +5037,7 @@ function App:_RenderStudio()
 			fit[field][axis] = value
 			refresh()
 			controller:ApplyFit(fit)
+			refreshReadiness()
 		end
 		local function setFromPointer(pointerX: number)
 			if track.AbsoluteSize.X <= 0 then
@@ -4880,7 +5129,7 @@ function App:_RenderStudio()
 	-- Fit presets: save the current position/rotation/scale under a name so it
 	-- can be reapplied later, without touching whatever fit is currently being
 	-- drafted for a different item.
-	local presetsY = 702
+	local presetsY = 822
 	local presetsHeight = 140
 	local presets = Factory.New("Frame", {
 		Position = UDim2.fromOffset(16, presetsY),
@@ -5493,11 +5742,24 @@ function App:_RenderDiscover()
 			Position = UDim2.fromOffset(10, 10),
 			BackgroundColor3 = Colors.Ink,
 			BorderSizePixel = 0,
-			Image = directImage(item.thumbnailAssetId),
+			Image = modelPreviewImage(item),
 			ScaleType = Enum.ScaleType.Crop,
 			Parent = card,
 		})
 		Factory.Corner(image, 11)
+		local imageHint = Factory.Label(image, "Preview processing on Roblox…", UDim2.new(1, -16, 0, 34), {
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 8, 1, -8),
+			AlignX = Enum.TextXAlignment.Center,
+			Color = Colors.Text,
+			TextSize = 10,
+			Wrapped = true,
+			ZIndex = 2,
+		})
+		imageHint.BackgroundColor3 = Colors.Ink
+		imageHint.BackgroundTransparency = 0.18
+		Factory.Corner(imageHint, 8)
+		self:_WatchImageLoad(image, imageHint, thumbnail(item.modelAssetId, 420))
 		if item.isListed then
 			Factory.Pill(card, string.format("R$ %d", item.listingPriceRobux), Colors.Mint, 68).Position =
 				UDim2.fromOffset(156, 18)
@@ -5554,6 +5816,8 @@ function App:_RenderDiscover()
 				meta = itemMeta,
 				description = item.description,
 				imageId = item.thumbnailAssetId,
+				modelAssetId = item.modelAssetId,
+				previewImage = modelPreviewImage(item),
 				isListed = item.isListed,
 				listingPriceRobux = item.listingPriceRobux,
 				likes = item.likes,
@@ -7441,7 +7705,7 @@ function App:_RenderSettings()
 					Position = UDim2.fromOffset(6, 6),
 					BackgroundColor3 = Colors.Panel,
 					BorderSizePixel = 0,
-					Image = directImage(item.thumbnailAssetId),
+					Image = modelPreviewImage(item),
 					ScaleType = Enum.ScaleType.Crop,
 					Parent = row,
 				})
@@ -8061,14 +8325,30 @@ function App:_ShowContentDetail(descriptor: { [string]: any })
 		Parent = modal,
 	})
 	Factory.Corner(previewFrame, 14)
-	Factory.New("ImageLabel", {
+	local previewImage = Factory.New("ImageLabel", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
-		Image = directImage(descriptor.imageId),
+		Image = descriptor.previewImage or directImage(descriptor.imageId),
 		ScaleType = Enum.ScaleType.Fit,
 		ZIndex = ZBASE + 3,
 		Parent = previewFrame,
 	})
+	if descriptor.kind == "ITEM" then
+		local previewHint =
+			Factory.Label(previewFrame, "Preview processing/moderating on Roblox…", UDim2.new(1, -24, 0, 38), {
+				AnchorPoint = Vector2.new(0, 1),
+				Position = UDim2.new(0, 12, 1, -12),
+				AlignX = Enum.TextXAlignment.Center,
+				Color = Colors.Text,
+				TextSize = 11,
+				Wrapped = true,
+				ZIndex = ZBASE + 4,
+			})
+		previewHint.BackgroundColor3 = Colors.Ink
+		previewHint.BackgroundTransparency = 0.12
+		Factory.Corner(previewHint, 8)
+		self:_WatchImageLoad(previewImage, previewHint, thumbnail(descriptor.modelAssetId, 420))
+	end
 	if descriptor.isListed then
 		local pricePill = Factory.Pill(modal, string.format("R$ %d", descriptor.listingPriceRobux), Colors.Mint, 76)
 		pricePill.Position = UDim2.new(1, -90, 0, 24)

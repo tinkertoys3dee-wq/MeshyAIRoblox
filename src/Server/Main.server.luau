@@ -676,7 +676,21 @@ typedRequestRemote.OnServerInvoke = function(player: Player, action: any, payloa
 		warn(string.format("[Main] Remote %s returned success without response data for %d", action, player.UserId))
 		result = {}
 	end
-	return if ok then { ok = true, data = result } else { ok = false, error = result }
+	if ok then
+		return { ok = true, data = result }
+	end
+	-- Most errors remain a plain code for backward compatibility. A service may
+	-- additionally return safe, player-facing diagnostics (for example measured
+	-- wearable bounds); keep the code in the same field while carrying those
+	-- details alongside it.
+	if type(result) == "table" then
+		return {
+			ok = false,
+			error = if type(result.code) == "string" then result.code else "SERVER_ERROR",
+			details = result.details,
+		}
+	end
+	return { ok = false, error = result }
 end
 
 Players.PlayerAdded:Connect(function(player)

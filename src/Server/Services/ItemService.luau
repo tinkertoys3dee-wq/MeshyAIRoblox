@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
+local AccessoryBounds = require(ReplicatedStorage:WaitForChild("AccessoryBounds"))
 local AccessoryFit = require(ReplicatedStorage:WaitForChild("AccessoryFit"))
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
@@ -40,6 +41,7 @@ local AVATAR_ASSET_ENUMS = {
 -- produced by CreateMeshPartAsync. Runtime accessories can remain massless,
 -- but the instance passed to the creation prompt must retain upload-safe data.
 local AVATAR_CREATION_HANDLE_COLOR = Color3.fromRGB(163, 162, 165)
+local ASSET_CACHE_SECONDS = 45
 
 -- Avatar Creation Tokens authorize paid publishing and should never be
 -- replicated to every client through Config. Studio owners keep them in an
@@ -92,12 +94,146 @@ local function stripUnsafe(root: Instance)
 	end
 end
 
+local function vectorData(value: Vector3): { x: number, y: number, z: number }
+	return { x = value.X, y = value.Y, z = value.Z }
+end
+
+local function textureContent(mesh: MeshPart): any?
+	if mesh.TextureID ~= "" then
+		return Content.fromUri(mesh.TextureID)
+	end
+	local surface = mesh:FindFirstChildWhichIsA("SurfaceAppearance")
+	if not surface then
+		return nil
+	end
+	if surface.ColorMap ~= "" then
+		return Content.fromUri(surface.ColorMap)
+	end
+	-- Newer imports can populate the Content-typed property without mirroring
+	-- it back into the legacy ContentId string immediately.
+	local success, content = pcall(function()
+		return surface.ColorMapContent
+	end)
+	if not success then
+		return nil
+	end
+	local sourceSuccess, sourceType = pcall(function()
+		return content.SourceType
+	end)
+	if not sourceSuccess or sourceType == Enum.ContentSourceType.None then
+		return nil
+	end
+	return content
+end
+
+local function hasTextureReference(mesh: MeshPart): boolean
+	return textureContent(mesh) ~= nil
+end
+
+local function itemDiagnostics(item: { [string]: any }, source: MeshPart): { [string]: any }
+	local fittedSize = AccessoryBounds.GetFittedSize(source.Size, item.fit)
+	local maximumSize = AccessoryBounds.GetMaximum(item.fit.accessoryType)
+	local exceededAxes = if maximumSize then AccessoryBounds.ExceededAxes(fittedSize, maximumSize) else {}
+	local textureReady = hasTextureReference(source)
+	return {
+		baseSize = vectorData(source.Size),
+		fittedSize = vectorData(fittedSize),
+		maximumSize = if maximumSize then vectorData(maximumSize) else nil,
+		exceededAxes = exceededAxes,
+		tooLarge = #exceededAxes > 0,
+		textureStatus = if textureReady then "READY" else "PROCESSING",
+		textureExpected = true,
+		triangles = item.triangles,
+		vertices = item.vertices,
+		textureWidth = item.textureWidth,
+		textureHeight = item.textureHeight,
+	}
+end
+
+local function formatSize(value: { [string]: any }): string
+	return string.format("%.2f × %.2f × %.2f", value.x, value.y, value.z)
+end
+
+local function boundsProblem(item: { [string]: any }, diagnostics: { [string]: any }): { [string]: any }
+	local axes = table.concat(diagnostics.exceededAxes, ", ")
+	return {
+		code = "UGC_BOUNDS_TOO_LARGE",
+		details = {
+			diagnostics = diagnostics,
+			userMessage = string.format(
+				"This %s is %s studs after fit; Roblox's limit is %s. Reduce the %s scale in Fitting.",
+				tostring(item.fit.accessoryType),
+				formatSize(diagnostics.fittedSize),
+				formatSize(diagnostics.maximumSize),
+				axes
+			),
+		},
+	}
+end
+
+local function sanitizePlatformMessage(value: any): string
+	local message = string.gsub(tostring(value or ""), "[%c]", " ")
+	message = string.gsub(message, "%s+", " ")
+	return string.sub(message, 1, 240)
+end
+
+local function classifyValidationProblem(value: any): string
+	local message = string.lower(tostring(value or ""))
+	if
+		string.find(message, "too large", 1, true)
+		or string.find(message, "larger than", 1, true)
+		or string.find(message, "bounding", 1, true)
+		or string.find(message, "bounds", 1, true)
+		or string.find(message, "dimension", 1, true)
+		or string.find(message, "scale down", 1, true)
+	then
+		return "UGC_BOUNDS_TOO_LARGE"
+	end
+	if
+		string.find(message, "moderation", 1, true)
+		or string.find(message, "pending", 1, true)
+		or string.find(message, "processing", 1, true)
+		or string.find(message, "not yet available", 1, true)
+	then
+		return "UGC_MODERATION_PENDING"
+	end
+	if
+		string.find(message, "texture", 1, true)
+		or string.find(message, "color map", 1, true)
+		or string.find(message, "colormap", 1, true)
+	then
+		return "MODEL_TEXTURE_PROCESSING"
+	end
+	return "UGC_VALIDATION_FAILED"
+end
+
+local function validationProblem(value: any): { [string]: any }
+	local code = classifyValidationProblem(value)
+	local platformMessage = sanitizePlatformMessage(value)
+	local fallback = if code == "UGC_BOUNDS_TOO_LARGE"
+		then "Roblox says this wearable is outside its size bounds. Check the measured X/Y/Z limits in Fitting."
+		elseif
+			code == "UGC_MODERATION_PENDING"
+		then "Roblox is still processing or moderating this model or texture. Your item is saved; retry publishing later."
+		elseif
+			code == "MODEL_TEXTURE_PROCESSING"
+		then "Roblox has not released this model's texture yet. Your item is saved; retry after the texture appears in Fitting."
+		else "Roblox validation rejected this wearable. Adjust the fit and review the validation detail below."
+	return {
+		code = code,
+		details = {
+			userMessage = if platformMessage ~= "" then fallback .. " Roblox: " .. platformMessage else fallback,
+		},
+	}
+end
+
 function ItemService.new(profileService: any, playerStateService: any, push: (Player, string, any) -> ())
 	return setmetatable({
 		profiles = profileService,
 		playerStates = playerStateService,
 		push = push,
 		assetCache = {} :: { [number]: Model },
+		assetCacheLoadedAt = {} :: { [number]: number },
 	}, ItemService)
 end
 
@@ -559,12 +695,27 @@ function ItemService:RequestPrivateModel(player: Player, item: { [string]: any }
 	if type(item.modelAssetId) ~= "number" or item.modelAssetId <= 0 then
 		return false, "MODEL_UNAVAILABLE"
 	end
-	local success, modelOrError = self:_LoadModel(item.modelAssetId)
+	-- Always ask Roblox for a fresh copy here. A model upload can become
+	-- loadable before its embedded texture is released by moderation/CDN; an
+	-- indefinite server cache would otherwise keep handing every fitting view
+	-- that first gray copy even after Roblox finished processing it.
+	local success, modelOrError = self:_LoadModel(item.modelAssetId, true)
 	if not success then
 		return false, modelOrError
 	end
+	local sourceModel = modelOrError :: Model
+	local source = sourceModel:FindFirstChildWhichIsA("MeshPart", true)
+	if not source then
+		sourceModel:Destroy()
+		return false, "MESH_NOT_FOUND"
+	end
+	local diagnostics = itemDiagnostics(item, source)
+	if diagnostics.textureStatus ~= "READY" then
+		self:_InvalidateModel(item.modelAssetId)
+	end
 	local playerGui = player:FindFirstChildOfClass("PlayerGui")
 	if not playerGui then
+		sourceModel:Destroy()
 		return false, "PLAYER_GUI_UNAVAILABLE"
 	end
 	local cache = playerGui:FindFirstChild("ForgeAssetCache")
@@ -577,11 +728,12 @@ function ItemService:RequestPrivateModel(player: Player, item: { [string]: any }
 	if existing then
 		existing:Destroy()
 	end
-	local model = (modelOrError :: Model):Clone()
+	local model = sourceModel:Clone()
+	sourceModel:Destroy()
 	model.Name = item.id
 	stripUnsafe(model)
 	model.Parent = cache
-	return true, { cacheName = item.id }
+	return true, { cacheName = item.id, diagnostics = diagnostics }
 end
 
 function ItemService:Publish(player: Player, itemId: string): (boolean, any)
@@ -602,7 +754,7 @@ function ItemService:Publish(player: Player, itemId: string): (boolean, any)
 	if type(tokenId) ~= "string" or tokenId == "" or not avatarAssetType then
 		return false, "CREATION_TOKEN_NOT_CONFIGURED"
 	end
-	local success, accessoryOrError = self:_CreateAccessory(item, true)
+	local success, accessoryOrError = self:_CreateAccessory(item, true, true)
 	if not success then
 		return false, accessoryOrError
 	end
@@ -616,9 +768,10 @@ function ItemService:Publish(player: Player, itemId: string): (boolean, any)
 			return AvatarCreationService:ValidateUGCAccessoryAsync(player, accessory, ACCESSORY_ENUMS[accessoryType])
 		end)
 		if not validationSuccess or not isValid then
-			warn(string.format("[ItemService] UGC validation failed: %s", tostring(validationMessage)))
+			local validationProblemMessage = if validationSuccess then validationMessage else isValid
+			warn(string.format("[ItemService] UGC validation failed: %s", tostring(validationProblemMessage)))
 			accessory:Destroy()
-			return false, "UGC_VALIDATION_FAILED"
+			return false, validationProblem(validationProblemMessage)
 		end
 	end
 
@@ -628,12 +781,19 @@ function ItemService:Publish(player: Player, itemId: string): (boolean, any)
 	if not promptSuccess then
 		accessory:Destroy()
 		warn(`[ItemService] Avatar creation prompt failed: {result}`)
+		local classified = validationProblem(result)
+		if classified.code ~= "UGC_VALIDATION_FAILED" then
+			return false, classified
+		end
 		return false, "AVATAR_CREATION_UNAVAILABLE"
 	end
 	if result ~= Enum.PromptCreateAssetResult.Success then
 		accessory:Destroy()
 		warn(string.format("[ItemService] Avatar creation was not completed: %s", tostring(resultMessage)))
-		return false, "AVATAR_CREATION_REJECTED"
+		if string.find(string.lower(tostring(result)), "cancel", 1, true) then
+			return false, "AVATAR_CREATION_CANCELLED"
+		end
+		return false, validationProblem(resultMessage)
 	end
 	accessory:Destroy()
 	local assetId = tonumber(resultMessage)
@@ -655,9 +815,19 @@ function ItemService:Publish(player: Player, itemId: string): (boolean, any)
 	return true, { assetId = assetId }
 end
 
-function ItemService:_LoadModel(assetId: number): (boolean, Model | string)
+function ItemService:_InvalidateModel(assetId: number)
 	local cached = self.assetCache[assetId]
 	if cached then
+		cached:Destroy()
+	end
+	self.assetCache[assetId] = nil
+	self.assetCacheLoadedAt[assetId] = nil
+end
+
+function ItemService:_LoadModel(assetId: number, forceRefresh: boolean?): (boolean, Model | string)
+	local cached = self.assetCache[assetId]
+	local loadedAt = self.assetCacheLoadedAt[assetId] or 0
+	if cached and not forceRefresh and os.clock() - loadedAt < ASSET_CACHE_SECONDS then
 		return true, cached:Clone()
 	end
 	local lastProblem: any = "No model returned"
@@ -669,7 +839,9 @@ function ItemService:_LoadModel(assetId: number): (boolean, Model | string)
 			local model = loaded :: Model
 			stripUnsafe(model)
 			model.Parent = nil
+			self:_InvalidateModel(assetId)
 			self.assetCache[assetId] = model
+			self.assetCacheLoadedAt[assetId] = os.clock()
 			return true, model:Clone()
 		end
 		lastProblem = loaded
@@ -693,9 +865,13 @@ function ItemService:LoadModelForInspection(assetId: number): (boolean, Model | 
 	return self:_LoadModel(assetId)
 end
 
-function ItemService:_CreateAccessory(item: { [string]: any }, editable: boolean): (boolean, Accessory | string)
+function ItemService:_CreateAccessory(
+	item: { [string]: any },
+	editable: boolean,
+	forceRefresh: boolean?
+): (boolean, any)
 	local callSuccess, creationSuccess, accessoryOrProblem = pcall(function()
-		return self:_BuildAccessory(item, editable)
+		return self:_BuildAccessory(item, editable, forceRefresh)
 	end)
 	if not callSuccess then
 		warn(`[ItemService] Accessory preparation crashed for {item.id}: {creationSuccess}`)
@@ -704,8 +880,8 @@ function ItemService:_CreateAccessory(item: { [string]: any }, editable: boolean
 	return creationSuccess, accessoryOrProblem
 end
 
-function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean): (boolean, Accessory | string)
-	local success, modelOrError = self:_LoadModel(item.modelAssetId)
+function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean, forceRefresh: boolean?): (boolean, any)
+	local success, modelOrError = self:_LoadModel(item.modelAssetId, forceRefresh)
 	if not success then
 		return false, modelOrError
 	end
@@ -714,6 +890,23 @@ function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean)
 	if not source then
 		model:Destroy()
 		return false, "MESH_NOT_FOUND"
+	end
+	local diagnostics = itemDiagnostics(item, source)
+	if editable and diagnostics.tooLarge then
+		model:Destroy()
+		return false, boundsProblem(item, diagnostics)
+	end
+	if editable and diagnostics.textureStatus ~= "READY" then
+		model:Destroy()
+		self:_InvalidateModel(item.modelAssetId)
+		return false,
+			{
+				code = "MODEL_TEXTURE_PROCESSING",
+				details = {
+					diagnostics = diagnostics,
+					userMessage = "Roblox has not released this model's generated texture yet. Your item is saved; retry after the texture appears in Fitting.",
+				},
+			}
 	end
 
 	local handle: MeshPart
@@ -726,13 +919,9 @@ function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean)
 			local created = AssetService:CreateMeshPartAsync(Content.fromObject(editableMesh), {
 				CollisionFidelity = Enum.CollisionFidelity.Hull,
 			})
-			local textureUri = source.TextureID
-			local oldSurface = source:FindFirstChildWhichIsA("SurfaceAppearance")
-			if oldSurface and oldSurface.ColorMap ~= "" then
-				textureUri = oldSurface.ColorMap
-			end
-			if textureUri ~= "" then
-				local editableImage = AssetService:CreateEditableImageAsync(Content.fromUri(textureUri))
+			local sourceTexture = textureContent(source)
+			if sourceTexture then
+				local editableImage = AssetService:CreateEditableImageAsync(sourceTexture)
 				if editableImage then
 					local surface = AssetService:CreateSurfaceAppearanceAsync({
 						ColorMap = Content.fromObject(editableImage),
@@ -774,6 +963,10 @@ function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean)
 	attachment.Name = AccessoryFit.GetAttachmentName(item.fit.accessoryType)
 	attachment.CFrame = AccessoryFit.GetHandleAttachmentCFrame(item.fit)
 	attachment.Parent = handle
+	local scaleType = Instance.new("StringValue")
+	scaleType.Name = "AvatarPartScaleType"
+	scaleType.Value = "ProportionsNormal"
+	scaleType.Parent = handle
 
 	local accessory = Instance.new("Accessory")
 	accessory.Name = item.name

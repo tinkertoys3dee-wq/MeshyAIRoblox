@@ -45,6 +45,14 @@ export type ItemRecord = {
 	modelAssetId: number?,
 	previewAssetId: number?,
 	thumbnailAssetId: number?,
+	-- Captured from the backend's successful GLB validation. Besides giving
+	-- creators useful publishing diagnostics, non-zero texture dimensions let
+	-- the game distinguish "Roblox is still releasing the texture" from a
+	-- genuinely textureless generation.
+	triangles: number?,
+	vertices: number?,
+	textureWidth: number?,
+	textureHeight: number?,
 	fit: FitTransform,
 	visibility: Visibility,
 	isListed: boolean,
