@@ -30,6 +30,8 @@ local DinoRunner = require(script.Parent.Games.DinoRunner)
 local ColorSwitch = require(script.Parent.Games.ColorSwitch)
 local NeonSnake = require(script.Parent.Games.NeonSnake)
 local BlockStacker = require(script.Parent.Games.BlockStacker)
+local BrickBreaker = require(script.Parent.Games.BrickBreaker)
+local ReflexTap = require(script.Parent.Games.ReflexTap)
 
 local Colors = Theme.Colors
 
@@ -74,6 +76,18 @@ local GAMES = {
 		icon = "🧱",
 		blurb = "Stack it straight, don't miss.",
 	},
+	{
+		game = BrickBreaker,
+		color = Color3.fromRGB(255, 149, 66),
+		icon = "🏓",
+		blurb = "Steer the paddle, clear the bricks.",
+	},
+	{
+		game = ReflexTap,
+		color = Color3.fromRGB(45, 205, 196),
+		icon = "🎯",
+		blurb = "Tap the lit tile before it's gone.",
+	},
 }
 
 local TILE_SIZE = UDim2.fromOffset(248, 172)
@@ -115,19 +129,20 @@ function GamesHub.Show(app: any)
 		Parent = app.gui,
 	})
 
-	-- Height (702) is derived, not guessed: hubView's content box is
-	-- modal height - 128 (see hubView's Size below), and a 3-row wide-mode
-	-- tile grid (6 tiles: #GAMES games + 1 Leaderboard tile, computed by
-	-- wideTilePosition above) needs 3*TILE_SIZE.Y + 2*TILE_GRID_GAP + the
-	-- same 26px bottom margin the original 2-row layout used = 574, so
-	-- modal height = 574 + 128 = 702 -- that's the MaxSize clamp below, and
-	-- what any normal desktop window actually renders at. Below that, the
-	-- modal's own height is scale-based (not the old fixed `0, 702` offset,
-	-- which simply rendered past the top/bottom of any shorter viewport with
-	-- nothing to stop it), so it shrinks to fit short windows instead; hubView
-	-- is a genuine ScrollingFrame (see below) so the tile grid scrolls rather
-	-- than silently overflowing modal's own ClipsDescendants once that
-	-- shrinking leaves less room than the grid needs.
+	-- Height (702) is a target, not a hard requirement any more: hubView's
+	-- content box is modal height - 128 (see hubView's Size below), and the
+	-- wide-mode tile grid (8 tiles now: #GAMES games + 1 Leaderboard tile,
+	-- computed by wideTilePosition above) is 4 rows -- 4*TILE_SIZE.Y +
+	-- 3*TILE_GRID_GAP + a 26px bottom margin = 726, taller than the 574 a
+	-- 3-row grid needed when this number was first picked. Rather than
+	-- rechase this comment's math every time Config.Arcade.Games grows,
+	-- hubView is a genuine ScrollingFrame (see below): 702 (the MaxSize
+	-- clamp below, and what any normal desktop window actually renders at)
+	-- just no longer needs to be tall enough to fit every row at once, and
+	-- neither does a shorter viewport once the modal's own scale-based
+	-- height (not the old fixed `0, 702` offset, which simply rendered past
+	-- the top/bottom of any shorter viewport with nothing to stop it)
+	-- shrinks to fit it.
 	local restingModalPosition = UDim2.fromScale(0.5, 0.5)
 	local modal = Factory.Card(
 		overlay,

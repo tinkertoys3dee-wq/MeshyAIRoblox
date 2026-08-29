@@ -10,14 +10,19 @@ local DailyChallenge = {}
 -- A rough "good but achievable in one sitting" score for each game, given
 -- their own scoring scales (see each Games/*.luau module): FlappyBird and
 -- ColorSwitch score one point per obstacle/ring cleared, DinoRunner scores
--- ~10/second survived, NeonSnake scores one point per food eaten, and
--- BlockStacker scores one point per block successfully landed on the tower.
+-- ~10/second survived, NeonSnake scores one point per food eaten,
+-- BlockStacker scores one point per block successfully landed on the tower,
+-- BrickBreaker scores one point per brick broken (a wave is 24 bricks), and
+-- ReflexTap scores one point per correctly-tapped tile before its window
+-- expires.
 local BASE_TARGETS: { [string]: number } = {
 	FlappyBird = 8,
 	DinoRunner = 260,
 	ColorSwitch = 10,
 	NeonSnake = 12,
 	BlockStacker = 14,
+	BrickBreaker = 20,
+	ReflexTap = 14,
 }
 
 -- Deterministic pseudo-randomness with no storage: folds the day number and
