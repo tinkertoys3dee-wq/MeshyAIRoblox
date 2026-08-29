@@ -9,9 +9,9 @@
 -- see ProfileService.defaultProfile), these are credited straight to
 -- `tokens`, the same fully-spendable pool ad rewards and Robux purchases
 -- fund, not the spend-restricted `bonusTokens` pool. That's a deliberate,
--- bounded cost, not an oversight: max payout is 448 tokens/game * 9 games =
--- 4032 tokens/week worst case (every rank won by a different player, every
--- week), worth roughly 3.3 generations or ~$1.00 at the token pricing in
+-- bounded cost, not an oversight: max payout is 313 tokens/game * 9 games =
+-- 2817 tokens/week worst case (every rank won by a different player, every
+-- week), worth roughly 2.3 generations or ~$0.70 at the token pricing in
 -- Config.Generation. Accepted as an engagement investment, same category as
 -- the free tokens for watching an ad -- not something to "fix" back to
 -- bonusTokens without checking with the studio owner first.

@@ -394,16 +394,16 @@ return table.freeze({
 		-- credits these to `tokens`, not `bonusTokens` — fully spendable,
 		-- generations included. That's a deliberate, bounded exception to the
 		-- "only gain money" guarantee (approved for the engagement value):
-		-- worst case is 448/game * #Games (9) = 4032 tokens/week, worth
-		-- roughly 3.3 generations (~$1.00) at the pricing in
+		-- worst case is 313/game * #Games (9) = 2817 tokens/week, worth
+		-- roughly 2.3 generations (~$0.70) at the pricing in
 		-- Config.Generation. See ArcadeService's module header and
 		-- docs/PRICING.md for the full reasoning; raising these numbers
 		-- meaningfully needs that math re-checked, not just a game-balance
-		-- judgment call. (Lowered 30% from 360/200/80 when Brick Breaker and
-		-- Reflex Tap were added; the studio-approved per-game amount has stayed
-		-- at that level as the Arcade has grown. Keep this comment's math in sync
-		-- with WeeklyRewards and Games if either changes again.)
-		WeeklyRewards = { 252, 140, 56 },
+		-- judgment call. (Originally lowered 30% from 360/200/80 to
+		-- 252/140/56, then lowered another 30% to the whole-token values below.
+		-- Keep this comment's math in sync with WeeklyRewards and Games if
+		-- either changes again.)
+		WeeklyRewards = { 176, 98, 39 },
 		-- Sanity ceiling against an obviously spoofed score reaching the
 		-- leaderboard store. Can't stop a determined cheater on a
 		-- client-simulated game, only bound the damage one can do.
