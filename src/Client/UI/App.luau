@@ -1721,7 +1721,7 @@ function App:_WatchImageLoad(imageLabel: ImageLabel, hintLabel: TextLabel)
 			task.wait(delaySeconds)
 		end
 		if imageLabel.Parent then
-			hintLabel.Text = "Still preparing — Roblox moderation can take a minute or two."
+			hintLabel.Text = "Still awaiting Roblox moderation — this can occasionally take longer than usual."
 		end
 	end)
 end
@@ -3661,16 +3661,21 @@ function App:_RenderCreate()
 			Parent = reference,
 		})
 		Factory.Corner(image, 13)
-		local imageLoadHint = Factory.Label(image, "Preparing image…", UDim2.new(1, -8, 0, 28), {
-			Name = "LoadHint",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-			Color = Colors.Text,
-			TextSize = 10,
-			Wrapped = true,
-			AlignX = Enum.TextXAlignment.Center,
-			ZIndex = image.ZIndex + 1,
-		})
+		local imageLoadHint = Factory.Label(
+			image,
+			"Preparing image — likely still awaiting Roblox moderation.",
+			UDim2.new(1, -8, 0, 44),
+			{
+				Name = "LoadHint",
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Color = Colors.Text,
+				TextSize = 10,
+				Wrapped = true,
+				AlignX = Enum.TextXAlignment.Center,
+				ZIndex = image.ZIndex + 1,
+			}
+		)
 		Factory.New("UIStroke", { Color = Colors.Ink, Thickness = 1.5, Transparency = 0.2, Parent = imageLoadHint })
 		self:_WatchImageLoad(image, imageLoadHint)
 		Factory.Label(
