@@ -2,6 +2,7 @@
 
 local AdService = game:GetService("AdService")
 local AvatarEditorService = game:GetService("AvatarEditorService")
+local ContentProvider = game:GetService("ContentProvider")
 local GuiService = game:GetService("GuiService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -1199,7 +1200,7 @@ function App:_SyncAvatarPreviewPanel()
 				assetId = assetId,
 				name = info.name,
 				assetType = info.assetType,
-				image = thumbnail(assetId, 100),
+				image = thumbnail(assetId, 150),
 			})
 		end
 	end
@@ -1679,6 +1680,49 @@ function App:_Track(payload: { [string]: any })
 		pcall(function()
 			remote:InvokeServer(Network.Actions.Track, payload)
 		end)
+	end)
+end
+
+-- A freshly generated Image/Decal asset can take Roblox's own content
+-- moderation and CDN a little while to actually become renderable even
+-- though the generation pipeline itself already finished (see
+-- docs/ARCHITECTURE.md on the moderation gate) -- without this, the
+-- ImageLabel just sits on its plain background color with no indication
+-- anything is still happening, which reads as broken rather than pending.
+-- Polls via ContentProvider:PreloadAsync -- the same primitive Roblox's own
+-- loading screens use to know when content is actually ready -- with
+-- backoff, rather than guessing a fixed timer, so `hintLabel` clears the
+-- moment the asset actually becomes visible instead of after some arbitrary
+-- delay. `imageLabel.Parent` is checked on every iteration as the life
+-- token: once the card re-renders (a fresh ImageLabel replaces this one) or
+-- the page navigates away, this stops on its own.
+local IMAGE_LOAD_RETRY_DELAYS = { 2, 3, 5, 8, 13, 13, 13 }
+function App:_WatchImageLoad(imageLabel: ImageLabel, hintLabel: TextLabel)
+	task.spawn(function()
+		for _, delaySeconds in IMAGE_LOAD_RETRY_DELAYS do
+			if not imageLabel.Parent then
+				return
+			end
+			local loaded = false
+			pcall(function()
+				ContentProvider:PreloadAsync({ imageLabel }, function(_, status)
+					if status == Enum.AssetFetchStatus.Success then
+						loaded = true
+					end
+				end)
+			end)
+			if not imageLabel.Parent then
+				return
+			end
+			if loaded then
+				hintLabel.Visible = false
+				return
+			end
+			task.wait(delaySeconds)
+		end
+		if imageLabel.Parent then
+			hintLabel.Text = "Still preparing — Roblox moderation can take a minute or two."
+		end
 	end)
 end
 
@@ -3550,10 +3594,22 @@ function App:_RenderCreate()
 				if isAvatar then
 					request.avatarView = self.selectedAvatarView
 				end
-				local success, result = if isUpload
-					then self:_Invoke(Network.Actions.CreateUploadedImage, request)
-					elseif isAvatar then self:_Invoke(Network.Actions.CreateFromAvatar, request)
-					else self:_Invoke(Network.Actions.CreateGeneration, request)
+				-- A multi-return call nested inside an if-then-else *expression*
+				-- (as this was) gets truncated to its first value -- Luau's
+				-- if-expression always evaluates to exactly one value, so
+				-- `result` was silently always nil regardless of which branch
+				-- ran, and `result.usedRetryCredit`/`.mocked`/`.tokensSpent`
+				-- below would error the instant a generation actually
+				-- succeeded. An if-statement assigning both return values in
+				-- each branch keeps the full pair intact.
+				local success, result
+				if isUpload then
+					success, result = self:_Invoke(Network.Actions.CreateUploadedImage, request)
+				elseif isAvatar then
+					success, result = self:_Invoke(Network.Actions.CreateFromAvatar, request)
+				else
+					success, result = self:_Invoke(Network.Actions.CreateGeneration, request)
+				end
 				generate.Active = true
 				generate.Text = actionText
 				if success then
@@ -3605,6 +3661,18 @@ function App:_RenderCreate()
 			Parent = reference,
 		})
 		Factory.Corner(image, 13)
+		local imageLoadHint = Factory.Label(image, "Preparing image…", UDim2.new(1, -8, 0, 28), {
+			Name = "LoadHint",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Color = Colors.Text,
+			TextSize = 10,
+			Wrapped = true,
+			AlignX = Enum.TextXAlignment.Center,
+			ZIndex = image.ZIndex + 1,
+		})
+		Factory.New("UIStroke", { Color = Colors.Ink, Thickness = 1.5, Transparency = 0.2, Parent = imageLoadHint })
+		self:_WatchImageLoad(image, imageLoadHint)
 		Factory.Label(
 			reference,
 			"REFERENCE READY",
