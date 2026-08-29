@@ -1,5 +1,5 @@
 --!strict
---l
+
 local Players = game:GetService("Players")
 
 local App = require(script.Parent.UI.App)

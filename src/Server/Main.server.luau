@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 
 -- Publish the transport before loading feature services. If a service ever
@@ -50,6 +51,8 @@ local LeaderboardService = require(script.Parent.Services.LeaderboardService)
 local ArcadeService = require(script.Parent.Services.ArcadeService)
 local LeaderstatsService = require(script.Parent.Services.LeaderstatsService)
 local AfkRewardService = require(script.Parent.Services.AfkRewardService)
+local ProgressionService = require(script.Parent.Services.ProgressionService)
+local RunwayService = require(script.Parent.Services.RunwayService)
 
 local function push(player: Player, eventName: string, payload: any)
 	if player.Parent == Players then
@@ -61,16 +64,18 @@ local profiles = ProfileService.new()
 local playerStates = PlayerStateService.new()
 local analytics = AnalyticsService.new()
 local achievements = AchievementService.new(profiles, push, analytics)
-local retention = RetentionService.new(profiles, analytics, achievements, push)
+local progression = ProgressionService.new(profiles, push, analytics)
+local retention = RetentionService.new(profiles, analytics, achievements, push, progression)
 local backend = BackendService.new()
 local commerce = CommerceService.new(profiles, playerStates, analytics, push)
 local adRewards = AdRewardService.new(profiles, playerStates, commerce, push, analytics, achievements)
 local items = ItemService.new(profiles, playerStates, push)
 local generations =
-	GenerationService.new(profiles, playerStates, backend, commerce, push, analytics, achievements, items)
+	GenerationService.new(profiles, playerStates, backend, commerce, push, analytics, achievements, items, progression)
 local leaderboard = LeaderboardService.new()
 local arcade = ArcadeService.new(profiles, playerStates, push, analytics)
 local afkRewards = AfkRewardService.new(profiles, push, analytics)
+local runway = RunwayService.new(profiles, push, analytics, retention, progression)
 local community = CommunityService.new(profiles, playerStates, push, analytics, achievements, leaderboard)
 local catalog = CatalogService.new(profiles, playerStates, analytics)
 local leaderstats = LeaderstatsService.new()
@@ -132,6 +137,7 @@ local function initializePlayer(player: Player)
 		achievements:Unlock(player, "GROUP_JOINED")
 	end
 	retention:CheckIn(player)
+	progression:AnnouncePending(player)
 	generations:Resume(player)
 end
 
@@ -163,6 +169,9 @@ local function bootstrap(player: Player): (boolean, any)
 			prices = commerce:GetPrices(),
 			dailyBrief = retention:GetBrief(player),
 			questState = retention:GetQuestState(player),
+			journeyState = retention:GetJourneyState(player),
+			creatorProgress = progression:GetSnapshot(player),
+			runwayState = runway:GetState(player),
 		}
 end
 
@@ -181,9 +190,6 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			method = if type(payload) == "table" then payload.kind else "unknown",
 		})
 		local success, result = generations:Create(player, payload)
-		if success then
-			retention:MarkQuest(player, "GENERATE")
-		end
 		return success, result
 	end,
 	[Network.Actions.CreateUploadedImage] = function(player, payload)
@@ -194,9 +200,6 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			method = "IMAGE_UPLOAD",
 		})
 		local success, result = generations:CreateUploadedImage(player, payload)
-		if success then
-			retention:MarkQuest(player, "GENERATE")
-		end
 		return success, result
 	end,
 	[Network.Actions.CreateFromAvatar] = function(player, payload)
@@ -207,9 +210,6 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			method = "AVATAR_TO_3D",
 		})
 		local success, result = generations:CreateFromAvatar(player, payload)
-		if success then
-			retention:MarkQuest(player, "GENERATE")
-		end
 		return success, result
 	end,
 	[Network.Actions.CreateAvatarGraphic] = function(player, payload)
@@ -220,9 +220,6 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			method = "AVATAR_GRAPHIC",
 		})
 		local success, result = generations:CreateAvatarGraphic(player, payload)
-		if success then
-			retention:MarkQuest(player, "GENERATE")
-		end
 		return success, result
 	end,
 	[Network.Actions.CreateTextImage] = function(player, payload)
@@ -233,9 +230,6 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			method = "TEXT_TO_IMAGE",
 		})
 		local success, result = generations:CreateTextImage(player, payload)
-		if success then
-			retention:MarkQuest(player, "GENERATE")
-		end
 		return success, result
 	end,
 	[Network.Actions.DeleteGraphic] = function(player, payload)
@@ -245,9 +239,6 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		analytics:BeginFunnel(player, "generation", "Approved conversion started", { method = "IMAGE_TO_3D" })
 		analytics:Funnel(player, "generation", 2, "Reference image approved", { method = "IMAGE_TO_3D" })
 		local success, result = generations:ConvertImage(player, payload)
-		if success then
-			retention:MarkQuest(player, "GENERATE")
-		end
 		return success, result
 	end,
 	[Network.Actions.PromptCustomImagePass] = function(player)
@@ -277,6 +268,13 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		analytics:Custom(player, "GameInviteSent", math.min(math.floor(recipientCount), 20), {})
 		return true, {}
 	end,
+	[Network.Actions.ReportJourneyAction] = function(player, payload)
+		local action = type(payload) == "table" and payload.action or nil
+		if action ~= "OPEN_STUDIO" then
+			return false, "INVALID_REQUEST"
+		end
+		return retention:MarkJourney(player, action)
+	end,
 	-- Roblox requires a rewarded-ad reward product to also be normally
 	-- purchasable with Robux (see AdRewardService), so this is both a real
 	-- purchase path and the way to test token spending in Studio without a
@@ -300,7 +298,6 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		local success, result = items:SaveFit(player, payload)
 		if success then
 			analytics:Custom(player, "AccessoryFitSaved", 1, {})
-			retention:MarkQuest(player, "FIT")
 		end
 		return success, result
 	end,
@@ -338,6 +335,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		return success, result
 	end,
 	[Network.Actions.EquipOutfit] = function(player, payload)
+		if runway:IsLookFrozen(player) then
+			return false, "RUNWAY_LOOK_LOCKED"
+		end
 		local success, result = items:EquipOutfit(player, payload)
 		if success then
 			analytics:Custom(player, "OutfitEquipped", 1, {})
@@ -348,6 +348,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		return items:DeleteOutfit(player, payload)
 	end,
 	[Network.Actions.EquipItem] = function(player, payload)
+		if runway:IsLookFrozen(player) then
+			return false, "RUNWAY_LOOK_LOCKED"
+		end
 		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
 			return false, "INVALID_REQUEST"
 		end
@@ -355,10 +358,15 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		if success then
 			analytics:Custom(player, "GeneratedItemEquipped", 1, {})
 			achievements:Unlock(player, "FIRST_EQUIP")
+			retention:MarkJourney(player, "TRY_STYLE")
+			retention:MarkQuest(player, "TRY_STYLE")
 		end
 		return success, result
 	end,
 	[Network.Actions.UnequipItem] = function(player, payload)
+		if runway:IsLookFrozen(player) then
+			return false, "RUNWAY_LOOK_LOCKED"
+		end
 		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
 			return false, "INVALID_REQUEST"
 		end
@@ -377,6 +385,7 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			local alreadyPublished = type(result) == "table" and result.alreadyPublished == true
 			analytics:Custom(player, "GeneratedItemPublished", 1, { alreadyPublished = alreadyPublished })
 			if not alreadyPublished then
+				progression:Grant(player, Config.CreatorProgression.FirstPublishXP, "FIRST_PUBLISH")
 				achievements:Unlock(player, "FIRST_PUBLISH")
 			end
 		end
@@ -453,6 +462,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		return items:RequestPrivateModel(player, item)
 	end,
 	[Network.Actions.TryOnCommunityItem] = function(player, payload)
+		if runway:IsLookFrozen(player) then
+			return false, "RUNWAY_LOOK_LOCKED"
+		end
 		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
 			return false, "INVALID_REQUEST"
 		end
@@ -461,18 +473,31 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			return false, "ITEM_NOT_FOUND"
 		end
 		analytics:Funnel(player, "marketplace", 2, "Community item tried", {})
-		return items:TryOn(player, item)
+		local success, result = items:TryOn(player, item)
+		if success then
+			retention:MarkJourney(player, "TRY_STYLE")
+			retention:MarkQuest(player, "TRY_STYLE")
+		end
+		return success, result
 	end,
 	[Network.Actions.ClearCommunityTryOn] = function(player)
+		if runway:IsLookFrozen(player) then
+			return false, "RUNWAY_LOOK_LOCKED"
+		end
 		return items:ClearCommunityTryOn(player)
 	end,
 	[Network.Actions.PromptPlus] = function(player)
 		return community:PromptPlus(player)
 	end,
 	[Network.Actions.TryCatalogAsset] = function(player, payload)
+		if runway:IsLookFrozen(player) then
+			return false, "RUNWAY_LOOK_LOCKED"
+		end
 		local success, result = catalog:TryOn(player, payload)
 		if success then
 			achievements:Unlock(player, "FIRST_TRY_ON")
+			retention:MarkJourney(player, "TRY_STYLE")
+			retention:MarkQuest(player, "TRY_STYLE")
 			task.defer(function()
 				items:RestoreEquipped(player)
 			end)
@@ -480,6 +505,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		return success, result
 	end,
 	[Network.Actions.UntryCatalogAsset] = function(player, payload)
+		if runway:IsLookFrozen(player) then
+			return false, "RUNWAY_LOOK_LOCKED"
+		end
 		local success, result = catalog:Untry(player, payload)
 		if success then
 			task.defer(function()
@@ -492,6 +520,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		return catalog:GetEquippedAccessories(player)
 	end,
 	[Network.Actions.ResetAvatar] = function(player)
+		if runway:IsLookFrozen(player) then
+			return false, "RUNWAY_LOOK_LOCKED"
+		end
 		local success, result = catalog:Reset(player)
 		if success then
 			task.defer(function()
@@ -551,7 +582,13 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		return true, { settings = profiles:Get(player).settings }
 	end,
 	[Network.Actions.CompleteOnboarding] = function(player)
+		local existingProfile = profiles:Get(player)
+		if existingProfile and existingProfile.onboarding.completed == true then
+			return true, {}
+		end
+		local previousStep = 1
 		local mutateSuccess, mutateProblem = profiles:Mutate(player, function(profile)
+			previousStep = math.clamp(math.floor(profile.onboarding.step or 1), 1, 4)
 			profile.onboarding.completed = true
 			profile.onboarding.step = 4
 		end)
@@ -561,7 +598,17 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		if not profiles:Save(player) then
 			return false, "SAVE_FAILED"
 		end
-		analytics:Onboarding(player, 4, "Ready to create")
+		-- The new onboarding is intentionally one decision instead of three
+		-- slides, but Roblox's funnel still needs ordered steps. Emit any
+		-- missing milestones here, after the authoritative completion save,
+		-- so asynchronous client telemetry cannot arrive out of order.
+		if previousStep < 2 then
+			analytics:Onboarding(player, 2, "Chose a starting path")
+		end
+		if previousStep < 3 then
+			analytics:Onboarding(player, 3, "First Look introduced")
+		end
+		analytics:Onboarding(player, 4, "Ready to style")
 		return true, {}
 	end,
 	[Network.Actions.Track] = function(player, payload)
@@ -588,6 +635,25 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			return false, "INVALID_REQUEST"
 		end
 		return arcade:GetFriendStandings(player, payload.game)
+	end,
+	[Network.Actions.GetRunwayState] = function(player)
+		return true, runway:GetState(player)
+	end,
+	[Network.Actions.JoinRunway] = function(player)
+		return runway:Join(player)
+	end,
+	[Network.Actions.LeaveRunway] = function(player)
+		return runway:Leave(player)
+	end,
+	[Network.Actions.ReadyRunwayLook] = function(player)
+		return runway:Ready(player)
+	end,
+	[Network.Actions.VoteRunway] = function(player, payload)
+		local targetUserId = type(payload) == "table" and payload.targetUserId or nil
+		return runway:Vote(player, targetUserId)
+	end,
+	[Network.Actions.GetRunwayLeaderboard] = function(player)
+		return runway:GetLeaderboard(player)
 	end,
 }
 
@@ -631,6 +697,7 @@ Players.PlayerRemoving:Connect(function(player)
 	playerStates:Remove(player)
 	commerce:Remove(player)
 	afkRewards:Remove(player)
+	runway:Remove(player)
 	profiles:Remove(player)
 end)
 

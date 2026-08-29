@@ -63,6 +63,13 @@ Network.Actions = table.freeze({
 	SubmitArcadeScore = "SubmitArcadeScore",
 	GetArcadeLeaderboard = "GetArcadeLeaderboard",
 	GetFriendArcadeLeaderboard = "GetFriendArcadeLeaderboard",
+	GetRunwayState = "GetRunwayState",
+	JoinRunway = "JoinRunway",
+	LeaveRunway = "LeaveRunway",
+	ReadyRunwayLook = "ReadyRunwayLook",
+	VoteRunway = "VoteRunway",
+	GetRunwayLeaderboard = "GetRunwayLeaderboard",
+	ReportJourneyAction = "ReportJourneyAction",
 })
 
 Network.PushEvents = table.freeze({
@@ -75,6 +82,9 @@ Network.PushEvents = table.freeze({
 	Entitlements = "Entitlements",
 	Quests = "Quests",
 	Afk = "Afk",
+	Runway = "Runway",
+	Journey = "Journey",
+	CreatorProgress = "CreatorProgress",
 })
 
 return table.freeze(Network)

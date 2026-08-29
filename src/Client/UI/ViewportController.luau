@@ -87,7 +87,7 @@ local function pointInsideVisibleBounds(gui: GuiObject, point: Vector2): boolean
 	return point.X >= minimum.X and point.X <= maximum.X and point.Y >= minimum.Y and point.Y <= maximum.Y
 end
 
-function ViewportController.new(viewport: ViewportFrame, excludedForgeItemId: string?)
+function ViewportController.new(viewport: ViewportFrame, excludedForgeItemId: string?, sourcePlayer: Player?)
 	local world = Instance.new("WorldModel")
 	world.Name = "ForgePreviewWorld"
 	world.Parent = viewport
@@ -248,13 +248,13 @@ function ViewportController.new(viewport: ViewportFrame, excludedForgeItemId: st
 	end)
 
 	task.spawn(function()
-		local player = Players.LocalPlayer
+		local previewPlayer = sourcePlayer or Players.LocalPlayer
 		local success, avatar = pcall(function()
-			local current = cloneCurrentCharacter(player)
+			local current = cloneCurrentCharacter(previewPlayer)
 			if current then
 				return current
 			end
-			local character = player.Character
+			local character = previewPlayer.Character
 			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 			if humanoid then
 				return Players:CreateHumanoidModelFromDescriptionAsync(
@@ -262,7 +262,7 @@ function ViewportController.new(viewport: ViewportFrame, excludedForgeItemId: st
 					humanoid.RigType
 				)
 			end
-			return Players:CreateHumanoidModelFromUserIdAsync(player.UserId)
+			return Players:CreateHumanoidModelFromUserIdAsync(previewPlayer.UserId)
 		end)
 		if success and avatar then
 			if not self.destroyed and viewport.Parent then

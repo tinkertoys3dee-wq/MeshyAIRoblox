@@ -18,6 +18,7 @@ local CLIENT_EVENTS = {
 	OnboardingStep = true,
 	CatalogSearch = true,
 	FitPresetApplied = true,
+	RunwayOpened = true,
 }
 
 -- "Settings" was missing here for a while: every Settings-page visit was
@@ -44,9 +45,9 @@ local ASSET_TYPE_VALUES = {
 }
 local ONBOARDING_STEP_NAMES = {
 	[1] = "Entered Forge",
-	[2] = "Understood creation paths",
-	[3] = "Understood fitting and marketplace",
-	[4] = "Ready to create",
+	[2] = "Chose a starting path",
+	[3] = "First Look introduced",
+	[4] = "Ready to style",
 }
 
 local function safeCall(callback: () -> ())
@@ -91,6 +92,8 @@ function AnalyticsService:PlayerJoined(player: Player, returning: boolean)
 		generation = HttpService:GenerateGUID(false),
 		reference = HttpService:GenerateGUID(false),
 		marketplace = HttpService:GenerateGUID(false),
+		runway = HttpService:GenerateGUID(false),
+		creator_journey = HttpService:GenerateGUID(false),
 		playtime = HttpService:GenerateGUID(false),
 		startedAt = os.time(),
 	}

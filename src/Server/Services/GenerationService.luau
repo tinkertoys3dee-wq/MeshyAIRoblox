@@ -175,7 +175,8 @@ function GenerationService.new(
 	push: (Player, string, any) -> (),
 	analyticsService: any,
 	achievementService: any,
-	itemService: any
+	itemService: any,
+	progressionService: any
 )
 	local self = setmetatable({
 		profiles = profileService,
@@ -185,6 +186,7 @@ function GenerationService.new(
 		analytics = analyticsService,
 		achievements = achievementService,
 		items = itemService,
+		progression = progressionService,
 		push = push,
 		polling = {} :: { [string]: boolean },
 		launching = {} :: { [string]: boolean },
@@ -1168,6 +1170,7 @@ function GenerationService:_CompleteModel(player: Player, generationId: string, 
 			productKey = existingGeneration.productKey,
 			method = existingGeneration.method,
 		})
+		self.progression:Grant(player, Config.CreatorProgression.ModelCompletionXP, "MODEL_COMPLETED")
 		self.achievements:Unlock(player, "FIRST_CREATION")
 		local completedCount = self.profiles:Get(player).stats.generationsCompleted
 		self.achievements:CheckCount(player, "FIVE_CREATIONS", completedCount, 5)
@@ -1248,6 +1251,7 @@ function GenerationService:_CompleteGraphic(player: Player, generationId: string
 			productKey = existingGeneration.productKey,
 			method = existingGeneration.method,
 		})
+		self.progression:Grant(player, Config.CreatorProgression.GraphicCompletionXP, "GRAPHIC_COMPLETED")
 		self.achievements:Unlock(player, "FIRST_CREATION")
 		local completedCount = self.profiles:Get(player).stats.generationsCompleted
 		self.achievements:CheckCount(player, "FIVE_CREATIONS", completedCount, 5)

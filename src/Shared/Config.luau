@@ -211,8 +211,8 @@ return table.freeze({
 		-- session count, is the point. bonusTokens, same Priority-Pass-only
 		-- restriction as every other grant in this table.
 		Quests = {
-			{ key = "GENERATE", label = "Forge or convert something new", icon = "🧊", tokens = 3 },
-			{ key = "FIT", label = "Save a fit on any item", icon = "🪄", tokens = 3 },
+			{ key = "TRY_STYLE", label = "Try any avatar accessory", icon = "◇", tokens = 3 },
+			{ key = "RUNWAY", label = "Finish a Forge Runway round", icon = "◆", tokens = 3 },
 			{ key = "ARCADE", label = "Post a score in the Arcade", icon = "🎮", tokens = 3 },
 		},
 		-- Extra one-shot bonus for clearing all Quests the same UTC day, on
@@ -234,6 +234,57 @@ return table.freeze({
 		-- tier repeats every this-many days instead of the table needing an
 		-- entry for every future day forever.
 		StreakMilestoneRepeatDay = 30,
+		-- A free first-session route through the systems that make Forge feel
+		-- like a game. Only OPEN_STUDIO is client-reported; every later step is
+		-- completed from a successful server action (try-on, runway lock-in,
+		-- round completion). Rewards are bonusTokens, so they can accelerate a
+		-- queue but can never pay OpenAI/Meshy provider cost.
+		FirstLookJourney = {
+			{ key = "OPEN_STUDIO", label = "Open your creator studio", icon = "✦" },
+			{ key = "TRY_STYLE", label = "Try any accessory", icon = "◇" },
+			{ key = "JOIN_RUNWAY", label = "Lock in a runway look", icon = "◆" },
+			{ key = "COMPLETE_RUNWAY", label = "Finish a style round", icon = "★" },
+		},
+		FirstLookStepTokens = 2,
+		FirstLookCompletionTokens = 12,
+		FirstLookCompletionXP = 100,
+	},
+
+	-- A populated server-wide style round lasts exactly six minutes. A solo
+	-- server skips the meaningless ballot phase rather than padding time;
+	-- otherwise two rounds form the 10-15 minute session target through active
+	-- styling, avatar viewing, voting, and results. Routine rewards are XP or
+	-- bonusTokens, never provider-backed tokens.
+	Runway = {
+		Themes = {
+			"Cyber royalty",
+			"Soft cloud fantasy",
+			"Retro arcade hero",
+			"Deep-sea explorer",
+			"Celestial streetwear",
+			"Nature reclaimed",
+			"Villain entrance",
+			"Candy-colored chaos",
+			"Ancient future",
+			"Prismatic festival",
+		},
+		IntermissionSeconds = 30,
+		StylingSeconds = 210,
+		VotingSeconds = 90,
+		ResultsSeconds = 30,
+		MinimumEntrantsForPlacement = 2,
+		ParticipationXP = 25,
+		VoteXP = 5,
+		PlacementXP = { 100, 60, 40 },
+		DailyFirstRoundBonusTokens = 5,
+		WeeklyPlacementXP = { 600, 350, 200 },
+		LeaderboardSize = 10,
+	},
+
+	CreatorProgression = {
+		ModelCompletionXP = 75,
+		GraphicCompletionXP = 35,
+		FirstPublishXP = 50,
 	},
 
 	AFK = {
@@ -378,6 +429,7 @@ return table.freeze({
 		-- week, so a fixed list here wouldn't fit the pattern the other
 		-- stores use).
 		ArcadeMeta = "ForgeUGC_ArcadeMeta_v1",
+		RunwayMeta = "ForgeUGC_RunwayMeta_v1",
 	},
 
 	Leaderboard = {

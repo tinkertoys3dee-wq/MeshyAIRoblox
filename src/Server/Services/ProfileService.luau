@@ -21,7 +21,7 @@ end
 local function defaultProfile(userId: number): { [string]: any }
 	local now = os.time()
 	return {
-		schemaVersion = 2,
+		schemaVersion = 3,
 		userId = userId,
 		items = {},
 		itemOrder = {},
@@ -57,6 +57,23 @@ local function defaultProfile(userId: number): { [string]: any }
 		bonusTokens = 0,
 		adWatch = { day = 0, count = 0 },
 		afk = { day = 0, earned = 0 },
+		creator = {
+			xp = 0,
+			level = 1,
+			runwayEntries = 0,
+			runwayWins = 0,
+			runwayVotes = 0,
+		},
+		firstLookJourney = { done = {}, completed = false, completedAt = 0 },
+		runway = {
+			dailyDay = 0,
+			dailyCompleted = false,
+			weeklyPlacements = 0,
+			-- Makes weekly payouts safe to retry after a transient DataStore
+			-- failure or two servers racing at the UTC week boundary.
+			weeklyPaidWeek = 0,
+			weeklyReward = { week = 0, rank = 0, xp = 0, announced = true },
+		},
 		achievements = {},
 		settings = { soundsEnabled = true, reduceMotion = false, highContrast = false, uiScale = 1 },
 		stats = {
@@ -171,7 +188,7 @@ function ProfileService:Load(player: Player): (boolean, string?)
 			+ profile.retryCredits.ImagePreview
 		profile.retryCredits.ImagePreview = nil
 	end
-	profile.schemaVersion = 2
+	profile.schemaVersion = 3
 	profile.userId = player.UserId
 	profile.updatedAt = os.time()
 	profile.stats.sessions += 1
@@ -249,7 +266,7 @@ function ProfileService:ReadUser(userId: number): { [string]: any }?
 	if success and type(result) == "table" then
 		local profile = result :: { [string]: any }
 		reconcile(profile, defaultProfile(userId))
-		profile.schemaVersion = 2
+		profile.schemaVersion = 3
 		return profile
 	end
 	return nil
@@ -267,7 +284,7 @@ function ProfileService:MutateUser(userId: number, mutator: ({ [string]: any }) 
 		return self.store:UpdateAsync(keyFor(userId), function(stored)
 			local profile = if type(stored) == "table" then stored else defaultProfile(userId)
 			reconcile(profile, defaultProfile(userId))
-			profile.schemaVersion = 2
+			profile.schemaVersion = 3
 			mutator(profile)
 			profile.updatedAt = os.time()
 			return profile

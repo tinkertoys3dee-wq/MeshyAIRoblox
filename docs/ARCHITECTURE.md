@@ -73,12 +73,21 @@ Forge Tokens are earned by watching a Roblox Rewarded Video ad (`Class.AdService
 - liked/favorited item references;
 - pending generation purchases and Plus transfers;
 - paid/ad Forge Token balance, free bonus-token balance, the daily ad counter, and AFK daily earnings;
+- First Look progress, Creator XP/level statistics, runway participation, daily runway reward state, and idempotent weekly payout state;
 - processed developer-product receipt IDs;
 - settings, onboarding, streak, and analytics counters.
 
 `ForgeUGC_ItemIndex_v1` contains only public item IDs, owner IDs, current listing state/price, engagement counters, and ranking timestamps. Trending scores and cross-server listing availability are calculated from that index; the owner profile remains canonical for ownership, licensing, visibility, and the source model. This small shared index is necessary because Roblox DataStores cannot enumerate every player key for marketplace discovery.
 
 The raw GLB/PNG bytes are never placed in a DataStore. Roblox DataStores are metadata stores with strict value-size limits. Final files become Roblox assets; temporary provider artifacts live only long enough for Railway to validate and upload them.
+
+## First Look, Creator progression, and Forge Runway
+
+`RetentionService` owns the free four-step First Look journey. The client may report only `OPEN_STUDIO`; try-on, runway ready, and round completion advance from successful server branches. Every step is idempotent and persists to the player profile. Its token grants use `bonusTokens`, so the journey can buy a Priority Pass but cannot fund OpenAI or Meshy work.
+
+`ProgressionService` is the single authority for Creator XP. `CreatorProgression.luau` contains pure shared level/title math for display, while every award is applied on the server after a completed action. Generation completion IDs already make creation XP idempotent; weekly runway awards additionally store `profile.runway.weeklyPaidWeek`, making cross-server payout retries safe.
+
+`RunwayService` synchronizes a server-local style round without creating Workspace instances or changing Lighting. Players join during intermission/styling, mark a look ready, inspect live character appearances inside client-only `WorldModel` viewports, and cast at most one non-self vote. In-game equip/unequip/try-on/reset routes freeze for ready entrants during voting/results, so a displayed look cannot change after ballots open. Departed entrants and their votes are removed safely. Equal vote totals use a server-authored random tie break rather than lock-in speed, so players are not incentivized to rush the styling phase. Results grant participation/placement XP, one daily `bonusTokens` reward, First Look/daily-quest progress, and weekly spotlight points. The weekly top-three payout reads an `OrderedDataStore`; per-profile idempotency permits overlapping servers, and the global completion marker advances only after every winner mutation succeeds.
 
 ## Roblox asset lifecycle
 
@@ -116,4 +125,4 @@ Trying on a public item is free and does not require Plus or an active listing. 
 
 ## Analytics boundary
 
-Only server-authored events and three tightly allowlisted client events reach `AnalyticsService`. Fields are enumerated or numeric, capped in count and length, and never contain prompts, item names, catalog queries, or provider responses. See `docs/ANALYTICS.md` for the launch scorecard and decision cadence.
+Only server-authored events and a small, tightly allowlisted set of client UI events reach `AnalyticsService`. Fields are enumerated or numeric, capped in count and length, and never contain prompts, item names, catalog queries, or provider responses. See `docs/ANALYTICS.md` for the launch scorecard and decision cadence.

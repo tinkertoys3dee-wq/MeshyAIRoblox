@@ -19,6 +19,7 @@ local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Factory)
 local GamesHub = require(script.Parent.GamesHub)
+local RunwayHub = require(script.Parent.RunwayHub)
 local SoundController = require(script.Parent.SoundController)
 local ViewportController = require(script.Parent.ViewportController)
 
@@ -147,6 +148,15 @@ local ERROR_MESSAGES = {
 	CONTENT_NOT_FOUND = "That creation is no longer available. Refresh and try again.",
 	CANNOT_TIP_SELF = "You can't tip your own creation.",
 	INVALID_TIP_AMOUNT = "Choose one of the available tip amounts.",
+	RUNWAY_JOIN_CLOSED = "This runway round has already moved to voting. Join the next one.",
+	RUNWAY_ROUND_ACTIVE = "Finish the active runway round before leaving it.",
+	RUNWAY_NOT_STYLING = "Looks can only be locked during the styling phase.",
+	RUNWAY_NOT_JOINED = "Join the runway before locking in a look.",
+	RUNWAY_SELF_VOTE = "Choose another creator's look—you cannot vote for yourself.",
+	RUNWAY_ALREADY_VOTED = "You already cast your vote for this round.",
+	RUNWAY_LOOK_UNAVAILABLE = "That look left the runway or was not locked in.",
+	RUNWAY_NOT_VOTING = "Voting is not open for this runway round.",
+	RUNWAY_LOOK_LOCKED = "Your runway look is frozen during voting and results.",
 }
 
 local CATALOG_TYPES = {
@@ -378,6 +388,9 @@ function App.new()
 		afkSnapshot = nil :: { [string]: any }?,
 		afkOverlay = nil :: Frame?,
 		afkRunId = 0,
+		runwayState = nil :: { [string]: any }?,
+		runwayOverlay = nil :: Frame?,
+		runwayRefresh = nil :: (({ [string]: any }) -> ())?,
 		pageVersion = 0,
 		toastVersion = 0,
 		queuedSoundIds = {} :: { [string]: boolean },
@@ -391,6 +404,7 @@ function App.new()
 		-- the Settings page's UIScale chips can keep it live-scaled too --
 		-- see the "Make Arcade modal inherit UIScale" fix in GamesHub.luau.
 		arcadeUiScale = nil :: UIScale?,
+		runwayUiScale = nil :: UIScale?,
 	}, App)
 	self:_BuildChrome()
 	AvatarEditorService.PromptAllowInventoryReadAccessCompleted:Connect(function(result)
@@ -638,6 +652,26 @@ function App:_BuildChrome()
 	end)
 	self.launcher = launcher
 
+	-- The primary repeatable social loop. It lives beside the launchers and
+	-- renders avatars in isolated ViewportFrames; it never constructs a map
+	-- stage or changes global Lighting.
+	local runwayLauncher = buildLauncher(
+		"◆",
+		"Forge Runway",
+		"6-minute live style battles",
+		-146,
+		Colors.Rose,
+		Color3.fromRGB(255, 139, 188),
+		Color3.fromRGB(189, 59, 126),
+		Colors.Text
+	)
+	runwayLauncher.Name = "RunwayLauncher"
+	self:_BindButton(runwayLauncher)
+	runwayLauncher.Activated:Connect(function()
+		RunwayHub.Show(self)
+	end)
+	self.runwayLauncher = runwayLauncher
+
 	-- A separate entry point from the Forge Studio launcher above, not a
 	-- variant of it: this opens the Arcade (see GamesHub), which has nothing
 	-- to do with creation/fitting/marketplace. Same visibility rule as the
@@ -647,7 +681,7 @@ function App:_BuildChrome()
 		"🎮",
 		"Arcade",
 		string.format("%d mini-games · weekly prizes", #Config.Arcade.Games),
-		-146,
+		-214,
 		Colors.Mint,
 		Color3.fromRGB(160, 255, 215),
 		Color3.fromRGB(46, 196, 143),
@@ -664,7 +698,7 @@ function App:_BuildChrome()
 		"✧",
 		"Tokens for AFK",
 		"Passive bonus tokens · optional ads",
-		-214,
+		-282,
 		Color3.fromRGB(54, 44, 112),
 		Color3.fromRGB(105, 86, 212),
 		Color3.fromRGB(22, 19, 54),
@@ -723,7 +757,7 @@ function App:_BuildChrome()
 		Name = "StatusArea",
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -68, 0.5, 0),
-		Size = UDim2.fromOffset(430, 48),
+		Size = UDim2.fromOffset(560, 48),
 		BackgroundTransparency = 1,
 		Parent = topbar,
 	})
@@ -1390,14 +1424,18 @@ function App:_SetStudioOpen(open: boolean)
 	-- shell does not hide the panel automatically; recompute its visibility
 	-- in the same frame as every open/close transition.
 	self:_LayoutAvatarPreviewPanel()
-	local showLaunchers = not open and self.afkOverlay == nil
+	local showLaunchers = not open and self.afkOverlay == nil and self.runwayOverlay == nil
 	self.launcher.Visible = showLaunchers
+	self.runwayLauncher.Visible = showLaunchers
 	self.arcadeLauncher.Visible = showLaunchers
 	self.afkLauncher.Visible = showLaunchers
 	if changed and open then
 		self.sounds:Play("PanelOpen")
 	elseif changed then
 		self.sounds:Play("PanelClose")
+	end
+	if open then
+		self:_MarkJourneyOpen()
 	end
 end
 
@@ -1546,6 +1584,24 @@ function App:_PromptFriendInvite()
 		warn(string.format("[App] Game invite prompt failed: %s", tostring(promptProblem)))
 		self:_Toast("error", "Roblox could not open the invite prompt.")
 	end
+end
+
+function App:_MarkJourneyOpen()
+	local state = self.state
+	local journey = state and state.journeyState
+	if not state or not journey or journey.completed or (journey.done and journey.done.OPEN_STUDIO) then
+		return
+	end
+	task.spawn(function()
+		local success, result = self:_Invoke(Network.Actions.ReportJourneyAction, { action = "OPEN_STUDIO" })
+		if success and self.state then
+			self.state.journeyState = result
+			if self.runwayState then
+				self.runwayState.journeyState = result
+			end
+			self:_RenderActivePage()
+		end
+	end)
 end
 
 -- Shared by the Create page's own Priority Pass button and the contextual
@@ -1733,6 +1789,7 @@ function App:_CloseAfkLounge()
 	self.afkOverlay = nil
 	overlay:Destroy()
 	self.launcher.Visible = not self.shell.Visible
+	self.runwayLauncher.Visible = not self.shell.Visible
 	self.arcadeLauncher.Visible = not self.shell.Visible
 	self.afkLauncher.Visible = not self.shell.Visible
 	self.afkSnapshot = nil
@@ -1755,6 +1812,7 @@ function App:_OpenAfkLounge()
 	self.afkRunId += 1
 	local runId = self.afkRunId
 	self.launcher.Visible = false
+	self.runwayLauncher.Visible = false
 	self.arcadeLauncher.Visible = false
 	self.afkLauncher.Visible = false
 
@@ -2028,6 +2086,7 @@ function App:_Bootstrap()
 			return
 		end
 		self.state = data
+		self.runwayState = data.runwayState
 		self.adWatchesToday = watchesTodayFromProfile(data.profile)
 		self.sounds:SetEnabled(data.profile.settings.soundsEnabled ~= false)
 		if data.profile.settings.highContrast == true then
@@ -2040,8 +2099,9 @@ function App:_Bootstrap()
 		self:_SetAmbientMotion(data.profile.settings.reduceMotion ~= true)
 		self.loading:Destroy()
 		self:_RenderStatus()
-		self:_OpenPage("Create")
 		self:_ConnectPush()
+		self:_OpenPage("Create")
+		self:_MarkJourneyOpen()
 		self:_RefreshLocalizedPrices()
 		if not data.profile.onboarding.completed then
 			self:_ShowOnboarding()
@@ -2114,6 +2174,7 @@ function App:_RefreshBootstrap()
 		local success, data = self:_Invoke(Network.Actions.Bootstrap, {})
 		if success then
 			self.state = data
+			self.runwayState = data.runwayState
 			self.adWatchesToday = watchesTodayFromProfile(data.profile)
 			self:_RenderStatus()
 			self:_RenderActivePage()
@@ -2148,6 +2209,7 @@ function App:_SetHighContrast(enabled: boolean)
 	self.loading:Destroy()
 	self.shell.Visible = wasOpen
 	self.launcher.Visible = not wasOpen
+	self.runwayLauncher.Visible = not wasOpen
 	self.arcadeLauncher.Visible = not wasOpen
 	self.afkLauncher.Visible = not wasOpen
 	self:_UpdateSoundButton()
@@ -2430,6 +2492,34 @@ function App:_ConnectPush()
 				self.sounds:Play("Success")
 			end
 			self:_RenderActivePage()
+		elseif eventName == Network.PushEvents.Runway then
+			self.runwayState = payload
+			self.state.runwayState = payload
+			self.state.creatorProgress = payload.creatorProgress or self.state.creatorProgress
+			self.state.journeyState = payload.journeyState or self.state.journeyState
+			if self.runwayRefresh then
+				self.runwayRefresh(payload)
+			end
+			self:_RenderStatus()
+		elseif eventName == Network.PushEvents.Journey then
+			self.state.journeyState = payload.state
+			if self.runwayState then
+				self.runwayState.journeyState = payload.state
+			end
+			if self.runwayRefresh and self.runwayState then
+				self.runwayRefresh(self.runwayState)
+			end
+			self:_RenderActivePage()
+		elseif eventName == Network.PushEvents.CreatorProgress then
+			self.state.profile.creator = payload.creator
+			self.state.creatorProgress = payload.progress
+			if self.runwayState then
+				self.runwayState.creatorProgress = payload.progress
+			end
+			if self.runwayRefresh and self.runwayState then
+				self.runwayRefresh(self.runwayState)
+			end
+			self:_RenderStatus()
 		end
 	end)
 end
@@ -2449,9 +2539,14 @@ function App:_RenderStatus()
 	end
 	local benefits = self.state.benefits
 	local daily = self.state.dailyBrief
+	local creator = self.state.creatorProgress
+	if creator then
+		Factory.Pill(self.statusArea, string.format("LV. %d CREATOR", creator.level or 1), Colors.Gold, 112).LayoutOrder =
+			1
+	end
 	if daily then
 		Factory.Pill(self.statusArea, string.format("🔥 %d DAY STREAK", daily.streak), Colors.Rose, 112).LayoutOrder =
-			1
+			2
 	end
 	Factory.Pill(
 		self.statusArea,
@@ -2459,14 +2554,14 @@ function App:_RenderStatus()
 		Colors.Cyan,
 		118
 	).LayoutOrder =
-		2
+		3
 	Factory.Pill(
 		self.statusArea,
 		if benefits.plusSubscriber then "PLUS ACTIVE" else "PLUS: SELL ONLY",
 		if benefits.plusSubscriber then Colors.Mint else Colors.Gold,
 		124
 	).LayoutOrder =
-		3
+		4
 end
 
 function App:_OpenPage(page: string)
@@ -2649,6 +2744,95 @@ function App:_RenderCreate()
 		Parent = page,
 	})
 	Factory.List(stack, Enum.FillDirection.Vertical, 14)
+
+	-- The real first-session path, kept visible on Create until completed.
+	-- It produces a satisfying outfit/runway result without requiring a paid
+	-- AI call, then becomes a permanent shortcut back to the social loop.
+	local firstLook = self.state.journeyState
+	if firstLook then
+		local complete = firstLook.completed == true
+		local card = Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 158 else 132), nil, "FirstLook")
+		card.LayoutOrder = -1
+		local icon = Factory.New("Frame", {
+			Size = UDim2.fromOffset(44, 44),
+			Position = UDim2.fromOffset(16, 16),
+			BackgroundColor3 = if complete then Colors.Mint else Colors.Rose,
+			BorderSizePixel = 0,
+			Parent = card,
+		})
+		Factory.Corner(icon, 15)
+		Factory.Gradient(icon, if complete then { Colors.Mint, Colors.Cyan } else { Colors.Rose, Colors.Violet }, 135)
+		Factory.Label(icon, if complete then "✓" else "◆", UDim2.fromScale(1, 1), {
+			Font = Theme.Fonts.Black,
+			TextSize = 20,
+			Color = if complete then Colors.Ink else Colors.Text,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+		})
+		Factory.Label(
+			card,
+			if complete then "First Look complete" else "Start with a free First Look",
+			UDim2.new(1, if self.compact then -88 else -240, 0, 26),
+			{
+				Position = UDim2.fromOffset(72, 13),
+				Font = Theme.Fonts.Black,
+				TextSize = 17,
+				Truncate = Enum.TextTruncate.AtEnd,
+			}
+		)
+		Factory.Label(
+			card,
+			if complete
+				then "Keep leveling up in six-minute Forge Runway style battles."
+				else "Try a catalog style, lock it in, and finish one runway round—no generation purchase needed.",
+			UDim2.new(if self.compact then 1 else 0.68, if self.compact then -32 else -80, 0, 38),
+			{
+				Position = UDim2.fromOffset(if self.compact then 16 else 72, if self.compact then 67 else 42),
+				Color = Colors.TextMuted,
+				TextSize = 11,
+				Wrapped = true,
+				AlignY = Enum.TextYAlignment.Top,
+			}
+		)
+		local total = math.max(1, firstLook.total or #Config.Retention.FirstLookJourney)
+		local progress = if complete then 1 else math.clamp((firstLook.doneCount or 0) / total, 0, 1)
+		local track = Factory.New("Frame", {
+			Position = UDim2.fromOffset(16, if self.compact then 104 else 92),
+			Size = UDim2.new(if self.compact then 1 else 0.68, if self.compact then -32 else -32, 0, 9),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 0.35,
+			BorderSizePixel = 0,
+			Parent = card,
+		})
+		Factory.Corner(track, 5)
+		local fill = Factory.New("Frame", {
+			Size = UDim2.new(progress, 0, 1, 0),
+			BackgroundColor3 = if complete then Colors.Mint else Colors.Rose,
+			BorderSizePixel = 0,
+			Parent = track,
+		})
+		Factory.Corner(fill, 5)
+		local continue = Factory.Button(
+			card,
+			if complete
+				then "Open Forge Runway"
+				else string.format("Continue · %d/%d", firstLook.doneCount or 0, total),
+			if self.compact then UDim2.new(1, -32, 0, 36) else UDim2.new(0.27, -12, 0, 42),
+			if self.compact then UDim2.fromOffset(16, 116) else UDim2.new(0.72, 0, 0, 45),
+			if complete then "mint" else "primary"
+		)
+		self:_BindButton(continue)
+		continue.Activated:Connect(function()
+			local done = firstLook.done or {}
+			if not done.OPEN_STUDIO then
+				self:_MarkJourneyOpen()
+			elseif not done.TRY_STYLE then
+				self:_OpenPage("Avatar Lab")
+			else
+				RunwayHub.Show(self)
+			end
+		end)
+	end
 
 	if self.adAvailable == nil and not self.adAvailabilityChecking then
 		self:_RefreshAdAvailability()
@@ -5543,8 +5727,55 @@ function App:_RenderAvatarLab()
 	local controlsHeight = if filtersExpanded
 		then (if self.compact then 276 else 200)
 		else (if self.compact then 194 else 151)
-	local controls =
-		Factory.Card(self.content, UDim2.new(0.95, 0, 0, controlsHeight), UDim2.new(0.025, 0, 0, 94), "CatalogControls")
+	local runwayState = self.runwayState or self.state.runwayState
+	local runwayJoined = runwayState and runwayState.joined == true
+	local controlsTop = if runwayJoined then 164 else 94
+	if runwayJoined then
+		local runwayBanner =
+			Factory.Card(self.content, UDim2.new(0.95, 0, 0, 54), UDim2.new(0.025, 0, 0, 94), "RunwayReturn")
+		local runwayLabel = Factory.Label(runwayBanner, "", UDim2.new(1, -154, 1, 0), {
+			Position = UDim2.fromOffset(14, 0),
+			Font = Theme.Fonts.Bold,
+			TextSize = 11,
+			Color = Colors.Rose,
+			Truncate = Enum.TextTruncate.AtEnd,
+		})
+		local returnButton = Factory.Button(
+			runwayBanner,
+			if runwayState.ready then "View round" else "Return & lock in",
+			UDim2.fromOffset(126, 34),
+			UDim2.new(1, -140, 0, 10),
+			"primary"
+		)
+		self:_BindButton(returnButton)
+		returnButton.Activated:Connect(function()
+			RunwayHub.Show(self)
+		end)
+		local bannerVersion = self.pageVersion
+		task.spawn(function()
+			while bannerVersion == self.pageVersion and runwayLabel.Parent do
+				local liveState = self.runwayState or runwayState
+				local remaining = math.max(0, math.floor((liveState.endsAt or os.time()) - os.time()))
+				runwayLabel.Text = string.format(
+					"◆  %s · %d:%02d",
+					liveState.theme or "Forge Runway",
+					math.floor(remaining / 60),
+					remaining % 60
+				)
+				returnButton.Text = if liveState.joined == false
+					then "Next round"
+					elseif liveState.ready then "View round"
+					else "Return & lock in"
+				task.wait(1)
+			end
+		end)
+	end
+	local controls = Factory.Card(
+		self.content,
+		UDim2.new(0.95, 0, 0, controlsHeight),
+		UDim2.new(0.025, 0, 0, controlsTop),
+		"CatalogControls"
+	)
 	local search = self:_TextBox(
 		controls,
 		"Search the Roblox avatar marketplace",
@@ -5756,7 +5987,7 @@ function App:_RenderAvatarLab()
 		local access = Factory.Card(
 			self.content,
 			UDim2.new(0.95, 0, 0, 190),
-			UDim2.new(0.025, 0, 0, 94 + controlsHeight + 16),
+			UDim2.new(0.025, 0, 0, controlsTop + controlsHeight + 16),
 			"CatalogAccess"
 		)
 		Factory.Label(access, "Enable Roblox catalog access", UDim2.new(1, -32, 0, 34), {
@@ -5794,7 +6025,7 @@ function App:_RenderAvatarLab()
 	if self.catalogResults == nil and not self.catalogSearching then
 		self:_SearchCatalog(self.catalogQuery)
 	end
-	local belowControls = 94 + controlsHeight + 16
+	local belowControls = controlsTop + controlsHeight + 16
 	if self.catalogSearching then
 		Factory.Label(self.content, "Searching Roblox Marketplace…", UDim2.new(1, -52, 0, 60), {
 			Position = UDim2.fromOffset(26, belowControls + 20),
@@ -7006,6 +7237,9 @@ function App:_RenderSettings()
 			if self.arcadeUiScale then
 				self.arcadeUiScale.Scale = option.Value
 			end
+			if self.runwayUiScale then
+				self.runwayUiScale.Scale = option.Value
+			end
 			self:_UpdateSetting("uiScale", option.Value)
 		end)
 	end
@@ -7266,120 +7500,102 @@ function App:_ShowOnboarding()
 		ZIndex = 200,
 		Parent = self.gui,
 	})
-	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, 430), UDim2.fromScale(0.5, 0.5), "OnboardingModal")
+	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, 400), UDim2.fromScale(0.5, 0.5), "OnboardingModal")
 	modal.AnchorPoint = Vector2.new(0.5, 0.5)
 	modal.ZIndex = 201
 	Factory.New("UISizeConstraint", {
-		MaxSize = Vector2.new(610, 430),
+		MaxSize = Vector2.new(620, 400),
 		Parent = modal,
 	})
-	for _, descendant in modal:GetDescendants() do
-		if descendant:IsA("GuiObject") then
-			descendant.ZIndex = 202
-		end
-	end
-	local step = 1
-	local slides = {
+	local badge = Factory.New("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 28),
+		Size = UDim2.fromOffset(70, 70),
+		BackgroundColor3 = Colors.Rose,
+		BorderSizePixel = 0,
+		ZIndex = 203,
+		Parent = modal,
+	})
+	Factory.Corner(badge, 23)
+	Factory.Gradient(badge, { Colors.Rose, Colors.Violet, Colors.Cyan }, 135)
+	Factory.Label(badge, "◆", UDim2.fromScale(1, 1), {
+		Font = Theme.Fonts.Black,
+		TextSize = 34,
+		AlignX = Enum.TextXAlignment.Center,
+		AlignY = Enum.TextYAlignment.Center,
+		ZIndex = 204,
+	})
+	Factory.Label(modal, "WELCOME TO FORGE", UDim2.new(1, -48, 0, 22), {
+		Position = UDim2.fromOffset(24, 112),
+		AlignX = Enum.TextXAlignment.Center,
+		Font = Theme.Fonts.Bold,
+		TextSize = 11,
+		Color = Colors.Mint,
+		ZIndex = 203,
+	})
+	Factory.Label(modal, "Make a look before you make a purchase.", UDim2.new(1, -64, 0, 58), {
+		Position = UDim2.fromOffset(32, 138),
+		AlignX = Enum.TextXAlignment.Center,
+		Font = Theme.Fonts.Black,
+		TextSize = 24,
+		Wrapped = true,
+		ZIndex = 203,
+	})
+	Factory.Label(
+		modal,
+		"The free First Look journey takes you through Avatar Lab and one live style round. After that, create, fit, publish, and sell whenever you're ready.",
+		UDim2.new(1, -86, 0, 70),
 		{
-			kicker = "WELCOME TO THE FORGE",
-			title = "Your idea becomes a Roblox-ready object.",
-			body = "Choose Direct Forge for value, Art-Directed for an AI reference, or unlock Upload Reference for your own Roblox-moderated art. Style and detail controls guide every path.",
-			icon = "✦",
-		},
-		{
-			kicker = "FIT WITH PRECISION",
-			title = "Position, rotate, and scale on an avatar.",
-			body = "Every generated model targets one mesh, fewer than 4,000 triangles and vertices, with a 2K-or-smaller texture. Save separate fits for originals and purchased copies.",
-			icon = "◈",
-		},
-		{
-			kicker = "SHARE ON YOUR TERMS",
-			title = "Try freely. Sell only when you choose.",
-			body = "Public designs can always be tried on. Owners control listings. Buying requires Roblox Plus and a verified transfer receipt; purchased copies can never be resold.",
-			icon = "◎",
-		},
-	}
-	local function draw()
-		for _, child in modal:GetChildren() do
-			if
-				not child:IsA("UICorner")
-				and not child:IsA("UIStroke")
-				and not child:IsA("UIGradient")
-				and child.Name ~= "Gloss"
-			then
-				child:Destroy()
-			end
-		end
-		local slide = slides[step]
-		Factory.Label(modal, slide.icon, UDim2.new(1, 0, 0, 92), {
-			Position = UDim2.fromOffset(0, 34),
-			AlignX = Enum.TextXAlignment.Center,
-			Font = Theme.Fonts.Black,
-			TextSize = 66,
-			Color = if step == 1 then Colors.Cyan elseif step == 2 then Colors.Violet else Colors.Rose,
-			ZIndex = 203,
-		})
-		Factory.Label(modal, slide.kicker, UDim2.new(1, -60, 0, 24), {
-			Position = UDim2.fromOffset(30, 126),
-			AlignX = Enum.TextXAlignment.Center,
-			Font = Theme.Fonts.Bold,
-			TextSize = 11,
-			Color = Colors.Mint,
-			ZIndex = 203,
-		})
-		Factory.Label(modal, slide.title, UDim2.new(1, -72, 0, 66), {
-			Position = UDim2.fromOffset(36, 158),
-			AlignX = Enum.TextXAlignment.Center,
-			Font = Theme.Fonts.Black,
-			TextSize = 24,
-			Wrapped = true,
-			ZIndex = 203,
-		})
-		Factory.Label(modal, slide.body, UDim2.new(1, -90, 0, 94), {
-			Position = UDim2.fromOffset(45, 230),
+			Position = UDim2.fromOffset(43, 204),
 			AlignX = Enum.TextXAlignment.Center,
 			AlignY = Enum.TextYAlignment.Top,
 			Color = Colors.TextMuted,
-			TextSize = 14,
+			TextSize = 13,
 			Wrapped = true,
 			ZIndex = 203,
-		})
-		local nextButton = Factory.Button(
-			modal,
-			if step == #slides then "Enter the studio" else "Continue",
-			UDim2.fromOffset(190, 44),
-			UDim2.new(0.5, -95, 1, -68),
-			"primary"
-		)
-		nextButton.ZIndex = 204
-		self:_BindButton(nextButton)
-		nextButton.Activated:Connect(function()
-			if step < #slides then
-				step += 1
-				self:_Track({ event = "OnboardingStep", step = step })
-				draw()
-			else
-				task.spawn(function()
-					local success = self:_Invoke(Network.Actions.CompleteOnboarding, {})
-					if success then
-						self.state.profile.onboarding.completed = true
-					end
-				end)
-				overlay:Destroy()
-				self.sounds:Play("Success")
-				self:_Toast("success", "Your studio is ready. Start with today's brief or your own idea.")
+		}
+	)
+	local start = Factory.Button(
+		modal,
+		"Start my free First Look",
+		UDim2.new(1, -64, 0, 46),
+		UDim2.fromOffset(32, 286),
+		"primary"
+	)
+	start.ZIndex = 204
+	self:_BindButton(start)
+	local skip = Factory.Button(modal, "Explore on my own", UDim2.new(1, -64, 0, 34), UDim2.fromOffset(32, 340), nil)
+	skip.ZIndex = 204
+	self:_BindButton(skip)
+
+	local finishing = false
+	local function finish(openJourney: boolean)
+		if finishing then
+			return
+		end
+		finishing = true
+		task.spawn(function()
+			local success = self:_Invoke(Network.Actions.CompleteOnboarding, {})
+			if success and self.state then
+				self.state.profile.onboarding.completed = true
 			end
 		end)
-		Factory.Label(modal, string.format("%d  /  %d", step, #slides), UDim2.fromOffset(90, 24), {
-			Position = UDim2.fromOffset(24, 378),
-			Color = Colors.TextMuted,
-			Font = Theme.Fonts.Bold,
-			TextSize = 11,
-			ZIndex = 203,
-		})
+		overlay:Destroy()
+		if openJourney then
+			self:_OpenPage("Avatar Lab")
+			self:_Toast("success", "First step: try any accessory on your avatar.")
+		else
+			self:_Toast("success", "Explore freely. Your First Look tracker will stay on the Create page.")
+		end
 	end
-	draw()
+	start.Activated:Connect(function()
+		finish(true)
+	end)
+	skip.Activated:Connect(function()
+		finish(false)
+	end)
 	self:_AnimateModalIn(overlay, modal)
+	GuiService.SelectedObject = start
 end
 
 function App:_ShowPlus()

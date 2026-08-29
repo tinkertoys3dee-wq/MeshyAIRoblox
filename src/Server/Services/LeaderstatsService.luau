@@ -44,6 +44,7 @@ function LeaderstatsService:Init(player: Player, profile: { [string]: any })
 	valueFor("Creations")
 	valueFor("Bought")
 	valueFor("Robux Spent")
+	valueFor("Creator Level")
 	self:Refresh(player, profile)
 end
 
@@ -64,6 +65,10 @@ function LeaderstatsService:Refresh(player: Player, profile: { [string]: any })
 	local robuxSpent = folder:FindFirstChild("Robux Spent")
 	if robuxSpent and robuxSpent:IsA("IntValue") then
 		robuxSpent.Value = robuxSpentOnCreators(stats)
+	end
+	local creatorLevel = folder:FindFirstChild("Creator Level")
+	if creatorLevel and creatorLevel:IsA("IntValue") then
+		creatorLevel.Value = if profile.creator then profile.creator.level or 1 else 1
 	end
 end
 

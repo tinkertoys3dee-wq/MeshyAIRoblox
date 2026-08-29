@@ -41,6 +41,13 @@ for _, quest in Config.Retention.Quests do
 	QUEST_BY_KEY[quest.key] = quest
 end
 
+local JOURNEY_BY_KEY = {} :: { [string]: { key: string, label: string, icon: string } }
+local JOURNEY_INDEX = {} :: { [string]: number }
+for index, step in Config.Retention.FirstLookJourney do
+	JOURNEY_BY_KEY[step.key] = step
+	JOURNEY_INDEX[step.key] = index
+end
+
 local RetentionService = {}
 RetentionService.__index = RetentionService
 
@@ -48,15 +55,116 @@ function RetentionService.new(
 	profileService: any,
 	analyticsService: any,
 	achievementService: any,
-	push: (Player, string, any) -> ()
+	push: (Player, string, any) -> (),
+	progressionService: any
 )
 	return setmetatable({
 		profiles = profileService,
 		analytics = analyticsService,
 		achievements = achievementService,
 		push = push,
+		progression = progressionService,
 		briefs = {} :: { [Player]: { [string]: any } },
 	}, RetentionService)
+end
+
+function RetentionService:GetJourneyState(player: Player): { [string]: any }
+	local profile = self.profiles:Get(player)
+	local journey = profile and profile.firstLookJourney or { done = {}, completed = false, completedAt = 0 }
+	local doneCount = 0
+	for _, definition in Config.Retention.FirstLookJourney do
+		if journey.done[definition.key] then
+			doneCount += 1
+		end
+	end
+	return {
+		done = journey.done,
+		doneCount = doneCount,
+		total = #Config.Retention.FirstLookJourney,
+		completed = journey.completed == true,
+		completedAt = journey.completedAt or 0,
+	}
+end
+
+-- Advances the first-look journey only from allowlisted actions. The caller
+-- owns authority for the action itself: Main only exposes OPEN_STUDIO to the
+-- client; try-on, runway ready, and runway completion call this from their
+-- successful server branches.
+function RetentionService:MarkJourney(player: Player, stepKey: string, persist: boolean?): (boolean, { [string]: any })
+	local definition = JOURNEY_BY_KEY[stepKey]
+	local stepIndex = JOURNEY_INDEX[stepKey]
+	if not definition or not stepIndex then
+		return false, self:GetJourneyState(player)
+	end
+	local justCompleted = false
+	local journeyFinished = false
+	local tokensGranted = 0
+	local success = self.profiles:Mutate(player, function(profile)
+		local journey = profile.firstLookJourney
+		if journey.done[stepKey] then
+			return
+		end
+		journey.done[stepKey] = true
+		justCompleted = true
+		tokensGranted = Config.Retention.FirstLookStepTokens
+		profile.bonusTokens = (profile.bonusTokens or 0) + tokensGranted
+
+		local allDone = true
+		for _, step in Config.Retention.FirstLookJourney do
+			if not journey.done[step.key] then
+				allDone = false
+				break
+			end
+		end
+		if allDone and not journey.completed then
+			journey.completed = true
+			journey.completedAt = os.time()
+			journeyFinished = true
+			tokensGranted += Config.Retention.FirstLookCompletionTokens
+			profile.bonusTokens = (profile.bonusTokens or 0) + Config.Retention.FirstLookCompletionTokens
+		end
+	end)
+	if not success then
+		return false, self:GetJourneyState(player)
+	end
+	if not justCompleted then
+		return true, self:GetJourneyState(player)
+	end
+
+	self.analytics:Funnel(player, "creator_journey", stepIndex, definition.label, { step = stepKey })
+	self.analytics:Custom(player, "FirstLookStepCompleted", stepIndex, { step = stepKey })
+	if journeyFinished then
+		-- This service owns the save below. The runway result path opts out of
+		-- both saves and performs one combined write after every round reward.
+		self.progression:Grant(player, Config.Retention.FirstLookCompletionXP, "FIRST_LOOK_JOURNEY", false)
+		self.analytics:Custom(player, "FirstLookJourneyCompleted", 1, {})
+	end
+	if persist ~= false then
+		self.profiles:Save(player)
+	end
+	local profile = self.profiles:Get(player)
+	local state = self:GetJourneyState(player)
+	self.push(player, Network.PushEvents.Profile, {
+		bonusTokens = profile and profile.bonusTokens or 0,
+		firstLookJourney = profile and profile.firstLookJourney or nil,
+	})
+	self.push(player, Network.PushEvents.Journey, {
+		state = state,
+		justCompleted = stepKey,
+		tokensGranted = tokensGranted,
+		journeyFinished = journeyFinished,
+	})
+	self.push(player, Network.PushEvents.Toast, {
+		tone = "success",
+		message = if journeyFinished
+			then string.format(
+				"First Look complete! +%d bonus tokens and +%d Creator XP",
+				tokensGranted,
+				Config.Retention.FirstLookCompletionXP
+			)
+			else string.format("First Look: %s (+%d bonus tokens)", definition.label, tokensGranted),
+	})
+	return true, state
 end
 
 function RetentionService:CheckIn(player: Player): { [string]: any }
@@ -192,9 +300,9 @@ end
 -- -- every later call the same day is a harmless no-op (mirrors
 -- AchievementService:Unlock's own "call sites never need their own check"
 -- contract). Call sites are the server's own verified success branches for
--- each underlying action (a generation queued, a fit saved, a score
--- submitted), never something the client can trigger by itself.
-function RetentionService:MarkQuest(player: Player, questKey: string)
+-- each underlying action (an accessory try-on, a runway completion, or an
+-- arcade score), never something the client can award directly.
+function RetentionService:MarkQuest(player: Player, questKey: string, persist: boolean?)
 	local quest = QUEST_BY_KEY[questKey]
 	if not quest then
 		warn(string.format("[RetentionService] Unknown quest key: %s", tostring(questKey)))
@@ -229,7 +337,9 @@ function RetentionService:MarkQuest(player: Player, questKey: string)
 	if not mutateSuccess or not justCompleted then
 		return
 	end
-	self.profiles:Save(player)
+	if persist ~= false then
+		self.profiles:Save(player)
+	end
 	local profile = self.profiles:Get(player)
 	if not profile or player.Parent == nil then
 		return

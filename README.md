@@ -13,6 +13,8 @@ The vertical slice supports three creation paths in the product specification:
 
 All three paths include allowlisted style presets (`Auto`, `Anime`, `Realistic`, `Stylized`, `Low poly`, and `Fantasy`) plus `Clean`, `Balanced`, or `Intricate` detail guidance. These parameters affect generated references, Meshy geometry prompts, and texture prompts without changing the strict topology limits.
 
+Outside paid generation, the experience has a free First Look activation journey, server-synchronized six-minute Forge Runway style rounds, Creator XP/levels/titles, a cross-server weekly spotlight, daily style/runway/arcade quests, Roblox catalog try-on, an arcade, and an AFK token lounge. These systems are designed to improve qualified play-through and repeat sessions without subsidizing provider-backed AI jobs; routine free rewards use the Priority-Pass-only `bonusTokens` balance.
+
 Generated item metadata, ownership, fit transforms, likes, favorites, purchase receipts, and non-resellable licenses are stored under the individual player's DataStore key. Shared stores contain only discovery indexes and idempotency records; they are not the source of truth for player content.
 
 ## Non-negotiable safety properties

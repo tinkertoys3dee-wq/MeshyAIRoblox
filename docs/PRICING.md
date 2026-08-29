@@ -58,7 +58,7 @@ Plus transfers accept 10–500 R$ per transaction. Roblox sends 90% to the liste
 Forge Tokens split across **two profile fields that are never merged**, because they carry different real-money guarantees:
 
 - `profile.tokens` — backed by an actual rewarded ad view, a direct purchase of the one-token `AdRewardTokens` reward product, or the 70-token `TokenPack70` store product. May fund a generation product (Direct Forge, every reference-image quality tier, Image → 3D Conversion, Avatar → 3D Conversion) or the Priority Pass.
-- `profile.bonusTokens` — free grants with no revenue behind them: achievements, the seven-day login calendar, AFK lounge time, invites, and group join. May **only ever** buy the Priority Pass.
+- `profile.bonusTokens` — free grants with no revenue behind them: achievements, the seven-day login calendar, AFK lounge time, First Look/daily runway rewards, daily quests, invites, and group join. May **only ever** buy the Priority Pass.
 
 Neither pool ever pays for the permanent Custom Image Upload game pass, which Roblox's rewarded-video-ad system cannot back (only developer products qualify). Players choose Robux or Tokens; the server, not the client, decides the price, which pool a purchase draws from, and grants the benefit either way — `CommerceService:BeginIntentWithTokens` enforces all of this regardless of what a client sends, and rejects any product key that is neither a generation product nor the Priority Pass outright.
 
@@ -81,6 +81,10 @@ Re-derive `TokenGrantPerAd`, `TokenPurchaseMarkup`, and `WorstCaseAdRevenuePerAd
 The seven-day repeating login calendar grants 3/6/10/20/40/50/70 `bonusTokens`; missing a UTC day resets it to day 1. The AFK lounge grants one `bonusToken` every three minutes, capped at 140 per UTC day. Both are server-authoritative and intentionally Priority-Pass-only, so unattended or retention rewards never subsidize OpenAI/Meshy provider cost. Rewarded ads shown from the lounge still credit normal `profile.tokens` at one per completed receipt. Roblox requires player activation for each ad, so the lounge auto-checks availability but never silently chains playback.
 
 There is deliberately no daily cap on rewarded-ad requests (`AdRewardService:RequestAd`). Every completed ad is real, positive revenue at even the worst measured rate, so unlike a free grant there is no scenario where letting a player watch more of them costs Forge anything — the only limits are Roblox's own ad inventory and how long a player is willing to sit there. `profile.adWatch` still tracks a per-UTC-day watch count, but purely as a "watched N today" stat for the client; nothing gates on it. A player funding a 1,590-token generation entirely through ads is, from Forge's side, 1,590 ad impressions' worth of revenue landed instead of one 159 R$ purchase — a substitution, not a loss, however fast or slow they get there.
+
+### First Look, daily quests, and Runway
+
+The First Look journey grants 2 `bonusTokens` per step plus 12 on completion (20 total), the first completed runway round of each UTC day grants 5, and the free daily try-style/runway/arcade quest trio grants 3 each plus a 6-token clear bonus. All of these are intentionally `bonusTokens`; even a player completing every free loop can only redeem the negligible-variable-cost Priority Pass, never an OpenAI/Meshy generation. Creator XP, level titles, votes, and weekly Spotlight awards have no currency value at all. Their purpose is activation, session depth, and D1/D7 return—not disguising a paid AI operation as a grind reward.
 
 ### Non-earning token budget (achievements)
 
