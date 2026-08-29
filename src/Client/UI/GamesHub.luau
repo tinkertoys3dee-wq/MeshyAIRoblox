@@ -120,13 +120,18 @@ function GamesHub.Show(app: any)
 	-- tile grid (6 tiles: #GAMES games + 1 Leaderboard tile, computed by
 	-- wideTilePosition above) needs 3*TILE_SIZE.Y + 2*TILE_GRID_GAP + the
 	-- same 26px bottom margin the original 2-row layout used = 574, so
-	-- modal height = 574 + 128 = 702. hubView is a ScrollingFrame (see
-	-- below) as a safety net on unusually short windows, but on any normal
-	-- desktop size this fits with no scrolling needed.
+	-- modal height = 574 + 128 = 702 -- that's the MaxSize clamp below, and
+	-- what any normal desktop window actually renders at. Below that, the
+	-- modal's own height is scale-based (not the old fixed `0, 702` offset,
+	-- which simply rendered past the top/bottom of any shorter viewport with
+	-- nothing to stop it), so it shrinks to fit short windows instead; hubView
+	-- is a genuine ScrollingFrame (see below) so the tile grid scrolls rather
+	-- than silently overflowing modal's own ClipsDescendants once that
+	-- shrinking leaves less room than the grid needs.
 	local restingModalPosition = UDim2.fromScale(0.5, 0.5)
 	local modal = Factory.Card(
 		overlay,
-		UDim2.new(1, -32, 0, 702),
+		UDim2.new(1, -32, 0.94, -16),
 		if reduceMotion then restingModalPosition else restingModalPosition + UDim2.fromOffset(0, 18),
 		"ArcadeModal"
 	)
@@ -139,8 +144,12 @@ function GamesHub.Show(app: any)
 	-- enough that this 560 cap -- not the screen -- is what's actually
 	-- limiting the modal, so its width is reliably exactly 560px, not just
 	-- "usually about that". The tile grid below is sized against that fixed
-	-- number, not a guess.
+	-- number, not a guess. MinSize keeps the modal from shrinking past a
+	-- usable floor on a genuinely tiny viewport -- GameShell's own game-over
+	-- card needs at least this much canvas height to avoid clipping (see its
+	-- own comment), and hubView's scrolling picks up whatever room is left.
 	Factory.New("UISizeConstraint", {
+		MinSize = Vector2.new(300, 420),
 		MaxSize = Vector2.new(560, 702),
 		Parent = modal,
 	})
@@ -331,12 +340,22 @@ function GamesHub.Show(app: any)
 	app:_BindButton(closeButton)
 
 	-- Three views share the same footprint below the header and are swapped
-	-- by visibility rather than all existing on screen at once.
-	local hubView = Factory.New("Frame", {
+	-- by visibility rather than all existing on screen at once. A
+	-- ScrollingFrame (not a plain Frame) so the tile grid below -- laid out
+	-- via fixed absolute offsets, not a UIListLayout -- scrolls into reach
+	-- instead of silently overflowing past modal's ClipsDescendants whenever
+	-- there isn't the full 574px of room the wide-mode grid was designed for
+	-- (a short viewport, or the modal's own MinSize clamp above).
+	local hubView = Factory.New("ScrollingFrame", {
 		Name = "HubView",
 		Position = UDim2.fromOffset(12, 116),
 		Size = UDim2.new(1, -24, 1, -128),
 		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = Colors.Rose,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ZIndex = 212,
 		Parent = modal,
 	})

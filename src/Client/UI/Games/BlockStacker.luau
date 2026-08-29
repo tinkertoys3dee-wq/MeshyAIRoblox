@@ -296,7 +296,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			block.frame.Position += UDim2.fromOffset(0, ROW_HEIGHT)
 		end
 		for i = #placed - 1, 1, -1 do
-			if placed[i].frame.Position.Y.Offset > canvasHeight + BLOCK_HEIGHT then
+			if placed[i].frame.Position.Y.Offset > heightPx() + BLOCK_HEIGHT then
 				placed[i].frame:Destroy()
 				table.remove(placed, i)
 			end
@@ -382,7 +382,12 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		end
 		dt = math.min(dt, 1 / 20)
 		movingX += movingSpeed * movingDirection * dt
-		local maxX = math.max(0, canvasWidth - movingWidth)
+		-- Live width, not the canvasWidth captured once at Game.Start -- a
+		-- player resizing their window mid-run (unlike FlappyBird/DinoRunner/
+		-- ColorSwitch, which all already re-read canvas.AbsoluteSize on every
+		-- use) used to leave the moving block oscillating against bounds from
+		-- whatever size the canvas happened to be when the game began.
+		local maxX = math.max(0, widthPx() - movingWidth)
 		if movingX <= 0 then
 			movingX = 0
 			movingDirection = 1

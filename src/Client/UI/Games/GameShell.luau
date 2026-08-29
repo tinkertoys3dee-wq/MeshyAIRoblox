@@ -340,8 +340,11 @@ function GameShell.new(
 	})
 	-- The actual game-over content lives on a centered card rather than
 	-- floating directly on the dim backdrop -- reads as a proper modal
-	-- instead of text pasted over the last frame of gameplay.
-	local card = Factory.Card(overlay, UDim2.fromOffset(252, 244), UDim2.fromScale(0.5, 0.45), "GameOverCard")
+	-- instead of text pasted over the last frame of gameplay. Height is 250,
+	-- not the hubButton's own bottom edge (236) rounded up -- 244 left only
+	-- an 8px gap under the "Back to Arcade" button, under this codebase's own
+	-- established 10px minimum clearance.
+	local card = Factory.Card(overlay, UDim2.fromOffset(252, 250), UDim2.fromScale(0.5, 0.45), "GameOverCard")
 	card.AnchorPoint = Vector2.new(0.5, 0.5)
 	card.ZIndex = 31
 	local badge = Factory.New("Frame", {
