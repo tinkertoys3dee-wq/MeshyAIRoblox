@@ -49,16 +49,16 @@ local PALETTE_COLORS = { Colors.Rose, Colors.Gold, Colors.Cyan, Colors.Mint }
 local PALETTE_SHAPES = { "●", "▲", "■", "★" }
 local PALETTE_COUNT = #PALETTE_COLORS
 
-local GRAVITY = 1000
-local BOUNCE_VELOCITY = -380
+local GRAVITY = 1150
+local BOUNCE_VELOCITY = -430
 local BALL_SIZE = 24
 local RING_SIZE = 84
 local RING_HUB_SIZE = 40
 local RING_SPACING_BASE = 230 -- world px climbed between ring spawns
-local RING_SPACING_MIN = 150
-local RING_SPACING_PER_SCORE = 3
-local RING_SPIN_MIN = 70 -- deg/sec
-local RING_SPIN_MAX = 160
+local RING_SPACING_MIN = 130
+local RING_SPACING_PER_SCORE = 4
+local RING_SPIN_MIN = 90 -- deg/sec
+local RING_SPIN_MAX = 190
 local ORB_SIZE = 22
 local ORB_SPACING_MIN = 320 -- world px climbed between orb spawns
 local ORB_SPACING_MAX = 520
@@ -66,6 +66,17 @@ local TRAIL_INTERVAL = 0.045
 local CEILING_FRACTION = 0.32 -- how far down the canvas the ball is pinned
 local NEAR_MISS_SEAM_DEGREES = 10 -- how close to a petal boundary counts as a close call
 local STREAK_WINDOW = 3.5 -- seconds between clean passes before the streak resets
+
+-- Special (non-color) orbs: SHIELD stacks up to SHIELD_MAX_CHARGES free
+-- passes through a wrong-colored ring instead of ending the run, and
+-- MULTIPLIER doubles ring score for a few seconds. Both drift down the same
+-- line as a normal color orb and share its collection code path, just
+-- carrying a different `kind` -- see spawnOrb/the orb-collision loop below.
+local SPECIAL_ORB_CHANCE = 0.22 -- of orb spawns, split evenly between the two kinds
+local SHIELD_COLOR = Colors.Text
+local SHIELD_MAX_CHARGES = 2
+local MULTIPLIER_COLOR = Colors.Gold
+local MULTIPLIER_DURATION = 8
 
 type Ring = {
 	backing: Frame,
@@ -77,7 +88,8 @@ type Ring = {
 	y: number,
 	checked: boolean,
 }
-type Orb = { frame: Frame, colorIndex: number, y: number, collected: boolean }
+type OrbKind = "COLOR" | "SHIELD" | "MULTIPLIER"
+type Orb = { frame: Frame, colorIndex: number?, kind: OrbKind, y: number, collected: boolean }
 
 local Game = {} :: GameShell.GameModule
 Game.Name = "Color Switch"
@@ -108,6 +120,9 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local trailTimer = 0
 	local streakCount = 0
 	local lastPassTime = 0
+	local shieldCharges = 0
+	local scoreMultiplierUntil = 0
+	local lastStatusText = ""
 
 	local function width(): number
 		local w = math.floor(canvas.AbsoluteSize.X)
@@ -164,6 +179,33 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		AlignY = Enum.TextYAlignment.Center,
 		ZIndex = 7,
 	})
+	-- A soft pulsing ring shown only while a shield charge is banked, and a
+	-- small floating badge only while the score multiplier is active -- both
+	-- children of the ball so they track its position/scale for free.
+	local shieldRing = Factory.New("Frame", {
+		Name = "ShieldRing",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(1.55, 1.55),
+		BackgroundTransparency = 1,
+		Visible = false,
+		ZIndex = 5,
+		Parent = ball,
+	})
+	Factory.Corner(shieldRing, 99)
+	local shieldRingStroke =
+		Factory.New("UIStroke", { Color = SHIELD_COLOR, Thickness = 2.5, Transparency = 0.2, Parent = shieldRing })
+	local multiplierBadge = Factory.Label(ball, "×2", UDim2.fromOffset(30, 16), {
+		Name = "MultiplierBadge",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 0, -6),
+		Color = MULTIPLIER_COLOR,
+		Font = Theme.Fonts.Black,
+		TextSize = 13,
+		Visible = false,
+		ZIndex = 8,
+	})
+	Factory.New("UIStroke", { Color = Colors.Ink, Thickness = 1.5, Transparency = 0.4, Parent = multiplierBadge })
 	local ballY = height() * 0.55
 	ball.Position = UDim2.fromOffset(centerX() - BALL_SIZE / 2, ballY)
 
@@ -197,6 +239,17 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		Thickness = 2,
 		Transparency = 0.4,
 		Parent = streakLabel,
+	})
+	local statusLabel = Factory.Label(canvas, "", UDim2.fromOffset(200, 16), {
+		Name = "StatusLabel",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 44),
+		Color = SHIELD_COLOR,
+		Font = Theme.Fonts.Bold,
+		TextSize = 11,
+		AlignX = Enum.TextXAlignment.Center,
+		Transparency = 1,
+		ZIndex = 46,
 	})
 
 	local function setBallColor(colorIndex: number)
@@ -417,24 +470,43 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	end
 
 	local function spawnOrb()
-		local colorIndex = math.random(1, PALETTE_COUNT)
-		while colorIndex == ballColorIndex do
-			colorIndex = math.random(1, PALETTE_COUNT)
+		local roll = math.random()
+		local kind: OrbKind = if roll < SPECIAL_ORB_CHANCE * 0.5
+			then "SHIELD"
+			elseif roll < SPECIAL_ORB_CHANCE then "MULTIPLIER"
+			else "COLOR"
+		local colorIndex: number? = nil
+		local color: Color3
+		local glyph: string
+		if kind == "COLOR" then
+			local picked = math.random(1, PALETTE_COUNT)
+			while picked == ballColorIndex do
+				picked = math.random(1, PALETTE_COUNT)
+			end
+			colorIndex = picked
+			color = PALETTE_COLORS[picked]
+			glyph = PALETTE_SHAPES[picked]
+		elseif kind == "SHIELD" then
+			color = SHIELD_COLOR
+			glyph = "🛡"
+		else
+			color = MULTIPLIER_COLOR
+			glyph = "×2"
 		end
 		local frame = Factory.New("Frame", {
 			Name = "Orb",
 			Size = UDim2.fromOffset(ORB_SIZE, ORB_SIZE),
 			Position = UDim2.fromOffset(centerX() - ORB_SIZE / 2, -ORB_SIZE),
-			BackgroundColor3 = PALETTE_COLORS[colorIndex],
+			BackgroundColor3 = color,
 			BorderSizePixel = 0,
 			ZIndex = 4,
 			Parent = canvas,
 		})
 		Factory.Corner(frame, ORB_SIZE / 2)
 		Factory.Stroke(frame, Colors.Ink, 0.2, 2)
-		Factory.Label(frame, PALETTE_SHAPES[colorIndex], UDim2.fromScale(1, 1), {
+		Factory.Label(frame, glyph, UDim2.fromScale(1, 1), {
 			Color = Colors.Ink,
-			TextSize = 11,
+			TextSize = if kind == "COLOR" then 11 else 9,
 			AlignX = Enum.TextXAlignment.Center,
 			AlignY = Enum.TextYAlignment.Center,
 			ZIndex = 5,
@@ -447,7 +519,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 				Size = UDim2.fromOffset(ORB_SIZE, ORB_SIZE),
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromScale(0.5, 0.5),
-				BackgroundColor3 = PALETTE_COLORS[colorIndex],
+				BackgroundColor3 = color,
 				BackgroundTransparency = 0.55,
 				BorderSizePixel = 0,
 				ZIndex = 3,
@@ -461,7 +533,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			)
 			glowTween:Play()
 		end
-		table.insert(orbs, { frame = frame, colorIndex = colorIndex, y = -ORB_SIZE, collected = false })
+		table.insert(orbs, { frame = frame, colorIndex = colorIndex, kind = kind, y = -ORB_SIZE, collected = false })
 	end
 
 	-- A ring within this many pixels of the top already claimed the spawn
@@ -501,6 +573,27 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			return
 		end
 		dt = math.min(dt, 1 / 20)
+
+		local now = os.clock()
+		local multiplierActive = now < scoreMultiplierUntil
+		shieldRing.Visible = shieldCharges > 0
+		if shieldCharges > 0 then
+			shieldRingStroke.Transparency = 0.5 + 0.35 * math.sin(now * 8)
+		end
+		multiplierBadge.Visible = multiplierActive
+		local statusParts = {}
+		if shieldCharges > 0 then
+			table.insert(statusParts, string.format("🛡 SHIELD ×%d", shieldCharges))
+		end
+		if multiplierActive then
+			table.insert(statusParts, "×2 SCORE")
+		end
+		local statusText = table.concat(statusParts, "   ")
+		if statusText ~= lastStatusText then
+			statusLabel.Text = statusText
+			statusLabel.TextTransparency = if statusText == "" then 1 else 0
+			lastStatusText = statusText
+		end
 
 		velocityY += GRAVITY * dt
 		ballY += velocityY * dt
@@ -597,11 +690,30 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 
 			if not ring.checked and ring.y + RING_SIZE >= ballTop and ring.y <= ballBottom then
 				ring.checked = true
-				if facingColorIndex ~= ballColorIndex then
-					endGame()
-					return
+				local mismatched = facingColorIndex ~= ballColorIndex
+				if mismatched then
+					if shieldCharges > 0 then
+						-- A banked shield absorbs one wrong-color pass --
+						-- still scores (this counts as a save, not a free
+						-- pass), just skips the near-miss check below since
+						-- there's nothing "close" about actually missing.
+						shieldCharges -= 1
+						flashScreen(SHIELD_COLOR, 0.7)
+						GameShell.Ring(
+							canvas,
+							UDim2.fromOffset(centerX(), ring.y + RING_SIZE / 2),
+							SHIELD_COLOR,
+							api.reduceMotion,
+							RING_SIZE * 0.85
+						)
+						api.sounds:Play("Success")
+					else
+						endGame()
+						return
+					end
 				end
-				score += 1
+				local scoreMultiplier = if os.clock() < scoreMultiplierUntil then 2 else 1
+				score += scoreMultiplier
 				api.setScore(score)
 				api.sounds:Play("Like")
 				GameShell.Burst(
@@ -618,13 +730,16 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 					RING_SIZE * 0.7
 				)
 				registerStreak()
-				-- How close the current rotation is to a petal boundary: a
-				-- beat later or earlier at this spin speed and a different
-				-- (likely wrong) color would have been facing the ball.
-				local seamOffset = ring.rotation % 90
-				local seamDistance = math.min(seamOffset, 90 - seamOffset)
-				if seamDistance <= NEAR_MISS_SEAM_DEGREES then
-					triggerNearMiss()
+				if not mismatched then
+					-- How close the current rotation is to a petal boundary:
+					-- a beat later or earlier at this spin speed and a
+					-- different (likely wrong) color would have been facing
+					-- the ball.
+					local seamOffset = ring.rotation % 90
+					local seamDistance = math.min(seamOffset, 90 - seamOffset)
+					if seamDistance <= NEAR_MISS_SEAM_DEGREES then
+						triggerNearMiss()
+					end
 				end
 			end
 
@@ -642,19 +757,31 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			if not orb.collected and orb.y + ORB_SIZE >= ballTop and orb.y <= ballBottom then
 				orb.collected = true
 				local orbPosition = orb.frame.Position
-				local orbColorIndex = orb.colorIndex
-				setBallColor(orbColorIndex)
-				api.sounds:Play("Hover")
+				local effectColor: Color3
+				if orb.kind == "COLOR" then
+					local orbColorIndex = orb.colorIndex :: number
+					setBallColor(orbColorIndex)
+					api.sounds:Play("Hover")
+					effectColor = PALETTE_COLORS[orbColorIndex]
+				elseif orb.kind == "SHIELD" then
+					shieldCharges = math.min(SHIELD_MAX_CHARGES, shieldCharges + 1)
+					api.sounds:Play("Success")
+					effectColor = SHIELD_COLOR
+				else
+					scoreMultiplierUntil = math.max(scoreMultiplierUntil, os.clock()) + MULTIPLIER_DURATION
+					api.sounds:Play("Success")
+					effectColor = MULTIPLIER_COLOR
+				end
 				GameShell.Burst(
 					canvas,
 					orbPosition + UDim2.fromOffset(ORB_SIZE / 2, ORB_SIZE / 2),
-					PALETTE_COLORS[orbColorIndex],
+					effectColor,
 					api.reduceMotion
 				)
 				GameShell.Ring(
 					canvas,
 					orbPosition + UDim2.fromOffset(ORB_SIZE / 2, ORB_SIZE / 2),
-					PALETTE_COLORS[orbColorIndex],
+					effectColor,
 					api.reduceMotion,
 					10
 				)
@@ -679,6 +806,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		sky:Destroy()
 		flashOverlay:Destroy()
 		streakLabel:Destroy()
+		statusLabel:Destroy()
 		for _, ring in rings do
 			ring.backing:Destroy()
 		end
