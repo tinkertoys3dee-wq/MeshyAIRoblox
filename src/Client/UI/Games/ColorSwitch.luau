@@ -49,16 +49,29 @@ local PALETTE_COLORS = { Colors.Rose, Colors.Gold, Colors.Cyan, Colors.Mint }
 local PALETTE_SHAPES = { "●", "▲", "■", "★" }
 local PALETTE_COUNT = #PALETTE_COLORS
 
-local GRAVITY = 1150
-local BOUNCE_VELOCITY = -430
+-- Gravity/bounce/spin all ramp with score, on top of the ring-spacing ramp
+-- already below -- climbing stays a genuinely faster, snappier game the
+-- longer a run goes, rather than the same pace throughout with only the
+-- rings arriving closer together.
+local GRAVITY_BASE = 1150
+local GRAVITY_PER_SCORE = 5
+local GRAVITY_MAX = 1500
+local BOUNCE_BASE = -430
+local BOUNCE_STRENGTH_PER_SCORE = -1.8 -- more negative bounce velocity = a stronger upward kick
+local BOUNCE_MAX_STRENGTH = -560
 local BALL_SIZE = 24
 local RING_SIZE = 84
 local RING_HUB_SIZE = 40
 local RING_SPACING_BASE = 230 -- world px climbed between ring spawns
 local RING_SPACING_MIN = 130
 local RING_SPACING_PER_SCORE = 4
-local RING_SPIN_MIN = 90 -- deg/sec
+local RING_SPIN_MIN = 90 -- deg/sec, at score 0
 local RING_SPIN_MAX = 190
+local RING_SPIN_BONUS_PER_SCORE = 1.4 -- added to both ends of the spin range as score climbs
+local RING_SPIN_BONUS_CAP = 130
+local GAUNTLET_EVERY = 4 -- one back-to-back ring pair every this-many normal ring spawns
+local GAUNTLET_GAP = 105 -- world px between the two rings in a gauntlet pair
+local GAUNTLET_SPIN_MULTIPLIER = 1.25
 local ORB_SIZE = 22
 local ORB_SPACING_MIN = 260 -- world px climbed between orb spawns
 local ORB_SPACING_MAX = 420
@@ -89,6 +102,7 @@ type Ring = {
 	spinSpeed: number,
 	y: number,
 	checked: boolean,
+	gauntlet: boolean,
 }
 type OrbKind = "COLOR" | "SHIELD" | "MULTIPLIER"
 type Orb = { frame: Frame, colorIndex: number?, kind: OrbKind, y: number, collected: boolean }
@@ -128,6 +142,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local lastStatusText = ""
 	local ambientSparks: { AmbientSpark } = {}
 	local timeSinceSpark = 0
+	local ringSpawnCount = 0
 
 	local function width(): number
 		local w = math.floor(canvas.AbsoluteSize.X)
@@ -142,6 +157,17 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	end
 	local function ceiling(): number
 		return height() * CEILING_FRACTION
+	end
+
+	local function currentGravity(): number
+		return math.min(GRAVITY_MAX, GRAVITY_BASE + score * GRAVITY_PER_SCORE)
+	end
+	local function currentBounceVelocity(): number
+		return math.max(BOUNCE_MAX_STRENGTH, BOUNCE_BASE + score * BOUNCE_STRENGTH_PER_SCORE)
+	end
+	local function ringSpinRange(): (number, number)
+		local bonus = math.min(RING_SPIN_BONUS_CAP, score * RING_SPIN_BONUS_PER_SCORE)
+		return RING_SPIN_MIN + bonus, RING_SPIN_MAX + bonus
 	end
 
 	local sky = Factory.New("Frame", {
@@ -273,7 +299,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		if not running then
 			return
 		end
-		velocityY = BOUNCE_VELOCITY
+		velocityY = currentBounceVelocity()
 		api.sounds:Play("Press")
 		if not api.reduceMotion then
 			ballScale.Scale = 0.75
@@ -419,9 +445,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 
 	-- `initialY` lets the very first ring spawn already visible near the
 	-- ceiling (matching the real game's idle screen) instead of starting
-	-- off-canvas and waiting for a climb that hasn't happened yet.
-	local function spawnRing(initialY: number?)
+	-- off-canvas and waiting for a climb that hasn't happened yet. `gauntlet`
+	-- tags a ring as part of a back-to-back pair (see GAUNTLET_EVERY below) --
+	-- purely a faster/harder variant of the same ring, not a new mechanic, so
+	-- it's flagged with a distinct outline rather than any new behavior.
+	local function spawnRing(initialY: number?, gauntlet: boolean?)
 		local y = initialY or -RING_SIZE
+		local isGauntlet = gauntlet == true
 		local backing = Factory.New("Frame", {
 			Name = "Ring",
 			Size = UDim2.fromOffset(RING_SIZE, RING_SIZE),
@@ -439,7 +469,12 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		-- than the ring's own radius.
 		backing.ClipsDescendants = true
 		Factory.Corner(backing, RING_SIZE / 2)
-		Factory.Stroke(backing, Colors.Line, 0.5, 1.5)
+		Factory.Stroke(
+			backing,
+			if isGauntlet then Colors.Rose else Colors.Line,
+			if isGauntlet then 0.25 else 0.5,
+			if isGauntlet then 2.5 else 1.5
+		)
 
 		-- AnchorPoint (0.5, 0.5) is load-bearing: Roblox rotates a GuiObject
 		-- around its AnchorPoint, which defaults to the top-left corner. Left
@@ -494,8 +529,10 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 
 		local rotation = math.random(0, 359)
 		spinner.Rotation = rotation
-		local spinSpeed = (RING_SPIN_MIN + math.random() * (RING_SPIN_MAX - RING_SPIN_MIN))
+		local spinMin, spinMax = ringSpinRange()
+		local spinSpeed = (spinMin + math.random() * (spinMax - spinMin))
 			* (if math.random() < 0.5 then -1 else 1)
+			* (if isGauntlet then GAUNTLET_SPIN_MULTIPLIER else 1)
 
 		-- A plain, non-rotating hollow hole punched through the middle of
 		-- the spinning petals -- genuinely empty (no color, no readout),
@@ -523,6 +560,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			spinSpeed = spinSpeed,
 			y = y,
 			checked = false,
+			gauntlet = isGauntlet,
 		})
 	end
 
@@ -652,7 +690,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			lastStatusText = statusText
 		end
 
-		velocityY += GRAVITY * dt
+		velocityY += currentGravity() * dt
 		ballY += velocityY * dt
 
 		-- The ball never actually rises past the ceiling -- any climb past
@@ -725,7 +763,17 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			local ringSpacing = math.max(RING_SPACING_MIN, RING_SPACING_BASE - score * RING_SPACING_PER_SCORE)
 			if distanceSinceRing >= ringSpacing then
 				distanceSinceRing -= ringSpacing
-				spawnRing()
+				ringSpawnCount += 1
+				if ringSpawnCount % GAUNTLET_EVERY == 0 then
+					-- A back-to-back pair instead of the usual single ring --
+					-- two clean passes in quick succession, tagged with a rose
+					-- outline and a faster spin so it reads as a deliberate
+					-- rhythm spike, not just another routine gate.
+					spawnRing(nil, true)
+					spawnRing(-RING_SIZE - GAUNTLET_GAP, true)
+				else
+					spawnRing()
+				end
 			end
 			if distanceSinceOrb >= nextOrbSpacing then
 				distanceSinceOrb = 0
@@ -787,7 +835,12 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 					end
 				end
 				local scoreMultiplier = if os.clock() < scoreMultiplierUntil then 2 else 1
-				score += scoreMultiplier
+				-- A gauntlet ring is strictly harder to clear (faster spin,
+				-- arriving right on top of its pair) than a routine ring, so
+				-- surviving one is worth a flat bonus point on top of
+				-- whatever the multiplier already grants.
+				local gauntletBonus = if ring.gauntlet then 1 else 0
+				score += scoreMultiplier + gauntletBonus
 				api.setScore(score)
 				api.sounds:Play("Like")
 				GameShell.Burst(
@@ -799,15 +852,17 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 				GameShell.Ring(
 					canvas,
 					UDim2.fromOffset(centerX(), ring.y + RING_SIZE / 2),
-					PALETTE_COLORS[ballColorIndex],
+					if ring.gauntlet then Colors.Rose else PALETTE_COLORS[ballColorIndex],
 					api.reduceMotion,
 					RING_SIZE * 0.7
 				)
-				GameShell.Shake(canvas, api.reduceMotion, 0.18)
+				GameShell.Shake(canvas, api.reduceMotion, if ring.gauntlet then 0.32 else 0.18)
 				spawnScorePopup(
-					"+" .. tostring(scoreMultiplier),
+					if ring.gauntlet
+						then string.format("+%d RUSH", scoreMultiplier + gauntletBonus)
+						else "+" .. tostring(scoreMultiplier),
 					ball.Position + UDim2.fromOffset(BALL_SIZE / 2, -4),
-					PALETTE_COLORS[ballColorIndex]
+					if ring.gauntlet then Colors.Rose else PALETTE_COLORS[ballColorIndex]
 				)
 				if not api.reduceMotion then
 					-- A quick bright flash on the ring itself the instant it's

@@ -58,6 +58,21 @@ local BRICK_SIDE_MARGIN = 10
 local BRICK_TOP_MARGIN = 54
 local COMBO_WINDOW = 1.6 -- seconds between broken bricks before the streak resets
 
+-- Wave layouts: each row is a BRICK_COLUMNS-character mask ("1" = brick,
+-- "0" = gap), BRICK_ROWS rows top to bottom. Cycled one-per-wave (see
+-- currentLayout below) so the map itself changes shape from round to round
+-- instead of the same solid rectangle refilling every time -- FULL is kept
+-- first so wave 1 still reads as the familiar classic layout.
+local WAVE_LAYOUTS: { { name: string, rows: { string } } } = {
+	{ name = "FULL HOUSE", rows = { "111111", "111111", "111111", "111111" } },
+	{ name = "CHECKERBOARD", rows = { "101010", "010101", "101010", "010101" } },
+	{ name = "DIAMOND", rows = { "001100", "011110", "011110", "001100" } },
+	{ name = "PILLARS", rows = { "110110", "110110", "110110", "110110" } },
+	{ name = "FORTRESS", rows = { "111111", "100001", "100001", "111111" } },
+	{ name = "STAIRCASE", rows = { "111000", "011100", "001110", "000111" } },
+	{ name = "HOURGLASS", rows = { "100001", "010010", "010010", "100001" } },
+}
+
 local MAX_BALLS = 6
 local POWERUP_DROP_CHANCE = 0.28
 local POWERUP_SIZE = 22
@@ -193,16 +208,17 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		ZIndex = 46,
 	})
 
-	local waveLabel = Factory.Label(canvas, "WAVE 1", UDim2.fromOffset(120, 22), {
-		Name = "WaveLabel",
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -10, 0, 8),
-		Color = Colors.TextMuted,
-		Font = Theme.Fonts.Bold,
-		TextSize = 12,
-		AlignX = Enum.TextXAlignment.Right,
-		ZIndex = 8,
-	})
+	local waveLabel =
+		Factory.Label(canvas, string.format("WAVE 1 · %s", WAVE_LAYOUTS[1].name), UDim2.fromOffset(180, 22), {
+			Name = "WaveLabel",
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -10, 0, 8),
+			Color = Colors.TextMuted,
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			AlignX = Enum.TextXAlignment.Right,
+			ZIndex = 8,
+		})
 
 	-- A slow hue drift per wave (not per brick -- a whole wave reads as one
 	-- coherent color) so a long run visibly keeps moving without needing a
@@ -220,27 +236,38 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		table.clear(bricks)
 	end
 
+	-- Cycles through WAVE_LAYOUTS one-per-wave so the map shape itself changes
+	-- every round -- looping back to FULL HOUSE after the list is exhausted
+	-- rather than repeating the same layout back-to-back.
+	local function currentLayout()
+		return WAVE_LAYOUTS[((wave - 1) % #WAVE_LAYOUTS) + 1]
+	end
+
 	local function spawnWave()
 		clearBricks()
 		local w = widthPx()
 		local usableWidth = w - BRICK_SIDE_MARGIN * 2
 		local brickWidth = (usableWidth - BRICK_GAP * (BRICK_COLUMNS - 1)) / BRICK_COLUMNS
+		local layout = currentLayout()
 		for row = 0, BRICK_ROWS - 1 do
+			local mask = layout.rows[row + 1]
 			for col = 0, BRICK_COLUMNS - 1 do
-				local x = BRICK_SIDE_MARGIN + col * (brickWidth + BRICK_GAP)
-				local y = BRICK_TOP_MARGIN + row * (BRICK_HEIGHT + BRICK_GAP)
-				local frame = Factory.New("Frame", {
-					Name = "Brick",
-					Size = UDim2.fromOffset(brickWidth, BRICK_HEIGHT),
-					Position = UDim2.fromOffset(x, y),
-					BackgroundColor3 = brickColor(row),
-					BorderSizePixel = 0,
-					ZIndex = 5,
-					Parent = canvas,
-				})
-				Factory.Corner(frame, 5)
-				Factory.Stroke(frame, Colors.Ink, 0.55, 1)
-				table.insert(bricks, { frame = frame, x = x, y = y, width = brickWidth, height = BRICK_HEIGHT })
+				if string.sub(mask, col + 1, col + 1) == "1" then
+					local x = BRICK_SIDE_MARGIN + col * (brickWidth + BRICK_GAP)
+					local y = BRICK_TOP_MARGIN + row * (BRICK_HEIGHT + BRICK_GAP)
+					local frame = Factory.New("Frame", {
+						Name = "Brick",
+						Size = UDim2.fromOffset(brickWidth, BRICK_HEIGHT),
+						Position = UDim2.fromOffset(x, y),
+						BackgroundColor3 = brickColor(row),
+						BorderSizePixel = 0,
+						ZIndex = 5,
+						Parent = canvas,
+					})
+					Factory.Corner(frame, 5)
+					Factory.Stroke(frame, Colors.Ink, 0.55, 1)
+					table.insert(bricks, { frame = frame, x = x, y = y, width = brickWidth, height = BRICK_HEIGHT })
+				end
 			end
 		end
 	end
@@ -796,7 +823,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 
 		if #bricks == 0 then
 			wave += 1
-			waveLabel.Text = string.format("WAVE %d", wave)
+			waveLabel.Text = string.format("WAVE %d · %s", wave, currentLayout().name)
 			flashScreen(Colors.Mint, 0.7)
 			api.sounds:Play("Success")
 			GameShell.Shake(canvas, api.reduceMotion, 1.6)

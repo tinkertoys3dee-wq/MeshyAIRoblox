@@ -17,7 +17,9 @@ local GameShell = require(script.Parent.GameShell)
 
 local Colors = Theme.Colors
 
-local CELL = 18
+local CELL = 23 -- bumped up from 18 -- fewer, bigger cells so the arena reads as a tighter, more dangerous space instead of a sprawling grid
+local MAX_COLS = 18
+local MAX_ROWS = 11
 local INITIAL_LENGTH = 3
 local BASE_MOVE_INTERVAL = 0.16
 local MIN_MOVE_INTERVAL = 0.078
@@ -28,8 +30,27 @@ local BODY_COLOR = Colors.Violet
 local TAIL_COLOR = Color3.fromRGB(94, 66, 190) -- a touch darker than BODY_COLOR
 local COMBO_WINDOW = 3 -- seconds between food pickups before the streak resets
 
+-- Obstacle blocks: static hazards that start appearing once a run has some
+-- legs, permanent for the rest of that run -- real stakes beyond "don't hit
+-- yourself/the wall", the same "the map fights back eventually" trick
+-- DinoRunner's pterodactyls add on top of its base jump.
+local OBSTACLE_UNLOCK_SCORE = 5
+local OBSTACLE_CHANCE = 0.4 -- per food eaten, once unlocked
+local MAX_OBSTACLES = 6
+local OBSTACLE_MIN_HEAD_DISTANCE = 3 -- cells -- never spawn right next to the current head
+
+-- Bonus food: a time-limited, higher-value pickup that shows up periodically
+-- alongside the routine gold food -- worth chasing down fast rather than
+-- always being the safest, slowest path to the next point.
+local BONUS_FOOD_EVERY = 4 -- one bonus food offered every this-many regular foods eaten
+local BONUS_FOOD_SCORE = 3
+local BONUS_FOOD_LIFETIME = 4.5
+local BONUS_FOOD_COLOR = Color3.fromRGB(255, 92, 168)
+
 type Point = { x: number, y: number }
 type Direction = { x: number, y: number }
+type Obstacle = { frame: Frame, point: Point }
+type BonusFood = { frame: Frame, point: Point, token: number }
 
 local Game = {} :: GameShell.GameModule
 Game.Name = "Neon Snake"
@@ -40,6 +61,10 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local score = 0
 	local comboCount = 0
 	local lastEatTime = 0
+	local obstacles: { Obstacle } = {}
+	local regularFoodCount = 0
+	local bonusFood: BonusFood? = nil
+	local bonusFoodTokenCounter = 0
 
 	-- Floored + defaulted the same way DinoRunner's width()/groundY() are:
 	-- AbsoluteSize can be fractional or briefly zero before layout settles,
@@ -53,8 +78,8 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		return if h > 40 then h else 270
 	end
 
-	local cols = math.max(12, math.floor(widthPx() / CELL))
-	local rows = math.max(10, math.floor(heightPx() / CELL))
+	local cols = math.clamp(math.floor(widthPx() / CELL), 10, MAX_COLS)
+	local rows = math.clamp(math.floor(heightPx() / CELL), 8, MAX_ROWS)
 	local boardWidth = cols * CELL
 	local boardHeight = rows * CELL
 	local originX = math.floor((widthPx() - boardWidth) / 2)
@@ -215,6 +240,27 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	Factory.Stroke(foodFrame, Colors.Ink, 0.35, 1.5)
 	local foodPulse = Factory.New("UIScale", { Scale = 1, Parent = foodFrame })
 
+	-- Shared "is this cell already spoken for" check used by every random
+	-- placement below (food, bonus food, obstacles) -- one place to keep in
+	-- sync with everything currently on the board.
+	local function cellBlocked(point: Point): boolean
+		if occupies(point, segments, false) then
+			return true
+		end
+		if point.x == food.x and point.y == food.y then
+			return true
+		end
+		if bonusFood and point.x == bonusFood.point.x and point.y == bonusFood.point.y then
+			return true
+		end
+		for _, obstacle in obstacles do
+			if obstacle.point.x == point.x and obstacle.point.y == point.y then
+				return true
+			end
+		end
+		return false
+	end
+
 	-- Full-canvas tint for streak milestones, same trick FlappyBird/ColorSwitch
 	-- use for their own near-miss/combo flashes.
 	local flashOverlay = Factory.New("Frame", {
@@ -251,14 +297,17 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	end
 
 	local comboFadeToken = 0
-	local function showScorePopup(position: UDim2, combo: number)
+	local function showScorePopup(position: UDim2, combo: number, amount: number?, popupColor: Color3?)
+		local gained = amount or 1
 		if not api.reduceMotion then
-			local popupText = if combo >= 2 then string.format("+1  x%d", combo) else "+1"
+			local popupText = if combo >= 2
+				then string.format("+%d  x%d", gained, combo)
+				else string.format("+%d", gained)
 			local popup = Factory.Label(canvas, popupText, UDim2.fromOffset(90, 20), {
 				Name = "ScorePopup",
 				AnchorPoint = Vector2.new(0.5, 1),
 				Position = position,
-				Color = if combo >= 5 then Colors.Gold else Colors.Mint,
+				Color = popupColor or (if combo >= 5 then Colors.Gold else Colors.Mint),
 				Font = Theme.Fonts.Black,
 				TextSize = 15,
 				AlignX = Enum.TextXAlignment.Center,
@@ -308,7 +357,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local function placeFood()
 		local attempt = randomCell()
 		local tries = 0
-		while occupies(attempt, segments, false) and tries < 200 do
+		while cellBlocked(attempt) and tries < 200 do
 			attempt = randomCell()
 			tries += 1
 		end
@@ -316,6 +365,127 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		foodFrame.Position = toPixel(food) + UDim2.fromOffset(CELL / 2, CELL / 2)
 	end
 	placeFood()
+
+	-- Obstacle blocks: a plain hazard-striped tile, permanent once placed.
+	local function spawnObstacle()
+		if #obstacles >= MAX_OBSTACLES then
+			return
+		end
+		local head = segments[1]
+		local attempt = randomCell()
+		local tries = 0
+		while
+			(
+				cellBlocked(attempt)
+				or math.abs(attempt.x - head.x) + math.abs(attempt.y - head.y) < OBSTACLE_MIN_HEAD_DISTANCE
+			) and tries < 200
+		do
+			attempt = randomCell()
+			tries += 1
+		end
+		if tries >= 200 then
+			-- Board's too crowded to place one fairly right now -- skip this
+			-- roll rather than force a cell that might be unfair or missing.
+			return
+		end
+		local frame = Factory.New("Frame", {
+			Name = "Obstacle",
+			Size = UDim2.fromOffset(CELL - 3, CELL - 3),
+			Position = toPixel(attempt),
+			BackgroundColor3 = Colors.Danger,
+			BorderSizePixel = 0,
+			ZIndex = 4,
+			Parent = canvas,
+		})
+		Factory.Corner(frame, 4)
+		Factory.Stroke(frame, Color3.fromRGB(255, 200, 120), 0.35, 1.5)
+		-- A couple of diagonal hazard ribs -- reads as "caution", distinct
+		-- silhouette from every food/snake tile on the board.
+		for _, fraction in { 0.25, 0.65 } do
+			Factory.New("Frame", {
+				Name = "HazardStripe",
+				Size = UDim2.new(0, (CELL - 3) * 1.4, 0, 3),
+				Position = UDim2.new(fraction, 0, 0, (CELL - 3) * fraction),
+				Rotation = 45,
+				BackgroundColor3 = Color3.fromRGB(255, 200, 120),
+				BackgroundTransparency = 0.35,
+				BorderSizePixel = 0,
+				ZIndex = 4,
+				Parent = frame,
+			})
+		end
+		if not api.reduceMotion then
+			GameShell.Burst(canvas, frame.Position + UDim2.fromOffset(CELL / 2, CELL / 2), Colors.Danger, false)
+		end
+		table.insert(obstacles, { frame = frame, point = attempt })
+	end
+
+	-- Bonus food: distinct color/glyph, a shrinking countdown ring, and a
+	-- timeout that despawns it if it's not caught in time.
+	local function spawnBonusFood()
+		local attempt = randomCell()
+		local tries = 0
+		while cellBlocked(attempt) and tries < 200 do
+			attempt = randomCell()
+			tries += 1
+		end
+		if tries >= 200 then
+			return
+		end
+		bonusFoodTokenCounter += 1
+		local myToken = bonusFoodTokenCounter
+		local frame = Factory.New("Frame", {
+			Name = "BonusFood",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Size = UDim2.fromOffset(CELL - 4, CELL - 4),
+			Position = toPixel(attempt) + UDim2.fromOffset(CELL / 2, CELL / 2),
+			BackgroundColor3 = BONUS_FOOD_COLOR,
+			BorderSizePixel = 0,
+			ZIndex = 5,
+			Parent = canvas,
+		})
+		Factory.Corner(frame, 6)
+		Factory.Stroke(frame, Colors.Ink, 0.3, 1.5)
+		Factory.Label(frame, "★", UDim2.fromScale(1, 1), {
+			TextSize = 11,
+			Color = Colors.Ink,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			ZIndex = 6,
+		})
+		-- The ring's own stroke transparency ticks from opaque to fully faded
+		-- over the food's lifetime -- a countdown a player reads at a glance
+		-- without needing a number.
+		local ring = Factory.New("Frame", {
+			Name = "BonusRing",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromScale(1.7, 1.7),
+			BackgroundTransparency = 1,
+			ZIndex = 5,
+			Parent = frame,
+		})
+		Factory.Corner(ring, 99)
+		local ringStroke = Factory.New("UIStroke", { Color = BONUS_FOOD_COLOR, Thickness = 2.5, Parent = ring })
+		if not api.reduceMotion then
+			local pulse = Factory.New("UIScale", { Scale = 1, Parent = frame })
+			TweenService:Create(
+				pulse,
+				TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+				{ Scale = 1.22 }
+			):Play()
+			TweenService:Create(ringStroke, TweenInfo.new(BONUS_FOOD_LIFETIME, Enum.EasingStyle.Linear), {
+				Transparency = 1,
+			}):Play()
+		end
+		bonusFood = { frame = frame, point = attempt, token = myToken }
+		task.delay(BONUS_FOOD_LIFETIME, function()
+			if bonusFood and bonusFood.token == myToken then
+				bonusFood.frame:Destroy()
+				bonusFood = nil
+			end
+		end)
+	end
 
 	local function updateEyes()
 		local head = segments[1]
@@ -438,8 +608,16 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			endGame()
 			return
 		end
+		for _, obstacle in obstacles do
+			if obstacle.point.x == newHead.x and obstacle.point.y == newHead.y then
+				endGame()
+				return
+			end
+		end
 		local eating = newHead.x == food.x and newHead.y == food.y
-		if occupies(newHead, segments, not eating) then
+		local eatingBonus = bonusFood ~= nil and newHead.x == bonusFood.point.x and newHead.y == bonusFood.point.y
+		local growing = eating or eatingBonus
+		if occupies(newHead, segments, not growing) then
 			endGame()
 			return
 		end
@@ -477,6 +655,30 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			-- a snake that only ever grows would never show one.
 			segmentFrames[#segmentFrames].BackgroundColor3 = TAIL_COLOR
 			placeFood()
+
+			regularFoodCount += 1
+			if score >= OBSTACLE_UNLOCK_SCORE and math.random() < OBSTACLE_CHANCE then
+				spawnObstacle()
+			end
+			if not bonusFood and regularFoodCount % BONUS_FOOD_EVERY == 0 then
+				spawnBonusFood()
+			end
+		elseif eatingBonus then
+			local activeBonusFood = bonusFood :: BonusFood
+			score += BONUS_FOOD_SCORE
+			api.setScore(score)
+			api.sounds:Play("Success")
+			local bonusPosition = activeBonusFood.frame.Position
+			GameShell.Burst(canvas, bonusPosition, BONUS_FOOD_COLOR, api.reduceMotion)
+			GameShell.Ring(canvas, bonusPosition, BONUS_FOOD_COLOR, api.reduceMotion, CELL * 1.4)
+			GameShell.Shake(canvas, api.reduceMotion, 0.35)
+			local now = os.clock()
+			comboCount = if now - lastEatTime <= COMBO_WINDOW then comboCount + 1 else 1
+			lastEatTime = now
+			showScorePopup(bonusPosition, comboCount, BONUS_FOOD_SCORE, BONUS_FOOD_COLOR)
+			segmentFrames[#segmentFrames].BackgroundColor3 = TAIL_COLOR
+			activeBonusFood.frame:Destroy()
+			bonusFood = nil
 		else
 			local removedPoint = table.remove(segments)
 			local removedFrame = table.remove(segmentFrames)
@@ -505,6 +707,14 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		comboLabel:Destroy()
 		eyeLeft:Destroy()
 		eyeRight:Destroy()
+		for _, obstacle in obstacles do
+			obstacle.frame:Destroy()
+		end
+		table.clear(obstacles)
+		if bonusFood then
+			bonusFood.frame:Destroy()
+			bonusFood = nil
+		end
 		if headGlow then
 			headGlow:Destroy()
 		end
