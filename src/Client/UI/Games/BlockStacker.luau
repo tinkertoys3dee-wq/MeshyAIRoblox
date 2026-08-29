@@ -314,6 +314,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 				Colors.Gold,
 				api.reduceMotion
 			)
+			GameShell.Ring(
+				canvas,
+				UDim2.fromOffset(finalX + finalWidth / 2, TOP_Y + BLOCK_HEIGHT / 2),
+				Colors.Gold,
+				api.reduceMotion,
+				math.min(finalWidth, 60)
+			)
 			if not api.reduceMotion then
 				landedFrame.BackgroundColor3 = Colors.Gold
 				TweenService:Create(

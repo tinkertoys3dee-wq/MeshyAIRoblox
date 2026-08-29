@@ -189,6 +189,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		api.sounds:Play("Hover")
 		flashScreen(Colors.Cyan, 0.82)
 		GameShell.Burst(canvas, UDim2.fromOffset(pipeCenterX, pipeGapCenterY), Colors.Cyan, api.reduceMotion)
+		GameShell.Ring(canvas, UDim2.fromOffset(pipeCenterX, pipeGapCenterY), Colors.Cyan, api.reduceMotion)
 	end
 
 	local comboFadeToken = 0
@@ -453,11 +454,19 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 				local now = os.clock()
 				comboCount = if now - lastScoreTime <= COMBO_WINDOW then comboCount + 1 else 1
 				lastScoreTime = now
+				local scoreColor = if comboCount >= 5 then Colors.Gold else Colors.Mint
 				GameShell.Burst(
 					canvas,
 					bird.Position + UDim2.fromOffset(BIRD_SIZE / 2, BIRD_SIZE / 2),
-					if comboCount >= 5 then Colors.Gold else Colors.Mint,
+					scoreColor,
 					api.reduceMotion
+				)
+				GameShell.Ring(
+					canvas,
+					UDim2.fromOffset(pipeLeft + PIPE_WIDTH / 2, pipe.gapY),
+					scoreColor,
+					api.reduceMotion,
+					12
 				)
 				showScorePopup(comboCount)
 			end

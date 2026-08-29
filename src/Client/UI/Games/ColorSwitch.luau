@@ -610,6 +610,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 					PALETTE_COLORS[ballColorIndex],
 					api.reduceMotion
 				)
+				GameShell.Ring(
+					canvas,
+					UDim2.fromOffset(centerX(), ring.y + RING_SIZE / 2),
+					PALETTE_COLORS[ballColorIndex],
+					api.reduceMotion,
+					RING_SIZE * 0.7
+				)
 				registerStreak()
 				-- How close the current rotation is to a petal boundary: a
 				-- beat later or earlier at this spin speed and a different
@@ -643,6 +650,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 					orbPosition + UDim2.fromOffset(ORB_SIZE / 2, ORB_SIZE / 2),
 					PALETTE_COLORS[orbColorIndex],
 					api.reduceMotion
+				)
+				GameShell.Ring(
+					canvas,
+					orbPosition + UDim2.fromOffset(ORB_SIZE / 2, ORB_SIZE / 2),
+					PALETTE_COLORS[orbColorIndex],
+					api.reduceMotion,
+					10
 				)
 				orb.frame:Destroy()
 				table.remove(orbs, i)

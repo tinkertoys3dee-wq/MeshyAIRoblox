@@ -278,6 +278,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			HOT_COLOR,
 			api.reduceMotion
 		)
+		GameShell.Ring(
+			canvas,
+			tile.button.Position + UDim2.fromOffset(tileSize / 2, tileSize / 2),
+			HOT_COLOR,
+			api.reduceMotion,
+			tileSize * 0.6
+		)
 		if not api.reduceMotion then
 			local pop = Factory.New("UIScale", { Scale = 0.82, Parent = tile.button })
 			TweenService

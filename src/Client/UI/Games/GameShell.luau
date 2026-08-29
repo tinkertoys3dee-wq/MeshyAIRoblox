@@ -48,21 +48,45 @@ export type WeeklyResult = { standings: { WeeklyStanding }, self: PersonalStandi
 local GameShell = {}
 GameShell.__index = GameShell
 
--- Small radial particle puff shared by all three games (gate passed, pipe
--- cleared, obstacle jumped) so the effect only has to be built once. A no-op
--- under reduceMotion -- it's pure decoration, never the game's only signal
--- that something happened (a sound and/or score update always accompanies
--- it), so skipping it costs nothing but flourish.
+-- Small radial particle puff shared by every game (gate passed, pipe
+-- cleared, obstacle jumped, brick broken, tile tapped, ...) so the effect
+-- only has to be built once. A no-op under reduceMotion -- it's pure
+-- decoration, never the game's only signal that something happened (a sound
+-- and/or score update always accompanies it), so skipping it costs nothing
+-- but flourish. A quick bright core flash leads the particles out -- reads
+-- as "impact" a beat before they finish their own outward arc, the same way
+-- a hit spark leads debris in any action game.
 function GameShell.Burst(parent: Instance, position: UDim2, color: Color3, reduceMotion: boolean)
 	if reduceMotion then
 		return
 	end
-	for i = 1, 6 do
-		local angle = (i / 6) * math.pi * 2 + math.random() * 0.4
-		local distance = 22 + math.random() * 16
+	local core = Factory.New("Frame", {
+		Name = "BurstCore",
+		Size = UDim2.fromOffset(6, 6),
+		Position = position,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = color,
+		BorderSizePixel = 0,
+		ZIndex = 39,
+		Parent = parent,
+	})
+	Factory.Corner(core, 20)
+	local coreTween = TweenService:Create(core, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = UDim2.fromOffset(44, 44),
+		BackgroundTransparency = 1,
+	})
+	coreTween.Completed:Connect(function()
+		core:Destroy()
+	end)
+	coreTween:Play()
+
+	for i = 1, 10 do
+		local angle = (i / 10) * math.pi * 2 + math.random() * 0.35
+		local distance = 24 + math.random() * 24
+		local size = 4 + math.random() * 4
 		local particle = Factory.New("Frame", {
 			Name = "Particle",
-			Size = UDim2.fromOffset(6, 6),
+			Size = UDim2.fromOffset(size, size),
 			Position = position,
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundColor3 = color,
@@ -70,18 +94,58 @@ function GameShell.Burst(parent: Instance, position: UDim2, color: Color3, reduc
 			ZIndex = 40,
 			Parent = parent,
 		})
-		Factory.Corner(particle, 3)
+		Factory.Corner(particle, size / 2)
 		local targetPosition = position + UDim2.fromOffset(math.cos(angle) * distance, math.sin(angle) * distance)
 		local tween = TweenService:Create(
 			particle,
-			TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-			{ Position = targetPosition, BackgroundTransparency = 1, Size = UDim2.fromOffset(2, 2) }
+			TweenInfo.new(0.38 + math.random() * 0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ Position = targetPosition, BackgroundTransparency = 1, Size = UDim2.fromOffset(1, 1) }
 		)
 		tween.Completed:Connect(function()
 			particle:Destroy()
 		end)
 		tween:Play()
 	end
+end
+
+-- A thin ring that expands outward from `position` and fades -- a bigger,
+-- more deliberate "impact" cue than Burst's scatter of particles, meant for
+-- a game's own signature moment (a ring cleared, a perfect landing, a tile
+-- beaten) rather than every routine score tick. Also a no-op under
+-- reduceMotion, for the same reason Burst is.
+function GameShell.Ring(parent: Instance, position: UDim2, color: Color3, reduceMotion: boolean, startSize: number?)
+	if reduceMotion then
+		return
+	end
+	local size = startSize or 18
+	local ring = Factory.New("Frame", {
+		Name = "RingPulse",
+		Size = UDim2.fromOffset(size, size),
+		Position = position,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1,
+		ZIndex = 39,
+		Parent = parent,
+	})
+	Factory.Corner(ring, size / 2)
+	local stroke = Factory.New("UIStroke", {
+		Color = color,
+		Thickness = 3,
+		Transparency = 0.1,
+		Parent = ring,
+	})
+	local tween = TweenService:Create(ring, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = UDim2.fromOffset(size + 70, size + 70),
+	})
+	local strokeTween =
+		TweenService:Create(stroke, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Transparency = 1,
+		})
+	tween.Completed:Connect(function()
+		ring:Destroy()
+	end)
+	tween:Play()
+	strokeTween:Play()
 end
 
 -- Nudges `frame` away from its current position and eases it back -- used

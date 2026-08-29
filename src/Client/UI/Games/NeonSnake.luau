@@ -373,6 +373,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			api.setScore(score)
 			api.sounds:Play("Success")
 			GameShell.Burst(canvas, foodFrame.Position, Colors.Gold, api.reduceMotion)
+			GameShell.Ring(canvas, foodFrame.Position, Colors.Gold, api.reduceMotion, CELL)
 			-- The new tail's frame gets the dedicated tail shade -- otherwise
 			-- a snake that only ever grows would never show one.
 			segmentFrames[#segmentFrames].BackgroundColor3 = TAIL_COLOR

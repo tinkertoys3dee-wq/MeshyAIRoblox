@@ -409,6 +409,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 					Colors.Line,
 					api.reduceMotion
 				)
+				GameShell.Ring(
+					canvas,
+					dino.Position + UDim2.fromOffset(DINO_SIZE / 2, DINO_SIZE),
+					Colors.Line,
+					api.reduceMotion,
+					10
+				)
 				if not api.reduceMotion then
 					dinoScale.Scale = 0.8
 					TweenService:Create(
