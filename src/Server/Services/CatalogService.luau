@@ -87,12 +87,12 @@ function CatalogService:TryOn(player: Player, payload: any): (boolean, any)
 	if not humanoid then
 		return false, "CHARACTER_UNAVAILABLE"
 	end
-	local success, problem = pcall(function()
+	local success, appliedOrProblem = pcall(function(): boolean
 		local description = humanoid:GetAppliedDescription()
 		local accessories = description:GetAccessories(true)
 		for _, accessory in accessories do
 			if accessory.AssetId == assetId then
-				return
+				return false
 			end
 		end
 		table.insert(accessories, {
@@ -102,15 +102,21 @@ function CatalogService:TryOn(player: Player, payload: any): (boolean, any)
 		})
 		description:SetAccessories(accessories, true)
 		humanoid:ApplyDescriptionAsync(description)
+		return true
 	end)
 	if not success then
-		warn(string.format("[CatalogService] Catalog try-on failed: %s", tostring(problem)))
+		warn(string.format("[CatalogService] Catalog try-on failed: %s", tostring(appliedOrProblem)))
 		return false, "TRY_ON_FAILED"
 	end
-	self.profiles:Mutate(player, function(profile)
-		profile.stats.catalogTryOns = (profile.stats.catalogTryOns or 0) + 1
-	end)
-	self.analytics:Custom(player, "CatalogItemTried", 1, { assetType = payload.avatarAssetType })
+	-- Already-worn assets (e.g. the client hasn't caught up to a HumanoidDescription
+	-- applied in a previous session) short-circuit above without changing anything --
+	-- don't count that no-op as a real try-on in stats/analytics.
+	if appliedOrProblem then
+		self.profiles:Mutate(player, function(profile)
+			profile.stats.catalogTryOns = (profile.stats.catalogTryOns or 0) + 1
+		end)
+		self.analytics:Custom(player, "CatalogItemTried", 1, { assetType = payload.avatarAssetType })
+	end
 	return true, {}
 end
 

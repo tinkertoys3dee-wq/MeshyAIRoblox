@@ -768,9 +768,20 @@ function RunwayHub.Show(app: any)
 					and entry.userId ~= localPlayer.UserId
 				local canLeave = entry.userId == localPlayer.UserId
 					and (state.phase == "INTERMISSION" or state.phase == "STYLING")
+				-- votedFor can be the -1 "spent ballot" sentinel (the entrant
+				-- this player voted for already left the round) rather than
+				-- nil or a real userId -- that never equals any entry.userId,
+				-- so without this every remaining row fell through to "Vote"
+				-- and looked actionable even though canVote below is already
+				-- correctly false for all of them.
+				local voteLabel = if canLeave
+					then "Leave"
+					elseif state.votedFor == entry.userId then "✓"
+					elseif state.votedFor ~= nil then "Voted"
+					else "Vote"
 				local vote = Factory.Button(
 					row,
-					if canLeave then "Leave" elseif state.votedFor == entry.userId then "✓" else "Vote",
+					voteLabel,
 					UDim2.fromOffset(58, 34),
 					UDim2.new(1, -66, 0, 3),
 					if canLeave then "danger" elseif canVote then "mint" else nil
