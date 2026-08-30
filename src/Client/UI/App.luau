@@ -408,6 +408,15 @@ function App.new()
 		runwayUiScale = nil :: UIScale?,
 	}, App)
 	self:_BuildChrome()
+	-- Land on the closed base view (Forge Studio / Arcade / Runway / AFK as
+	-- equal, deliberate choices) rather than the Studio shell wide open by
+	-- Roblox's own Frame default -- every new player was otherwise dropped
+	-- straight into the paywalled Create tab with no free option even on
+	-- screen, which the funnel data (0% of "Method and prompt submitted"
+	-- attempts ever reaching a completed purchase, against a 94% Discover
+	-- bounce with almost nothing yet to browse) is consistent with. Arcade
+	-- and Runway are free and immediate; Forge Studio remains one tap away.
+	self:_SetStudioOpen(false)
 	AvatarEditorService.PromptAllowInventoryReadAccessCompleted:Connect(function(result)
 		self.catalogAccessPrompting = false
 		self.catalogAccess = result == Enum.AvatarPromptResult.Success
