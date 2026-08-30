@@ -103,13 +103,24 @@ local function initializePlayer(player: Player)
 		return
 	end
 	loading[player] = true
+	-- playerStates:Initialize touches only Config/PolicyService/GroupService,
+	-- never the profile, so it doesn't need to wait for the DataStore load
+	-- below -- running it alongside instead of after overlaps two real
+	-- network round trips on every single new join instead of stacking them.
+	local playerStateDone = false
+	task.spawn(function()
+		playerStates:Initialize(player)
+		playerStateDone = true
+	end)
 	local success = profiles:Load(player)
+	while not playerStateDone do
+		task.wait()
+	end
 	if not success or player.Parent ~= Players then
 		loading[player] = nil
 		return
 	end
 	local profile = profiles:Get(player)
-	playerStates:Initialize(player)
 	leaderstats:Init(player, profile)
 	loaded[player] = true
 	loading[player] = nil

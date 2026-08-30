@@ -438,8 +438,18 @@ function App.new()
 		-- see the "Make Arcade modal inherit UIScale" fix in GamesHub.luau.
 		arcadeUiScale = nil :: UIScale?,
 		runwayUiScale = nil :: UIScale?,
+		-- True once Bootstrap knows onboarding isn't complete; consumed (and
+		-- cleared) the first time the Studio shell actually opens, since
+		-- nothing should pop up unprompted on join -- see _SetStudioOpen.
+		pendingOnboarding = false,
 	}, App)
 	self:_BuildChrome()
+	-- No panel opens on join -- the player lands on the closed base view
+	-- (Forge Studio / Arcade / Runway / AFK launchers) and opens the Studio
+	-- shell only when they actually choose to, rather than the shell (and,
+	-- for a new profile, the onboarding modal on top of it) appearing
+	-- immediately over whatever they were looking at.
+	self:_SetStudioOpen(false)
 	AvatarEditorService.PromptAllowInventoryReadAccessCompleted:Connect(function(result)
 		self.catalogAccessPrompting = false
 		self.catalogAccess = result == Enum.AvatarPromptResult.Success
@@ -1469,6 +1479,10 @@ function App:_SetStudioOpen(open: boolean)
 	end
 	if open then
 		self:_MarkJourneyOpen()
+		if self.pendingOnboarding and self.state then
+			self.pendingOnboarding = false
+			self:_ShowOnboarding()
+		end
 	end
 end
 
@@ -2227,7 +2241,13 @@ function App:_Bootstrap()
 		self:_OpenPage("Create")
 		self:_RefreshLocalizedPrices()
 		if not data.profile.onboarding.completed then
-			self:_ShowOnboarding()
+			-- Deferred rather than shown immediately here: with no panel
+			-- opening on join (see _SetStudioOpen(false) in App.new), the
+			-- Welcome modal firing straight off Bootstrap would still pop up
+			-- over whatever the player is looking at, same as the Studio
+			-- shell used to. It shows instead the first time they actually
+			-- open the Studio -- see the pendingOnboarding check there.
+			self.pendingOnboarding = true
 		elseif
 			data.dailyBrief
 			and (
