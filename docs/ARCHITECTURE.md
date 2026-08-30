@@ -83,7 +83,7 @@ The raw GLB/PNG bytes are never placed in a DataStore. Roblox DataStores are met
 
 ## First Look, Creator progression, and Forge Runway
 
-`RetentionService` owns the free four-step First Look journey. The client may report only `OPEN_STUDIO`; try-on, runway ready, and round completion advance from successful server branches. Every step is idempotent and persists to the player profile. Its token grants use `bonusTokens`, so the journey can buy a Priority Pass but cannot fund OpenAI or Meshy work.
+`RetentionService` owns the free four-step First Look journey. The client may report only `OPEN_STUDIO`; try-on, runway ready, and round completion advance from successful server branches. New players enter through Discover's featured public accessory, avoiding catalog-consent and purchase friction before their first visual payoff, then the same guide hands them to Runway. Onboarding steps three and four are emitted from the authoritative `OPEN_STUDIO` and successful `TRY_STYLE` mutations instead of being inferred from the welcome-modal click. Every step is idempotent and persists to the player profile. Its token grants use `bonusTokens`, so the journey can buy a Priority Pass but cannot fund OpenAI or Meshy work.
 
 `ProgressionService` is the single authority for Creator XP. `CreatorProgression.luau` contains pure shared level/title math for display, while every award is applied on the server after a completed action. Generation completion IDs already make creation XP idempotent; weekly runway awards additionally store `profile.runway.weeklyPaidWeek`, making cross-server payout retries safe.
 

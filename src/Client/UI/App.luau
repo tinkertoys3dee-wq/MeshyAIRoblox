@@ -15,6 +15,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Achievements = require(ReplicatedStorage:WaitForChild("Achievements"))
+local AccessoryBounds = require(ReplicatedStorage:WaitForChild("AccessoryBounds"))
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
@@ -90,6 +91,7 @@ local ERROR_MESSAGES = {
 	CREATION_TOKEN_NOT_CONFIGURED = "Add the Avatar Creation Token for this type to ServerStorage/ForgeUGCSecrets.",
 	MODEL_UNAVAILABLE = "The model asset is not available yet.",
 	ASSET_STILL_PROCESSING = "Roblox is still processing this new model. Wait a few seconds and try again.",
+	MODEL_TEXTURE_PROCESSING = "Roblox is still processing or moderating this model's texture. Your item is saved; retry when the texture appears.",
 	ASSET_LOAD_FAILED = "Roblox could not load this model. Check that the uploaded asset belongs to this experience's creator.",
 	MESH_NOT_FOUND = "The uploaded model does not contain a usable MeshPart.",
 	ACCESSORY_PREPARATION_FAILED = "Roblox could not turn this model into an accessory. The server log now includes the exact failure.",
@@ -99,6 +101,7 @@ local ERROR_MESSAGES = {
 	PLAYER_GUI_UNAVAILABLE = "Your private preview cache is unavailable. Rejoin and try again.",
 	AVATAR_CREATION_UNAVAILABLE = "Roblox could not open the wearable publishing prompt. Check the creation token and asset permissions.",
 	AVATAR_CREATION_REJECTED = "Wearable publishing was cancelled or Roblox rejected the asset.",
+	AVATAR_CREATION_CANCELLED = "Wearable publishing was cancelled. Your model and fit are still saved.",
 	AVATAR_CREATION_BAD_RESPONSE = "Roblox completed the prompt but did not return a valid wearable asset ID.",
 	SAVE_FAILED = "Roblox could not safely save this transaction. Nothing new was prompted; try again.",
 	GRANT_FAILED = "The purchase benefit could not be prepared. Try again in a moment.",
@@ -128,6 +131,8 @@ local ERROR_MESSAGES = {
 	SUBSCRIPTION_PROMPT_FAILED = "Roblox could not open the Plus subscription prompt.",
 	RATE_LIMITED = "Slow down for a moment, then try again.",
 	UGC_VALIDATION_FAILED = "Roblox validation did not accept this fit. Adjust it and try again.",
+	UGC_BOUNDS_TOO_LARGE = "This wearable exceeds Roblox's size limit. Check the measured X/Y/Z bounds in Fitting and reduce the highlighted scale axes.",
+	UGC_MODERATION_PENDING = "Roblox is still processing or moderating this model or texture. Your item is saved; retry publishing later.",
 	ITEM_NOT_EQUIPPED = "That item is not currently equipped.",
 	INVALID_IMAGE_QUALITY = "Choose one of the available reference image quality tiers.",
 	FIT_PRESET_LIMIT_REACHED = "You have saved the maximum number of fit presets. Delete one to save another.",
@@ -233,6 +238,29 @@ local function directImage(assetId: any): string
 		return ""
 	end
 	return string.format("rbxassetid://%d", id)
+end
+
+-- Generated models normally have a separately uploaded flat thumbnail. If
+-- that image is absent or still propagating, Roblox's rendered model thumbnail
+-- is a useful independent fallback instead of leaving every ImageLabel blank.
+local function modelPreviewImage(item: { [string]: any }): string
+	local uploadedThumbnail = directImage(item.thumbnailAssetId)
+	if uploadedThumbnail ~= "" then
+		return uploadedThumbnail
+	end
+	return thumbnail(item.modelAssetId, 420)
+end
+
+local function vectorFromData(value: any): Vector3?
+	if
+		type(value) ~= "table"
+		or type(value.x) ~= "number"
+		or type(value.y) ~= "number"
+		or type(value.z) ~= "number"
+	then
+		return nil
+	end
+	return Vector3.new(value.x, value.y, value.z)
 end
 
 -- Cheap, instant client-side avatar preview. `thumbType` is one of
@@ -342,6 +370,7 @@ function App.new()
 		fitDrafts = {} :: { [string]: { [string]: any } },
 		pageConnections = {} :: { RBXScriptConnection },
 		marketplaceItems = nil :: { any }?,
+		featuredCommunityItem = nil :: { [string]: any }?,
 		marketplaceQuery = "",
 		marketplaceSearchBy = "NAME",
 		marketplaceSortBy = "TRENDING",
@@ -373,6 +402,9 @@ function App.new()
 		avatarAccessoriesLoading = false,
 		avatarAccessoriesDirty = true,
 		communityTryOnItem = nil :: { [string]: any }?,
+		-- De-duplicates guide impressions across Discover's frequent re-renders
+		-- while retaining click telemetry for the same stage.
+		firstLookGuideEvents = {} :: { [string]: boolean },
 		-- True whenever the player's actual applied avatar description may
 		-- have changed since the panel's ViewportController last snapshotted
 		-- it (see ViewportController.new), so the panel knows to rebuild the
@@ -1227,7 +1259,7 @@ function App:_SyncAvatarPreviewPanel()
 					itemId = itemId,
 					name = item.name or "Forge accessory",
 					assetType = item.fit and item.fit.accessoryType or "Accessory",
-					image = directImage(item.thumbnailAssetId),
+					image = modelPreviewImage(item),
 				})
 			end
 		end
@@ -1240,7 +1272,7 @@ function App:_SyncAvatarPreviewPanel()
 			itemId = item.id,
 			name = item.title or item.name or "Community accessory",
 			assetType = item.fit and item.fit.accessoryType or "Accessory",
-			image = directImage(item.thumbnailAssetId),
+			image = modelPreviewImage(item),
 		})
 	end
 	for _, entry in rows do
@@ -1669,7 +1701,11 @@ function App:_Invoke(action: string, payload: any?): (boolean, any)
 	end
 	if response.ok ~= true then
 		local code = tostring(response.error or "SERVER_ERROR")
-		self:_Toast("error", ERROR_MESSAGES[code] or "That action could not be completed.")
+		local details = response.details
+		local detailedMessage = if type(details) == "table" and type(details.userMessage) == "string"
+			then details.userMessage
+			else nil
+		self:_Toast("error", detailedMessage or ERROR_MESSAGES[code] or "That action could not be completed.")
 		return false, code
 	end
 	if response.data == nil then
@@ -1677,6 +1713,25 @@ function App:_Invoke(action: string, payload: any?): (boolean, any)
 		return true, {}
 	end
 	return true, response.data
+end
+
+-- Creation requests can already have opened a purchase prompt, spent tokens,
+-- or consumed a retry credit by the time their response reaches the client.
+-- Never repeat one just because a malformed success response omitted its data:
+-- normalize at the point of use so presentation code cannot crash while the
+-- accepted server-side action continues normally.
+function App:_GenerationResult(action: string, result: any): { [string]: any }
+	if type(result) == "table" then
+		return result
+	end
+	warn(
+		string.format(
+			"[App] Generation action %s returned %s after success; continuing without repeating the request",
+			action,
+			typeof(result)
+		)
+	)
+	return {}
 end
 
 function App:_Track(payload: { [string]: any })
@@ -1705,10 +1760,16 @@ end
 -- delay. `imageLabel.Parent` is checked on every iteration as the life
 -- token: once the card re-renders (a fresh ImageLabel replaces this one) or
 -- the page navigates away, this stops on its own.
-local IMAGE_LOAD_RETRY_DELAYS = { 2, 3, 5, 8, 13, 13, 13 }
-function App:_WatchImageLoad(imageLabel: ImageLabel, hintLabel: TextLabel)
+local IMAGE_LOAD_RETRY_DELAYS = { 2, 3, 5, 8, 13, 20, 30, 45, 60 }
+function App:_WatchImageLoad(
+	imageLabel: ImageLabel,
+	hintLabel: TextLabel,
+	fallbackImage: string?,
+	statusContainer: GuiObject?
+)
 	task.spawn(function()
-		for _, delaySeconds in IMAGE_LOAD_RETRY_DELAYS do
+		local switchedToFallback = false
+		for attempt, delaySeconds in IMAGE_LOAD_RETRY_DELAYS do
 			if not imageLabel.Parent then
 				return
 			end
@@ -1724,13 +1785,32 @@ function App:_WatchImageLoad(imageLabel: ImageLabel, hintLabel: TextLabel)
 				return
 			end
 			if loaded then
-				hintLabel.Visible = false
+				if statusContainer then
+					-- Destroying the gallery's whole status group also stops its
+					-- decorative spinner tween; loaded cards should carry no hidden
+					-- animation cost after the placeholder disappears.
+					statusContainer:Destroy()
+				else
+					hintLabel.Visible = false
+				end
 				return
+			end
+			if
+				attempt == 4
+				and type(fallbackImage) == "string"
+				and fallbackImage ~= ""
+				and fallbackImage ~= imageLabel.Image
+			then
+				imageLabel.Image = fallbackImage
+				switchedToFallback = true
+				hintLabel.Text = "Roblox is still processing the uploaded preview — trying the model thumbnail…"
 			end
 			task.wait(delaySeconds)
 		end
 		if imageLabel.Parent then
-			hintLabel.Text = "Still awaiting Roblox moderation — this can occasionally take longer than usual."
+			hintLabel.Text = if switchedToFallback
+				then "Preview still processing/moderating on Roblox. The model is saved; open Fitting or retry later."
+				else "Still awaiting Roblox processing/moderation — this can occasionally take longer than usual."
 		end
 	end)
 end
@@ -2154,7 +2234,6 @@ function App:_Bootstrap()
 		self:_RenderStatus()
 		self:_ConnectPush()
 		self:_OpenPage("Create")
-		self:_MarkJourneyOpen()
 		self:_RefreshLocalizedPrices()
 		if not data.profile.onboarding.completed then
 			self:_ShowOnboarding()
@@ -2292,6 +2371,7 @@ function App:_ShowCreationComplete(kind: string, record: { [string]: any }, comp
 		elseif kind == "REFERENCE" then "Your concept has arrived. Review it, then send it into the 3D forge."
 		else "Fresh from the renderer and saved in your Avatar Graphics gallery."
 	local imageId = record.thumbnailAssetId or record.previewAssetId
+	local previewImage = if kind == "MODEL" then modelPreviewImage(record) else directImage(imageId)
 	local overlay = Factory.New("Frame", {
 		Name = "CreationComplete",
 		Size = UDim2.fromScale(1, 1),
@@ -2354,14 +2434,14 @@ function App:_ShowCreationComplete(kind: string, record: { [string]: any }, comp
 		Size = if self.compact then UDim2.new(0.68, 0, 0.42, 0) else UDim2.fromOffset(300, 300),
 		BackgroundColor3 = Colors.Ink,
 		BorderSizePixel = 0,
-		Image = directImage(imageId),
+		Image = previewImage,
 		ScaleType = Enum.ScaleType.Fit,
 		ZIndex = 304,
 		Parent = card,
 	})
 	Factory.Corner(preview, 22)
 	Factory.Stroke(preview, Colors.Cyan, 0.3, 1.5)
-	if tonumber(imageId) == nil or tonumber(imageId) <= 0 then
+	if previewImage == "" then
 		Factory.Label(preview, if kind == "MODEL" then "◇" else "❑", UDim2.fromScale(1, 1), {
 			Font = Theme.Fonts.Black,
 			TextSize = 76,
@@ -2370,6 +2450,29 @@ function App:_ShowCreationComplete(kind: string, record: { [string]: any }, comp
 			AlignY = Enum.TextYAlignment.Center,
 			ZIndex = 305,
 		})
+	end
+	local previewHint = Factory.Label(
+		preview,
+		if kind == "MODEL" then "Checking Roblox preview processing…" else "Checking Roblox image processing…",
+		UDim2.new(1, -20, 0, 42),
+		{
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 10, 1, -10),
+			Color = Colors.Text,
+			TextSize = 11,
+			Wrapped = true,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			ZIndex = 306,
+		}
+	)
+	previewHint.BackgroundColor3 = Colors.Ink
+	previewHint.BackgroundTransparency = 0.12
+	Factory.Corner(previewHint, 9)
+	if previewImage ~= "" then
+		self:_WatchImageLoad(preview, previewHint, if kind == "MODEL" then thumbnail(record.modelAssetId, 420) else nil)
+	else
+		previewHint.Text = "Roblox has not issued a preview yet. The creation is saved; open it again shortly."
 	end
 	local close = Factory.Button(card, "×", UDim2.fromOffset(38, 38), UDim2.new(1, -50, 0, 12), nil)
 	close.TextSize = 20
@@ -2623,6 +2726,13 @@ function App:_OpenPage(page: string)
 	self:_HighlightNavigation()
 	self:_RenderActivePage()
 	self:_Track({ event = "AppOpenedTab", fields = { page = page } })
+	-- Opening Discover (or Avatar Lab when community sharing is policy-
+	-- unavailable) is now the actual free First Look. Record the journey
+	-- only when a player intentionally reaches it, not automatically while
+	-- their profile is merely booting behind the onboarding modal.
+	if page == "Discover" or page == "Avatar Lab" then
+		self:_MarkJourneyOpen()
+	end
 end
 
 function App:_HighlightNavigation()
@@ -2804,6 +2914,7 @@ function App:_RenderCreate()
 	local firstLook = self.state.journeyState
 	if firstLook then
 		local complete = firstLook.completed == true
+		local done = firstLook.done or {}
 		local card = Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 158 else 132), nil, "FirstLook")
 		card.LayoutOrder = -1
 		local icon = Factory.New("Frame", {
@@ -2837,7 +2948,7 @@ function App:_RenderCreate()
 			card,
 			if complete
 				then "Keep leveling up in six-minute Forge Runway style battles."
-				else "Try a catalog style, lock it in, and finish one runway round—no generation purchase needed.",
+				else "Try a featured creator accessory free, lock it in, and finish one runway round—no generation purchase needed.",
 			UDim2.new(if self.compact then 1 else 0.68, if self.compact then -32 else -80, 0, 38),
 			{
 				Position = UDim2.fromOffset(if self.compact then 16 else 72, if self.compact then 67 else 42),
@@ -2869,18 +2980,15 @@ function App:_RenderCreate()
 			card,
 			if complete
 				then "Open Forge Runway"
-				else string.format("Continue · %d/%d", firstLook.doneCount or 0, total),
+				else if not done.TRY_STYLE then "Try a free look →" else "Enter Forge Runway →",
 			if self.compact then UDim2.new(1, -32, 0, 36) else UDim2.new(0.27, -12, 0, 42),
 			if self.compact then UDim2.fromOffset(16, 116) else UDim2.new(0.72, 0, 0, 45),
 			if complete then "mint" else "primary"
 		)
 		self:_BindButton(continue)
 		continue.Activated:Connect(function()
-			local done = firstLook.done or {}
-			if not done.OPEN_STUDIO then
-				self:_MarkJourneyOpen()
-			elseif not done.TRY_STYLE then
-				self:_OpenPage("Avatar Lab")
+			if not done.OPEN_STUDIO or not done.TRY_STYLE then
+				self:_OpenPage(if self.state.policy.contentSharingAllowed then "Discover" else "Avatar Lab")
 			else
 				RunwayHub.Show(self)
 			end
@@ -3603,25 +3711,19 @@ function App:_RenderCreate()
 				if isAvatar then
 					request.avatarView = self.selectedAvatarView
 				end
-				-- A multi-return call nested inside an if-then-else *expression*
-				-- (as this was) gets truncated to its first value -- Luau's
-				-- if-expression always evaluates to exactly one value, so
-				-- `result` was silently always nil regardless of which branch
-				-- ran, and `result.usedRetryCredit`/`.mocked`/`.tokensSpent`
-				-- below would error the instant a generation actually
-				-- succeeded. An if-statement assigning both return values in
-				-- each branch keeps the full pair intact.
-				local success, result
+				-- Keep the action separate from the multi-return call: wrapping
+				-- `_Invoke` in an if-expression would discard its second return.
+				local creationAction = Network.Actions.CreateGeneration
 				if isUpload then
-					success, result = self:_Invoke(Network.Actions.CreateUploadedImage, request)
+					creationAction = Network.Actions.CreateUploadedImage
 				elseif isAvatar then
-					success, result = self:_Invoke(Network.Actions.CreateFromAvatar, request)
-				else
-					success, result = self:_Invoke(Network.Actions.CreateGeneration, request)
+					creationAction = Network.Actions.CreateFromAvatar
 				end
+				local success, result = self:_Invoke(creationAction, request)
 				generate.Active = true
 				generate.Text = actionText
 				if success then
+					result = self:_GenerationResult(creationAction, result)
 					if isUpload then
 						self:_Toast("success", "Your Roblox image is entering visual moderation at no extra charge.")
 					elseif result.usedRetryCredit then
@@ -3756,6 +3858,7 @@ function App:_RenderCreate()
 					paymentMethod = self.paymentMethod,
 				})
 				if success then
+					result = self:_GenerationResult(Network.Actions.ConvertImage, result)
 					if result.usedRetryCredit then
 						self:_Toast("success", "Conversion credit applied. Your model is entering the queue.")
 					elseif result.mocked then
@@ -4529,11 +4632,20 @@ function App:_RenderStudio()
 				Position = UDim2.fromOffset(9, 9),
 				BackgroundColor3 = Colors.Panel,
 				BorderSizePixel = 0,
-				Image = directImage(item.thumbnailAssetId),
+				Image = modelPreviewImage(item),
 				ScaleType = Enum.ScaleType.Crop,
 				Parent = row,
 			})
 			Factory.Corner(image, 9)
+			local imageHint = Factory.Label(image, "…", UDim2.fromScale(1, 1), {
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = 18,
+				Color = Colors.Cyan,
+				ZIndex = 2,
+			})
+			self:_WatchImageLoad(image, imageHint, thumbnail(item.modelAssetId, 150))
 			if table.find(profile.equippedItemIds or {}, itemId) then
 				local badge = Factory.New("TextLabel", {
 					Size = UDim2.fromOffset(20, 20),
@@ -4662,22 +4774,31 @@ function App:_RenderStudio()
 	resetCamera.Activated:Connect(function()
 		controller:ResetCamera()
 	end)
+	local previewStatus = Factory.Label(viewport, "Loading model and generated texture…", UDim2.new(1, -128, 0, 38), {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 12, 1, -12),
+		Color = Colors.Text,
+		TextSize = 11,
+		Wrapped = true,
+		AlignY = Enum.TextYAlignment.Center,
+		ZIndex = 6,
+	})
+	previewStatus.BackgroundColor3 = Colors.Ink
+	previewStatus.BackgroundTransparency = 0.08
+	Factory.Corner(previewStatus, 8)
+	local retryPreview =
+		Factory.Button(viewport, "Retry preview", UDim2.fromOffset(104, 38), UDim2.new(1, -116, 1, -50), "primary")
+	retryPreview.ZIndex = 6
+	retryPreview.Visible = false
+	self:_BindButton(retryPreview)
 
 	if not self.fitDrafts[selected.id] then
 		self.fitDrafts[selected.id] = deepCopy(selected.fit)
 	end
 	local fit = self.fitDrafts[selected.id]
-	task.spawn(function()
-		local version = self.pageVersion
-		local success, data = self:_Invoke(Network.Actions.RequestPrivateModel, { itemId = selected.id })
-		if success and version == self.pageVersion and viewport.Parent then
-			local cache = player.PlayerGui:WaitForChild("ForgeAssetCache", 8)
-			local model = cache and cache:WaitForChild(data.cacheName, 8)
-			if model and model:IsA("Model") then
-				controller:SetAccessory(model, fit)
-			end
-		end
-	end)
+	local baseMeshSize = nil :: Vector3?
+	local textureStatus = "CHECKING"
+	local meshStats = nil :: { [string]: any }?
 
 	local inspectScroll = Factory.New("ScrollingFrame", {
 		Size = UDim2.new(1, -12, 1, -310),
@@ -4697,16 +4818,177 @@ function App:_RenderStudio()
 		-- above SHARING & SALES below -- only present for an original (a
 		-- personal copy has nothing to title/describe, so it keeps the base
 		-- height instead of an empty 184px gap at the bottom of the panel).
-		Size = UDim2.new(1, -8, 0, if selected.license == "PERSONAL_COPY" then 1120 else 1304),
+		Size = UDim2.new(1, -8, 0, if selected.license == "PERSONAL_COPY" then 1240 else 1424),
 		BackgroundTransparency = 1,
 		Parent = inspectScroll,
 	})
+	local readiness = Factory.New("Frame", {
+		Position = UDim2.fromOffset(16, 8),
+		Size = UDim2.new(1, -32, 0, 104),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.08,
+		BorderSizePixel = 0,
+		Parent = body,
+	})
+	Factory.Corner(readiness, 13)
+	local readinessStroke = Factory.Stroke(readiness, Colors.Gold, 0.35)
+	Factory.Label(readiness, "WEARABLE READINESS · RTHRO NORMAL", UDim2.new(1, -28, 0, 20), {
+		Position = UDim2.fromOffset(14, 10),
+		Font = Theme.Fonts.Bold,
+		TextSize = 12,
+		Color = Colors.Cyan,
+	})
+	local sizeStatus = Factory.Label(readiness, "Measuring the model…", UDim2.new(1, -28, 0, 24), {
+		Position = UDim2.fromOffset(14, 32),
+		Font = Theme.Fonts.Bold,
+		TextSize = 10,
+		Wrapped = true,
+	})
+	local textureStatusLabel = Factory.Label(
+		readiness,
+		"Checking whether Roblox has released the generated texture…",
+		UDim2.new(1, -28, 0, 34),
+		{
+			Position = UDim2.fromOffset(14, 57),
+			Color = Colors.Gold,
+			TextSize = 10,
+			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
+		}
+	)
+
+	local function refreshReadiness()
+		local maximum = AccessoryBounds.GetMaximum(fit.accessoryType)
+		if not baseMeshSize or not maximum then
+			sizeStatus.Text = "Measuring the model against Roblox's publishing bounds…"
+			sizeStatus.TextColor3 = Colors.Gold
+			readinessStroke.Color = Colors.Gold
+		else
+			local fittedSize = AccessoryBounds.GetFittedSize(baseMeshSize, fit)
+			local exceededAxes = AccessoryBounds.ExceededAxes(fittedSize, maximum)
+			sizeStatus.Text = string.format(
+				"%s · X %.2f/%.2f  Y %.2f/%.2f  Z %.2f/%.2f studs",
+				ACCESSORY_LABELS[fit.accessoryType] or "Accessory",
+				fittedSize.X,
+				maximum.X,
+				fittedSize.Y,
+				maximum.Y,
+				fittedSize.Z,
+				maximum.Z
+			)
+			if #exceededAxes > 0 then
+				sizeStatus.TextColor3 = Colors.Rose
+				readinessStroke.Color = Colors.Rose
+				textureStatusLabel.Text = string.format(
+					"Too large on %s. Reduce those scale axes before publishing; position can also affect Roblox's final check.",
+					table.concat(exceededAxes, ", ")
+				)
+				textureStatusLabel.TextColor3 = Colors.Rose
+				return
+			end
+			sizeStatus.TextColor3 = Colors.Mint
+			readinessStroke.Color = if textureStatus == "READY" then Colors.Mint else Colors.Gold
+		end
+
+		if textureStatus == "READY" then
+			local textureDetail = if meshStats
+					and meshStats.textureWidth
+					and meshStats.textureHeight
+				then string.format(" · %d×%d source", meshStats.textureWidth, meshStats.textureHeight)
+				else ""
+			textureStatusLabel.Text = "✓ Generated texture is available on Roblox" .. textureDetail .. "."
+			textureStatusLabel.TextColor3 = Colors.Mint
+		elseif textureStatus == "PROCESSING" or textureStatus == "FETCH_FAILED" then
+			textureStatusLabel.Text =
+				"Texture is still processing/moderating on Roblox. The model is saved; use Retry preview before publishing."
+			textureStatusLabel.TextColor3 = Colors.Gold
+		else
+			textureStatusLabel.Text = "Checking whether Roblox has released the generated texture…"
+			textureStatusLabel.TextColor3 = Colors.Gold
+		end
+	end
+	refreshReadiness()
+
+	local previewLoadId = 0
+	local function loadPrivatePreview()
+		previewLoadId += 1
+		local thisLoad = previewLoadId
+		previewStatus.Text = "Loading a fresh model and generated texture…"
+		previewStatus.Visible = true
+		retryPreview.Visible = false
+		textureStatus = "CHECKING"
+		refreshReadiness()
+		task.spawn(function()
+			local version = self.pageVersion
+			local success, dataOrCode =
+				self:_Invoke(Network.Actions.RequestPrivateModel, { itemId = selected.id, refresh = true })
+			if thisLoad ~= previewLoadId or version ~= self.pageVersion or not viewport.Parent then
+				return
+			end
+			if not success then
+				textureStatus = if dataOrCode == "ASSET_STILL_PROCESSING" then "PROCESSING" else "FETCH_FAILED"
+				previewStatus.Text = if dataOrCode == "ASSET_STILL_PROCESSING"
+					then "Roblox is still processing/moderating this model. It is saved — retry shortly."
+					else "Preview could not be loaded. Your model is saved — tap Retry preview."
+				retryPreview.Visible = true
+				refreshReadiness()
+				return
+			end
+
+			local data = dataOrCode
+			local diagnostics = if type(data.diagnostics) == "table" then data.diagnostics else {}
+			baseMeshSize = vectorFromData(diagnostics.baseSize)
+			meshStats = diagnostics
+			textureStatus = tostring(diagnostics.textureStatus or "CHECKING")
+			refreshReadiness()
+
+			local cache = player.PlayerGui:WaitForChild("ForgeAssetCache", 8)
+			local model = cache and cache:WaitForChild(data.cacheName, 8)
+			if thisLoad ~= previewLoadId or version ~= self.pageVersion or not viewport.Parent then
+				return
+			end
+			if not model or not model:IsA("Model") then
+				textureStatus = "FETCH_FAILED"
+				previewStatus.Text = "Roblox has not delivered the preview model yet. It is saved — retry shortly."
+				retryPreview.Visible = true
+				refreshReadiness()
+				return
+			end
+
+			controller:SetAccessory(model, fit)
+			local contentReady = true
+			local preloadSuccess = pcall(function()
+				ContentProvider:PreloadAsync({ model }, function(_, status)
+					if status ~= Enum.AssetFetchStatus.Success then
+						contentReady = false
+					end
+				end)
+			end)
+			if thisLoad ~= previewLoadId or version ~= self.pageVersion or not viewport.Parent then
+				return
+			end
+			if textureStatus == "READY" and preloadSuccess and contentReady then
+				previewStatus.Visible = false
+				retryPreview.Visible = false
+			else
+				textureStatus = "PROCESSING"
+				previewStatus.Text =
+					"Texture is still processing/moderating on Roblox. The model is saved — retry shortly."
+				previewStatus.Visible = true
+				retryPreview.Visible = true
+				refreshReadiness()
+			end
+		end)
+	end
+	retryPreview.Activated:Connect(loadPrivatePreview)
+	loadPrivatePreview()
+
 	-- Sized ~1.6x its original dials/labels/track/knob so the fit sliders are
 	-- actually legible and easy to grab, not just the item name/pills above
 	-- them -- everything below (presets/actions/note/social) keeps its
 	-- original size and simply shifts down to sit under the taller card.
 	local controls = Factory.New("Frame", {
-		Position = UDim2.fromOffset(16, 8),
+		Position = UDim2.fromOffset(16, 128),
 		Size = UDim2.new(1, -32, 0, 664),
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.08,
@@ -4798,6 +5080,7 @@ function App:_RenderStudio()
 			fit[field][axis] = value
 			refresh()
 			controller:ApplyFit(fit)
+			refreshReadiness()
 		end
 		local function setFromPointer(pointerX: number)
 			if track.AbsoluteSize.X <= 0 then
@@ -4889,7 +5172,7 @@ function App:_RenderStudio()
 	-- Fit presets: save the current position/rotation/scale under a name so it
 	-- can be reapplied later, without touching whatever fit is currently being
 	-- drafted for a different item.
-	local presetsY = 702
+	local presetsY = 822
 	local presetsHeight = 140
 	local presets = Factory.New("Frame", {
 		Position = UDim2.fromOffset(16, presetsY),
@@ -5319,6 +5602,202 @@ function App:_RenderStudio()
 	end
 end
 
+function App:_TrackFirstLookGuide(stage: string, action: string)
+	local key = action .. ":" .. stage
+	if self.firstLookGuideEvents[key] then
+		return
+	end
+	self.firstLookGuideEvents[key] = true
+	self:_Track({
+		event = "FirstLookGuide",
+		fields = { stage = stage, action = action },
+	})
+end
+
+-- Shared by the featured First Look card and the regular marketplace grid.
+-- A successful response means ItemService actually attached the model; the
+-- server now logs funnel step two only at that point.
+function App:_ApplyCommunityTryOn(item: { [string]: any }, button: TextButton, entryPoint: string)
+	local removing = self.communityTryOnItem ~= nil and self.communityTryOnItem.id == item.id
+	button.Active = false
+	button.Text = if removing then "Removing…" else "Applying…"
+	task.spawn(function()
+		local success, errorCode = self:_Invoke(
+			if removing then Network.Actions.ClearCommunityTryOn else Network.Actions.TryOnCommunityItem,
+			if removing
+				then {}
+				else {
+					itemId = item.id,
+					entryPoint = if entryPoint == "FIRST_LOOK" then "FIRST_LOOK" else "GRID",
+				}
+		)
+		if success then
+			self.communityTryOnItem = if removing then nil else item
+			self.avatarPreviewDirty = true
+			if not removing then
+				self.sounds:Play("Success")
+			end
+			self:_Toast(
+				"success",
+				if removing
+					then "Community model removed."
+					else "Look applied! Check your avatar, then take it to Forge Runway."
+			)
+			self:_RenderActivePage()
+			return
+		end
+		if button.Parent then
+			button.Active = true
+			button.Text = if removing
+				then "Remove"
+				else if entryPoint == "FIRST_LOOK" then "Try this look · FREE" else "Try on"
+		end
+		if not removing and errorCode == "ITEM_NOT_FOUND" then
+			self.featuredCommunityItem = nil
+			self.marketplaceItems = nil
+			self:_RefreshMarketplace("")
+		end
+	end)
+end
+
+-- Returns the vertical space consumed above Discover's search controls.
+-- Until First Look is complete, this is the page's dominant action: a free
+-- public-model try-on with no AvatarEditorService permission prompt, then a
+-- direct handoff to the already-performing Runway loop.
+function App:_RenderDiscoverFirstLook(topY: number): number
+	local journey = self.state.journeyState
+	if not journey or journey.completed == true then
+		return 0
+	end
+
+	local done = journey.done or {}
+	local height = if self.compact then 190 else 146
+	local card =
+		Factory.Card(self.content, UDim2.new(0.95, 0, 0, height), UDim2.new(0.025, 0, 0, topY), "FirstLookGuide")
+	Factory.Stroke(card, if done.TRY_STYLE then Colors.Mint else Colors.Cyan, 0.18, 1.5)
+
+	local featured = self.featuredCommunityItem
+		or (if self.marketplaceItems and #self.marketplaceItems > 0 then self.marketplaceItems[1] else nil)
+	local previewRecord = if done.TRY_STYLE and self.communityTryOnItem then self.communityTryOnItem else featured
+	local previewImage = if previewRecord then modelPreviewImage(previewRecord) else ""
+	local previewModelId = if previewRecord then tonumber(previewRecord.modelAssetId) else nil
+	local previewFallback = if previewModelId and previewModelId > 0 then thumbnail(previewModelId, 150) else nil
+	if previewImage == "" and previewFallback then
+		previewImage = previewFallback
+	end
+	local visualSize = if self.compact then 72 else 116
+	local visual = Factory.New("ImageLabel", {
+		Position = UDim2.fromOffset(14, 14),
+		Size = UDim2.fromOffset(visualSize, visualSize),
+		BackgroundColor3 = Colors.Ink,
+		BorderSizePixel = 0,
+		Image = previewImage,
+		ScaleType = Enum.ScaleType.Crop,
+		Parent = card,
+	})
+	Factory.Corner(visual, 14)
+	if visual.Image == "" then
+		Factory.Gradient(visual, { Color3.fromRGB(28, 35, 72), Color3.fromRGB(64, 39, 108) }, 135)
+		Factory.Label(visual, if self.marketplaceItems == nil then "…" else "◇", UDim2.fromScale(1, 1), {
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			Font = Theme.Fonts.Black,
+			TextSize = 32,
+			Color = Colors.Cyan,
+		})
+	elseif previewRecord then
+		local hint = Factory.Label(visual, "Loading preview…", UDim2.new(1, -12, 0, 28), {
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 6, 1, -6),
+			AlignX = Enum.TextXAlignment.Center,
+			Color = Colors.Text,
+			TextSize = 9,
+			Wrapped = true,
+			ZIndex = 2,
+		})
+		hint.BackgroundColor3 = Colors.Ink
+		hint.BackgroundTransparency = 0.18
+		Factory.Corner(hint, 7)
+		self:_WatchImageLoad(visual, hint, previewFallback)
+	end
+
+	local textX = if self.compact then 98 else 146
+	local headingWidth = if self.compact then UDim2.new(1, -112, 0, 28) else UDim2.new(1, -390, 0, 28)
+	local stage = "TRY_FREE_LOOK"
+	local heading = "Your free First Look"
+	local description = "One tap puts a featured creator accessory on your avatar. No Robux. No catalog permission."
+	local buttonText = "Try this look · FREE"
+	local badgeText = "STEP 2 OF 4"
+	if done.TRY_STYLE then
+		if done.JOIN_RUNWAY then
+			stage = "FINISH_RUNWAY"
+			heading = "Finish your style round"
+			description = "Your look is locked. Complete the round to finish First Look and earn the completion reward."
+			buttonText = "Return to Runway"
+			badgeText = "FINAL STEP"
+		else
+			stage = "ENTER_RUNWAY"
+			heading = "Your look is on!"
+			description = "Now bring it to Forge Runway. Locking your look is the next step—and the round is free."
+			buttonText = "Enter Forge Runway →"
+			badgeText = "STEP 3 OF 4"
+		end
+	elseif not featured and self.marketplaceItems ~= nil and #self.marketplaceItems == 0 then
+		stage = "EMPTY_MARKETPLACE"
+		heading = "No community looks are live yet"
+		description = "You can still complete this step with a free Roblox catalog try-on in Avatar Lab."
+		buttonText = "Open Avatar Lab"
+		badgeText = "FREE FALLBACK"
+	elseif not featured and self.marketplaceItems == nil then
+		heading = "Finding a free look…"
+		description = "Loading the current trending community accessory. This does not spend Robux or Forge Tokens."
+		buttonText = "Loading…"
+		badgeText = "FIRST LOOK"
+	end
+
+	Factory.Label(card, heading, headingWidth, {
+		Position = UDim2.fromOffset(textX, 15),
+		Font = Theme.Fonts.Black,
+		TextSize = if self.compact then 17 else 20,
+		Truncate = Enum.TextTruncate.AtEnd,
+	})
+	Factory.Label(card, description, if self.compact then UDim2.new(1, -112, 0, 48) else UDim2.new(1, -390, 0, 48), {
+		Position = UDim2.fromOffset(textX, 46),
+		Color = Colors.TextMuted,
+		TextSize = if self.compact then 10 else 12,
+		Wrapped = true,
+		AlignY = Enum.TextYAlignment.Top,
+	})
+	local badge = Factory.Pill(card, badgeText, if done.TRY_STYLE then Colors.Mint else Colors.Cyan, 112)
+	badge.Position = UDim2.fromOffset(textX, if self.compact then 101 else 103)
+
+	local action = Factory.Button(
+		card,
+		buttonText,
+		if self.compact then UDim2.new(1, -28, 0, 42) else UDim2.fromOffset(218, 46),
+		if self.compact then UDim2.fromOffset(14, 134) else UDim2.new(1, -232, 0, 50),
+		if done.TRY_STYLE then "mint" else "primary"
+	)
+	self:_BindButton(action)
+	local actionReady = done.TRY_STYLE or featured ~= nil or self.marketplaceItems ~= nil
+	action.Active = actionReady
+	if actionReady then
+		self:_TrackFirstLookGuide(stage, "IMPRESSION")
+	end
+	action.Activated:Connect(function()
+		self:_TrackFirstLookGuide(stage, "CLICK")
+		if done.TRY_STYLE then
+			RunwayHub.Show(self)
+		elseif featured then
+			self:_ApplyCommunityTryOn(featured, action, "FIRST_LOOK")
+		else
+			self:_OpenPage("Avatar Lab")
+		end
+	end)
+
+	return height + 12
+end
+
 function App:_RefreshMarketplace(query: string?)
 	self.marketplaceQuery = query or self.marketplaceQuery or ""
 	task.spawn(function()
@@ -5328,7 +5807,16 @@ function App:_RefreshMarketplace(query: string?)
 			sortBy = self.marketplaceSortBy,
 		})
 		if success then
-			self.marketplaceItems = data.items
+			local items = if type(data) == "table" and type(data.items) == "table" then data.items else {}
+			self.marketplaceItems = items
+			if
+				self.marketplaceQuery == ""
+				and self.marketplaceSearchBy == "NAME"
+				and self.marketplaceSortBy == "TRENDING"
+				and items[1]
+			then
+				self.featuredCommunityItem = items[1]
+			end
 			if self.activePage == "Discover" then
 				self:_RenderActivePage()
 			end
@@ -5363,8 +5851,12 @@ function App:_RenderDiscover()
 		)
 		return
 	end
+	local firstLookOffset = self:_RenderDiscoverFirstLook(96)
+	local toolsY = 96 + firstLookOffset
+	local filtersY = toolsY + (if self.compact then 104 else 54)
+	local gridY = filtersY + 58
 	local tools = Factory.New("Frame", {
-		Position = UDim2.new(0.025, 0, 0, 96),
+		Position = UDim2.new(0.025, 0, 0, toolsY),
 		Size = UDim2.new(0.95, 0, 0, if self.compact then 98 else 48),
 		BackgroundTransparency = 1,
 		Parent = self.content,
@@ -5410,7 +5902,7 @@ function App:_RenderDiscover()
 	end)
 
 	local filters = Factory.New("ScrollingFrame", {
-		Position = UDim2.new(0.025, 0, 0, if self.compact then 200 else 150),
+		Position = UDim2.new(0.025, 0, 0, filtersY),
 		Size = UDim2.new(0.95, 0, 0, 34),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
@@ -5465,7 +5957,7 @@ function App:_RenderDiscover()
 
 	if self.marketplaceItems == nil then
 		Factory.Label(self.content, "Loading trending creations…", UDim2.new(1, -52, 0, 60), {
-			Position = UDim2.fromOffset(26, if self.compact then 280 else 230),
+			Position = UDim2.fromOffset(26, gridY + 22),
 			AlignX = Enum.TextXAlignment.Center,
 			Color = Colors.TextMuted,
 			Font = Theme.Fonts.Bold,
@@ -5474,8 +5966,8 @@ function App:_RenderDiscover()
 		return
 	end
 	local grid = Factory.New("ScrollingFrame", {
-		Position = UDim2.new(0.02, 0, 0, if self.compact then 258 else 208),
-		Size = UDim2.new(0.96, 0, 1, if self.compact then -274 else -224),
+		Position = UDim2.new(0.02, 0, 0, gridY),
+		Size = UDim2.new(0.96, 0, 1, -(gridY + 16)),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -5502,11 +5994,24 @@ function App:_RenderDiscover()
 			Position = UDim2.fromOffset(10, 10),
 			BackgroundColor3 = Colors.Ink,
 			BorderSizePixel = 0,
-			Image = directImage(item.thumbnailAssetId),
+			Image = modelPreviewImage(item),
 			ScaleType = Enum.ScaleType.Crop,
 			Parent = card,
 		})
 		Factory.Corner(image, 11)
+		local imageHint = Factory.Label(image, "Preview processing on Roblox…", UDim2.new(1, -16, 0, 34), {
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 8, 1, -8),
+			AlignX = Enum.TextXAlignment.Center,
+			Color = Colors.Text,
+			TextSize = 10,
+			Wrapped = true,
+			ZIndex = 2,
+		})
+		imageHint.BackgroundColor3 = Colors.Ink
+		imageHint.BackgroundTransparency = 0.18
+		Factory.Corner(imageHint, 8)
+		self:_WatchImageLoad(image, imageHint, thumbnail(item.modelAssetId, 420))
 		if item.isListed then
 			Factory.Pill(card, string.format("R$ %d", item.listingPriceRobux), Colors.Mint, 68).Position =
 				UDim2.fromOffset(156, 18)
@@ -5563,6 +6068,8 @@ function App:_RenderDiscover()
 				meta = itemMeta,
 				description = item.description,
 				imageId = item.thumbnailAssetId,
+				modelAssetId = item.modelAssetId,
+				previewImage = modelPreviewImage(item),
 				isListed = item.isListed,
 				listingPriceRobux = item.listingPriceRobux,
 				likes = item.likes,
@@ -5596,29 +6103,7 @@ function App:_RenderDiscover()
 		self:_BindButton(buy)
 		buy.Active = item.isListed == true
 		try.Activated:Connect(function()
-			local removing = self.communityTryOnItem ~= nil and self.communityTryOnItem.id == item.id
-			try.Active = false
-			try.Text = if removing then "Removing…" else "Applying…"
-			task.spawn(function()
-				local success = self:_Invoke(
-					if removing then Network.Actions.ClearCommunityTryOn else Network.Actions.TryOnCommunityItem,
-					if removing then {} else { itemId = item.id }
-				)
-				if success then
-					self.communityTryOnItem = if removing then nil else item
-					self.avatarPreviewDirty = true
-					self:_Toast(
-						"success",
-						if removing then "Community model removed." else "Trying this creator's model on your avatar."
-					)
-					self:_RenderActivePage()
-					return
-				end
-				if try.Parent then
-					try.Active = true
-					try.Text = if removing then "Remove" else "Try on"
-				end
-			end)
+			self:_ApplyCommunityTryOn(item, try, "GRID")
 		end)
 		buy.Activated:Connect(function()
 			buy.Active = false
@@ -6898,6 +7383,10 @@ function App:_RenderAvatarGraphics()
 			generate.Active = true
 			generate.Text = actionText
 			if success then
+				local graphicAction = if isTextMode
+					then Network.Actions.CreateTextImage
+					else Network.Actions.CreateAvatarGraphic
+				result = self:_GenerationResult(graphicAction, result)
 				if result.usedRetryCredit then
 					self:_Toast("success", "Retry credit applied. Your image is entering the queue.")
 				elseif result.mocked then
@@ -7068,16 +7557,69 @@ function App:_RenderAvatarGraphics()
 		if graphic then
 			local card = Factory.Card(gallery, UDim2.fromScale(1, 1), nil, "GraphicItem")
 			card.LayoutOrder = index
+			local previewSource = directImage(graphic.previewAssetId)
 			local image = Factory.New("ImageLabel", {
 				Size = UDim2.new(1, -20, 0, 132),
 				Position = UDim2.fromOffset(10, 10),
 				BackgroundColor3 = Colors.Ink,
 				BorderSizePixel = 0,
-				Image = directImage(graphic.previewAssetId),
+				Image = previewSource,
 				ScaleType = Enum.ScaleType.Crop,
 				Parent = card,
 			})
 			Factory.Corner(image, 11)
+			-- This gallery used to leave the entire 132px media area blank while
+			-- Roblox processed/moderated a new Image asset. Give that state an
+			-- explicit, self-clearing explanation just like model/detail previews
+			-- already have, so a saved creation never reads as lost or broken.
+			local previewState = Factory.New("Frame", {
+				Name = "PreviewLoadingState",
+				Size = UDim2.new(1, -20, 0, 58),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				BackgroundColor3 = Colors.Panel,
+				BackgroundTransparency = 0.08,
+				BorderSizePixel = 0,
+				ZIndex = 3,
+				Parent = image,
+			})
+			Factory.Corner(previewState, 10)
+			Factory.Stroke(previewState, Colors.Cyan, 0.58, 1)
+			local spinner = Factory.Label(previewState, "◌", UDim2.fromOffset(34, 34), {
+				Position = UDim2.fromOffset(8, 12),
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = 22,
+				Color = Colors.Cyan,
+				ZIndex = 4,
+			})
+			local previewHint = Factory.Label(
+				previewState,
+				if previewSource == ""
+					then "Preview queued\nSaved safely — check again shortly"
+					else "Loading preview…\nRoblox may be processing or moderating it",
+				UDim2.new(1, -54, 1, -10),
+				{
+					Position = UDim2.fromOffset(48, 5),
+					Color = Colors.Text,
+					Font = Theme.Fonts.Medium,
+					TextSize = 10,
+					Wrapped = true,
+					AlignY = Enum.TextYAlignment.Center,
+					ZIndex = 4,
+				}
+			)
+			if self.state.profile.settings.reduceMotion ~= true then
+				TweenService:Create(
+					spinner,
+					TweenInfo.new(1.15, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+					{ Rotation = 360 }
+				):Play()
+			end
+			if previewSource ~= "" then
+				self:_WatchImageLoad(image, previewHint, nil, previewState)
+			end
 			Factory.Label(
 				card,
 				string.sub(graphic.filteredPrompt or "Graphic", 1, 60),
@@ -7450,7 +7992,7 @@ function App:_RenderSettings()
 					Position = UDim2.fromOffset(6, 6),
 					BackgroundColor3 = Colors.Panel,
 					BorderSizePixel = 0,
-					Image = directImage(item.thumbnailAssetId),
+					Image = modelPreviewImage(item),
 					ScaleType = Enum.ScaleType.Crop,
 					Parent = row,
 				})
@@ -7625,7 +8167,9 @@ function App:_ShowOnboarding()
 	})
 	Factory.Label(
 		modal,
-		"The free First Look journey takes you through Avatar Lab and one live style round. After that, create, fit, publish, and sell whenever you're ready.",
+		if self.state.policy.contentSharingAllowed
+			then "Start with one tap on a featured community accessory—no Robux and no catalog permission. Then take the look into a live style round."
+			else "Start with a free Roblox catalog try-on, then take your look into a live style round. No AI generation purchase is required.",
 		UDim2.new(1, -86, 0, 70),
 		{
 			Position = UDim2.fromOffset(43, 204),
@@ -7656,19 +8200,40 @@ function App:_ShowOnboarding()
 			return
 		end
 		finishing = true
+		start.Active = false
+		skip.Active = false
+		start.Text = if openJourney then "Opening your free look…" else "Saving your choice…"
 		task.spawn(function()
 			local success = self:_Invoke(Network.Actions.CompleteOnboarding, {})
-			if success and self.state then
+			if not success then
+				finishing = false
+				if start.Parent then
+					start.Active = true
+					skip.Active = true
+					start.Text = "Start my free First Look"
+				end
+				return
+			end
+			if self.state then
 				self.state.profile.onboarding.completed = true
+				self.state.profile.onboarding.step = math.max(self.state.profile.onboarding.step or 1, 2)
+			end
+			if overlay.Parent then
+				overlay:Destroy()
+			end
+			if openJourney then
+				local firstPage = if self.state.policy.contentSharingAllowed then "Discover" else "Avatar Lab"
+				self:_OpenPage(firstPage)
+				self:_Toast(
+					"success",
+					if firstPage == "Discover"
+						then "Choose the featured look—it's free and applies in one tap."
+						else "Choose any catalog accessory to complete your free try-on step."
+				)
+			else
+				self:_Toast("success", "Explore freely. Your First Look tracker will stay on the Create page.")
 			end
 		end)
-		overlay:Destroy()
-		if openJourney then
-			self:_OpenPage("Avatar Lab")
-			self:_Toast("success", "First step: try any accessory on your avatar.")
-		else
-			self:_Toast("success", "Explore freely. Your First Look tracker will stay on the Create page.")
-		end
 	end
 	start.Activated:Connect(function()
 		finish(true)
@@ -8070,14 +8635,30 @@ function App:_ShowContentDetail(descriptor: { [string]: any })
 		Parent = modal,
 	})
 	Factory.Corner(previewFrame, 14)
-	Factory.New("ImageLabel", {
+	local previewImage = Factory.New("ImageLabel", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
-		Image = directImage(descriptor.imageId),
+		Image = descriptor.previewImage or directImage(descriptor.imageId),
 		ScaleType = Enum.ScaleType.Fit,
 		ZIndex = ZBASE + 3,
 		Parent = previewFrame,
 	})
+	if descriptor.kind == "ITEM" then
+		local previewHint =
+			Factory.Label(previewFrame, "Preview processing/moderating on Roblox…", UDim2.new(1, -24, 0, 38), {
+				AnchorPoint = Vector2.new(0, 1),
+				Position = UDim2.new(0, 12, 1, -12),
+				AlignX = Enum.TextXAlignment.Center,
+				Color = Colors.Text,
+				TextSize = 11,
+				Wrapped = true,
+				ZIndex = ZBASE + 4,
+			})
+		previewHint.BackgroundColor3 = Colors.Ink
+		previewHint.BackgroundTransparency = 0.12
+		Factory.Corner(previewHint, 8)
+		self:_WatchImageLoad(previewImage, previewHint, thumbnail(descriptor.modelAssetId, 420))
+	end
 	if descriptor.isListed then
 		local pricePill = Factory.Pill(modal, string.format("R$ %d", descriptor.listingPriceRobux), Colors.Mint, 76)
 		pricePill.Position = UDim2.new(1, -90, 0, 24)

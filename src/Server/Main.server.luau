@@ -273,6 +273,10 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		if action ~= "OPEN_STUDIO" then
 			return false, "INVALID_REQUEST"
 		end
+		local profile = profiles:Get(player)
+		if not profile or profile.onboarding.completed ~= true then
+			return false, "ONBOARDING_REQUIRED"
+		end
 		return retention:MarkJourney(player, action)
 	end,
 	-- Roblox requires a rewarded-ad reward product to also be normally
@@ -401,7 +405,23 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		return community:SetItemDetails(player, payload)
 	end,
 	[Network.Actions.GetMarketplace] = function(player, payload)
-		return community:GetMarketplace(player, payload)
+		local success, result = community:GetMarketplace(player, payload)
+		if success then
+			local resultCount = if type(result) == "table" and type(result.items) == "table" then #result.items else 0
+			local requestedSort = if type(payload) == "table" then payload.sortBy else nil
+			local sortBy = if requestedSort == "NEWEST"
+					or requestedSort == "PRICE_LOW"
+					or requestedSort == "MOST_LIKED"
+				then requestedSort
+				else "TRENDING"
+			analytics:Custom(player, "CommunityMarketplaceLoaded", resultCount, {
+				resultCount = resultCount,
+				hasResults = resultCount > 0,
+				searchBy = if type(payload) == "table" and payload.searchBy == "CREATOR" then "CREATOR" else "NAME",
+				sortBy = sortBy,
+			})
+		end
+		return success, result
 	end,
 	[Network.Actions.GetLeaderboard] = function(player)
 		return community:GetLeaderboard(player)
@@ -468,15 +488,33 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
 			return false, "INVALID_REQUEST"
 		end
+		local entryPoint = if payload.entryPoint == "FIRST_LOOK" then "FIRST_LOOK" else "GRID"
+		analytics:Custom(player, "CommunityTryOnAttempted", 1, { entryPoint = entryPoint })
 		local item = community:ResolveAccessibleItem(player, payload.itemId)
 		if not item then
+			analytics:Custom(player, "CommunityTryOnFailed", 1, {
+				entryPoint = entryPoint,
+				failure = "ITEM_NOT_FOUND",
+			})
 			return false, "ITEM_NOT_FOUND"
 		end
-		analytics:Funnel(player, "marketplace", 2, "Community item tried", {})
 		local success, result = items:TryOn(player, item)
 		if success then
+			-- This funnel step means the model actually reached the avatar, not
+			-- merely that the player pressed the button. That distinction is
+			-- essential when diagnosing public-index versus asset-load failures.
+			analytics:Funnel(player, "marketplace", 2, "Community item worn", { entryPoint = entryPoint })
+			analytics:Custom(player, "CommunityTryOnSucceeded", 1, { entryPoint = entryPoint })
 			retention:MarkJourney(player, "TRY_STYLE")
 			retention:MarkQuest(player, "TRY_STYLE")
+		else
+			local failure = if type(result) == "string" and string.match(result, "^[A-Z0-9_]+$")
+				then string.sub(result, 1, 32)
+				else "TRY_ON_FAILED"
+			analytics:Custom(player, "CommunityTryOnFailed", 1, {
+				entryPoint = entryPoint,
+				failure = failure,
+			})
 		end
 		return success, result
 	end,
@@ -583,14 +621,18 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	end,
 	[Network.Actions.CompleteOnboarding] = function(player)
 		local existingProfile = profiles:Get(player)
-		if existingProfile and existingProfile.onboarding.completed == true then
+		if
+			existingProfile
+			and existingProfile.onboarding.completed == true
+			and (existingProfile.onboarding.step or 1) >= 2
+		then
 			return true, {}
 		end
 		local previousStep = 1
 		local mutateSuccess, mutateProblem = profiles:Mutate(player, function(profile)
 			previousStep = math.clamp(math.floor(profile.onboarding.step or 1), 1, 4)
 			profile.onboarding.completed = true
-			profile.onboarding.step = 4
+			profile.onboarding.step = math.max(previousStep, 2)
 		end)
 		if not mutateSuccess then
 			return false, mutateProblem or "PROFILE_UNAVAILABLE"
@@ -598,17 +640,13 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		if not profiles:Save(player) then
 			return false, "SAVE_FAILED"
 		end
-		-- The new onboarding is intentionally one decision instead of three
-		-- slides, but Roblox's funnel still needs ordered steps. Emit any
-		-- missing milestones here, after the authoritative completion save,
-		-- so asynchronous client telemetry cannot arrive out of order.
+		-- Choosing a path is the only action this request proves. Opening the
+		-- guided First Look and successfully wearing its free item advance
+		-- steps 3 and 4 from RetentionService, so analytics reflects behavior
+		-- instead of auto-completing the funnel from one modal click.
 		if previousStep < 2 then
 			analytics:Onboarding(player, 2, "Chose a starting path")
 		end
-		if previousStep < 3 then
-			analytics:Onboarding(player, 3, "First Look introduced")
-		end
-		analytics:Onboarding(player, 4, "Ready to style")
 		return true, {}
 	end,
 	[Network.Actions.Track] = function(player, payload)
@@ -657,6 +695,20 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	end,
 }
 
+-- These actions are consumed as structured purchase/generation results by
+-- the client. Keep their success contract table-shaped even if a service
+-- branch accidentally returns nil or another scalar. The action may already
+-- have spent currency or opened a Roblox prompt, so the client must never
+-- retry it merely to recover missing presentation metadata.
+local structuredGenerationActions: { [string]: boolean } = {
+	[Network.Actions.CreateGeneration] = true,
+	[Network.Actions.CreateUploadedImage] = true,
+	[Network.Actions.CreateFromAvatar] = true,
+	[Network.Actions.CreateAvatarGraphic] = true,
+	[Network.Actions.CreateTextImage] = true,
+	[Network.Actions.ConvertImage] = true,
+}
+
 typedRequestRemote.OnServerInvoke = function(player: Player, action: any, payload: any)
 	if not remoteLimiter:consume(player.UserId) then
 		return { ok = false, error = "RATE_LIMITED" }
@@ -672,11 +724,35 @@ typedRequestRemote.OnServerInvoke = function(player: Player, action: any, payloa
 		warn(string.format("[Main] Remote %s failed for %d: %s", action, player.UserId, tostring(ok)))
 		return { ok = false, error = "SERVER_ERROR" }
 	end
-	if ok and result == nil then
+	if ok and structuredGenerationActions[action] and type(result) ~= "table" then
+		warn(
+			string.format(
+				"[Main] Generation remote %s returned success with %s response data for %d",
+				action,
+				typeof(result),
+				player.UserId
+			)
+		)
+		result = {}
+	elseif ok and result == nil then
 		warn(string.format("[Main] Remote %s returned success without response data for %d", action, player.UserId))
 		result = {}
 	end
-	return if ok then { ok = true, data = result } else { ok = false, error = result }
+	if ok then
+		return { ok = true, data = result }
+	end
+	-- Most errors remain a plain code for backward compatibility. A service may
+	-- additionally return safe, player-facing diagnostics (for example measured
+	-- wearable bounds); keep the code in the same field while carrying those
+	-- details alongside it.
+	if type(result) == "table" then
+		return {
+			ok = false,
+			error = if type(result.code) == "string" then result.code else "SERVER_ERROR",
+			details = result.details,
+		}
+	end
+	return { ok = false, error = result }
 end
 
 Players.PlayerAdded:Connect(function(player)
