@@ -1702,6 +1702,25 @@ function App:_Invoke(action: string, payload: any?): (boolean, any)
 	return true, response.data
 end
 
+-- Creation requests can already have opened a purchase prompt, spent tokens,
+-- or consumed a retry credit by the time their response reaches the client.
+-- Never repeat one just because a malformed success response omitted its data:
+-- normalize at the point of use so presentation code cannot crash while the
+-- accepted server-side action continues normally.
+function App:_GenerationResult(action: string, result: any): { [string]: any }
+	if type(result) == "table" then
+		return result
+	end
+	warn(
+		string.format(
+			"[App] Generation action %s returned %s after success; continuing without repeating the request",
+			action,
+			typeof(result)
+		)
+	)
+	return {}
+end
+
 function App:_Track(payload: { [string]: any })
 	task.spawn(function()
 		local folder = waitForRemoteFolder()
@@ -3675,25 +3694,19 @@ function App:_RenderCreate()
 				if isAvatar then
 					request.avatarView = self.selectedAvatarView
 				end
-				-- A multi-return call nested inside an if-then-else *expression*
-				-- (as this was) gets truncated to its first value -- Luau's
-				-- if-expression always evaluates to exactly one value, so
-				-- `result` was silently always nil regardless of which branch
-				-- ran, and `result.usedRetryCredit`/`.mocked`/`.tokensSpent`
-				-- below would error the instant a generation actually
-				-- succeeded. An if-statement assigning both return values in
-				-- each branch keeps the full pair intact.
-				local success, result
+				-- Keep the action separate from the multi-return call: wrapping
+				-- `_Invoke` in an if-expression would discard its second return.
+				local creationAction = Network.Actions.CreateGeneration
 				if isUpload then
-					success, result = self:_Invoke(Network.Actions.CreateUploadedImage, request)
+					creationAction = Network.Actions.CreateUploadedImage
 				elseif isAvatar then
-					success, result = self:_Invoke(Network.Actions.CreateFromAvatar, request)
-				else
-					success, result = self:_Invoke(Network.Actions.CreateGeneration, request)
+					creationAction = Network.Actions.CreateFromAvatar
 				end
+				local success, result = self:_Invoke(creationAction, request)
 				generate.Active = true
 				generate.Text = actionText
 				if success then
+					result = self:_GenerationResult(creationAction, result)
 					if isUpload then
 						self:_Toast("success", "Your Roblox image is entering visual moderation at no extra charge.")
 					elseif result.usedRetryCredit then
@@ -3828,6 +3841,7 @@ function App:_RenderCreate()
 					paymentMethod = self.paymentMethod,
 				})
 				if success then
+					result = self:_GenerationResult(Network.Actions.ConvertImage, result)
 					if result.usedRetryCredit then
 						self:_Toast("success", "Conversion credit applied. Your model is entering the queue.")
 					elseif result.mocked then
@@ -7165,6 +7179,10 @@ function App:_RenderAvatarGraphics()
 			generate.Active = true
 			generate.Text = actionText
 			if success then
+				local graphicAction = if isTextMode
+					then Network.Actions.CreateTextImage
+					else Network.Actions.CreateAvatarGraphic
+				result = self:_GenerationResult(graphicAction, result)
 				if result.usedRetryCredit then
 					self:_Toast("success", "Retry credit applied. Your image is entering the queue.")
 				elseif result.mocked then

@@ -657,6 +657,20 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	end,
 }
 
+-- These actions are consumed as structured purchase/generation results by
+-- the client. Keep their success contract table-shaped even if a service
+-- branch accidentally returns nil or another scalar. The action may already
+-- have spent currency or opened a Roblox prompt, so the client must never
+-- retry it merely to recover missing presentation metadata.
+local structuredGenerationActions: { [string]: boolean } = {
+	[Network.Actions.CreateGeneration] = true,
+	[Network.Actions.CreateUploadedImage] = true,
+	[Network.Actions.CreateFromAvatar] = true,
+	[Network.Actions.CreateAvatarGraphic] = true,
+	[Network.Actions.CreateTextImage] = true,
+	[Network.Actions.ConvertImage] = true,
+}
+
 typedRequestRemote.OnServerInvoke = function(player: Player, action: any, payload: any)
 	if not remoteLimiter:consume(player.UserId) then
 		return { ok = false, error = "RATE_LIMITED" }
@@ -672,7 +686,17 @@ typedRequestRemote.OnServerInvoke = function(player: Player, action: any, payloa
 		warn(string.format("[Main] Remote %s failed for %d: %s", action, player.UserId, tostring(ok)))
 		return { ok = false, error = "SERVER_ERROR" }
 	end
-	if ok and result == nil then
+	if ok and structuredGenerationActions[action] and type(result) ~= "table" then
+		warn(
+			string.format(
+				"[Main] Generation remote %s returned success with %s response data for %d",
+				action,
+				typeof(result),
+				player.UserId
+			)
+		)
+		result = {}
+	elseif ok and result == nil then
 		warn(string.format("[Main] Remote %s returned success without response data for %d", action, player.UserId))
 		result = {}
 	end
