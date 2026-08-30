@@ -8,7 +8,7 @@ Review these by new/returning player, device class, creation method, group membe
 
 | Goal | Primary metrics | Diagnostic events |
 |---|---|---|
-| Activation / play-through | onboarding completion; First Look step and round completion; first creation attempt | onboarding funnel, `FirstLookStepCompleted`, `FirstLookJourneyCompleted`, `creator_journey` funnel, generation funnel |
+| Activation / play-through | onboarding path choice; free-look impression/click/success; First Look step and round completion; first creation attempt | onboarding funnel, `FirstLookGuide`, `CommunityTryOnAttempted`/`Succeeded`/`Failed`, `FirstLookStepCompleted`, `FirstLookJourneyCompleted`, `creator_journey` funnel, generation funnel |
 | Reliability | paid-to-ready completion; median generation duration; retry rate; completion/failure rate per reference-image quality tier | `GenerationCompleted`, `GenerationFailed` (both carry `productKey`, e.g. `ImagePreviewLow`/`Medium`/`High`) |
 | Retention | D1/D7 retention; sessions per user; median session length; streak return rate | `ForgeSessionStarted`, `ForgeSessionEnded`, `DailyStudioCheckIn` |
 | Creation demand | direct/guided mix; image approval-to-conversion; generations per creator | generation funnel method field and profile counters |
@@ -22,7 +22,7 @@ Review these by new/returning player, device class, creation method, group membe
 | Social playtime | runway open-to-join, join-to-ready, ready-to-complete, and first-to-second-round rates; votes per round; rounds per session; friend-invite use from runway | `RunwayOpened`, `runway` funnel, `RunwayLookLocked`, `RunwayVoteCast`, `RunwayRoundCompleted`, `RunwayEncoreCompleted`, `GameInviteSent` |
 | Progression / D1-D7 return | Creator levels reached; XP source mix; daily first-round and two-round Encore claims; weekly repeat participation | `CreatorXPGranted` (`reason`), `CreatorLevelReached`, `RunwayRoundCompleted`, `RunwayEncoreCompleted`, `RunwayWeeklyRewardClaimed` |
 | Feature reach / virality | achievement completion rate per milestone; daily-bonus claim rate; invite-sent rate | `AchievementUnlocked` (`achievement`), `DailyStudioCheckIn` (`tokensGranted`), `GameInviteSent` |
-| Community health | discovery visits; try-on rate; likes/favorites per view; leaderboard engagement | marketplace funnel, reaction and view counters, `CommunityLikeToggled` |
+| Community health | discovery visits; marketplace inventory availability; try-on attempt-to-success rate; likes/favorites per view; leaderboard engagement | marketplace funnel, `CommunityMarketplaceLoaded`, `CommunityTryOnAttempted`/`Succeeded`/`Failed`, reaction and view counters, `CommunityLikeToggled` |
 | Monetization | payer conversion; ARPDAU; revenue per completed model; priority-pass attach rate | economy events by SKU plus completion events |
 | Marketplace liquidity | listed originals; try-on-to-transfer rate; transfer completion | marketplace funnel steps 1–4 |
 
@@ -30,8 +30,8 @@ Review these by new/returning player, device class, creation method, group membe
 
 - Generation: creation attempt → method/prompt submitted → paid job queued → model ready to fit.
 - Reference: AI-image attempt → prompt submitted → paid image job queued → reference ready; or custom-image submission → visual moderation queued → reference ready.
-- Marketplace: Discover opened → community item tried → Plus transfer prompted → personal copy granted.
-- Onboarding: entered Forge → chose a starting path → First Look introduced → ready to style.
+- Marketplace: Discover opened → community item successfully worn → Plus transfer prompted → personal copy granted. A button press is not step two unless the model actually attaches to the avatar.
+- Onboarding: entered Forge → chose a starting path → opened the free First Look → successfully wore a free look. These milestones are server-authored from real actions; choosing the initial path no longer auto-emits steps three and four.
 - First Look: studio opened → accessory tried → runway look locked → style round completed.
 - Runway: runway entered → look locked → vote cast (when another entrant exists) → style round completed. A solo round legitimately skips the optional vote step.
 - Daily Encore: first completed round → second completed round → 10 bonus-token and 50-XP reward. Compare its completion rate, session length, and next-day return against otherwise similar first-round completers.
@@ -40,4 +40,4 @@ Review these by new/returning player, device class, creation method, group membe
 
 During beta, inspect reliability and purchase reconciliation daily, cohorts weekly, and price/cost margin after every provider or Roblox pricing change. Prioritize fixes in this order: paid job loss, moderation/policy violations, completion rate, activation, retention, then monetization experiments. Run one material UX or price experiment at a time so the result is interpretable.
 
-The First Look journey, Forge Runway, two-round Daily Encore, Creator levels, weekly spotlight, daily free quest trio, daily theme, three-day priority reward, group queue benefit, free community try-on, and Roblox catalog lab are intended to create useful return reasons and longer customization sessions. Treat each as a hypothesis: keep it only if cohort data improves without degrading generation completion, player trust, or safety. The first release question is whether First Look completion lifts qualified play-through and six-minute retention; the second is whether the visible Encore improves the first-to-second-round rate and 10–15 minute session survival; the third is whether those completers return on D1/D7. Do not increase rewards or add purchase friction until those cohort cuts are understood.
+The First Look journey, Forge Runway, two-round Daily Encore, Creator levels, weekly spotlight, daily free quest trio, daily theme, three-day priority reward, group queue benefit, free community try-on, and Roblox catalog lab are intended to create useful return reasons and longer customization sessions. Treat each as a hypothesis: keep it only if cohort data improves without degrading generation completion, player trust, or safety. First Look deliberately starts with a featured community item because it is immediate, free, reversible, and does not require Roblox catalog-consent UI; search, Plus, and generation controls remain available below it. Use `FirstLookGuide` to compare guide impressions to clicks, then `CommunityTryOnAttempted`/`Succeeded`/`Failed` to distinguish weak UX from an empty marketplace or asset-attachment problem. The first release question is whether First Look completion lifts qualified play-through and six-minute retention; the second is whether the visible Encore improves the first-to-second-round rate and 10–15 minute session survival; the third is whether those completers return on D1/D7. Do not increase rewards or add purchase friction until those cohort cuts are understood.

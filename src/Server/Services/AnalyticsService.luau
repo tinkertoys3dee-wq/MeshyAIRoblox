@@ -23,6 +23,7 @@ local CLIENT_EVENTS = {
 	FitPresetApplied = true,
 	RunwayOpened = true,
 	ArcadeGameStarted = true,
+	FirstLookGuide = true,
 }
 
 local ARCADE_GAME_VALUES: { [string]: boolean } = {}
@@ -55,9 +56,16 @@ local ASSET_TYPE_VALUES = {
 local ONBOARDING_STEP_NAMES = {
 	[1] = "Entered Forge",
 	[2] = "Chose a starting path",
-	[3] = "First Look introduced",
-	[4] = "Ready to style",
+	[3] = "Opened free First Look",
+	[4] = "Wore a free look",
 }
+local FIRST_LOOK_GUIDE_STAGES: { [string]: boolean } = {
+	TRY_FREE_LOOK = true,
+	ENTER_RUNWAY = true,
+	FINISH_RUNWAY = true,
+	EMPTY_MARKETPLACE = true,
+}
+local FIRST_LOOK_GUIDE_ACTIONS: { [string]: boolean } = { IMPRESSION = true, CLICK = true }
 
 local function safeCall(callback: () -> ())
 	local success, problem = pcall(callback)
@@ -222,6 +230,19 @@ function AnalyticsService:TrackClient(player: Player, payload: any): (boolean, a
 			return false, "INVALID_ANALYTICS_FIELDS"
 		end
 		fields.game = gameKey
+	elseif payload.event == "FirstLookGuide" then
+		local stage = type(payload.fields) == "table" and payload.fields.stage or nil
+		local action = type(payload.fields) == "table" and payload.fields.action or nil
+		if
+			type(stage) ~= "string"
+			or not FIRST_LOOK_GUIDE_STAGES[stage]
+			or type(action) ~= "string"
+			or not FIRST_LOOK_GUIDE_ACTIONS[action]
+		then
+			return false, "INVALID_ANALYTICS_FIELDS"
+		end
+		fields.stage = stage
+		fields.action = action
 	end
 	self:Custom(player, payload.event, 1, fields)
 	if payload.event == "OnboardingStep" then

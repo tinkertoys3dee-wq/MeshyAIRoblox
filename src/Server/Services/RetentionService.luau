@@ -48,6 +48,15 @@ for index, step in Config.Retention.FirstLookJourney do
 	JOURNEY_INDEX[step.key] = index
 end
 
+-- The onboarding funnel shares two real milestones with First Look. Keep
+-- them server-authored here, where the successful actions are already
+-- verified, rather than letting the introductory modal claim that a player
+-- opened the guide or wore an item before either actually happened.
+local ONBOARDING_BY_JOURNEY_STEP: { [string]: { step: number, label: string } } = {
+	OPEN_STUDIO = { step = 3, label = "Opened free First Look" },
+	TRY_STYLE = { step = 4, label = "Wore a free look" },
+}
+
 local RetentionService = {}
 RetentionService.__index = RetentionService
 
@@ -99,7 +108,14 @@ function RetentionService:MarkJourney(player: Player, stepKey: string, persist: 
 	local justCompleted = false
 	local journeyFinished = false
 	local tokensGranted = 0
+	local onboardingAdvanced = nil :: { step: number, label: string }?
 	local success = self.profiles:Mutate(player, function(profile)
+		local onboardingMilestone = ONBOARDING_BY_JOURNEY_STEP[stepKey]
+		if onboardingMilestone and (profile.onboarding.step or 1) < onboardingMilestone.step then
+			profile.onboarding.step = onboardingMilestone.step
+			onboardingAdvanced = onboardingMilestone
+		end
+
 		local journey = profile.firstLookJourney
 		if journey.done[stepKey] then
 			return
@@ -127,7 +143,13 @@ function RetentionService:MarkJourney(player: Player, stepKey: string, persist: 
 	if not success then
 		return false, self:GetJourneyState(player)
 	end
+	if onboardingAdvanced then
+		self.analytics:Onboarding(player, onboardingAdvanced.step, onboardingAdvanced.label)
+	end
 	if not justCompleted then
+		if onboardingAdvanced and persist ~= false then
+			self.profiles:Save(player)
+		end
 		return true, self:GetJourneyState(player)
 	end
 
