@@ -466,5 +466,12 @@ return table.freeze({
 	Studio = {
 		AllowMockPurchases = true,
 		AllowMockBackend = true,
+		-- Every Studio Bootstrap response reports onboarding as incomplete
+		-- (see Main.server.luau's bootstrap()) regardless of what a prior
+		-- Studio run actually saved, so the tutorial reappears on every
+		-- playtest instead of only the first time a given account is used.
+		-- Never affects a live/published server, and never touches the
+		-- saved profile -- flip off to test the "already onboarded" state.
+		AlwaysShowOnboarding = true,
 	},
 })
