@@ -2237,6 +2237,7 @@ function App:_Bootstrap()
 			self.gui:Destroy()
 			self:_BuildChrome()
 		end
+		self:_ApplyLauncherEmphasis()
 		self.uiScaleInstance.Scale = tonumber(data.profile.settings.uiScale) or 1
 		self:_UpdateSoundButton()
 		self:_SetAmbientMotion(data.profile.settings.reduceMotion ~= true)
@@ -8235,6 +8236,52 @@ function App:_RenderSettings()
 			AlignY = Enum.TextYAlignment.Top,
 		})
 	end
+end
+
+-- The launcher screen (Forge Studio / Forge Runway / Arcade / Tokens for
+-- AFK) shows a first-timer four buttons of identical size and weight with
+-- no indication which one actually matters -- real tester feedback was
+-- that the game reads as confusing even with the onboarding tour in place,
+-- and a tour that plays once in a modal and then leaves the player looking
+-- at four equal buttons doesn't leave anything behind to point at the
+-- right one. This dims the other three and puts a slow pulsing glow on
+-- Forge Studio's own outline instead, so the "start here" signal survives
+-- after the tutorial modal closes -- without touching any button's size or
+-- position, since every launcher's vertical spacing (buildLauncher's
+-- bottomOffset math) assumes today's exact footprints.
+function App:_ApplyLauncherEmphasis()
+	local hasCreatedBefore = (self.state.profile.stats.generationsCompleted or 0) > 0
+	if hasCreatedBefore then
+		return
+	end
+	for _, secondaryLauncher in { self.runwayLauncher, self.arcadeLauncher, self.afkLauncher } do
+		secondaryLauncher.BackgroundTransparency = 0.35
+		local stroke = secondaryLauncher:FindFirstChildOfClass("UIStroke")
+		if stroke then
+			stroke.Transparency = 0.75
+		end
+		for _, child in secondaryLauncher:GetChildren() do
+			if child:IsA("TextLabel") then
+				child.TextTransparency = 0.35
+			end
+		end
+	end
+	local primaryStroke = self.launcher:FindFirstChildOfClass("UIStroke")
+	if not primaryStroke then
+		return
+	end
+	primaryStroke.Thickness = 2.5
+	primaryStroke.Color = Colors.Cyan
+	if self.state.profile.settings.reduceMotion == true then
+		primaryStroke.Transparency = 0.1
+		return
+	end
+	local pulse = TweenService:Create(
+		primaryStroke,
+		TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Transparency = 0.1 }
+	)
+	pulse:Play()
 end
 
 -- A short, skippable 3-page tour shown before the existing First Look step:
