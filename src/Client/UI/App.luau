@@ -348,6 +348,11 @@ function App.new()
 		state = nil :: { [string]: any }?,
 		activePage = "Create",
 		selectedMethod = "TEXT_TO_3D",
+		-- Sticky for the session once a first-timer taps "Show more ways to
+		-- create" on the Create page (see _RenderCreate) -- a returning
+		-- creator (stats.generationsCompleted > 0) always sees every method
+		-- regardless of this flag.
+		showAllMethods = false,
 		selectedAccessoryType = "Hat",
 		selectedStylePreset = "AUTO",
 		selectedDetailLevel = "BALANCED",
@@ -2903,9 +2908,20 @@ function App:_TextBox(parent: Instance, placeholder: string, size: UDim2, positi
 end
 
 function App:_RenderCreate()
+	-- Someone who has never finished a creation sees a deliberately smaller
+	-- Create page: one method instead of four, no reference-image/upload/
+	-- avatar jargon, and a few tappable example prompts near the text box.
+	-- The full four-method, art-direction-heavy page below is exactly what
+	-- shows once they've made one thing (or tap "Show more ways to create")
+	-- -- it isn't gone, it's just not the first thing a confused new player
+	-- has to parse before they've typed anything at all.
+	local hasCreatedBefore = (self.state.profile.stats.generationsCompleted or 0) > 0
+	local showAllMethods = hasCreatedBefore or self.showAllMethods
 	self:_PageHeader(
-		"Create something impossible",
-		"Three paths, precise art direction, one Roblox-ready accessory. Every input is moderated."
+		if showAllMethods then "Create something impossible" else "Describe it. Wear it.",
+		if showAllMethods
+			then "Three paths, precise art direction, one Roblox-ready accessory. Every input is moderated."
+			else "Type what you want below and Forge builds a real, wearable Roblox accessory from it. Every input is moderated."
 	)
 	local page = Factory.New("ScrollingFrame", {
 		Name = "CreateScroll",
@@ -3200,58 +3216,72 @@ function App:_RenderCreate()
 	end)
 
 	local customUploadOwned = self.state.benefits.customImageUpload == true
+	local allMethods = {
+		{
+			id = "TEXT_TO_3D",
+			title = "Direct Forge",
+			kicker = if showAllMethods then "FASTEST VALUE" else "START HERE",
+			body = if showAllMethods
+				then "Text → Smart Topology 3D. Lower cost and ideal for bold, simple silhouettes."
+				else "Describe anything you can imagine below and Forge builds a real, wearable Roblox accessory from it -- the fastest, cheapest way to create.",
+			price = self.state.prices.DirectGeneration,
+			color = Colors.Cyan,
+		},
+		{
+			id = "IMAGE_PREVIEW",
+			title = "Art-Directed",
+			kicker = "MORE CONTROL",
+			body = "Text → reference image → 3D. Choose a reference quality tier, then approve the look before spending on the model.",
+			priceText = string.format("FROM R$ %d", self.state.prices.ImagePreviewLow),
+			color = Colors.Rose,
+		},
+		{
+			id = "IMAGE_UPLOAD",
+			title = "Upload Reference",
+			kicker = "POWER USER",
+			body = "Use your own Roblox-moderated Image or Decal, then approve it before 3D conversion.",
+			priceText = if customUploadOwned
+				then "OWNED"
+				else string.format("R$ %d ONCE", self.state.prices.CustomImageUpload),
+			color = Colors.Gold,
+		},
+		{
+			id = "AVATAR_TO_3D",
+			title = "My Avatar",
+			kicker = "INSTANT SOURCE",
+			body = "Your current Roblox avatar → 3D. Nothing to upload -- we fetch your look automatically.",
+			price = self.state.prices.AvatarConversion,
+			color = Colors.Mint,
+		},
+	}
+	-- A first-timer only ever sees Direct Forge -- the cheapest, simplest
+	-- path -- so the very first thing Create shows isn't a 4-way decision
+	-- between jargon like "Smart Topology" and "reference quality tier".
+	-- "Show more ways to create" below reveals the rest on demand, and
+	-- self.selectedMethod already defaults to TEXT_TO_3D, so nothing about
+	-- the actual generation call changes for someone who never expands it.
+	local visibleMethods = if showAllMethods then allMethods else { allMethods[1] }
 	local methodRow = Factory.New("Frame", {
-		Size = UDim2.new(1, 0, 0, if self.compact then 612 else 320),
+		Size = UDim2.new(1, 0, 0, if showAllMethods then (if self.compact then 612 else 320) else 210),
 		BackgroundTransparency = 1,
 		LayoutOrder = 1,
 		Parent = stack,
 	})
-	for index, method in
-		{
-			{
-				id = "TEXT_TO_3D",
-				title = "Direct Forge",
-				kicker = "FASTEST VALUE",
-				body = "Text → Smart Topology 3D. Lower cost and ideal for bold, simple silhouettes.",
-				price = self.state.prices.DirectGeneration,
-				color = Colors.Cyan,
-			},
-			{
-				id = "IMAGE_PREVIEW",
-				title = "Art-Directed",
-				kicker = "MORE CONTROL",
-				body = "Text → reference image → 3D. Choose a reference quality tier, then approve the look before spending on the model.",
-				priceText = string.format("FROM R$ %d", self.state.prices.ImagePreviewLow),
-				color = Colors.Rose,
-			},
-			{
-				id = "IMAGE_UPLOAD",
-				title = "Upload Reference",
-				kicker = "POWER USER",
-				body = "Use your own Roblox-moderated Image or Decal, then approve it before 3D conversion.",
-				priceText = if customUploadOwned
-					then "OWNED"
-					else string.format("R$ %d ONCE", self.state.prices.CustomImageUpload),
-				color = Colors.Gold,
-			},
-			{
-				id = "AVATAR_TO_3D",
-				title = "My Avatar",
-				kicker = "INSTANT SOURCE",
-				body = "Your current Roblox avatar → 3D. Nothing to upload -- we fetch your look automatically.",
-				price = self.state.prices.AvatarConversion,
-				color = Colors.Mint,
-			},
-		}
-	do
+	for index, method in visibleMethods do
 		-- 2x2 grid in wide mode (156px cards, 12px column gap, 8px row gap --
 		-- see the compact-mode stack below for the matching vertical rhythm),
-		-- 4-tall stack in compact mode. methodRow.Size above is derived from
-		-- these same constants, not eyeballed.
+		-- 4-tall stack in compact mode; a single full-width card when
+		-- collapsed. methodRow.Size above is derived from these same
+		-- constants, not eyeballed.
 		local col = (index - 1) % 2
 		local row = math.floor((index - 1) / 2)
-		local card = if self.compact
-			then Factory.Card(methodRow, UDim2.new(1, 0, 0, 144), UDim2.fromOffset(0, (index - 1) * 156))
+		local card = if not showAllMethods
+			then Factory.Card(methodRow, UDim2.new(1, 0, 0, 156))
+			elseif self.compact then Factory.Card(
+				methodRow,
+				UDim2.new(1, 0, 0, 144),
+				UDim2.fromOffset(0, (index - 1) * 156)
+			)
 			else Factory.Card(methodRow, UDim2.new(0.5, -6, 0, 156), UDim2.new(col * 0.5, col * 6, 0, row * 164))
 		local selected = self.selectedMethod == method.id
 		local stroke = card:FindFirstChildOfClass("UIStroke")
@@ -3292,6 +3322,19 @@ function App:_RenderCreate()
 		self:_BindButton(choose)
 		choose.Activated:Connect(function()
 			self.selectedMethod = method.id
+			self:_RenderActivePage()
+		end)
+	end
+	if not showAllMethods then
+		local expand = Factory.Button(
+			methodRow,
+			"Show 3 more ways to create →",
+			UDim2.new(1, 0, 0, 34),
+			UDim2.fromOffset(0, 168)
+		)
+		self:_BindButton(expand)
+		expand.Activated:Connect(function()
+			self.showAllMethods = true
 			self:_RenderActivePage()
 		end)
 	end
@@ -3392,6 +3435,65 @@ function App:_RenderCreate()
 			count.Text = string.format("%d / %d", #prompt.Text, Config.Generation.PromptMaxLength)
 		end)
 		cursorY += 108
+
+		-- One-tap example prompts for anyone staring at a blank box with no
+		-- idea what to type -- only shown before a player's first creation
+		-- (isAvatar's "styling notes" field is a different kind of prompt,
+		-- so it's excluded here regardless of hasCreatedBefore).
+		if not isAvatar and not hasCreatedBefore then
+			Factory.Label(promptCard, "NEED AN IDEA? TRY ONE:", UDim2.new(1, -32, 0, 16), {
+				Position = UDim2.fromOffset(16, cursorY),
+				Font = Theme.Fonts.Bold,
+				TextSize = 10,
+				Color = Colors.TextMuted,
+			})
+			cursorY += 20
+			local sparkRow = Factory.New("ScrollingFrame", {
+				Position = UDim2.fromOffset(16, cursorY),
+				Size = UDim2.new(1, -32, 0, 34),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				ScrollBarThickness = 0,
+				AutomaticCanvasSize = Enum.AutomaticSize.X,
+				CanvasSize = UDim2.new(),
+				ScrollingDirection = Enum.ScrollingDirection.X,
+				Parent = promptCard,
+			})
+			Factory.List(sparkRow, Enum.FillDirection.Horizontal, 8)
+			for _, spark in
+				{
+					{
+						label = "🐉 Dragon Wings",
+						text = "A pair of large translucent dragon wings backpack, glowing red veins, leathery texture, folded slightly for a battle-ready silhouette",
+					},
+					{
+						label = "👑 Crystal Crown",
+						text = "A glossy crescent-moon crown made of translucent violet crystal, chunky silhouette, no floating pieces",
+					},
+					{
+						label = "⚔️ Neon Katana",
+						text = "A neon-edged katana strapped to the back, glowing cyan blade, sleek black hilt, faint energy trail",
+					},
+					{
+						label = "🎩 Steampunk Hat",
+						text = "A steampunk top hat with brass gears, a small ticking clock face on the brim, weathered leather band",
+					},
+					{
+						label = "🦋 Fairy Wings",
+						text = "A pair of iridescent fairy wings, delicate vein patterns, glowing softly at the edges, lightweight and symmetrical",
+					},
+				}
+			do
+				local chip = Factory.Button(sparkRow, spark.label, UDim2.fromOffset(140, 34))
+				self:_BindButton(chip)
+				chip.Activated:Connect(function()
+					prompt.Text = spark.text
+					prompt.CursorPosition = #spark.text + 1
+					prompt:CaptureFocus()
+				end)
+			end
+			cursorY += 42
+		end
 
 		local function choiceRow(
 			options: { any },
@@ -8232,7 +8334,7 @@ function App:_ShowOnboarding()
 		{ Colors.Rose, Colors.Violet, Colors.Cyan },
 		"WELCOME TO FORGE",
 		"Make anything. Wear it instantly.",
-		"Type a prompt, upload a photo, or use your own avatar -- Forge turns it into a real Roblox accessory in seconds."
+		'Type what you want -- like "a pair of glowing dragon wings" -- and Forge builds a real Roblox accessory from it.'
 	)
 
 	local arcadePage = newPageFrame(2, false)
