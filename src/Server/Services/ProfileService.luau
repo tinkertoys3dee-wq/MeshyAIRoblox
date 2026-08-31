@@ -77,7 +77,18 @@ local function defaultProfile(userId: number): { [string]: any }
 			weeklyReward = { week = 0, rank = 0, xp = 0, announced = true },
 		},
 		achievements = {},
-		settings = { soundsEnabled = true, reduceMotion = false, highContrast = false, uiScale = 1 },
+		-- simpleMode defaults true for every profile, existing accounts
+		-- included (see reconcile() below) -- Forge's primary audience
+		-- skews young, and a simplified Create page is the right default,
+		-- not just a first-timer nicety. See _RenderCreate for what it
+		-- actually hides.
+		settings = {
+			soundsEnabled = true,
+			reduceMotion = false,
+			highContrast = false,
+			uiScale = 1,
+			simpleMode = true,
+		},
 		stats = {
 			sessions = 0,
 			generationsStarted = 0,

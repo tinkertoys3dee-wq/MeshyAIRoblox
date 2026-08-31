@@ -466,15 +466,16 @@ return table.freeze({
 	Studio = {
 		AllowMockPurchases = true,
 		AllowMockBackend = true,
-		-- Every Studio Bootstrap response reports onboarding incomplete and
-		-- generationsCompleted as 0 (see Main.server.luau's bootstrap())
-		-- regardless of what a prior Studio run actually saved, so the
-		-- first-timer flow -- landing straight on Create instead of the
-		-- launcher screen (see App.luau's Bootstrap success handler) --
-		-- replays on every playtest instead of only the first time a given
-		-- account is used. Never affects a live/published server, and never
+		-- Every Studio Bootstrap response reports onboarding incomplete,
+		-- generationsCompleted as 0, and settings.simpleMode as true (see
+		-- Main.server.luau's bootstrap()) regardless of what a prior Studio
+		-- run actually saved, so the first-timer flow -- landing straight
+		-- on Create instead of the launcher screen, in Simple Mode -- (see
+		-- App.luau's Bootstrap success handler and _RenderCreate) replays
+		-- on every playtest instead of only the first time a given account
+		-- is used. Never affects a live/published server, and never
 		-- touches the saved profile -- flip off to test the returning-
-		-- creator state instead.
+		-- creator/Advanced-Mode state instead.
 		AlwaysShowFirstTimerFlow = true,
 	},
 })
