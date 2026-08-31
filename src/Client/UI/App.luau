@@ -8125,6 +8125,11 @@ function App:_RenderSettings()
 	end
 end
 
+-- A short, skippable 3-page tour shown before the existing First Look step:
+-- what Forge is, the Create flow, and the Arcade. Added because most new
+-- players were leaving in well under a minute without ever seeing either --
+-- the First Look CTA below is still the only page that actually asks for an
+-- action, pages 1-2 are pure orientation and can be skipped straight past.
 function App:_ShowOnboarding()
 	local overlay = Factory.New("Frame", {
 		Name = "Onboarding",
@@ -8135,75 +8140,216 @@ function App:_ShowOnboarding()
 		ZIndex = 200,
 		Parent = self.gui,
 	})
-	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, 400), UDim2.fromScale(0.5, 0.5), "OnboardingModal")
+	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, 406), UDim2.fromScale(0.5, 0.5), "OnboardingModal")
 	modal.AnchorPoint = Vector2.new(0.5, 0.5)
 	modal.ZIndex = 201
 	Factory.New("UISizeConstraint", {
-		MaxSize = Vector2.new(620, 400),
+		MaxSize = Vector2.new(620, 406),
 		Parent = modal,
 	})
-	local badge = Factory.New("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 28),
-		Size = UDim2.fromOffset(70, 70),
-		BackgroundColor3 = Colors.Rose,
-		BorderSizePixel = 0,
-		ZIndex = 203,
-		Parent = modal,
-	})
-	Factory.Corner(badge, 23)
-	Factory.Gradient(badge, { Colors.Rose, Colors.Violet, Colors.Cyan }, 135)
-	Factory.Label(badge, "◆", UDim2.fromScale(1, 1), {
-		Font = Theme.Fonts.Black,
-		TextSize = 34,
-		AlignX = Enum.TextXAlignment.Center,
-		AlignY = Enum.TextYAlignment.Center,
-		ZIndex = 204,
-	})
-	Factory.Label(modal, "WELCOME TO FORGE", UDim2.new(1, -48, 0, 22), {
-		Position = UDim2.fromOffset(24, 112),
-		AlignX = Enum.TextXAlignment.Center,
-		Font = Theme.Fonts.Bold,
-		TextSize = 11,
-		Color = Colors.Mint,
-		ZIndex = 203,
-	})
-	Factory.Label(modal, "Make a look before you make a purchase.", UDim2.new(1, -64, 0, 58), {
-		Position = UDim2.fromOffset(32, 138),
-		AlignX = Enum.TextXAlignment.Center,
-		Font = Theme.Fonts.Black,
-		TextSize = 24,
-		Wrapped = true,
-		ZIndex = 203,
-	})
-	Factory.Label(
-		modal,
-		if self.state.policy.contentSharingAllowed
-			then "Start with one tap on a featured community accessory—no Robux and no catalog permission. Then take the look into a live style round."
-			else "Start with a free Roblox catalog try-on, then take your look into a live style round. No AI generation purchase is required.",
-		UDim2.new(1, -86, 0, 70),
-		{
-			Position = UDim2.fromOffset(43, 204),
+
+	local function buildPageContent(
+		parent: Frame,
+		glyph: string,
+		gradient: { Color3 },
+		eyebrow: string,
+		headline: string,
+		description: string
+	)
+		local badge = Factory.New("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, 26),
+			Size = UDim2.fromOffset(68, 68),
+			BackgroundColor3 = gradient[1],
+			BorderSizePixel = 0,
+			ZIndex = 203,
+			Parent = parent,
+		})
+		Factory.Corner(badge, 22)
+		Factory.Gradient(badge, gradient, 135)
+		Factory.Label(badge, glyph, UDim2.fromScale(1, 1), {
+			Font = Theme.Fonts.Black,
+			TextSize = 32,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			ZIndex = 204,
+		})
+		Factory.Label(parent, eyebrow, UDim2.new(1, -48, 0, 20), {
+			Position = UDim2.fromOffset(24, 108),
+			AlignX = Enum.TextXAlignment.Center,
+			Font = Theme.Fonts.Bold,
+			TextSize = 11,
+			Color = Colors.Mint,
+			ZIndex = 203,
+		})
+		Factory.Label(parent, headline, UDim2.new(1, -64, 0, 56), {
+			Position = UDim2.fromOffset(32, 134),
+			AlignX = Enum.TextXAlignment.Center,
+			Font = Theme.Fonts.Black,
+			TextSize = 24,
+			Wrapped = true,
+			ZIndex = 203,
+		})
+		Factory.Label(parent, description, UDim2.new(1, -86, 0, 60), {
+			Position = UDim2.fromOffset(43, 198),
 			AlignX = Enum.TextXAlignment.Center,
 			AlignY = Enum.TextYAlignment.Top,
 			Color = Colors.TextMuted,
 			TextSize = 13,
 			Wrapped = true,
 			ZIndex = 203,
-		}
+		})
+	end
+
+	local pageFrames: { Frame } = {}
+	local function newPageFrame(index: number, visible: boolean): Frame
+		local frame = Factory.New("Frame", {
+			Name = "Page" .. index,
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			Visible = visible,
+			ZIndex = 203,
+			Parent = modal,
+		})
+		pageFrames[index] = frame
+		return frame
+	end
+
+	local welcomePage = newPageFrame(1, true)
+	buildPageContent(
+		welcomePage,
+		"🔥",
+		{ Colors.Rose, Colors.Violet, Colors.Cyan },
+		"WELCOME TO FORGE",
+		"Make anything. Wear it instantly.",
+		"Type a prompt, upload a photo, or use your own avatar -- Forge turns it into a real Roblox accessory in seconds."
 	)
-	local start = Factory.Button(
-		modal,
-		"Start my free First Look",
-		UDim2.new(1, -64, 0, 46),
-		UDim2.fromOffset(32, 286),
-		"primary"
+
+	local arcadePage = newPageFrame(2, false)
+	buildPageContent(
+		arcadePage,
+		"🎮",
+		{ Color3.fromRGB(160, 255, 215), Colors.Mint, Color3.fromRGB(46, 196, 143) },
+		"NEED A BREAK?",
+		"Hop into the Arcade.",
+		string.format(
+			"%d free minigames with weekly token prizes and daily challenges -- perfect while a generation is queued.",
+			#Config.Arcade.Games
+		)
 	)
-	start.ZIndex = 204
-	self:_BindButton(start)
-	local skip = Factory.Button(modal, "Explore on my own", UDim2.new(1, -64, 0, 34), UDim2.fromOffset(32, 340), nil)
-	skip.ZIndex = 204
-	self:_BindButton(skip)
+
+	-- The pre-existing First Look step: same content and submission logic as
+	-- before this tour was added in front of it, just moved onto page 3.
+	local firstLookPage = newPageFrame(3, false)
+	buildPageContent(
+		firstLookPage,
+		"◆",
+		{ Colors.Rose, Colors.Violet, Colors.Cyan },
+		"YOUR FIRST STEP, FREE",
+		"Make a look before you make a purchase.",
+		if self.state.policy.contentSharingAllowed
+			then "Start with one tap on a featured community accessory—no Robux and no catalog permission. Then take the look into a live style round."
+			else "Start with a free Roblox catalog try-on, then take your look into a live style round. No AI generation purchase is required."
+	)
+
+	local dotsRow = Factory.New("Frame", {
+		Name = "Dots",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 270),
+		Size = UDim2.fromOffset(46, 8),
+		BackgroundTransparency = 1,
+		ZIndex = 204,
+		Parent = modal,
+	})
+	Factory.List(dotsRow, Enum.FillDirection.Horizontal, 8).HorizontalAlignment = Enum.HorizontalAlignment.Center
+	local dots: { Frame } = {}
+	for index = 1, 3 do
+		local dot = Factory.New("Frame", {
+			Name = "Dot" .. index,
+			Size = UDim2.fromOffset(8, 8),
+			BackgroundColor3 = Colors.Line,
+			BackgroundTransparency = if index == 1 then 0 else 0.5,
+			BorderSizePixel = 0,
+			ZIndex = 204,
+			Parent = dotsRow,
+		})
+		Factory.Corner(dot, 4)
+		dots[index] = dot
+	end
+
+	local primary = Factory.Button(modal, "Next", UDim2.new(1, -64, 0, 46), UDim2.fromOffset(32, 290), "primary")
+	primary.ZIndex = 204
+	self:_BindButton(primary)
+	local secondary = Factory.Button(modal, "Skip tutorial", UDim2.new(1, -64, 0, 34), UDim2.fromOffset(32, 344), nil)
+	secondary.ZIndex = 204
+	self:_BindButton(secondary)
+
+	local currentPage = 1
+	local switchingPage = false
+	local function setPage(index: number)
+		for dotIndex, dot in dots do
+			dot.BackgroundColor3 = if dotIndex == index then Colors.Mint else Colors.Line
+			dot.BackgroundTransparency = if dotIndex == index then 0 else 0.5
+		end
+		if index == 3 then
+			primary.Text = "Start my free First Look"
+			secondary.Text = "Explore on my own"
+		else
+			primary.Text = "Next"
+			secondary.Text = "Skip tutorial"
+			self:_Track({ event = "TutorialPageViewed", fields = { page = if index == 1 then "welcome" else "arcade" } })
+		end
+		GuiService.SelectedObject = primary
+	end
+
+	local function goToPage(index: number)
+		if switchingPage or index == currentPage then
+			return
+		end
+		local previousPage = currentPage
+		local function apply()
+			pageFrames[previousPage].Visible = false
+			pageFrames[index].Visible = true
+			currentPage = index
+			setPage(index)
+		end
+		if self.state and self.state.profile.settings.reduceMotion == true then
+			apply()
+			return
+		end
+		switchingPage = true
+		local dip = Factory.New("Frame", {
+			Name = "PageTransition",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ZIndex = 220,
+			Parent = modal,
+		})
+		self:_Animate(
+			dip,
+			TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ BackgroundTransparency = 0.08 }
+		)
+		task.delay(0.12, function()
+			if not dip.Parent then
+				return
+			end
+			apply()
+			self:_Animate(
+				dip,
+				TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ BackgroundTransparency = 1 }
+			)
+			task.delay(0.16, function()
+				if dip.Parent then
+					dip:Destroy()
+				end
+				switchingPage = false
+			end)
+		end)
+	end
 
 	local finishing = false
 	local function finish(openJourney: boolean)
@@ -8211,17 +8357,17 @@ function App:_ShowOnboarding()
 			return
 		end
 		finishing = true
-		start.Active = false
-		skip.Active = false
-		start.Text = if openJourney then "Opening your free look…" else "Saving your choice…"
+		primary.Active = false
+		secondary.Active = false
+		primary.Text = if openJourney then "Opening your free look…" else "Saving your choice…"
 		task.spawn(function()
 			local success = self:_Invoke(Network.Actions.CompleteOnboarding, {})
 			if not success then
 				finishing = false
-				if start.Parent then
-					start.Active = true
-					skip.Active = true
-					start.Text = "Start my free First Look"
+				if primary.Parent then
+					primary.Active = true
+					secondary.Active = true
+					primary.Text = "Start my free First Look"
 				end
 				return
 			end
@@ -8246,14 +8392,24 @@ function App:_ShowOnboarding()
 			end
 		end)
 	end
-	start.Activated:Connect(function()
-		finish(true)
+
+	primary.Activated:Connect(function()
+		if currentPage == 3 then
+			finish(true)
+		else
+			goToPage(currentPage + 1)
+		end
 	end)
-	skip.Activated:Connect(function()
-		finish(false)
+	secondary.Activated:Connect(function()
+		if currentPage == 3 then
+			finish(false)
+		else
+			goToPage(3)
+		end
 	end)
+
+	setPage(1)
 	self:_AnimateModalIn(overlay, modal)
-	GuiService.SelectedObject = start
 end
 
 function App:_ShowPlus()
