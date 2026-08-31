@@ -51,7 +51,7 @@ local Achievements = {
 		{
 			id = "FIRST_TRY_ON",
 			name = "Window Shopper",
-			description = "Try on a Roblox catalog item in Avatar Lab.",
+			description = "Try on your first item -- a Roblox catalog piece or a community creation.",
 			tokens = 2,
 		},
 		{ id = "FIRST_AD_WATCHED", name = "Ad Break", description = "Watch a rewarded ad.", tokens = 3 },

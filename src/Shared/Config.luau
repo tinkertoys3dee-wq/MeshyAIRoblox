@@ -387,6 +387,8 @@ return table.freeze({
 			"ReflexTap",
 			"PrismMerge",
 			"MeteorRush",
+			"SkyHopper",
+			"EchoMatch",
 		},
 		-- Weekly reward for each game's top 3 players by that game's best
 		-- score of the week. Index = placement: [1] = 1st, [2] = 2nd,
@@ -394,16 +396,19 @@ return table.freeze({
 		-- credits these to `tokens`, not `bonusTokens` — fully spendable,
 		-- generations included. That's a deliberate, bounded exception to the
 		-- "only gain money" guarantee (approved for the engagement value):
-		-- worst case is 313/game * #Games (9) = 2817 tokens/week, worth
-		-- roughly 2.3 generations (~$0.70) at the pricing in
+		-- worst case is 266/game * #Games (11) = 2926 tokens/week, worth
+		-- roughly 2.4 generations (~$0.73) at the pricing in
 		-- Config.Generation. See ArcadeService's module header and
 		-- docs/PRICING.md for the full reasoning; raising these numbers
 		-- meaningfully needs that math re-checked, not just a game-balance
 		-- judgment call. (Originally lowered 30% from 360/200/80 to
-		-- 252/140/56, then lowered another 30% to the whole-token values below.
-		-- Keep this comment's math in sync with WeeklyRewards and Games if
-		-- either changes again.)
-		WeeklyRewards = { 176, 98, 39 },
+		-- 252/140/56, lowered another 30% to 176/98/39, then lowered another
+		-- 15% to the whole-token values below -- the total ceiling still
+		-- ticked up slightly versus the 176/98/39 era despite the per-game
+		-- cut, purely from SkyHopper/EchoMatch adding two more games to
+		-- multiply against. Keep this comment's math in sync with
+		-- WeeklyRewards and Games if either changes again.)
+		WeeklyRewards = { 150, 83, 33 },
 		-- Sanity ceiling against an obviously spoofed score reaching the
 		-- leaderboard store. Can't stop a determined cheater on a
 		-- client-simulated game, only bound the damage one can do.
@@ -413,8 +418,9 @@ return table.freeze({
 		-- WeeklyRewards above, this is a normal bonusTokens grant --
 		-- Priority-Pass-only, same restriction as every other free grant in
 		-- this file, not the fully-spendable `tokens` exception WeeklyRewards
-		-- carries. (Lowered 20% from an original 8.)
-		DailyChallengeBonusTokens = 6,
+		-- carries. (Lowered 20% from an original 8 to 6, then another 15% to
+		-- the value below.)
+		DailyChallengeBonusTokens = 5,
 	},
 
 	Marketplace = {
