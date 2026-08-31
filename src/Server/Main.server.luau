@@ -2,6 +2,7 @@
 --fs
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
@@ -159,6 +160,13 @@ local function bootstrap(player: Player): (boolean, any)
 	local profile = profiles:PublicSnapshot(player)
 	if not profile then
 		return false, "PROFILE_UNAVAILABLE"
+	end
+	-- A snapshot, not the live profile (see ProfileService:PublicSnapshot),
+	-- so this never touches what's actually saved: only what this one
+	-- Bootstrap response claims. Lets a Studio playtester re-see onboarding
+	-- every run without a fresh account or hand-editing their real profile.
+	if RunService:IsStudio() and Config.Studio.AlwaysShowOnboarding then
+		profile.onboarding = { completed = false, step = 1 }
 	end
 	local state = playerStates:Get(player)
 	return true,
