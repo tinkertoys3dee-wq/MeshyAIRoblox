@@ -34,6 +34,8 @@ local BrickBreaker = require(script.Parent.Games.BrickBreaker)
 local ReflexTap = require(script.Parent.Games.ReflexTap)
 local PrismMerge = require(script.Parent.Games.PrismMerge)
 local MeteorRush = require(script.Parent.Games.MeteorRush)
+local SkyHopper = require(script.Parent.Games.SkyHopper)
+local EchoMatch = require(script.Parent.Games.EchoMatch)
 
 local Colors = Theme.Colors
 
@@ -102,6 +104,18 @@ local GAMES = {
 		icon = "🚀",
 		blurb = "Dodge meteors, collect cores, go hyper.",
 	},
+	{
+		game = SkyHopper,
+		color = Color3.fromRGB(120, 200, 255),
+		icon = "☁️",
+		blurb = "Bounce ever higher, don't fall behind.",
+	},
+	{
+		game = EchoMatch,
+		color = Colors.Gold,
+		icon = "🔔",
+		blurb = "Watch the pattern, echo it back.",
+	},
 }
 
 local TILE_SIZE = UDim2.fromOffset(248, 172)
@@ -146,9 +160,9 @@ function GamesHub.Show(app: any)
 
 	-- Height (702) is a target, not a hard requirement any more: hubView's
 	-- content box is modal height - 128 (see hubView's Size below), and the
-	-- wide-mode tile grid (10 tiles now: #GAMES games + 1 Leaderboard tile,
-	-- computed by wideTilePosition above) is 5 rows -- 5*TILE_SIZE.Y +
-	-- 4*TILE_GRID_GAP + a 26px bottom margin = 926, taller than the 574 a
+	-- wide-mode tile grid (12 tiles now: #GAMES games + 1 Leaderboard tile,
+	-- computed by wideTilePosition above) is 6 rows -- 6*TILE_SIZE.Y +
+	-- 5*TILE_GRID_GAP + a 26px bottom margin = 1104, taller than the 574 a
 	-- 3-row grid needed when this number was first picked. Rather than
 	-- rechase this comment's math every time Config.Arcade.Games grows,
 	-- hubView is a genuine ScrollingFrame (see below): 702 (the MaxSize

@@ -516,6 +516,7 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			-- essential when diagnosing public-index versus asset-load failures.
 			analytics:Funnel(player, "marketplace", 2, "Community item worn", { entryPoint = entryPoint })
 			analytics:Custom(player, "CommunityTryOnSucceeded", 1, { entryPoint = entryPoint })
+			achievements:Unlock(player, "FIRST_TRY_ON")
 			retention:MarkJourney(player, "TRY_STYLE")
 			retention:MarkQuest(player, "TRY_STYLE")
 		else

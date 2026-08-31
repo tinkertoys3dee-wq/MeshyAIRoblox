@@ -14,8 +14,12 @@ local DailyChallenge = {}
 -- BlockStacker scores one point per block successfully landed on the tower,
 -- BrickBreaker scores one point per brick broken (a wave is 24 bricks),
 -- ReflexTap scores one point per correctly-tapped tile before its window
--- expires, PrismMerge adds the value of every combined prism, and MeteorRush
--- scores distance plus pickups, deflections, and near misses.
+-- expires, PrismMerge adds the value of every combined prism, MeteorRush
+-- scores distance plus pickups, deflections, and near misses, SkyHopper
+-- scores world height climbed (÷6) plus coins, and EchoMatch scores every
+-- correct tap (plus a speed-combo bonus) plus an escalating per-round clear
+-- bonus, so clearing a handful of rounds outpaces ReflexTap-style per-tap
+-- scoring quickly.
 local BASE_TARGETS: { [string]: number } = {
 	FlappyBird = 8,
 	DinoRunner = 260,
@@ -26,6 +30,8 @@ local BASE_TARGETS: { [string]: number } = {
 	ReflexTap = 14,
 	PrismMerge = 512,
 	MeteorRush = 220,
+	SkyHopper = 200,
+	EchoMatch = 40,
 }
 
 -- Deterministic pseudo-randomness with no storage: folds the day number and
