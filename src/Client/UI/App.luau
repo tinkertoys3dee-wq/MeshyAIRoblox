@@ -2241,13 +2241,23 @@ function App:_Bootstrap()
 		self:_OpenPage("Create")
 		self:_RefreshLocalizedPrices()
 		if not data.profile.onboarding.completed then
-			-- Deferred rather than shown immediately here: with no panel
-			-- opening on join (see _SetStudioOpen(false) in App.new), the
-			-- Welcome modal firing straight off Bootstrap would still pop up
-			-- over whatever the player is looking at, same as the Studio
-			-- shell used to. It shows instead the first time they actually
-			-- open the Studio -- see the pendingOnboarding check there.
+			-- Gating this purely on "first time they open the Studio" (the
+			-- original design here) meant it never reached the player it
+			-- matters most for: someone who looks at the launcher screen,
+			-- doesn't know what any of the buttons mean, and leaves before
+			-- clicking one. `_SetStudioOpen(true)` still consumes the flag
+			-- immediately if they do open Studio first, but a short delay
+			-- also fires it automatically -- long enough that it isn't the
+			-- literal first frame the player sees (still honoring "no panel
+			-- opens on join"), short enough to land inside the window where
+			-- most drop-off was happening.
 			self.pendingOnboarding = true
+			task.delay(1.5, function()
+				if self.pendingOnboarding and self.state then
+					self.pendingOnboarding = false
+					self:_ShowOnboarding()
+				end
+			end)
 		elseif
 			data.dailyBrief
 			and (
