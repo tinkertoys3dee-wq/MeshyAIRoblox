@@ -443,17 +443,15 @@ function App.new()
 		-- see the "Make Arcade modal inherit UIScale" fix in GamesHub.luau.
 		arcadeUiScale = nil :: UIScale?,
 		runwayUiScale = nil :: UIScale?,
-		-- True once Bootstrap knows onboarding isn't complete; consumed (and
-		-- cleared) the first time the Studio shell actually opens, since
-		-- nothing should pop up unprompted on join -- see _SetStudioOpen.
-		pendingOnboarding = false,
 	}, App)
 	self:_BuildChrome()
-	-- No panel opens on join -- the player lands on the closed base view
-	-- (Forge Studio / Arcade / Runway / AFK launchers) and opens the Studio
-	-- shell only when they actually choose to, rather than the shell (and,
-	-- for a new profile, the onboarding modal on top of it) appearing
-	-- immediately over whatever they were looking at.
+	-- Nothing opens before Bootstrap resolves -- self.state doesn't exist
+	-- yet, so there's nothing to decide a first-timer vs. returning player
+	-- with. The base view (Forge Studio / Arcade / Runway / AFK launchers)
+	-- is the safe default until then; Bootstrap itself immediately reopens
+	-- the shell to Create for anyone who's never finished a generation (see
+	-- the Bootstrap success handler below), so this stays closed only for
+	-- returning creators.
 	self:_SetStudioOpen(false)
 	AvatarEditorService.PromptAllowInventoryReadAccessCompleted:Connect(function(result)
 		self.catalogAccessPrompting = false
@@ -1484,10 +1482,6 @@ function App:_SetStudioOpen(open: boolean)
 	end
 	if open then
 		self:_MarkJourneyOpen()
-		if self.pendingOnboarding and self.state then
-			self.pendingOnboarding = false
-			self:_ShowOnboarding()
-		end
 	end
 end
 
@@ -2246,24 +2240,25 @@ function App:_Bootstrap()
 		self:_ConnectPush()
 		self:_OpenPage("Create")
 		self:_RefreshLocalizedPrices()
-		if not data.profile.onboarding.completed then
-			-- Gating this purely on "first time they open the Studio" (the
-			-- original design here) meant it never reached the player it
-			-- matters most for: someone who looks at the launcher screen,
-			-- doesn't know what any of the buttons mean, and leaves before
-			-- clicking one. `_SetStudioOpen(true)` still consumes the flag
-			-- immediately if they do open Studio first, but a short delay
-			-- also fires it automatically -- long enough that it isn't the
-			-- literal first frame the player sees (still honoring "no panel
-			-- opens on join"), short enough to land inside the window where
-			-- most drop-off was happening.
-			self.pendingOnboarding = true
-			task.delay(1.5, function()
-				if self.pendingOnboarding and self.state then
-					self.pendingOnboarding = false
-					self:_ShowOnboarding()
-				end
-			end)
+		if (data.profile.stats.generationsCompleted or 0) == 0 then
+			-- A first-timer used to land on four equal launcher buttons,
+			-- then (briefly) a tutorial modal describing what they meant.
+			-- Both are gone: they now land directly on the Create page
+			-- itself, already collapsed to one method, a prompt box, and a
+			-- few tappable example ideas (see _RenderCreate) -- there's
+			-- nothing left worth explaining in a separate modal first, the
+			-- destination explains itself. _SetStudioOpen(true) already
+			-- reports OPEN_STUDIO to RetentionService, which is the real
+			-- driver of onboarding step 3 ("Opened free First Look") --
+			-- this just also closes out step 2 ("Chose a starting path"),
+			-- since landing here *is* that choice now that there's only
+			-- ever the one path to land on.
+			if not data.profile.onboarding.completed then
+				task.spawn(function()
+					self:_Invoke(Network.Actions.CompleteOnboarding, {})
+				end)
+			end
+			self:_SetStudioOpen(true)
 		elseif
 			data.dailyBrief
 			and (
@@ -3466,22 +3461,27 @@ function App:_RenderCreate()
 					{
 						label = "🐉 Dragon Wings",
 						text = "A pair of large translucent dragon wings backpack, glowing red veins, leathery texture, folded slightly for a battle-ready silhouette",
+						accessoryType = "BackAccessory",
 					},
 					{
 						label = "👑 Crystal Crown",
 						text = "A glossy crescent-moon crown made of translucent violet crystal, chunky silhouette, no floating pieces",
+						accessoryType = "Hat",
 					},
 					{
 						label = "⚔️ Neon Katana",
 						text = "A neon-edged katana strapped to the back, glowing cyan blade, sleek black hilt, faint energy trail",
+						accessoryType = "BackAccessory",
 					},
 					{
 						label = "🎩 Steampunk Hat",
 						text = "A steampunk top hat with brass gears, a small ticking clock face on the brim, weathered leather band",
+						accessoryType = "Hat",
 					},
 					{
 						label = "🦋 Fairy Wings",
 						text = "A pair of iridescent fairy wings, delicate vein patterns, glowing softly at the edges, lightweight and symmetrical",
+						accessoryType = "BackAccessory",
 					},
 				}
 			do
@@ -3491,6 +3491,11 @@ function App:_RenderCreate()
 					prompt.Text = spark.text
 					prompt.CursorPosition = #spark.text + 1
 					prompt:CaptureFocus()
+					-- Advanced options (including fit region) are collapsed
+					-- for a first-timer -- without this, every example would
+					-- still submit against the "Hat" default regardless of
+					-- what it actually depicts.
+					self.selectedAccessoryType = spark.accessoryType
 				end)
 			end
 			cursorY += 42
@@ -3619,43 +3624,102 @@ function App:_RenderCreate()
 			step = 3
 		end
 
-		Factory.Label(promptCard, string.format("%d  CHOOSE A VISUAL STYLE", step), UDim2.new(1, -32, 0, 22), {
-			Position = UDim2.fromOffset(16, cursorY),
-			Font = Theme.Fonts.Bold,
-			TextSize = 12,
-			Color = Colors.Violet,
-		})
-		cursorY += 27
-		choiceRow(Config.Generation.StylePresets, self.selectedStylePreset, cursorY, Colors.Violet, function(value)
-			self.selectedStylePreset = value
-			self:_RenderActivePage()
-		end)
-		cursorY += 46
-		step += 1
-
-		Factory.Label(promptCard, string.format("%d  CHOOSE DETAIL DENSITY", step), UDim2.new(1, -32, 0, 22), {
-			Position = UDim2.fromOffset(16, cursorY),
-			Font = Theme.Fonts.Bold,
-			TextSize = 12,
-			Color = Colors.Rose,
-		})
-		cursorY += 27
-		choiceRow(Config.Generation.DetailLevels, self.selectedDetailLevel, cursorY, Colors.Rose, function(value)
-			self.selectedDetailLevel = value
-			self:_RenderActivePage()
-		end)
-		cursorY += 46
-		step += 1
-
-		if self.selectedMethod == "IMAGE_PREVIEW" then
-			Factory.Label(promptCard, string.format("%d  CHOOSE REFERENCE QUALITY", step), UDim2.new(1, -32, 0, 22), {
+		-- Style, detail, and fit region all default to something sensible
+		-- (AUTO / BALANCED / whichever example chip was tapped, or "Hat")
+		-- and stay hidden -- along with the other three methods -- until
+		-- "Show 3 more ways to create" is tapped above, so a first visit
+		-- ends at the prompt box + Generate rather than four more decisions.
+		if showAllMethods then
+			Factory.Label(promptCard, string.format("%d  CHOOSE A VISUAL STYLE", step), UDim2.new(1, -32, 0, 22), {
 				Position = UDim2.fromOffset(16, cursorY),
 				Font = Theme.Fonts.Bold,
 				TextSize = 12,
-				Color = Colors.Gold,
+				Color = Colors.Violet,
 			})
 			cursorY += 27
-			local qualityRow = Factory.New("ScrollingFrame", {
+			choiceRow(Config.Generation.StylePresets, self.selectedStylePreset, cursorY, Colors.Violet, function(value)
+				self.selectedStylePreset = value
+				self:_RenderActivePage()
+			end)
+			cursorY += 46
+			step += 1
+
+			Factory.Label(promptCard, string.format("%d  CHOOSE DETAIL DENSITY", step), UDim2.new(1, -32, 0, 22), {
+				Position = UDim2.fromOffset(16, cursorY),
+				Font = Theme.Fonts.Bold,
+				TextSize = 12,
+				Color = Colors.Rose,
+			})
+			cursorY += 27
+			choiceRow(Config.Generation.DetailLevels, self.selectedDetailLevel, cursorY, Colors.Rose, function(value)
+				self.selectedDetailLevel = value
+				self:_RenderActivePage()
+			end)
+			cursorY += 46
+			step += 1
+
+			if self.selectedMethod == "IMAGE_PREVIEW" then
+				Factory.Label(
+					promptCard,
+					string.format("%d  CHOOSE REFERENCE QUALITY", step),
+					UDim2.new(1, -32, 0, 22),
+					{
+						Position = UDim2.fromOffset(16, cursorY),
+						Font = Theme.Fonts.Bold,
+						TextSize = 12,
+						Color = Colors.Gold,
+					}
+				)
+				cursorY += 27
+				local qualityRow = Factory.New("ScrollingFrame", {
+					Position = UDim2.fromOffset(16, cursorY),
+					Size = UDim2.new(1, -32, 0, 38),
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+					ScrollBarThickness = 0,
+					AutomaticCanvasSize = Enum.AutomaticSize.X,
+					CanvasSize = UDim2.new(),
+					ScrollingDirection = Enum.ScrollingDirection.X,
+					Parent = promptCard,
+				})
+				Factory.List(qualityRow, Enum.FillDirection.Horizontal, 8)
+				for _, tier in Config.Generation.ImageQualityTiers do
+					local tierSelected = self.selectedImageQuality == tier.Id
+					local chip = Factory.Button(
+						qualityRow,
+						string.format("%s · R$ %d", tier.Label, self.state.prices[tier.ProductKey] or 0),
+						UDim2.fromOffset(146, 34),
+						nil,
+						if tierSelected then "primary" else nil
+					)
+					if tierSelected then
+						chip.BackgroundColor3 = Colors.Gold
+					end
+					self:_BindButton(chip)
+					chip.Activated:Connect(function()
+						self.selectedImageQuality = tier.Id
+						self:_RenderActivePage()
+					end)
+				end
+				cursorY += 46
+				step += 1
+				Factory.Label(
+					promptCard,
+					"Higher tiers use a more detailed OpenAI render for a closer, cleaner reference before you approve the 3D build.",
+					UDim2.new(1, -32, 0, 18),
+					{ Position = UDim2.fromOffset(16, cursorY), Color = Colors.TextMuted, TextSize = 10 }
+				)
+				cursorY += 24
+			end
+
+			Factory.Label(promptCard, string.format("%d  CHOOSE A FIT REGION", step), UDim2.new(1, -32, 0, 22), {
+				Position = UDim2.fromOffset(16, cursorY),
+				Font = Theme.Fonts.Bold,
+				TextSize = 12,
+				Color = Colors.Cyan,
+			})
+			cursorY += 27
+			local chipRow = Factory.New("ScrollingFrame", {
 				Position = UDim2.fromOffset(16, cursorY),
 				Size = UDim2.new(1, -32, 0, 38),
 				BackgroundTransparency = 1,
@@ -3666,66 +3730,27 @@ function App:_RenderCreate()
 				ScrollingDirection = Enum.ScrollingDirection.X,
 				Parent = promptCard,
 			})
-			Factory.List(qualityRow, Enum.FillDirection.Horizontal, 8)
-			for _, tier in Config.Generation.ImageQualityTiers do
-				local tierSelected = self.selectedImageQuality == tier.Id
-				local chip = Factory.Button(
-					qualityRow,
-					string.format("%s · R$ %d", tier.Label, self.state.prices[tier.ProductKey] or 0),
-					UDim2.fromOffset(146, 34),
-					nil,
-					if tierSelected then "primary" else nil
-				)
-				if tierSelected then
-					chip.BackgroundColor3 = Colors.Gold
-				end
+			Factory.List(chipRow, Enum.FillDirection.Horizontal, 8)
+			for typeName, label in ACCESSORY_LABELS do
+				local selected = self.selectedAccessoryType == typeName
+				local chip =
+					Factory.Button(chipRow, label, UDim2.fromOffset(88, 34), nil, if selected then "primary" else nil)
 				self:_BindButton(chip)
 				chip.Activated:Connect(function()
-					self.selectedImageQuality = tier.Id
+					self.selectedAccessoryType = typeName
 					self:_RenderActivePage()
 				end)
 			end
-			cursorY += 46
-			step += 1
+			cursorY += 50
+		else
 			Factory.Label(
 				promptCard,
-				"Higher tiers use a more detailed OpenAI render for a closer, cleaner reference before you approve the 3D build.",
+				'Using default style, detail, and fit -- tap "Show 3 more ways to create" above for full control.',
 				UDim2.new(1, -32, 0, 18),
-				{ Position = UDim2.fromOffset(16, cursorY), Color = Colors.TextMuted, TextSize = 10 }
+				{ Position = UDim2.fromOffset(16, cursorY), Color = Colors.TextMuted, TextSize = 10, Wrapped = true }
 			)
-			cursorY += 24
+			cursorY += 26
 		end
-
-		Factory.Label(promptCard, string.format("%d  CHOOSE A FIT REGION", step), UDim2.new(1, -32, 0, 22), {
-			Position = UDim2.fromOffset(16, cursorY),
-			Font = Theme.Fonts.Bold,
-			TextSize = 12,
-			Color = Colors.Cyan,
-		})
-		cursorY += 27
-		local chipRow = Factory.New("ScrollingFrame", {
-			Position = UDim2.fromOffset(16, cursorY),
-			Size = UDim2.new(1, -32, 0, 38),
-			BackgroundTransparency = 1,
-			BorderSizePixel = 0,
-			ScrollBarThickness = 0,
-			AutomaticCanvasSize = Enum.AutomaticSize.X,
-			CanvasSize = UDim2.new(),
-			ScrollingDirection = Enum.ScrollingDirection.X,
-			Parent = promptCard,
-		})
-		Factory.List(chipRow, Enum.FillDirection.Horizontal, 8)
-		for typeName, label in ACCESSORY_LABELS do
-			local selected = self.selectedAccessoryType == typeName
-			local chip =
-				Factory.Button(chipRow, label, UDim2.fromOffset(88, 34), nil, if selected then "primary" else nil)
-			self:_BindButton(chip)
-			chip.Activated:Connect(function()
-				self.selectedAccessoryType = typeName
-				self:_RenderActivePage()
-			end)
-		end
-		cursorY += 50
 
 		local safetyY = cursorY
 		local buttonY = if self.compact then safetyY + 39 else safetyY
@@ -8238,17 +8263,15 @@ function App:_RenderSettings()
 	end
 end
 
--- The launcher screen (Forge Studio / Forge Runway / Arcade / Tokens for
--- AFK) shows a first-timer four buttons of identical size and weight with
--- no indication which one actually matters -- real tester feedback was
--- that the game reads as confusing even with the onboarding tour in place,
--- and a tour that plays once in a modal and then leaves the player looking
--- at four equal buttons doesn't leave anything behind to point at the
--- right one. This dims the other three and puts a slow pulsing glow on
--- Forge Studio's own outline instead, so the "start here" signal survives
--- after the tutorial modal closes -- without touching any button's size or
--- position, since every launcher's vertical spacing (buildLauncher's
--- bottomOffset math) assumes today's exact footprints.
+-- A first-timer no longer lands on the launcher screen at all (Bootstrap
+-- opens Studio straight to Create instead -- see the Bootstrap success
+-- handler), but they still reach these four buttons the moment they close
+-- Studio to look around, and nothing there marks Forge Studio as the one
+-- that matters over Forge Runway / Arcade / Tokens for AFK. This dims the
+-- other three and puts a slow pulsing glow on Forge Studio's own outline
+-- for anyone who's never finished a generation, without touching any
+-- button's size or position -- every launcher's vertical spacing
+-- (buildLauncher's bottomOffset math) assumes today's exact footprints.
 function App:_ApplyLauncherEmphasis()
 	local hasCreatedBefore = (self.state.profile.stats.generationsCompleted or 0) > 0
 	if hasCreatedBefore then
@@ -8282,293 +8305,6 @@ function App:_ApplyLauncherEmphasis()
 		{ Transparency = 0.1 }
 	)
 	pulse:Play()
-end
-
--- A short, skippable 3-page tour shown before the existing First Look step:
--- what Forge is, the Create flow, and the Arcade. Added because most new
--- players were leaving in well under a minute without ever seeing either --
--- the First Look CTA below is still the only page that actually asks for an
--- action, pages 1-2 are pure orientation and can be skipped straight past.
-function App:_ShowOnboarding()
-	local overlay = Factory.New("Frame", {
-		Name = "Onboarding",
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Colors.Ink,
-		BackgroundTransparency = 0.18,
-		BorderSizePixel = 0,
-		ZIndex = 200,
-		Parent = self.gui,
-	})
-	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, 406), UDim2.fromScale(0.5, 0.5), "OnboardingModal")
-	modal.AnchorPoint = Vector2.new(0.5, 0.5)
-	modal.ZIndex = 201
-	Factory.New("UISizeConstraint", {
-		MaxSize = Vector2.new(620, 406),
-		Parent = modal,
-	})
-
-	local function buildPageContent(
-		parent: Frame,
-		glyph: string,
-		gradient: { Color3 },
-		eyebrow: string,
-		headline: string,
-		description: string
-	)
-		local badge = Factory.New("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0),
-			Position = UDim2.new(0.5, 0, 0, 26),
-			Size = UDim2.fromOffset(68, 68),
-			BackgroundColor3 = gradient[1],
-			BorderSizePixel = 0,
-			ZIndex = 203,
-			Parent = parent,
-		})
-		Factory.Corner(badge, 22)
-		Factory.Gradient(badge, gradient, 135)
-		Factory.Label(badge, glyph, UDim2.fromScale(1, 1), {
-			Font = Theme.Fonts.Black,
-			TextSize = 32,
-			AlignX = Enum.TextXAlignment.Center,
-			AlignY = Enum.TextYAlignment.Center,
-			ZIndex = 204,
-		})
-		Factory.Label(parent, eyebrow, UDim2.new(1, -48, 0, 20), {
-			Position = UDim2.fromOffset(24, 108),
-			AlignX = Enum.TextXAlignment.Center,
-			Font = Theme.Fonts.Bold,
-			TextSize = 11,
-			Color = Colors.Mint,
-			ZIndex = 203,
-		})
-		Factory.Label(parent, headline, UDim2.new(1, -64, 0, 56), {
-			Position = UDim2.fromOffset(32, 134),
-			AlignX = Enum.TextXAlignment.Center,
-			Font = Theme.Fonts.Black,
-			TextSize = 24,
-			Wrapped = true,
-			ZIndex = 203,
-		})
-		Factory.Label(parent, description, UDim2.new(1, -86, 0, 60), {
-			Position = UDim2.fromOffset(43, 198),
-			AlignX = Enum.TextXAlignment.Center,
-			AlignY = Enum.TextYAlignment.Top,
-			Color = Colors.TextMuted,
-			TextSize = 13,
-			Wrapped = true,
-			ZIndex = 203,
-		})
-	end
-
-	local pageFrames: { Frame } = {}
-	local function newPageFrame(index: number, visible: boolean): Frame
-		local frame = Factory.New("Frame", {
-			Name = "Page" .. index,
-			Size = UDim2.fromScale(1, 1),
-			BackgroundTransparency = 1,
-			Visible = visible,
-			ZIndex = 203,
-			Parent = modal,
-		})
-		pageFrames[index] = frame
-		return frame
-	end
-
-	local welcomePage = newPageFrame(1, true)
-	buildPageContent(
-		welcomePage,
-		"🔥",
-		{ Colors.Rose, Colors.Violet, Colors.Cyan },
-		"WELCOME TO FORGE",
-		"Make anything. Wear it instantly.",
-		'Type what you want -- like "a pair of glowing dragon wings" -- and Forge builds a real Roblox accessory from it.'
-	)
-
-	local arcadePage = newPageFrame(2, false)
-	buildPageContent(
-		arcadePage,
-		"🎮",
-		{ Color3.fromRGB(160, 255, 215), Colors.Mint, Color3.fromRGB(46, 196, 143) },
-		"NEED A BREAK?",
-		"Hop into the Arcade.",
-		string.format(
-			"%d free minigames with weekly token prizes and daily challenges -- perfect while a generation is queued.",
-			#Config.Arcade.Games
-		)
-	)
-
-	-- The pre-existing First Look step: same content and submission logic as
-	-- before this tour was added in front of it, just moved onto page 3.
-	local firstLookPage = newPageFrame(3, false)
-	buildPageContent(
-		firstLookPage,
-		"◆",
-		{ Colors.Rose, Colors.Violet, Colors.Cyan },
-		"YOUR FIRST STEP, FREE",
-		"Make a look before you make a purchase.",
-		if self.state.policy.contentSharingAllowed
-			then "Start with one tap on a featured community accessory—no Robux and no catalog permission. Then take the look into a live style round."
-			else "Start with a free Roblox catalog try-on, then take your look into a live style round. No AI generation purchase is required."
-	)
-
-	local dotsRow = Factory.New("Frame", {
-		Name = "Dots",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 270),
-		Size = UDim2.fromOffset(46, 8),
-		BackgroundTransparency = 1,
-		ZIndex = 204,
-		Parent = modal,
-	})
-	Factory.List(dotsRow, Enum.FillDirection.Horizontal, 8).HorizontalAlignment = Enum.HorizontalAlignment.Center
-	local dots: { Frame } = {}
-	for index = 1, 3 do
-		local dot = Factory.New("Frame", {
-			Name = "Dot" .. index,
-			Size = UDim2.fromOffset(8, 8),
-			BackgroundColor3 = Colors.Line,
-			BackgroundTransparency = if index == 1 then 0 else 0.5,
-			BorderSizePixel = 0,
-			ZIndex = 204,
-			Parent = dotsRow,
-		})
-		Factory.Corner(dot, 4)
-		dots[index] = dot
-	end
-
-	local primary = Factory.Button(modal, "Next", UDim2.new(1, -64, 0, 46), UDim2.fromOffset(32, 290), "primary")
-	primary.ZIndex = 204
-	self:_BindButton(primary)
-	local secondary = Factory.Button(modal, "Skip tutorial", UDim2.new(1, -64, 0, 34), UDim2.fromOffset(32, 344), nil)
-	secondary.ZIndex = 204
-	self:_BindButton(secondary)
-
-	local currentPage = 1
-	local switchingPage = false
-	local function setPage(index: number)
-		for dotIndex, dot in dots do
-			dot.BackgroundColor3 = if dotIndex == index then Colors.Mint else Colors.Line
-			dot.BackgroundTransparency = if dotIndex == index then 0 else 0.5
-		end
-		if index == 3 then
-			primary.Text = "Start my free First Look"
-			secondary.Text = "Explore on my own"
-		else
-			primary.Text = "Next"
-			secondary.Text = "Skip tutorial"
-			self:_Track({ event = "TutorialPageViewed", fields = { page = if index == 1 then "welcome" else "arcade" } })
-		end
-		GuiService.SelectedObject = primary
-	end
-
-	local function goToPage(index: number)
-		if switchingPage or index == currentPage then
-			return
-		end
-		local previousPage = currentPage
-		local function apply()
-			pageFrames[previousPage].Visible = false
-			pageFrames[index].Visible = true
-			currentPage = index
-			setPage(index)
-		end
-		if self.state and self.state.profile.settings.reduceMotion == true then
-			apply()
-			return
-		end
-		switchingPage = true
-		local dip = Factory.New("Frame", {
-			Name = "PageTransition",
-			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = Colors.Ink,
-			BackgroundTransparency = 1,
-			BorderSizePixel = 0,
-			ZIndex = 220,
-			Parent = modal,
-		})
-		self:_Animate(
-			dip,
-			TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-			{ BackgroundTransparency = 0.08 }
-		)
-		task.delay(0.12, function()
-			if not dip.Parent then
-				return
-			end
-			apply()
-			self:_Animate(
-				dip,
-				TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-				{ BackgroundTransparency = 1 }
-			)
-			task.delay(0.16, function()
-				if dip.Parent then
-					dip:Destroy()
-				end
-				switchingPage = false
-			end)
-		end)
-	end
-
-	local finishing = false
-	local function finish(openJourney: boolean)
-		if finishing then
-			return
-		end
-		finishing = true
-		primary.Active = false
-		secondary.Active = false
-		primary.Text = if openJourney then "Opening your free look…" else "Saving your choice…"
-		task.spawn(function()
-			local success = self:_Invoke(Network.Actions.CompleteOnboarding, {})
-			if not success then
-				finishing = false
-				if primary.Parent then
-					primary.Active = true
-					secondary.Active = true
-					primary.Text = "Start my free First Look"
-				end
-				return
-			end
-			if self.state then
-				self.state.profile.onboarding.completed = true
-				self.state.profile.onboarding.step = math.max(self.state.profile.onboarding.step or 1, 2)
-			end
-			if overlay.Parent then
-				overlay:Destroy()
-			end
-			if openJourney then
-				local firstPage = if self.state.policy.contentSharingAllowed then "Discover" else "Avatar Lab"
-				self:_OpenPage(firstPage)
-				self:_Toast(
-					"success",
-					if firstPage == "Discover"
-						then "Choose the featured look—it's free and applies in one tap."
-						else "Choose any catalog accessory to complete your free try-on step."
-				)
-			else
-				self:_Toast("success", "Explore freely. Your First Look tracker will stay on the Create page.")
-			end
-		end)
-	end
-
-	primary.Activated:Connect(function()
-		if currentPage == 3 then
-			finish(true)
-		else
-			goToPage(currentPage + 1)
-		end
-	end)
-	secondary.Activated:Connect(function()
-		if currentPage == 3 then
-			finish(false)
-		else
-			goToPage(3)
-		end
-	end)
-
-	setPage(1)
-	self:_AnimateModalIn(overlay, modal)
 end
 
 function App:_ShowPlus()

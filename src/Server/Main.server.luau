@@ -163,10 +163,13 @@ local function bootstrap(player: Player): (boolean, any)
 	end
 	-- A snapshot, not the live profile (see ProfileService:PublicSnapshot),
 	-- so this never touches what's actually saved: only what this one
-	-- Bootstrap response claims. Lets a Studio playtester re-see onboarding
-	-- every run without a fresh account or hand-editing their real profile.
-	if RunService:IsStudio() and Config.Studio.AlwaysShowOnboarding then
+	-- Bootstrap response claims. Lets a Studio playtester re-see the
+	-- first-timer flow (App.luau's Bootstrap handler opens straight to
+	-- Create whenever stats.generationsCompleted is 0) every run, without a
+	-- fresh account or hand-editing their real profile.
+	if RunService:IsStudio() and Config.Studio.AlwaysShowFirstTimerFlow then
 		profile.onboarding = { completed = false, step = 1 }
+		profile.stats.generationsCompleted = 0
 	end
 	local state = playerStates:Get(player)
 	return true,
