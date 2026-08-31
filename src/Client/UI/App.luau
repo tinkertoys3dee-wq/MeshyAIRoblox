@@ -355,6 +355,11 @@ function App.new()
 		showAllMethods = false,
 		selectedAccessoryType = "Hat",
 		selectedStylePreset = "AUTO",
+		-- Not a real player choice any more -- there's no "choose detail
+		-- density" UI left anywhere on Create (see _RenderCreate). Kept as
+		-- a field, not a literal in the generation payload, only because
+		-- GenerationService still expects a valid Config.Generation.
+		-- DetailLevels id on every request.
 		selectedDetailLevel = "BALANCED",
 		selectedImageQuality = "LOW",
 		selectedAvatarView = "HEADSHOT",
@@ -3624,11 +3629,13 @@ function App:_RenderCreate()
 			step = 3
 		end
 
-		-- Style, detail, and fit region all default to something sensible
-		-- (AUTO / BALANCED / whichever example chip was tapped, or "Hat")
-		-- and stay hidden -- along with the other three methods -- until
-		-- "Show 3 more ways to create" is tapped above, so a first visit
-		-- ends at the prompt box + Generate rather than four more decisions.
+		-- Style and fit region default to something sensible (AUTO /
+		-- whichever example chip was tapped, or "Hat") and stay hidden --
+		-- along with the other three methods -- until "Show 3 more ways to
+		-- create" is tapped above, so a first visit ends at the prompt box
+		-- + Generate. Detail density isn't a choice at all any more --
+		-- selectedDetailLevel is permanently "BALANCED" (see App.new),
+		-- there's no UI left that ever changes it.
 		if showAllMethods then
 			Factory.Label(promptCard, string.format("%d  CHOOSE A VISUAL STYLE", step), UDim2.new(1, -32, 0, 22), {
 				Position = UDim2.fromOffset(16, cursorY),
@@ -3639,20 +3646,6 @@ function App:_RenderCreate()
 			cursorY += 27
 			choiceRow(Config.Generation.StylePresets, self.selectedStylePreset, cursorY, Colors.Violet, function(value)
 				self.selectedStylePreset = value
-				self:_RenderActivePage()
-			end)
-			cursorY += 46
-			step += 1
-
-			Factory.Label(promptCard, string.format("%d  CHOOSE DETAIL DENSITY", step), UDim2.new(1, -32, 0, 22), {
-				Position = UDim2.fromOffset(16, cursorY),
-				Font = Theme.Fonts.Bold,
-				TextSize = 12,
-				Color = Colors.Rose,
-			})
-			cursorY += 27
-			choiceRow(Config.Generation.DetailLevels, self.selectedDetailLevel, cursorY, Colors.Rose, function(value)
-				self.selectedDetailLevel = value
 				self:_RenderActivePage()
 			end)
 			cursorY += 46
@@ -3745,7 +3738,7 @@ function App:_RenderCreate()
 		else
 			Factory.Label(
 				promptCard,
-				'Using default style, detail, and fit -- tap "Show 3 more ways to create" above for full control.',
+				'Using default style and fit -- tap "Show 3 more ways to create" above for full control.',
 				UDim2.new(1, -32, 0, 18),
 				{ Position = UDim2.fromOffset(16, cursorY), Color = Colors.TextMuted, TextSize = 10, Wrapped = true }
 			)
