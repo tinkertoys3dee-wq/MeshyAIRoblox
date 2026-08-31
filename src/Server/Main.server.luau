@@ -170,6 +170,7 @@ local function bootstrap(player: Player): (boolean, any)
 	if RunService:IsStudio() and Config.Studio.AlwaysShowFirstTimerFlow then
 		profile.onboarding = { completed = false, step = 1 }
 		profile.stats.generationsCompleted = 0
+		profile.settings.simpleMode = true
 	end
 	local state = playerStates:Get(player)
 	return true,
@@ -621,6 +622,12 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 				return false, "INVALID_REQUEST"
 			end
 			updates.uiScale = scale
+		end
+		if payload.simpleMode ~= nil then
+			if type(payload.simpleMode) ~= "boolean" then
+				return false, "INVALID_REQUEST"
+			end
+			updates.simpleMode = payload.simpleMode
 		end
 		if next(updates) == nil then
 			return false, "INVALID_REQUEST"

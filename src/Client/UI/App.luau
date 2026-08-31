@@ -348,11 +348,6 @@ function App.new()
 		state = nil :: { [string]: any }?,
 		activePage = "Create",
 		selectedMethod = "TEXT_TO_3D",
-		-- Sticky for the session once a first-timer taps "Show more ways to
-		-- create" on the Create page (see _RenderCreate) -- a returning
-		-- creator (stats.generationsCompleted > 0) always sees every method
-		-- regardless of this flag.
-		showAllMethods = false,
 		selectedAccessoryType = "Hat",
 		selectedStylePreset = "AUTO",
 		-- Not a real player choice any more -- there's no "choose detail
@@ -2909,15 +2904,17 @@ function App:_TextBox(parent: Instance, placeholder: string, size: UDim2, positi
 end
 
 function App:_RenderCreate()
-	-- Someone who has never finished a creation sees a deliberately smaller
-	-- Create page: one method instead of four, no reference-image/upload/
-	-- avatar jargon, and a few tappable example prompts near the text box.
-	-- The full four-method, art-direction-heavy page below is exactly what
-	-- shows once they've made one thing (or tap "Show more ways to create")
-	-- -- it isn't gone, it's just not the first thing a confused new player
-	-- has to parse before they've typed anything at all.
-	local hasCreatedBefore = (self.state.profile.stats.generationsCompleted or 0) > 0
-	local showAllMethods = hasCreatedBefore or self.showAllMethods
+	-- Simple Mode is a real, persisted setting (profile.settings.
+	-- simpleMode, defaulting true for every account -- see ProfileService's
+	-- defaultProfile), not a one-time first-timer nicety: a player picks
+	-- it, in Settings or via the switch link below, and it stays picked
+	-- across sessions until they change it back. In Simple Mode, Create
+	-- shows one method instead of four, no reference-image/upload/avatar
+	-- jargon, and a few tappable example prompts near the text box -- the
+	-- full four-method, art-direction-heavy page is exactly one tap away,
+	-- never removed, just not the default for an audience that skews young.
+	local simpleMode = self.state.profile.settings.simpleMode ~= false
+	local showAllMethods = not simpleMode
 	self:_PageHeader(
 		if showAllMethods then "Create something impossible" else "Describe it. Wear it.",
 		if showAllMethods
@@ -3263,7 +3260,7 @@ function App:_RenderCreate()
 	-- the actual generation call changes for someone who never expands it.
 	local visibleMethods = if showAllMethods then allMethods else { allMethods[1] }
 	local methodRow = Factory.New("Frame", {
-		Size = UDim2.new(1, 0, 0, if showAllMethods then (if self.compact then 612 else 320) else 210),
+		Size = UDim2.new(1, 0, 0, if showAllMethods then (if self.compact then 656 else 364) else 210),
 		BackgroundTransparency = 1,
 		LayoutOrder = 1,
 		Parent = stack,
@@ -3326,17 +3323,28 @@ function App:_RenderCreate()
 			self:_RenderActivePage()
 		end)
 	end
-	if not showAllMethods then
-		local expand = Factory.Button(
+	if showAllMethods then
+		local collapse = Factory.Button(
 			methodRow,
-			"Show 3 more ways to create →",
+			"← Switch to Simple Mode",
 			UDim2.new(1, 0, 0, 34),
-			UDim2.fromOffset(0, 168)
+			UDim2.fromOffset(0, if self.compact then 612 else 320)
 		)
+		self:_BindButton(collapse)
+		collapse.Activated:Connect(function()
+			-- Its own toggle button is about to disappear -- if it was left
+			-- on, Simple Mode's next generation would otherwise silently
+			-- spend a Priority Pass the player has no visible way left to
+			-- turn back off.
+			self.usePriority = false
+			self:_UpdateSetting("simpleMode", true)
+		end)
+	else
+		local expand =
+			Factory.Button(methodRow, "Switch to Advanced Mode →", UDim2.new(1, 0, 0, 34), UDim2.fromOffset(0, 168))
 		self:_BindButton(expand)
 		expand.Activated:Connect(function()
-			self.showAllMethods = true
-			self:_RenderActivePage()
+			self:_UpdateSetting("simpleMode", false)
 		end)
 	end
 
@@ -3438,10 +3446,10 @@ function App:_RenderCreate()
 		cursorY += 108
 
 		-- One-tap example prompts for anyone staring at a blank box with no
-		-- idea what to type -- only shown before a player's first creation
-		-- (isAvatar's "styling notes" field is a different kind of prompt,
-		-- so it's excluded here regardless of hasCreatedBefore).
-		if not isAvatar and not hasCreatedBefore then
+		-- idea what to type -- shown throughout Simple Mode, not just a
+		-- first-timer's first visit (isAvatar's "styling notes" field is a
+		-- different kind of prompt, so it's excluded here regardless).
+		if not isAvatar and not showAllMethods then
 			Factory.Label(promptCard, "NEED AN IDEA? TRY ONE:", UDim2.new(1, -32, 0, 16), {
 				Position = UDim2.fromOffset(16, cursorY),
 				Font = Theme.Fonts.Bold,
@@ -3630,12 +3638,13 @@ function App:_RenderCreate()
 		end
 
 		-- Style and fit region default to something sensible (AUTO /
-		-- whichever example chip was tapped, or "Hat") and stay hidden --
-		-- along with the other three methods -- until "Show 3 more ways to
-		-- create" is tapped above, so a first visit ends at the prompt box
-		-- + Generate. Detail density isn't a choice at all any more --
-		-- selectedDetailLevel is permanently "BALANCED" (see App.new),
-		-- there's no UI left that ever changes it.
+		-- whichever example chip was tapped, or "Hat") and stay hidden in
+		-- Simple Mode, same as the other three methods -- switching to
+		-- Advanced Mode above reveals both together, so Simple Mode ends
+		-- at the prompt box + Generate. Detail density isn't a choice at
+		-- all any more, in either mode -- selectedDetailLevel is
+		-- permanently "BALANCED" (see App.new), there's no UI left that
+		-- ever changes it.
 		if showAllMethods then
 			Factory.Label(promptCard, string.format("%d  CHOOSE A VISUAL STYLE", step), UDim2.new(1, -32, 0, 22), {
 				Position = UDim2.fromOffset(16, cursorY),
@@ -3738,7 +3747,7 @@ function App:_RenderCreate()
 		else
 			Factory.Label(
 				promptCard,
-				'Using default style and fit -- tap "Show 3 more ways to create" above for full control.',
+				'Using default style and fit -- tap "Switch to Advanced Mode" above for full control.',
 				UDim2.new(1, -32, 0, 18),
 				{ Position = UDim2.fromOffset(16, cursorY), Color = Colors.TextMuted, TextSize = 10, Wrapped = true }
 			)
@@ -3783,8 +3792,13 @@ function App:_RenderCreate()
 		local priceText = if payWithTokens
 			then string.format("%d ad tokens", tokenPrice(price, generationProductKey))
 			else string.format("R$ %d", price)
-		local actionText = if self.selectedMethod == "TEXT_TO_3D"
-			then string.format("Forge 3D · %s", priceText)
+		-- Simple Mode's button says what it does in plain words instead of
+		-- brand terms ("Forge 3D") a first-time young creator hasn't been
+		-- taught yet -- always the TEXT_TO_3D case, since that's the only
+		-- method Simple Mode ever leaves selected.
+		local actionText = if not showAllMethods
+			then string.format("Make It! · %s", priceText)
+			elseif self.selectedMethod == "TEXT_TO_3D" then string.format("Forge 3D · %s", priceText)
 			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · %s", priceText)
 			elseif self.selectedMethod == "AVATAR_TO_3D" then string.format(
 				"Forge from my avatar · %s",
@@ -3798,35 +3812,44 @@ function App:_RenderCreate()
 			if self.compact then UDim2.new(0.5, 5, 0, buttonY) else UDim2.new(1, -266, 0, buttonY),
 			"primary"
 		)
-		local availablePasses = self.state.profile.retryCredits.PriorityPass or 0
-		local priority = Factory.Button(
-			promptCard,
-			if availablePasses > 0
-				then string.format(
-					"Priority %s · %d pass%s",
-					if self.usePriority then "✓" else "",
-					availablePasses,
-					if availablePasses == 1 then "" else "es"
-				)
-				elseif self.paymentMethod == "TOKENS" then string.format(
-					"Priority pass · %d tokens",
-					tokenPrice(self.state.prices.PriorityPass)
-				)
-				else string.format("Priority pass · R$ %d", self.state.prices.PriorityPass),
-			if self.compact then UDim2.new(0.5, -20, 0, 42) else UDim2.fromOffset(184, 42),
-			if self.compact then UDim2.new(0, 15, 0, buttonY) else UDim2.new(1, -460, 0, buttonY),
-			if self.usePriority then "mint" else nil
-		)
 		self:_BindButton(generate)
-		self:_BindButton(priority)
-		priority.Activated:Connect(function()
-			if availablePasses > 0 then
-				self.usePriority = not self.usePriority
-				self:_RenderActivePage()
-			else
-				self:_BuyPriorityPass()
-			end
-		end)
+		-- The Priority Pass upsell -- a second button competing for
+		-- attention right beside the one action Simple Mode actually needs
+		-- -- only shows in Advanced Mode. Both places that switch into
+		-- Simple Mode (below, and the Settings toggle) reset
+		-- self.usePriority to false first, so a generation made here never
+		-- silently spends a pass through a toggle the player can no longer
+		-- see or reach.
+		local availablePasses = self.state.profile.retryCredits.PriorityPass or 0
+		if showAllMethods then
+			local priority = Factory.Button(
+				promptCard,
+				if availablePasses > 0
+					then string.format(
+						"Priority %s · %d pass%s",
+						if self.usePriority then "✓" else "",
+						availablePasses,
+						if availablePasses == 1 then "" else "es"
+					)
+					elseif self.paymentMethod == "TOKENS" then string.format(
+						"Priority pass · %d tokens",
+						tokenPrice(self.state.prices.PriorityPass)
+					)
+					else string.format("Priority pass · R$ %d", self.state.prices.PriorityPass),
+				if self.compact then UDim2.new(0.5, -20, 0, 42) else UDim2.fromOffset(184, 42),
+				if self.compact then UDim2.new(0, 15, 0, buttonY) else UDim2.new(1, -460, 0, buttonY),
+				if self.usePriority then "mint" else nil
+			)
+			self:_BindButton(priority)
+			priority.Activated:Connect(function()
+				if availablePasses > 0 then
+					self.usePriority = not self.usePriority
+					self:_RenderActivePage()
+				else
+					self:_BuyPriorityPass()
+				end
+			end)
+		end
 		generate.Activated:Connect(function()
 			self.draftPrompt = prompt.Text
 			generate.Active = false
@@ -7938,7 +7961,10 @@ function App:_UpdateSetting(key: string, value: any)
 end
 
 function App:_RenderSettings()
-	self:_PageHeader("Settings", "Accessibility, audio, what's equipped right now, and your achievements.")
+	self:_PageHeader(
+		"Settings",
+		"Simple/Advanced Create mode, accessibility, audio, what's equipped right now, and your achievements."
+	)
 	local page = Factory.New("ScrollingFrame", {
 		Name = "SettingsScroll",
 		Position = UDim2.new(0.02, 0, 0, 96),
@@ -7962,6 +7988,54 @@ function App:_RenderSettings()
 	Factory.List(stack, Enum.FillDirection.Vertical, 14)
 
 	local settings = self.state.profile.settings
+
+	-- CREATE PAGE ---------------------------------------------------------
+	-- The single most consequential setting for Forge's actual audience
+	-- (young creators): whether Create shows one method, a text box, and a
+	-- few example ideas, or the full four-method art-direction toolkit.
+	-- Also switchable right from Create itself (see _RenderCreate's
+	-- "Switch to Advanced/Simple Mode" links); this card exists so it's
+	-- somewhere a player -- or a parent -- would think to look for it, not
+	-- only stumbled into mid-creation.
+	local createMode = Factory.Card(stack, UDim2.new(1, 0, 0, 168), nil, "CreateMode")
+	createMode.LayoutOrder = 0
+	Factory.Pill(createMode, "CREATE PAGE", Colors.Mint, 140).Position = UDim2.fromOffset(16, 14)
+	Factory.Label(createMode, "Simple Mode", UDim2.new(1, -32, 0, 22), {
+		Position = UDim2.fromOffset(16, 52),
+		Font = Theme.Fonts.Bold,
+		TextSize = 13,
+	})
+	local simpleModeOn = settings.simpleMode ~= false
+	local nextSimpleMode = not simpleModeOn
+	local simpleModeButton = Factory.Button(
+		createMode,
+		if simpleModeOn then "Simple Mode · ON" else "Simple Mode · OFF",
+		UDim2.new(1, -32, 0, 40),
+		UDim2.fromOffset(16, 78),
+		if simpleModeOn then "mint" else nil
+	)
+	self:_BindButton(simpleModeButton)
+	simpleModeButton.Activated:Connect(function()
+		if nextSimpleMode then
+			-- Turning Simple Mode ON: Create's Priority Pass toggle is
+			-- about to disappear -- if it was left on, the next generation
+			-- would otherwise silently spend a pass with no visible way
+			-- left to turn it back off.
+			self.usePriority = false
+		end
+		self:_UpdateSetting("simpleMode", nextSimpleMode)
+	end)
+	Factory.Label(
+		createMode,
+		"Simple Mode keeps Create down to one way to make something, a text box, and a few example ideas to tap. Turn it off to unlock every generation method plus style and fit-region controls.",
+		UDim2.new(1, -32, 0, 34),
+		{
+			Position = UDim2.fromOffset(16, 126),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Wrapped = true,
+		}
+	)
 
 	-- ACCESSIBILITY -----------------------------------------------------
 	local accessibility =
