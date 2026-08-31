@@ -4592,8 +4592,15 @@ function App:_RenderCreate()
 end
 
 function App:_RenderStudio()
-	self:_PageHeader("My Studio", "Fit, equip, share, list, or publish every original and personal copy you own.")
 	local profile = self.state.profile
+	local simpleMode = profile.settings.simpleMode ~= false
+	local showAllMethods = not simpleMode
+	self:_PageHeader(
+		"My Studio",
+		if showAllMethods
+			then "Fit, equip, share, list, or publish every original and personal copy you own."
+			else "Tap an item below, then equip it or publish it as a real Roblox wearable."
+	)
 	if #profile.itemOrder == 0 then
 		local empty = Factory.Card(self.content, UDim2.new(0.95, 0, 0, 260), UDim2.new(0.025, 0, 0, 112))
 		Factory.Label(empty, "◇", UDim2.new(1, 0, 0, 70), {
@@ -4983,7 +4990,15 @@ function App:_RenderStudio()
 		-- above SHARING & SALES below -- only present for an original (a
 		-- personal copy has nothing to title/describe, so it keeps the base
 		-- height instead of an empty 184px gap at the bottom of the panel).
-		Size = UDim2.new(1, -8, 0, if selected.license == "PERSONAL_COPY" then 1240 else 1424),
+		-- Simple Mode skips FIT CONTROLS/PRESETS/TITLE & DESCRIPTION/SHARING &
+		-- SALES entirely (see the showAllMethods branch below) so its body is
+		-- a short, fixed 278 regardless of license.
+		Size = UDim2.new(
+			1,
+			-8,
+			0,
+			if not showAllMethods then 278 elseif selected.license == "PERSONAL_COPY" then 1240 else 1424
+		),
 		BackgroundTransparency = 1,
 		Parent = inspectScroll,
 	})
@@ -5148,385 +5163,683 @@ function App:_RenderStudio()
 	retryPreview.Activated:Connect(loadPrivatePreview)
 	loadPrivatePreview()
 
-	-- Sized ~1.6x its original dials/labels/track/knob so the fit sliders are
-	-- actually legible and easy to grab, not just the item name/pills above
-	-- them -- everything below (presets/actions/note/social) keeps its
-	-- original size and simply shifts down to sit under the taller card.
-	local controls = Factory.New("Frame", {
-		Position = UDim2.fromOffset(16, 128),
-		Size = UDim2.new(1, -32, 0, 664),
-		BackgroundColor3 = Colors.Ink,
-		BackgroundTransparency = 0.08,
-		BorderSizePixel = 0,
-		Parent = body,
-	})
-	Factory.Corner(controls, 13)
-	Factory.Stroke(controls, Colors.Line, 0.5)
-	Factory.Label(controls, "FIT CONTROLS", UDim2.new(0.5, -14, 0, 38), {
-		Position = UDim2.fromOffset(14, 16),
-		Font = Theme.Fonts.Bold,
-		TextSize = 19,
-		Color = Colors.Cyan,
-	})
-	Factory.Label(controls, "Drag a dial or tap − / +", UDim2.new(0.5, -24, 0, 38), {
-		Position = UDim2.new(0.5, 8, 0, 16),
-		AlignX = Enum.TextXAlignment.Right,
-		Color = Colors.TextMuted,
-		TextSize = 16,
-	})
-
-	local function sliderRow(field: string, axis: string, y: number, minimum: number, maximum: number, step: number)
-		Factory.Label(controls, string.upper(axis), UDim2.new(0.06, 0, 0, 45), {
-			Position = UDim2.new(0.015, 0, 0, y),
-			AlignX = Enum.TextXAlignment.Center,
+	if showAllMethods then
+		-- Sized ~1.6x its original dials/labels/track/knob so the fit sliders are
+		-- actually legible and easy to grab, not just the item name/pills above
+		-- them -- everything below (presets/actions/note/social) keeps its
+		-- original size and simply shifts down to sit under the taller card.
+		local controls = Factory.New("Frame", {
+			Position = UDim2.fromOffset(16, 128),
+			Size = UDim2.new(1, -32, 0, 664),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 0.08,
+			BorderSizePixel = 0,
+			Parent = body,
+		})
+		Factory.Corner(controls, 13)
+		Factory.Stroke(controls, Colors.Line, 0.5)
+		Factory.Label(controls, "FIT CONTROLS", UDim2.new(0.5, -14, 0, 38), {
+			Position = UDim2.fromOffset(14, 16),
 			Font = Theme.Fonts.Bold,
-			TextSize = 18,
-			Color = if axis == "x" then Colors.Rose elseif axis == "y" then Colors.Mint else Colors.Cyan,
+			TextSize = 19,
+			Color = Colors.Cyan,
 		})
-		local minus = Factory.Button(controls, "−", UDim2.new(0.075, -4, 0, 45), UDim2.new(0.08, 0, 0, y), nil)
-		Factory.New("UISizeConstraint", { MinSize = Vector2.new(42, 45), Parent = minus })
-		local track = Factory.New("TextButton", {
-			Position = UDim2.new(0.17, 0, 0, y + 6),
-			Size = UDim2.new(0.55, 0, 0, 32),
-			BackgroundColor3 = Colors.PanelSoft,
-			BorderSizePixel = 0,
-			AutoButtonColor = false,
-			Text = "",
-			Parent = controls,
-		})
-		Factory.Corner(track, 99)
-		local fill = Factory.New("Frame", {
-			Size = UDim2.fromScale(0, 1),
-			BackgroundColor3 = Colors.Violet,
-			BorderSizePixel = 0,
-			Parent = track,
-		})
-		Factory.Corner(fill, 99)
-		Factory.Gradient(fill, { Colors.Violet, Colors.Cyan }, 0)
-		local knob = Factory.New("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0, 0.5),
-			Size = UDim2.fromOffset(26, 26),
-			BackgroundColor3 = Color3.fromRGB(248, 250, 255),
-			BorderSizePixel = 0,
-			Parent = track,
-		})
-		Factory.Corner(knob, 99)
-		Factory.Stroke(knob, Colors.Cyan, 0.15)
-		local plus = Factory.Button(controls, "+", UDim2.new(0.075, -4, 0, 45), UDim2.new(0.735, 0, 0, y), nil)
-		Factory.New("UISizeConstraint", { MinSize = Vector2.new(42, 45), Parent = plus })
-		local valueLabel = Factory.Label(controls, "", UDim2.new(0.17, -10, 0, 45), {
-			Position = UDim2.new(0.82, 0, 0, y),
+		Factory.Label(controls, "Drag a dial or tap − / +", UDim2.new(0.5, -24, 0, 38), {
+			Position = UDim2.new(0.5, 8, 0, 16),
 			AlignX = Enum.TextXAlignment.Right,
-			Font = Theme.Fonts.Bold,
-			TextSize = 18,
-			Color = Colors.Text,
+			Color = Colors.TextMuted,
+			TextSize = 16,
 		})
 
-		local function refresh()
-			local value = fit[field][axis]
-			local alpha = math.clamp((value - minimum) / (maximum - minimum), 0, 1)
-			fill.Size = UDim2.fromScale(alpha, 1)
-			knob.Position = UDim2.fromScale(alpha, 0.5)
-			if field == "rotation" then
-				valueLabel.Text = string.format("%d°", math.floor(value + 0.5))
-			elseif field == "scale" then
-				valueLabel.Text = string.format("%.2f×", value)
-			else
-				valueLabel.Text = string.format("%.2f", value)
-			end
-		end
-		local function setValue(rawValue: number)
-			local steps = math.floor(((rawValue - minimum) / step) + 0.5)
-			local value = math.clamp(minimum + steps * step, minimum, maximum)
-			if math.abs(value) < step * 0.25 then
-				value = 0
-			end
-			fit[field][axis] = value
-			refresh()
-			controller:ApplyFit(fit)
-			refreshReadiness()
-		end
-		local function setFromPointer(pointerX: number)
-			if track.AbsoluteSize.X <= 0 then
-				return
-			end
-			local alpha = math.clamp((pointerX - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-			setValue(minimum + (maximum - minimum) * alpha)
-		end
+		local function sliderRow(field: string, axis: string, y: number, minimum: number, maximum: number, step: number)
+			Factory.Label(controls, string.upper(axis), UDim2.new(0.06, 0, 0, 45), {
+				Position = UDim2.new(0.015, 0, 0, y),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Bold,
+				TextSize = 18,
+				Color = if axis == "x" then Colors.Rose elseif axis == "y" then Colors.Mint else Colors.Cyan,
+			})
+			local minus = Factory.Button(controls, "−", UDim2.new(0.075, -4, 0, 45), UDim2.new(0.08, 0, 0, y), nil)
+			Factory.New("UISizeConstraint", { MinSize = Vector2.new(42, 45), Parent = minus })
+			local track = Factory.New("TextButton", {
+				Position = UDim2.new(0.17, 0, 0, y + 6),
+				Size = UDim2.new(0.55, 0, 0, 32),
+				BackgroundColor3 = Colors.PanelSoft,
+				BorderSizePixel = 0,
+				AutoButtonColor = false,
+				Text = "",
+				Parent = controls,
+			})
+			Factory.Corner(track, 99)
+			local fill = Factory.New("Frame", {
+				Size = UDim2.fromScale(0, 1),
+				BackgroundColor3 = Colors.Violet,
+				BorderSizePixel = 0,
+				Parent = track,
+			})
+			Factory.Corner(fill, 99)
+			Factory.Gradient(fill, { Colors.Violet, Colors.Cyan }, 0)
+			local knob = Factory.New("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0, 0.5),
+				Size = UDim2.fromOffset(26, 26),
+				BackgroundColor3 = Color3.fromRGB(248, 250, 255),
+				BorderSizePixel = 0,
+				Parent = track,
+			})
+			Factory.Corner(knob, 99)
+			Factory.Stroke(knob, Colors.Cyan, 0.15)
+			local plus = Factory.Button(controls, "+", UDim2.new(0.075, -4, 0, 45), UDim2.new(0.735, 0, 0, y), nil)
+			Factory.New("UISizeConstraint", { MinSize = Vector2.new(42, 45), Parent = plus })
+			local valueLabel = Factory.Label(controls, "", UDim2.new(0.17, -10, 0, 45), {
+				Position = UDim2.new(0.82, 0, 0, y),
+				AlignX = Enum.TextXAlignment.Right,
+				Font = Theme.Fonts.Bold,
+				TextSize = 18,
+				Color = Colors.Text,
+			})
 
-		local dragging = false
-		local dragTouch = nil :: InputObject?
-		track.InputBegan:Connect(function(input: InputObject)
-			if
-				input.UserInputType == Enum.UserInputType.MouseButton1
-				or input.UserInputType == Enum.UserInputType.Touch
-			then
-				dragging = true
-				dragTouch = if input.UserInputType == Enum.UserInputType.Touch then input else nil
-				setFromPointer(input.Position.X)
+			local function refresh()
+				local value = fit[field][axis]
+				local alpha = math.clamp((value - minimum) / (maximum - minimum), 0, 1)
+				fill.Size = UDim2.fromScale(alpha, 1)
+				knob.Position = UDim2.fromScale(alpha, 0.5)
+				if field == "rotation" then
+					valueLabel.Text = string.format("%d°", math.floor(value + 0.5))
+				elseif field == "scale" then
+					valueLabel.Text = string.format("%.2f×", value)
+				else
+					valueLabel.Text = string.format("%.2f", value)
+				end
 			end
-		end)
-		table.insert(
-			self.pageConnections,
-			UserInputService.InputChanged:Connect(function(input: InputObject)
-				if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input == dragTouch) then
+			local function setValue(rawValue: number)
+				local steps = math.floor(((rawValue - minimum) / step) + 0.5)
+				local value = math.clamp(minimum + steps * step, minimum, maximum)
+				if math.abs(value) < step * 0.25 then
+					value = 0
+				end
+				fit[field][axis] = value
+				refresh()
+				controller:ApplyFit(fit)
+				refreshReadiness()
+			end
+			local function setFromPointer(pointerX: number)
+				if track.AbsoluteSize.X <= 0 then
+					return
+				end
+				local alpha = math.clamp((pointerX - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+				setValue(minimum + (maximum - minimum) * alpha)
+			end
+
+			local dragging = false
+			local dragTouch = nil :: InputObject?
+			track.InputBegan:Connect(function(input: InputObject)
+				if
+					input.UserInputType == Enum.UserInputType.MouseButton1
+					or input.UserInputType == Enum.UserInputType.Touch
+				then
+					dragging = true
+					dragTouch = if input.UserInputType == Enum.UserInputType.Touch then input else nil
 					setFromPointer(input.Position.X)
 				end
 			end)
-		)
-		table.insert(
-			self.pageConnections,
-			UserInputService.InputEnded:Connect(function(input: InputObject)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 or input == dragTouch then
-					dragging = false
-					dragTouch = nil
-				end
-			end)
-		)
-		minus.Activated:Connect(function()
-			setValue(fit[field][axis] - step)
-		end)
-		plus.Activated:Connect(function()
-			setValue(fit[field][axis] + step)
-		end)
-		self:_BindButton(minus)
-		self:_BindButton(plus)
-		refresh()
-	end
-
-	local dialY = 102
-	for _, group in
-		{
-			{
-				title = "POSITION",
-				field = "position",
-				minimum = Config.Fitting.Position.Minimum,
-				maximum = Config.Fitting.Position.Maximum,
-				step = Config.Fitting.Position.Step,
-			},
-			{
-				title = "ROTATION",
-				field = "rotation",
-				minimum = Config.Fitting.Rotation.Minimum,
-				maximum = Config.Fitting.Rotation.Maximum,
-				step = Config.Fitting.Rotation.Step,
-			},
-			{
-				title = "SCALE",
-				field = "scale",
-				minimum = Config.Fitting.Scale.Minimum,
-				maximum = Config.Fitting.Scale.Maximum,
-				step = Config.Fitting.Scale.Step,
-			},
-		}
-	do
-		Factory.Label(controls, group.title, UDim2.new(1, -28, 0, 32), {
-			Position = UDim2.fromOffset(14, dialY - 35),
-			Font = Theme.Fonts.Bold,
-			TextSize = 16,
-			Color = Colors.TextMuted,
-		})
-		for _, axis in { "x", "y", "z" } do
-			sliderRow(group.field, axis, dialY, group.minimum, group.maximum, group.step)
-			dialY += 48
-		end
-		dialY += 37
-	end
-
-	-- Fit presets: save the current position/rotation/scale under a name so it
-	-- can be reapplied later, without touching whatever fit is currently being
-	-- drafted for a different item.
-	local presetsY = 822
-	local presetsHeight = 140
-	local presets = Factory.New("Frame", {
-		Position = UDim2.fromOffset(16, presetsY),
-		Size = UDim2.new(1, -32, 0, presetsHeight),
-		BackgroundColor3 = Colors.Ink,
-		BackgroundTransparency = 0.08,
-		BorderSizePixel = 0,
-		Parent = body,
-	})
-	Factory.Corner(presets, 13)
-	Factory.Stroke(presets, Colors.Line, 0.5)
-	Factory.Label(presets, "FIT PRESETS", UDim2.new(1, -28, 0, 18), {
-		Position = UDim2.fromOffset(14, 10),
-		Font = Theme.Fonts.Bold,
-		TextSize = 12,
-		Color = Colors.Cyan,
-	})
-	Factory.Label(
-		presets,
-		"Save this fit to reuse later while you customize a different item.",
-		UDim2.new(1, -28, 0, 14),
-		{
-			Position = UDim2.fromOffset(14, 30),
-			Color = Colors.TextMuted,
-			TextSize = 10,
-			Truncate = Enum.TextTruncate.AtEnd,
-		}
-	)
-	local presetNameBox =
-		self:_TextBox(presets, "Name this fit", UDim2.new(1, -122, 0, 32), UDim2.fromOffset(14, 52), false)
-	local savePresetButton =
-		Factory.Button(presets, "Save preset", UDim2.fromOffset(96, 32), UDim2.new(1, -110, 0, 52), "mint")
-	self:_BindButton(savePresetButton)
-	savePresetButton.Activated:Connect(function()
-		savePresetButton.Active = false
-		task.spawn(function()
-			local success, data = self:_Invoke(Network.Actions.SaveFitPreset, {
-				name = presetNameBox.Text,
-				accessoryType = fit.accessoryType,
-				fit = fit,
-			})
-			if success then
-				self.state.profile.fitPresets[data.preset.id] = data.preset
-				table.insert(self.state.profile.fitPresetOrder, data.preset.id)
-				self.sounds:Play("Success")
-				self:_Toast("success", "Fit preset saved.")
-				self:_RenderActivePage()
-				return
-			end
-			if savePresetButton.Parent then
-				savePresetButton.Active = true
-			end
-		end)
-	end)
-	local presetList = Factory.New("ScrollingFrame", {
-		Position = UDim2.fromOffset(14, 92),
-		Size = UDim2.new(1, -28, 0, presetsHeight - 100),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		ScrollBarThickness = 3,
-		ScrollBarImageColor3 = Colors.Cyan,
-		AutomaticCanvasSize = Enum.AutomaticSize.X,
-		CanvasSize = UDim2.new(),
-		ScrollingDirection = Enum.ScrollingDirection.X,
-		Parent = presets,
-	})
-	Factory.List(presetList, Enum.FillDirection.Horizontal, 8)
-	local presetOrder = profile.fitPresetOrder or {}
-	if #presetOrder == 0 then
-		Factory.Label(presetList, "No saved presets yet.", UDim2.fromOffset(220, 30), {
-			AlignY = Enum.TextYAlignment.Center,
-			Color = Colors.TextMuted,
-			TextSize = 11,
-		})
-	else
-		for _, presetId in presetOrder do
-			local preset = profile.fitPresets[presetId]
-			if preset then
-				local nameWidth = math.clamp(#preset.name * 7 + 40, 90, 150)
-				local chip = Factory.New("Frame", {
-					Size = UDim2.fromOffset(nameWidth + 34, 30),
-					BackgroundTransparency = 1,
-					Parent = presetList,
-				})
-				local apply = Factory.Button(
-					chip,
-					preset.name,
-					UDim2.fromOffset(nameWidth, 30),
-					UDim2.fromOffset(0, 0),
-					if preset.accessoryType == fit.accessoryType then "primary" else nil
-				)
-				apply.TextTruncate = Enum.TextTruncate.AtEnd
-				self:_BindButton(apply)
-				apply.Activated:Connect(function()
-					fit.position = deepCopy(preset.fit.position)
-					fit.rotation = deepCopy(preset.fit.rotation)
-					fit.scale = deepCopy(preset.fit.scale)
-					self:_Track({ event = "FitPresetApplied", fields = {} })
-					self:_RenderActivePage()
-				end)
-				local remove =
-					Factory.Button(chip, "×", UDim2.fromOffset(26, 30), UDim2.fromOffset(nameWidth + 8, 0), "danger")
-				self:_BindButton(remove)
-				remove.Activated:Connect(function()
-					task.spawn(function()
-						local success = self:_Invoke(Network.Actions.DeleteFitPreset, { presetId = presetId })
-						if success then
-							self.state.profile.fitPresets[presetId] = nil
-							local index = table.find(self.state.profile.fitPresetOrder, presetId)
-							if index then
-								table.remove(self.state.profile.fitPresetOrder, index)
-							end
-							self:_RenderActivePage()
-						end
-					end)
-				end)
-			end
-		end
-	end
-
-	local actionsY = presetsY + presetsHeight + 16
-	local isEquipped = table.find(profile.equippedItemIds or {}, selected.id) ~= nil
-	local save =
-		Factory.Button(body, "Save fit", UDim2.new(0.25, -22, 0, 42), UDim2.fromOffset(16, actionsY), "primary")
-	local equip = Factory.Button(
-		body,
-		if isEquipped then "Unequip" else "Equip in game",
-		UDim2.new(0.25, -12, 0, 42),
-		UDim2.new(0.25, 6, 0, actionsY),
-		if isEquipped then "danger" else "mint"
-	)
-	local publish = Factory.Button(
-		body,
-		if selected.publishedAssetId then "Published ✓" else "Publish wearable",
-		UDim2.new(0.25, -12, 0, 42),
-		UDim2.new(0.5, 6, 0, actionsY),
-		nil
-	)
-	local resetFit =
-		Factory.Button(body, "↺ Reset fit", UDim2.new(0.25, -22, 0, 42), UDim2.new(0.75, 6, 0, actionsY), nil)
-	for _, button in { save, equip, publish, resetFit } do
-		self:_BindButton(button)
-	end
-	publish.Active = not selected.publishedAssetId
-	local function saveCurrentFit(): (boolean, any)
-		local success, data = self:_Invoke(Network.Actions.SaveFit, { itemId = selected.id, fit = fit })
-		if success then
-			self.state.profile.items[selected.id] = data.item
-			self.sounds:Play("Success")
-		end
-		return success, data
-	end
-	save.Activated:Connect(function()
-		save.Active = false
-		save.Text = "Saving…"
-		task.spawn(function()
-			saveCurrentFit()
-			if save.Parent then
-				save.Active = true
-				save.Text = "Save fit"
-			end
-		end)
-	end)
-	equip.Activated:Connect(function()
-		equip.Active = false
-		if isEquipped then
-			equip.Text = "Removing…"
-			task.spawn(function()
-				local success = self:_Invoke(Network.Actions.UnequipItem, { itemId = selected.id })
-				if success then
-					local index = table.find(self.state.profile.equippedItemIds, selected.id)
-					if index then
-						table.remove(self.state.profile.equippedItemIds, index)
+			table.insert(
+				self.pageConnections,
+				UserInputService.InputChanged:Connect(function(input: InputObject)
+					if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input == dragTouch) then
+						setFromPointer(input.Position.X)
 					end
-					self.avatarPreviewDirty = true
-					self:_Toast("success", "Unequipped.")
+				end)
+			)
+			table.insert(
+				self.pageConnections,
+				UserInputService.InputEnded:Connect(function(input: InputObject)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input == dragTouch then
+						dragging = false
+						dragTouch = nil
+					end
+				end)
+			)
+			minus.Activated:Connect(function()
+				setValue(fit[field][axis] - step)
+			end)
+			plus.Activated:Connect(function()
+				setValue(fit[field][axis] + step)
+			end)
+			self:_BindButton(minus)
+			self:_BindButton(plus)
+			refresh()
+		end
+
+		local dialY = 102
+		for _, group in
+			{
+				{
+					title = "POSITION",
+					field = "position",
+					minimum = Config.Fitting.Position.Minimum,
+					maximum = Config.Fitting.Position.Maximum,
+					step = Config.Fitting.Position.Step,
+				},
+				{
+					title = "ROTATION",
+					field = "rotation",
+					minimum = Config.Fitting.Rotation.Minimum,
+					maximum = Config.Fitting.Rotation.Maximum,
+					step = Config.Fitting.Rotation.Step,
+				},
+				{
+					title = "SCALE",
+					field = "scale",
+					minimum = Config.Fitting.Scale.Minimum,
+					maximum = Config.Fitting.Scale.Maximum,
+					step = Config.Fitting.Scale.Step,
+				},
+			}
+		do
+			Factory.Label(controls, group.title, UDim2.new(1, -28, 0, 32), {
+				Position = UDim2.fromOffset(14, dialY - 35),
+				Font = Theme.Fonts.Bold,
+				TextSize = 16,
+				Color = Colors.TextMuted,
+			})
+			for _, axis in { "x", "y", "z" } do
+				sliderRow(group.field, axis, dialY, group.minimum, group.maximum, group.step)
+				dialY += 48
+			end
+			dialY += 37
+		end
+
+		-- Fit presets: save the current position/rotation/scale under a name so it
+		-- can be reapplied later, without touching whatever fit is currently being
+		-- drafted for a different item.
+		local presetsY = 822
+		local presetsHeight = 140
+		local presets = Factory.New("Frame", {
+			Position = UDim2.fromOffset(16, presetsY),
+			Size = UDim2.new(1, -32, 0, presetsHeight),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 0.08,
+			BorderSizePixel = 0,
+			Parent = body,
+		})
+		Factory.Corner(presets, 13)
+		Factory.Stroke(presets, Colors.Line, 0.5)
+		Factory.Label(presets, "FIT PRESETS", UDim2.new(1, -28, 0, 18), {
+			Position = UDim2.fromOffset(14, 10),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = Colors.Cyan,
+		})
+		Factory.Label(
+			presets,
+			"Save this fit to reuse later while you customize a different item.",
+			UDim2.new(1, -28, 0, 14),
+			{
+				Position = UDim2.fromOffset(14, 30),
+				Color = Colors.TextMuted,
+				TextSize = 10,
+				Truncate = Enum.TextTruncate.AtEnd,
+			}
+		)
+		local presetNameBox =
+			self:_TextBox(presets, "Name this fit", UDim2.new(1, -122, 0, 32), UDim2.fromOffset(14, 52), false)
+		local savePresetButton =
+			Factory.Button(presets, "Save preset", UDim2.fromOffset(96, 32), UDim2.new(1, -110, 0, 52), "mint")
+		self:_BindButton(savePresetButton)
+		savePresetButton.Activated:Connect(function()
+			savePresetButton.Active = false
+			task.spawn(function()
+				local success, data = self:_Invoke(Network.Actions.SaveFitPreset, {
+					name = presetNameBox.Text,
+					accessoryType = fit.accessoryType,
+					fit = fit,
+				})
+				if success then
+					self.state.profile.fitPresets[data.preset.id] = data.preset
+					table.insert(self.state.profile.fitPresetOrder, data.preset.id)
+					self.sounds:Play("Success")
+					self:_Toast("success", "Fit preset saved.")
 					self:_RenderActivePage()
 					return
 				end
-				if equip.Parent then
-					equip.Active = true
-					equip.Text = "Unequip"
+				if savePresetButton.Parent then
+					savePresetButton.Active = true
 				end
 			end)
+		end)
+		local presetList = Factory.New("ScrollingFrame", {
+			Position = UDim2.fromOffset(14, 92),
+			Size = UDim2.new(1, -28, 0, presetsHeight - 100),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 3,
+			ScrollBarImageColor3 = Colors.Cyan,
+			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			CanvasSize = UDim2.new(),
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			Parent = presets,
+		})
+		Factory.List(presetList, Enum.FillDirection.Horizontal, 8)
+		local presetOrder = profile.fitPresetOrder or {}
+		if #presetOrder == 0 then
+			Factory.Label(presetList, "No saved presets yet.", UDim2.fromOffset(220, 30), {
+				AlignY = Enum.TextYAlignment.Center,
+				Color = Colors.TextMuted,
+				TextSize = 11,
+			})
 		else
-			equip.Text = "Applying fit…"
+			for _, presetId in presetOrder do
+				local preset = profile.fitPresets[presetId]
+				if preset then
+					local nameWidth = math.clamp(#preset.name * 7 + 40, 90, 150)
+					local chip = Factory.New("Frame", {
+						Size = UDim2.fromOffset(nameWidth + 34, 30),
+						BackgroundTransparency = 1,
+						Parent = presetList,
+					})
+					local apply = Factory.Button(
+						chip,
+						preset.name,
+						UDim2.fromOffset(nameWidth, 30),
+						UDim2.fromOffset(0, 0),
+						if preset.accessoryType == fit.accessoryType then "primary" else nil
+					)
+					apply.TextTruncate = Enum.TextTruncate.AtEnd
+					self:_BindButton(apply)
+					apply.Activated:Connect(function()
+						fit.position = deepCopy(preset.fit.position)
+						fit.rotation = deepCopy(preset.fit.rotation)
+						fit.scale = deepCopy(preset.fit.scale)
+						self:_Track({ event = "FitPresetApplied", fields = {} })
+						self:_RenderActivePage()
+					end)
+					local remove = Factory.Button(
+						chip,
+						"×",
+						UDim2.fromOffset(26, 30),
+						UDim2.fromOffset(nameWidth + 8, 0),
+						"danger"
+					)
+					self:_BindButton(remove)
+					remove.Activated:Connect(function()
+						task.spawn(function()
+							local success = self:_Invoke(Network.Actions.DeleteFitPreset, { presetId = presetId })
+							if success then
+								self.state.profile.fitPresets[presetId] = nil
+								local index = table.find(self.state.profile.fitPresetOrder, presetId)
+								if index then
+									table.remove(self.state.profile.fitPresetOrder, index)
+								end
+								self:_RenderActivePage()
+							end
+						end)
+					end)
+				end
+			end
+		end
+
+		local actionsY = presetsY + presetsHeight + 16
+		local isEquipped = table.find(profile.equippedItemIds or {}, selected.id) ~= nil
+		local save =
+			Factory.Button(body, "Save fit", UDim2.new(0.25, -22, 0, 42), UDim2.fromOffset(16, actionsY), "primary")
+		local equip = Factory.Button(
+			body,
+			if isEquipped then "Unequip" else "Equip in game",
+			UDim2.new(0.25, -12, 0, 42),
+			UDim2.new(0.25, 6, 0, actionsY),
+			if isEquipped then "danger" else "mint"
+		)
+		local publish = Factory.Button(
+			body,
+			if selected.publishedAssetId then "Published ✓" else "Publish wearable",
+			UDim2.new(0.25, -12, 0, 42),
+			UDim2.new(0.5, 6, 0, actionsY),
+			nil
+		)
+		local resetFit =
+			Factory.Button(body, "↺ Reset fit", UDim2.new(0.25, -22, 0, 42), UDim2.new(0.75, 6, 0, actionsY), nil)
+		for _, button in { save, equip, publish, resetFit } do
+			self:_BindButton(button)
+		end
+		publish.Active = not selected.publishedAssetId
+		local function saveCurrentFit(): (boolean, any)
+			local success, data = self:_Invoke(Network.Actions.SaveFit, { itemId = selected.id, fit = fit })
+			if success then
+				self.state.profile.items[selected.id] = data.item
+				self.sounds:Play("Success")
+			end
+			return success, data
+		end
+		save.Activated:Connect(function()
+			save.Active = false
+			save.Text = "Saving…"
+			task.spawn(function()
+				saveCurrentFit()
+				if save.Parent then
+					save.Active = true
+					save.Text = "Save fit"
+				end
+			end)
+		end)
+		equip.Activated:Connect(function()
+			equip.Active = false
+			if isEquipped then
+				equip.Text = "Removing…"
+				task.spawn(function()
+					local success = self:_Invoke(Network.Actions.UnequipItem, { itemId = selected.id })
+					if success then
+						local index = table.find(self.state.profile.equippedItemIds, selected.id)
+						if index then
+							table.remove(self.state.profile.equippedItemIds, index)
+						end
+						self.avatarPreviewDirty = true
+						self:_Toast("success", "Unequipped.")
+						self:_RenderActivePage()
+						return
+					end
+					if equip.Parent then
+						equip.Active = true
+						equip.Text = "Unequip"
+					end
+				end)
+			else
+				equip.Text = "Applying fit…"
+				task.spawn(function()
+					local saved = saveCurrentFit()
+					if saved then
+						local success = self:_Invoke(Network.Actions.EquipItem, { itemId = selected.id })
+						if success then
+							if not table.find(self.state.profile.equippedItemIds, selected.id) then
+								table.insert(self.state.profile.equippedItemIds, selected.id)
+							end
+							self.avatarPreviewDirty = true
+							self:_Toast("success", "Equipped on your in-game avatar.")
+							self:_RenderActivePage()
+							return
+						end
+					end
+					if equip.Parent then
+						equip.Active = true
+						equip.Text = "Equip in game"
+					end
+				end)
+			end
+		end)
+		publish.Activated:Connect(function()
+			publish.Active = false
+			publish.Text = "Preparing wearable…"
 			task.spawn(function()
 				local saved = saveCurrentFit()
 				if saved then
+					local success, data = self:_Invoke(Network.Actions.PublishItem, { itemId = selected.id })
+					if success then
+						self.state.profile.items[selected.id].publishedAssetId = data.assetId
+						self:_Toast("success", "Your wearable was published to Roblox.")
+						self:_RenderActivePage()
+						return
+					end
+				end
+				if publish.Parent then
+					publish.Active = true
+					publish.Text = "Publish wearable"
+				end
+			end)
+		end)
+		resetFit.Activated:Connect(function()
+			resetFit.Active = false
+			resetFit.Text = "Resetting…"
+			task.spawn(function()
+				local success, data = self:_Invoke(Network.Actions.ResetFitToSuggested, { itemId = selected.id })
+				if success then
+					self.state.profile.items[selected.id] = data.item
+					self.fitDrafts[selected.id] = deepCopy(data.item.fit)
+					if self.activeViewport then
+						self.activeViewport:ApplyFit(self.fitDrafts[selected.id])
+					end
+					self.sounds:Play("Success")
+					self:_RenderActivePage()
+					return
+				end
+				if resetFit.Parent then
+					resetFit.Active = true
+					resetFit.Text = "↺ Reset fit"
+				end
+			end)
+		end)
+		local noteY = actionsY + 50
+		Factory.Label(
+			body,
+			"Publishing opens Roblox's creation prompt and can have a separate token price.",
+			UDim2.new(1, -32, 0, 16),
+			{
+				Position = UDim2.fromOffset(16, noteY),
+				Color = Colors.TextMuted,
+				TextSize = 10,
+				Truncate = Enum.TextTruncate.AtEnd,
+			}
+		)
+
+		-- Title/description editing only makes sense for an original -- a
+		-- personal copy shows its own static license note below instead, same
+		-- scope as the SHARING & SALES card just under it.
+		local socialY = noteY + 26
+		if selected.license ~= "PERSONAL_COPY" then
+			local details = Factory.New("Frame", {
+				Position = UDim2.fromOffset(16, socialY),
+				Size = UDim2.new(1, -32, 0, 168),
+				BackgroundColor3 = Colors.Ink,
+				BackgroundTransparency = 0.12,
+				BorderSizePixel = 0,
+				Parent = body,
+			})
+			Factory.Corner(details, 12)
+			Factory.Stroke(details, Colors.Line, 0.55)
+			Factory.Label(details, "TITLE & DESCRIPTION", UDim2.new(1, -28, 0, 25), {
+				Position = UDim2.fromOffset(14, 10),
+				Font = Theme.Fonts.Bold,
+				Color = Colors.Cyan,
+				TextSize = 11,
+			})
+			local titleBox =
+				self:_TextBox(details, "Untitled creation", UDim2.new(1, -28, 0, 36), UDim2.fromOffset(14, 40), false)
+			titleBox.Text = selected.title or ""
+			local descriptionBox = self:_TextBox(
+				details,
+				"Tell people about this creation…",
+				UDim2.new(1, -28, 0, 62),
+				UDim2.fromOffset(14, 82),
+				true
+			)
+			descriptionBox.Text = selected.description or ""
+			local saveDetails = Factory.Button(
+				details,
+				"Save details",
+				UDim2.fromOffset(120, 32),
+				UDim2.new(1, -134, 0, 152),
+				"primary"
+			)
+			self:_BindButton(saveDetails)
+			saveDetails.Activated:Connect(function()
+				saveDetails.Active = false
+				task.spawn(function()
+					local success, data = self:_Invoke(Network.Actions.SetItemDetails, {
+						itemId = selected.id,
+						title = titleBox.Text,
+						description = descriptionBox.Text,
+					})
+					if success then
+						self.state.profile.items[selected.id] = data.item
+						self.sounds:Play("Success")
+						self:_Toast("success", "Details saved.")
+						self:_RenderActivePage()
+					end
+					if saveDetails.Parent then
+						saveDetails.Active = true
+					end
+				end)
+			end)
+			socialY = socialY + 184
+		end
+		local social = Factory.New("Frame", {
+			Position = UDim2.fromOffset(16, socialY),
+			Size = UDim2.new(1, -32, 0, 154),
+			BackgroundColor3 = Colors.Ink,
+			BackgroundTransparency = 0.12,
+			BorderSizePixel = 0,
+			Parent = body,
+		})
+		Factory.Corner(social, 12)
+		Factory.Stroke(social, Colors.Line, 0.55)
+		if selected.license == "PERSONAL_COPY" then
+			Factory.Label(social, "PERSONAL LICENSE", UDim2.new(1, -28, 0, 25), {
+				Position = UDim2.fromOffset(14, 14),
+				Font = Theme.Fonts.Bold,
+				Color = Colors.Gold,
+				TextSize = 11,
+			})
+			Factory.Label(
+				social,
+				"You can fit, equip, and publish this copy as a wearable. It can never be listed or resold in Forge.",
+				UDim2.new(1, -28, 0, 72),
+				{
+					Position = UDim2.fromOffset(14, 45),
+					Color = Colors.TextMuted,
+					TextSize = 12,
+					Wrapped = true,
+					AlignY = Enum.TextYAlignment.Top,
+				}
+			)
+		else
+			Factory.Label(social, "SHARING & SALES", UDim2.new(1, -28, 0, 25), {
+				Position = UDim2.fromOffset(14, 10),
+				Font = Theme.Fonts.Bold,
+				Color = Colors.Rose,
+				TextSize = 11,
+			})
+			local visibility = Factory.Button(
+				social,
+				if selected.visibility == "PUBLIC" then "Private" else "Share",
+				if self.compact then UDim2.new(0.31, -8, 0, 38) else UDim2.fromOffset(132, 38),
+				UDim2.fromOffset(14, 42),
+				nil
+			)
+			self:_BindButton(visibility)
+			visibility.Activated:Connect(function()
+				task.spawn(function()
+					local success, data = self:_Invoke(Network.Actions.SetVisibility, {
+						itemId = selected.id,
+						isPublic = selected.visibility ~= "PUBLIC",
+					})
+					if success then
+						self.state.profile.items[selected.id] = data.item
+						self:_RenderActivePage()
+					end
+				end)
+			end)
+			local priceBox = self:_TextBox(
+				social,
+				"R$ 10–500",
+				if self.compact then UDim2.new(0.31, -8, 0, 38) else UDim2.fromOffset(118, 38),
+				if self.compact then UDim2.new(0.31, 12, 0, 42) else UDim2.fromOffset(156, 42),
+				false
+			)
+			priceBox.Text = tostring(selected.listingPriceRobux or 50)
+			priceBox.TextXAlignment = Enum.TextXAlignment.Center
+			local list = Factory.Button(
+				social,
+				if selected.isListed then "End listing" else "List for sale",
+				if self.compact then UDim2.new(0.38, -24, 0, 38) else UDim2.fromOffset(126, 38),
+				if self.compact then UDim2.new(0.62, 10, 0, 42) else UDim2.fromOffset(284, 42),
+				"primary"
+			)
+			self:_BindButton(list)
+			list.Activated:Connect(function()
+				task.spawn(function()
+					local success, data = self:_Invoke(Network.Actions.SetListing, {
+						itemId = selected.id,
+						isListed = not selected.isListed,
+						priceRobux = tonumber(priceBox.Text),
+					})
+					if success then
+						self.state.profile.items[selected.id] = data.item
+						self:_RenderActivePage()
+					end
+				end)
+			end)
+			local transferNote = Factory.Label(
+				social,
+				string.format(
+					"Seller receives 90%% (about R$ %d). Buyers need Plus; public try-ons remain free even when not for sale.",
+					math.floor((tonumber(priceBox.Text) or 50) * Config.Marketplace.SellerShare)
+				),
+				UDim2.new(1, -28, 0, 50),
+				{
+					Position = UDim2.fromOffset(14, 91),
+					Color = Colors.TextMuted,
+					TextSize = 11,
+					Wrapped = true,
+					AlignY = Enum.TextYAlignment.Top,
+				}
+			)
+			priceBox.FocusLost:Connect(function()
+				local entered = math.clamp(math.floor(tonumber(priceBox.Text) or 50), 10, 500)
+				priceBox.Text = tostring(entered)
+				transferNote.Text = string.format(
+					"Seller receives 90%% (about R$ %d). Buyers need Plus; public try-ons remain free even when not for sale.",
+					math.floor(entered * Config.Marketplace.SellerShare)
+				)
+			end)
+		end
+	else
+		-- Independent short body: no sliders, no presets, no title/pricing --
+		-- just try it on or send it to Roblox. Reuses EquipItem/UnequipItem/
+		-- PublishItem directly (skipping the Advanced branch's saveCurrentFit()
+		-- pre-step above) since there is no fit-editing UI here for the fit
+		-- draft to ever drift from what the server already has saved.
+		local actionsY = 128
+		local isEquipped = table.find(profile.equippedItemIds or {}, selected.id) ~= nil
+		local equip = Factory.Button(
+			body,
+			if isEquipped then "Unequip" else "Equip in game",
+			UDim2.new(0.5, -22, 0, 46),
+			UDim2.fromOffset(16, actionsY),
+			if isEquipped then "danger" else "mint"
+		)
+		local publish = Factory.Button(
+			body,
+			if selected.publishedAssetId then "Published ✓" else "Publish wearable",
+			UDim2.new(0.5, -22, 0, 46),
+			UDim2.new(0.5, 6, 0, actionsY),
+			"primary"
+		)
+		self:_BindButton(equip)
+		self:_BindButton(publish)
+		publish.Active = not selected.publishedAssetId
+		equip.Activated:Connect(function()
+			equip.Active = false
+			if isEquipped then
+				equip.Text = "Removing…"
+				task.spawn(function()
+					local success = self:_Invoke(Network.Actions.UnequipItem, { itemId = selected.id })
+					if success then
+						local index = table.find(self.state.profile.equippedItemIds, selected.id)
+						if index then
+							table.remove(self.state.profile.equippedItemIds, index)
+						end
+						self.avatarPreviewDirty = true
+						self:_Toast("success", "Unequipped.")
+						self:_RenderActivePage()
+						return
+					end
+					if equip.Parent then
+						equip.Active = true
+						equip.Text = "Unequip"
+					end
+				end)
+			else
+				equip.Text = "Equipping…"
+				task.spawn(function()
 					local success = self:_Invoke(Network.Actions.EquipItem, { itemId = selected.id })
 					if success then
 						if not table.find(self.state.profile.equippedItemIds, selected.id) then
@@ -5537,20 +5850,17 @@ function App:_RenderStudio()
 						self:_RenderActivePage()
 						return
 					end
-				end
-				if equip.Parent then
-					equip.Active = true
-					equip.Text = "Equip in game"
-				end
-			end)
-		end
-	end)
-	publish.Activated:Connect(function()
-		publish.Active = false
-		publish.Text = "Preparing wearable…"
-		task.spawn(function()
-			local saved = saveCurrentFit()
-			if saved then
+					if equip.Parent then
+						equip.Active = true
+						equip.Text = "Equip in game"
+					end
+				end)
+			end
+		end)
+		publish.Activated:Connect(function()
+			publish.Active = false
+			publish.Text = "Preparing wearable…"
+			task.spawn(function()
 				local success, data = self:_Invoke(Network.Actions.PublishItem, { itemId = selected.id })
 				if success then
 					self.state.profile.items[selected.id].publishedAssetId = data.assetId
@@ -5558,211 +5868,37 @@ function App:_RenderStudio()
 					self:_RenderActivePage()
 					return
 				end
-			end
-			if publish.Parent then
-				publish.Active = true
-				publish.Text = "Publish wearable"
-			end
-		end)
-	end)
-	resetFit.Activated:Connect(function()
-		resetFit.Active = false
-		resetFit.Text = "Resetting…"
-		task.spawn(function()
-			local success, data = self:_Invoke(Network.Actions.ResetFitToSuggested, { itemId = selected.id })
-			if success then
-				self.state.profile.items[selected.id] = data.item
-				self.fitDrafts[selected.id] = deepCopy(data.item.fit)
-				if self.activeViewport then
-					self.activeViewport:ApplyFit(self.fitDrafts[selected.id])
-				end
-				self.sounds:Play("Success")
-				self:_RenderActivePage()
-				return
-			end
-			if resetFit.Parent then
-				resetFit.Active = true
-				resetFit.Text = "↺ Reset fit"
-			end
-		end)
-	end)
-	local noteY = actionsY + 50
-	Factory.Label(
-		body,
-		"Publishing opens Roblox's creation prompt and can have a separate token price.",
-		UDim2.new(1, -32, 0, 16),
-		{
-			Position = UDim2.fromOffset(16, noteY),
-			Color = Colors.TextMuted,
-			TextSize = 10,
-			Truncate = Enum.TextTruncate.AtEnd,
-		}
-	)
-
-	-- Title/description editing only makes sense for an original -- a
-	-- personal copy shows its own static license note below instead, same
-	-- scope as the SHARING & SALES card just under it.
-	local socialY = noteY + 26
-	if selected.license ~= "PERSONAL_COPY" then
-		local details = Factory.New("Frame", {
-			Position = UDim2.fromOffset(16, socialY),
-			Size = UDim2.new(1, -32, 0, 168),
-			BackgroundColor3 = Colors.Ink,
-			BackgroundTransparency = 0.12,
-			BorderSizePixel = 0,
-			Parent = body,
-		})
-		Factory.Corner(details, 12)
-		Factory.Stroke(details, Colors.Line, 0.55)
-		Factory.Label(details, "TITLE & DESCRIPTION", UDim2.new(1, -28, 0, 25), {
-			Position = UDim2.fromOffset(14, 10),
-			Font = Theme.Fonts.Bold,
-			Color = Colors.Cyan,
-			TextSize = 11,
-		})
-		local titleBox =
-			self:_TextBox(details, "Untitled creation", UDim2.new(1, -28, 0, 36), UDim2.fromOffset(14, 40), false)
-		titleBox.Text = selected.title or ""
-		local descriptionBox = self:_TextBox(
-			details,
-			"Tell people about this creation…",
-			UDim2.new(1, -28, 0, 62),
-			UDim2.fromOffset(14, 82),
-			true
-		)
-		descriptionBox.Text = selected.description or ""
-		local saveDetails =
-			Factory.Button(details, "Save details", UDim2.fromOffset(120, 32), UDim2.new(1, -134, 0, 152), "primary")
-		self:_BindButton(saveDetails)
-		saveDetails.Activated:Connect(function()
-			saveDetails.Active = false
-			task.spawn(function()
-				local success, data = self:_Invoke(Network.Actions.SetItemDetails, {
-					itemId = selected.id,
-					title = titleBox.Text,
-					description = descriptionBox.Text,
-				})
-				if success then
-					self.state.profile.items[selected.id] = data.item
-					self.sounds:Play("Success")
-					self:_Toast("success", "Details saved.")
-					self:_RenderActivePage()
-				end
-				if saveDetails.Parent then
-					saveDetails.Active = true
+				if publish.Parent then
+					publish.Active = true
+					publish.Text = "Publish wearable"
 				end
 			end)
 		end)
-		socialY = socialY + 184
-	end
-	local social = Factory.New("Frame", {
-		Position = UDim2.fromOffset(16, socialY),
-		Size = UDim2.new(1, -32, 0, 154),
-		BackgroundColor3 = Colors.Ink,
-		BackgroundTransparency = 0.12,
-		BorderSizePixel = 0,
-		Parent = body,
-	})
-	Factory.Corner(social, 12)
-	Factory.Stroke(social, Colors.Line, 0.55)
-	if selected.license == "PERSONAL_COPY" then
-		Factory.Label(social, "PERSONAL LICENSE", UDim2.new(1, -28, 0, 25), {
-			Position = UDim2.fromOffset(14, 14),
-			Font = Theme.Fonts.Bold,
-			Color = Colors.Gold,
-			TextSize = 11,
-		})
+
+		local noteY = actionsY + 60
 		Factory.Label(
-			social,
-			"You can fit, equip, and publish this copy as a wearable. It can never be listed or resold in Forge.",
-			UDim2.new(1, -28, 0, 72),
+			body,
+			"Equip wears it right now. Publish sends it to Roblox to become a real wearable -- this can open Roblox's own purchase prompt.",
+			UDim2.new(1, -32, 0, 34),
 			{
-				Position = UDim2.fromOffset(14, 45),
+				Position = UDim2.fromOffset(16, noteY),
 				Color = Colors.TextMuted,
-				TextSize = 12,
+				TextSize = 10,
 				Wrapped = true,
-				AlignY = Enum.TextYAlignment.Top,
 			}
 		)
-	else
-		Factory.Label(social, "SHARING & SALES", UDim2.new(1, -28, 0, 25), {
-			Position = UDim2.fromOffset(14, 10),
-			Font = Theme.Fonts.Bold,
-			Color = Colors.Rose,
-			TextSize = 11,
-		})
-		local visibility = Factory.Button(
-			social,
-			if selected.visibility == "PUBLIC" then "Private" else "Share",
-			if self.compact then UDim2.new(0.31, -8, 0, 38) else UDim2.fromOffset(132, 38),
-			UDim2.fromOffset(14, 42),
+
+		local switchY = noteY + 44
+		local switchAdvanced = Factory.Button(
+			body,
+			"Switch to Advanced Mode for fit, pricing & sharing →",
+			UDim2.new(1, -32, 0, 30),
+			UDim2.fromOffset(16, switchY),
 			nil
 		)
-		self:_BindButton(visibility)
-		visibility.Activated:Connect(function()
-			task.spawn(function()
-				local success, data = self:_Invoke(Network.Actions.SetVisibility, {
-					itemId = selected.id,
-					isPublic = selected.visibility ~= "PUBLIC",
-				})
-				if success then
-					self.state.profile.items[selected.id] = data.item
-					self:_RenderActivePage()
-				end
-			end)
-		end)
-		local priceBox = self:_TextBox(
-			social,
-			"R$ 10–500",
-			if self.compact then UDim2.new(0.31, -8, 0, 38) else UDim2.fromOffset(118, 38),
-			if self.compact then UDim2.new(0.31, 12, 0, 42) else UDim2.fromOffset(156, 42),
-			false
-		)
-		priceBox.Text = tostring(selected.listingPriceRobux or 50)
-		priceBox.TextXAlignment = Enum.TextXAlignment.Center
-		local list = Factory.Button(
-			social,
-			if selected.isListed then "End listing" else "List for sale",
-			if self.compact then UDim2.new(0.38, -24, 0, 38) else UDim2.fromOffset(126, 38),
-			if self.compact then UDim2.new(0.62, 10, 0, 42) else UDim2.fromOffset(284, 42),
-			"primary"
-		)
-		self:_BindButton(list)
-		list.Activated:Connect(function()
-			task.spawn(function()
-				local success, data = self:_Invoke(Network.Actions.SetListing, {
-					itemId = selected.id,
-					isListed = not selected.isListed,
-					priceRobux = tonumber(priceBox.Text),
-				})
-				if success then
-					self.state.profile.items[selected.id] = data.item
-					self:_RenderActivePage()
-				end
-			end)
-		end)
-		local transferNote = Factory.Label(
-			social,
-			string.format(
-				"Seller receives 90%% (about R$ %d). Buyers need Plus; public try-ons remain free even when not for sale.",
-				math.floor((tonumber(priceBox.Text) or 50) * Config.Marketplace.SellerShare)
-			),
-			UDim2.new(1, -28, 0, 50),
-			{
-				Position = UDim2.fromOffset(14, 91),
-				Color = Colors.TextMuted,
-				TextSize = 11,
-				Wrapped = true,
-				AlignY = Enum.TextYAlignment.Top,
-			}
-		)
-		priceBox.FocusLost:Connect(function()
-			local entered = math.clamp(math.floor(tonumber(priceBox.Text) or 50), 10, 500)
-			priceBox.Text = tostring(entered)
-			transferNote.Text = string.format(
-				"Seller receives 90%% (about R$ %d). Buyers need Plus; public try-ons remain free even when not for sale.",
-				math.floor(entered * Config.Marketplace.SellerShare)
-			)
+		self:_BindButton(switchAdvanced)
+		switchAdvanced.Activated:Connect(function()
+			self:_UpdateSetting("simpleMode", false)
 		end)
 	end
 end
@@ -5990,9 +6126,13 @@ function App:_RefreshMarketplace(query: string?)
 end
 
 function App:_RenderDiscover()
+	local simpleMode = self.state.profile.settings.simpleMode ~= false
+	local showAllMethods = not simpleMode
 	self:_PageHeader(
 		"Discover",
-		"Try on every public design for free. Like, favorite, and support creators through verified Plus transfers."
+		if showAllMethods
+			then "Try on every public design for free. Like, favorite, and support creators through verified Plus transfers."
+			else "Try on things other players made. Tap Try on, then Like the ones you love."
 	)
 	if not self.state.policy.contentSharingAllowed then
 		local blocked = Factory.Card(self.content, UDim2.new(0.95, 0, 0, 230), UDim2.new(0.025, 0, 0, 112))
@@ -6016,20 +6156,25 @@ function App:_RenderDiscover()
 		)
 		return
 	end
-	local firstLookOffset = self:_RenderDiscoverFirstLook(96)
+	local firstLookOffset: number = self:_RenderDiscoverFirstLook(96)
 	local toolsY = 96 + firstLookOffset
-	local filtersY = toolsY + (if self.compact then 104 else 54)
-	local gridY = filtersY + 58
+	local toolsHeight: number = if showAllMethods
+		then (if self.compact then 98 else 48)
+		else (if self.compact then 92 else 48)
+	local gridY: number
 	local tools = Factory.New("Frame", {
 		Position = UDim2.new(0.025, 0, 0, toolsY),
-		Size = UDim2.new(0.95, 0, 0, if self.compact then 98 else 48),
+		Size = UDim2.new(0.95, 0, 0, toolsHeight),
 		BackgroundTransparency = 1,
 		Parent = self.content,
 	})
 	local search = self:_TextBox(
 		tools,
 		if self.marketplaceSearchBy == "CREATOR" then "Search by creator username" else "Search public designs",
-		if self.compact then UDim2.new(1, 0, 0, 42) else UDim2.new(1, -232, 0, 42),
+		if self.compact
+			then UDim2.new(1, 0, 0, 42)
+			elseif showAllMethods then UDim2.new(1, -232, 0, 42)
+			else UDim2.new(1, -112, 0, 42),
 		UDim2.new(),
 		false
 	)
@@ -6038,18 +6183,13 @@ function App:_RenderDiscover()
 		tools,
 		"Search",
 		if self.compact then UDim2.new(0.5, -5, 0, 40) else UDim2.fromOffset(96, 42),
-		if self.compact then UDim2.fromOffset(0, 50) else UDim2.new(1, -216, 0, 0),
+		if self.compact
+			then UDim2.fromOffset(0, 50)
+			elseif showAllMethods then UDim2.new(1, -216, 0, 0)
+			else UDim2.new(1, -96, 0, 0),
 		"primary"
 	)
-	local plus = Factory.Button(
-		tools,
-		if self.state.benefits.plusSubscriber then "Plus active ✓" else "Get Roblox Plus",
-		if self.compact then UDim2.new(0.5, -5, 0, 40) else UDim2.fromOffset(110, 42),
-		if self.compact then UDim2.new(0.5, 5, 0, 50) else UDim2.new(1, -110, 0, 0),
-		if self.state.benefits.plusSubscriber then "mint" else nil
-	)
 	self:_BindButton(refresh)
-	self:_BindButton(plus)
 	refresh.Activated:Connect(function()
 		self:_RefreshMarketplace(search.Text)
 	end)
@@ -6058,67 +6198,100 @@ function App:_RenderDiscover()
 			self:_RefreshMarketplace(search.Text)
 		end
 	end)
-	plus.Activated:Connect(function()
-		if not self.state.benefits.plusSubscriber then
-			task.spawn(function()
-				self:_Invoke(Network.Actions.PromptPlus, {})
+
+	if showAllMethods then
+		local plus = Factory.Button(
+			tools,
+			if self.state.benefits.plusSubscriber then "Plus active ✓" else "Get Roblox Plus",
+			if self.compact then UDim2.new(0.5, -5, 0, 40) else UDim2.fromOffset(110, 42),
+			if self.compact then UDim2.new(0.5, 5, 0, 50) else UDim2.new(1, -110, 0, 0),
+			if self.state.benefits.plusSubscriber then "mint" else nil
+		)
+		self:_BindButton(plus)
+		plus.Activated:Connect(function()
+			if not self.state.benefits.plusSubscriber then
+				task.spawn(function()
+					self:_Invoke(Network.Actions.PromptPlus, {})
+				end)
+			end
+		end)
+
+		local filtersY = toolsY + toolsHeight + 6
+		local filters = Factory.New("ScrollingFrame", {
+			Position = UDim2.new(0.025, 0, 0, filtersY),
+			Size = UDim2.new(0.95, 0, 0, 34),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 0,
+			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			CanvasSize = UDim2.new(),
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			Parent = self.content,
+		})
+		Factory.List(filters, Enum.FillDirection.Horizontal, 7)
+		for _, mode in { { Id = "NAME", Label = "By name" }, { Id = "CREATOR", Label = "By creator" } } do
+			local selected = self.marketplaceSearchBy == mode.Id
+			local chip =
+				Factory.Button(filters, mode.Label, UDim2.fromOffset(96, 30), nil, if selected then "primary" else nil)
+			self:_BindButton(chip)
+			chip.Activated:Connect(function()
+				self.marketplaceSearchBy = mode.Id
+				self:_RefreshMarketplace(search.Text)
+				self:_RenderActivePage()
 			end)
 		end
-	end)
+		Factory.New("Frame", {
+			Size = UDim2.fromOffset(1, 22),
+			BackgroundColor3 = Colors.Line,
+			BackgroundTransparency = 0.4,
+			BorderSizePixel = 0,
+			Parent = filters,
+		})
+		for _, sort in
+			{
+				{ Id = "TRENDING", Label = "Trending" },
+				{ Id = "NEWEST", Label = "Newest" },
+				{ Id = "PRICE_LOW", Label = "Price ↑" },
+				{ Id = "MOST_LIKED", Label = "Most liked" },
+			}
+		do
+			local selected = self.marketplaceSortBy == sort.Id
+			local chip =
+				Factory.Button(filters, sort.Label, UDim2.fromOffset(94, 30), nil, if selected then "primary" else nil)
+			self:_BindButton(chip)
+			chip.Activated:Connect(function()
+				self.marketplaceSortBy = sort.Id
+				self:_RefreshMarketplace(search.Text)
+				self:_RenderActivePage()
+			end)
+		end
+		local leaderboardChip = Factory.Button(filters, "🏆 Top Creators", UDim2.fromOffset(130, 30), nil, "mint")
+		self:_BindButton(leaderboardChip)
+		leaderboardChip.Activated:Connect(function()
+			self:_ShowLeaderboard()
+		end)
+		local simpleChip = Factory.Button(filters, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
+		self:_BindButton(simpleChip)
+		simpleChip.Activated:Connect(function()
+			self:_UpdateSetting("simpleMode", true)
+		end)
 
-	local filters = Factory.New("ScrollingFrame", {
-		Position = UDim2.new(0.025, 0, 0, filtersY),
-		Size = UDim2.new(0.95, 0, 0, 34),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		ScrollBarThickness = 0,
-		AutomaticCanvasSize = Enum.AutomaticSize.X,
-		CanvasSize = UDim2.new(),
-		ScrollingDirection = Enum.ScrollingDirection.X,
-		Parent = self.content,
-	})
-	Factory.List(filters, Enum.FillDirection.Horizontal, 7)
-	for _, mode in { { Id = "NAME", Label = "By name" }, { Id = "CREATOR", Label = "By creator" } } do
-		local selected = self.marketplaceSearchBy == mode.Id
-		local chip =
-			Factory.Button(filters, mode.Label, UDim2.fromOffset(96, 30), nil, if selected then "primary" else nil)
-		self:_BindButton(chip)
-		chip.Activated:Connect(function()
-			self.marketplaceSearchBy = mode.Id
-			self:_RefreshMarketplace(search.Text)
-			self:_RenderActivePage()
+		gridY = filtersY + 58
+	else
+		local switchY = toolsY + toolsHeight + 10
+		local switchAdvanced = Factory.Button(
+			self.content,
+			"Switch to Advanced Mode for filters, sorting & buying →",
+			UDim2.new(0.95, 0, 0, 28),
+			UDim2.new(0.025, 0, 0, switchY),
+			nil
+		)
+		self:_BindButton(switchAdvanced)
+		switchAdvanced.Activated:Connect(function()
+			self:_UpdateSetting("simpleMode", false)
 		end)
+		gridY = switchY + 28 + 16
 	end
-	Factory.New("Frame", {
-		Size = UDim2.fromOffset(1, 22),
-		BackgroundColor3 = Colors.Line,
-		BackgroundTransparency = 0.4,
-		BorderSizePixel = 0,
-		Parent = filters,
-	})
-	for _, sort in
-		{
-			{ Id = "TRENDING", Label = "Trending" },
-			{ Id = "NEWEST", Label = "Newest" },
-			{ Id = "PRICE_LOW", Label = "Price ↑" },
-			{ Id = "MOST_LIKED", Label = "Most liked" },
-		}
-	do
-		local selected = self.marketplaceSortBy == sort.Id
-		local chip =
-			Factory.Button(filters, sort.Label, UDim2.fromOffset(94, 30), nil, if selected then "primary" else nil)
-		self:_BindButton(chip)
-		chip.Activated:Connect(function()
-			self.marketplaceSortBy = sort.Id
-			self:_RefreshMarketplace(search.Text)
-			self:_RenderActivePage()
-		end)
-	end
-	local leaderboardChip = Factory.Button(filters, "🏆 Top Creators", UDim2.fromOffset(130, 30), nil, "mint")
-	self:_BindButton(leaderboardChip)
-	leaderboardChip.Activated:Connect(function()
-		self:_ShowLeaderboard()
-	end)
 
 	if self.marketplaceItems == nil then
 		Factory.Label(self.content, "Loading trending creations…", UDim2.new(1, -52, 0, 60), {
@@ -6177,7 +6350,7 @@ function App:_RenderDiscover()
 		imageHint.BackgroundTransparency = 0.18
 		Factory.Corner(imageHint, 8)
 		self:_WatchImageLoad(image, imageHint, thumbnail(item.modelAssetId, 420))
-		if item.isListed then
+		if showAllMethods and item.isListed then
 			Factory.Pill(card, string.format("R$ %d", item.listingPriceRobux), Colors.Mint, 68).Position =
 				UDim2.fromOffset(156, 18)
 		end
@@ -6253,42 +6426,45 @@ function App:_RenderDiscover()
 		local try = Factory.Button(
 			card,
 			if isCommunityTryOn then "Remove" else "Try on",
-			UDim2.new(0.48, -14, 0, 38),
+			if showAllMethods then UDim2.new(0.48, -14, 0, 38) else UDim2.new(1, -20, 0, 38),
 			UDim2.fromOffset(10, 250),
 			if isCommunityTryOn then "danger" else "primary"
 		)
-		local buy = Factory.Button(
-			card,
-			if item.isListed then "Buy copy" else "Not for sale",
-			UDim2.new(0.52, -14, 0, 38),
-			UDim2.new(0.48, 4, 0, 250),
-			if item.isListed then "mint" else nil
-		)
 		self:_BindButton(try)
-		self:_BindButton(buy)
-		buy.Active = item.isListed == true
 		try.Activated:Connect(function()
 			self:_ApplyCommunityTryOn(item, try, "GRID")
 		end)
-		buy.Activated:Connect(function()
-			buy.Active = false
-			buy.Text = "Checking listing…"
-			task.spawn(function()
-				local success, errorCode = self:_Invoke(Network.Actions.BeginMarketplacePurchase, { itemId = item.id })
-				if success then
-					self:_Toast("success", "Confirm the verified creator transfer in Roblox.")
-				elseif errorCode == "PLUS_REQUIRED" then
-					self:_ShowPlus()
-				elseif errorCode == "LISTING_UNAVAILABLE" then
-					self.marketplaceItems = nil
-					self:_RefreshMarketplace(search.Text)
-				end
-				if buy.Parent then
-					buy.Active = item.isListed == true
-					buy.Text = if item.isListed then "Buy copy" else "Not for sale"
-				end
+		if showAllMethods then
+			local buy = Factory.Button(
+				card,
+				if item.isListed then "Buy copy" else "Not for sale",
+				UDim2.new(0.52, -14, 0, 38),
+				UDim2.new(0.48, 4, 0, 250),
+				if item.isListed then "mint" else nil
+			)
+			self:_BindButton(buy)
+			buy.Active = item.isListed == true
+			buy.Activated:Connect(function()
+				buy.Active = false
+				buy.Text = "Checking listing…"
+				task.spawn(function()
+					local success, errorCode =
+						self:_Invoke(Network.Actions.BeginMarketplacePurchase, { itemId = item.id })
+					if success then
+						self:_Toast("success", "Confirm the verified creator transfer in Roblox.")
+					elseif errorCode == "PLUS_REQUIRED" then
+						self:_ShowPlus()
+					elseif errorCode == "LISTING_UNAVAILABLE" then
+						self.marketplaceItems = nil
+						self:_RefreshMarketplace(search.Text)
+					end
+					if buy.Parent then
+						buy.Active = item.isListed == true
+						buy.Text = if item.isListed then "Buy copy" else "Not for sale"
+					end
+				end)
 			end)
-		end)
+		end
 		local like = Factory.Button(
 			card,
 			string.format("%s %s", if item.viewerLiked then "♥" else "♡", formatNumber(item.likes)),
@@ -6445,20 +6621,35 @@ function App:_SearchCatalog(query: string)
 end
 
 function App:_RenderAvatarLab()
+	local simpleMode = self.state.profile.settings.simpleMode ~= false
+	local showAllMethods = not simpleMode
 	self:_PageHeader(
 		"Avatar Lab",
-		"Mix Roblox Marketplace accessories with your Forge creations and stay longer in the look."
+		if showAllMethods
+			then "Mix Roblox Marketplace accessories with your Forge creations and stay longer in the look."
+			else "Try on free Roblox items. Tap a category below, then Try on."
 	)
 	-- The creator-name/price-range row is the single biggest thing in this
 	-- card, and most searches never touch it — collapsed by default, it only
 	-- renders (and only counts toward controlsHeight) once a player asks for
 	-- it, so the catalog grid below gets that space back instead of always
-	-- reserving it for filters most sessions never open.
-	local filtersExpanded = self.catalogFiltersExpanded == true
-	local filtersActive = self.catalogCreatorName ~= "" or self.catalogMinPrice ~= "" or self.catalogMaxPrice ~= ""
-	local controlsHeight = if filtersExpanded
-		then (if self.compact then 276 else 200)
-		else (if self.compact then 194 else 151)
+	-- reserving it for filters most sessions never open. Simple Mode never
+	-- expands it at all (nor the SORT row below) -- see the showAllMethods
+	-- branches further down.
+	local filtersExpanded = showAllMethods and self.catalogFiltersExpanded == true
+	local filtersActive = showAllMethods
+		and (self.catalogCreatorName ~= "" or self.catalogMinPrice ~= "" or self.catalogMaxPrice ~= "")
+	local controlsHeight: number
+	if showAllMethods then
+		controlsHeight = if filtersExpanded
+			then (if self.compact then 276 else 200)
+			else (if self.compact then 194 else 151)
+	else
+		-- accessoryChipsY (106 compact / 63 desktop, computed below) + 40 for
+		-- the switch-to-Advanced row's own Y offset + its 28px height + 16px
+		-- bottom padding.
+		controlsHeight = if self.compact then 190 else 147
+	end
 	local runwayState = self.runwayState or self.state.runwayState
 	local runwayJoined = runwayState and runwayState.joined == true
 	local controlsTop = if runwayJoined then 164 else 94
@@ -6599,56 +6790,83 @@ function App:_RenderAvatarLab()
 			self:_RenderActivePage()
 		end)
 	end
-	local filtersToggle = Factory.Button(
-		chips,
-		if filtersExpanded then "Filters ▲" elseif filtersActive then "Filters ✓" else "Filters ▾",
-		UDim2.fromOffset(if filtersActive and not filtersExpanded then 92 else 78, 30),
-		nil,
-		if filtersExpanded or filtersActive then "primary" else nil
-	)
-	self:_BindButton(filtersToggle)
-	filtersToggle.Activated:Connect(function()
-		self.catalogFiltersExpanded = not filtersExpanded
-		self:_RenderActivePage()
-	end)
-
-	-- Real Roblox Marketplace search options: sort order, then creator name
-	-- and price range. A visible Label precedes every input here (rather than
-	-- relying on placeholder text alone) so the row reads correctly for
-	-- screen-reader-style access and keyboard/gamepad users tabbing through.
-	local sortY = accessoryChipsY + 40
-	Factory.Label(controls, "SORT", UDim2.fromOffset(60, 32), {
-		Position = UDim2.fromOffset(14, sortY),
-		AlignY = Enum.TextYAlignment.Center,
-		Font = Theme.Fonts.Bold,
-		TextSize = 10,
-		Color = Colors.TextMuted,
-	})
-	local sortChips = Factory.New("ScrollingFrame", {
-		Position = UDim2.fromOffset(66, sortY),
-		Size = UDim2.new(1, -80, 0, 32),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		ScrollBarThickness = 0,
-		AutomaticCanvasSize = Enum.AutomaticSize.X,
-		CanvasSize = UDim2.new(),
-		ScrollingDirection = Enum.ScrollingDirection.X,
-		Parent = controls,
-	})
-	Factory.List(sortChips, Enum.FillDirection.Horizontal, 7)
-	for _, sortKey in CATALOG_SORT_ORDER do
-		local chip = Factory.Button(
-			sortChips,
-			CATALOG_SORT_LABELS[sortKey],
-			UDim2.fromOffset(math.max(72, #CATALOG_SORT_LABELS[sortKey] * 7 + 24), 30),
+	if showAllMethods then
+		local filtersToggle = Factory.Button(
+			chips,
+			if filtersExpanded then "Filters ▲" elseif filtersActive then "Filters ✓" else "Filters ▾",
+			UDim2.fromOffset(if filtersActive and not filtersExpanded then 92 else 78, 30),
 			nil,
-			if self.catalogSortType == sortKey then "primary" else nil
+			if filtersExpanded or filtersActive then "primary" else nil
 		)
-		self:_BindButton(chip)
-		chip.Activated:Connect(function()
-			self.catalogSortType = sortKey
-			self:_ApplyCatalogFilters()
+		self:_BindButton(filtersToggle)
+		filtersToggle.Activated:Connect(function()
+			self.catalogFiltersExpanded = not filtersExpanded
 			self:_RenderActivePage()
+		end)
+		local simpleChip = Factory.Button(chips, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
+		self:_BindButton(simpleChip)
+		simpleChip.Activated:Connect(function()
+			self:_UpdateSetting("simpleMode", true)
+		end)
+	end
+
+	-- Also the Y the creator/price filter fields build on below (once
+	-- expanded) -- kept in scope outside the branch since filtersExpanded
+	-- can only be true when showAllMethods is true, but that check happens
+	-- well after this branch closes.
+	local sortY = accessoryChipsY + 40
+	if showAllMethods then
+		-- Real Roblox Marketplace search options: sort order, then creator
+		-- name and price range. A visible Label precedes every input here
+		-- (rather than relying on placeholder text alone) so the row reads
+		-- correctly for screen-reader-style access and keyboard/gamepad
+		-- users tabbing through. Simple Mode skips sorting/creator/price
+		-- entirely -- see controlsHeight above for its shorter card.
+		Factory.Label(controls, "SORT", UDim2.fromOffset(60, 32), {
+			Position = UDim2.fromOffset(14, sortY),
+			AlignY = Enum.TextYAlignment.Center,
+			Font = Theme.Fonts.Bold,
+			TextSize = 10,
+			Color = Colors.TextMuted,
+		})
+		local sortChips = Factory.New("ScrollingFrame", {
+			Position = UDim2.fromOffset(66, sortY),
+			Size = UDim2.new(1, -80, 0, 32),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 0,
+			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			CanvasSize = UDim2.new(),
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			Parent = controls,
+		})
+		Factory.List(sortChips, Enum.FillDirection.Horizontal, 7)
+		for _, sortKey in CATALOG_SORT_ORDER do
+			local chip = Factory.Button(
+				sortChips,
+				CATALOG_SORT_LABELS[sortKey],
+				UDim2.fromOffset(math.max(72, #CATALOG_SORT_LABELS[sortKey] * 7 + 24), 30),
+				nil,
+				if self.catalogSortType == sortKey then "primary" else nil
+			)
+			self:_BindButton(chip)
+			chip.Activated:Connect(function()
+				self.catalogSortType = sortKey
+				self:_ApplyCatalogFilters()
+				self:_RenderActivePage()
+			end)
+		end
+	else
+		local switchAdvanced = Factory.Button(
+			controls,
+			"Switch to Advanced Mode for filters, sorting & buying →",
+			UDim2.new(1, -28, 0, 28),
+			UDim2.fromOffset(14, sortY),
+			nil
+		)
+		self:_BindButton(switchAdvanced)
+		switchAdvanced.Activated:Connect(function()
+			self:_UpdateSetting("simpleMode", false)
 		end)
 	end
 
@@ -6810,30 +7028,43 @@ function App:_RenderAvatarLab()
 				Truncate = Enum.TextTruncate.AtEnd,
 			})
 			local price = tonumber(item.Price or item.LowestPrice)
-			Factory.Label(
-				card,
-				if price then string.format("R$ %d", price) else "View details",
-				UDim2.new(1, -20, 0, 22),
-				{
-					Position = UDim2.fromOffset(10, 222),
-					Color = if price then Colors.Mint else Colors.TextMuted,
-					Font = Theme.Fonts.Bold,
-					TextSize = 11,
-				}
-			)
+			if showAllMethods then
+				Factory.Label(
+					card,
+					if price then string.format("R$ %d", price) else "View details",
+					UDim2.new(1, -20, 0, 22),
+					{
+						Position = UDim2.fromOffset(10, 222),
+						Color = if price then Colors.Mint else Colors.TextMuted,
+						Font = Theme.Fonts.Bold,
+						TextSize = 11,
+					}
+				)
+			end
 			-- The old -12/-8 split left "Buy" only ~4px from the card's own
 			-- right edge; widened both the outer and inter-button gaps to a
 			-- real ~10px (matching the CellSize bump above).
 			local try = Factory.Button(
 				card,
 				if self.triedOnAssetIds[assetId] then "Unequip" else "Try",
-				UDim2.new(0.45, -14, 0, 38),
+				if showAllMethods then UDim2.new(0.45, -14, 0, 38) else UDim2.new(1, -20, 0, 38),
 				UDim2.fromOffset(10, 248),
 				if self.triedOnAssetIds[assetId] then "danger" else "primary"
 			)
-			local buy = Factory.Button(card, "Buy", UDim2.new(0.55, -14, 0, 38), UDim2.new(0.45, 4, 0, 248), "mint")
 			self:_BindButton(try)
-			self:_BindButton(buy)
+			if showAllMethods then
+				local buy = Factory.Button(card, "Buy", UDim2.new(0.55, -14, 0, 38), UDim2.new(0.45, 4, 0, 248), "mint")
+				self:_BindButton(buy)
+				buy.Activated:Connect(function()
+					local success, problem = pcall(function()
+						MarketplaceService:PromptPurchase(player, assetId)
+					end)
+					if not success then
+						warn(string.format("[App] Catalog purchase prompt failed: %s", tostring(problem)))
+						self:_Toast("error", "Roblox could not open the catalog purchase prompt.")
+					end
+				end)
+			end
 			try.Activated:Connect(function()
 				local removing = self.triedOnAssetIds[assetId] == true
 				try.Active = false
@@ -6867,15 +7098,6 @@ function App:_RenderAvatarLab()
 						try.Text = if removing then "Unequip" else "Try"
 					end
 				end)
-			end)
-			buy.Activated:Connect(function()
-				local success, problem = pcall(function()
-					MarketplaceService:PromptPurchase(player, assetId)
-				end)
-				if not success then
-					warn(string.format("[App] Catalog purchase prompt failed: %s", tostring(problem)))
-					self:_Toast("error", "Roblox could not open the catalog purchase prompt.")
-				end
 			end)
 		end
 	end
@@ -6919,6 +7141,8 @@ end
 -- no "try on" concept (graphics aren't wearable), and search matches the
 -- prompt text since graphics have no separate name field.
 function App:_RenderGraphicsDiscoverBody()
+	local simpleMode = self.state.profile.settings.simpleMode ~= false
+	local showAllMethods = not simpleMode
 	if not self.state.policy.contentSharingAllowed then
 		local blocked = Factory.Card(self.content, UDim2.new(0.95, 0, 0, 200), UDim2.new(0.025, 0, 0, 150))
 		Factory.Label(blocked, "Shared graphics are unavailable", UDim2.new(1, -40, 0, 32), {
@@ -6972,58 +7196,70 @@ function App:_RenderGraphicsDiscoverBody()
 		end
 	end)
 
-	local filters = Factory.New("ScrollingFrame", {
-		Position = UDim2.new(0.025, 0, 0, if self.compact then 248 else 198),
-		Size = UDim2.new(0.95, 0, 0, 34),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		ScrollBarThickness = 0,
-		AutomaticCanvasSize = Enum.AutomaticSize.X,
-		CanvasSize = UDim2.new(),
-		ScrollingDirection = Enum.ScrollingDirection.X,
-		Parent = self.content,
-	})
-	Factory.List(filters, Enum.FillDirection.Horizontal, 7)
-	for _, mode in { { Id = "PROMPT", Label = "By prompt" }, { Id = "CREATOR", Label = "By creator" } } do
-		local selected = self.graphicsMarketplaceSearchBy == mode.Id
-		local chip =
-			Factory.Button(filters, mode.Label, UDim2.fromOffset(96, 30), nil, if selected then "primary" else nil)
-		self:_BindButton(chip)
-		chip.Activated:Connect(function()
-			self.graphicsMarketplaceSearchBy = mode.Id
-			self:_RefreshGraphicsMarketplace(search.Text)
-			self:_RenderActivePage()
-		end)
-	end
-	Factory.New("Frame", {
-		Size = UDim2.fromOffset(1, 22),
-		BackgroundColor3 = Colors.Line,
-		BackgroundTransparency = 0.4,
-		BorderSizePixel = 0,
-		Parent = filters,
-	})
-	for _, sort in
-		{
-			{ Id = "TRENDING", Label = "Trending" },
-			{ Id = "NEWEST", Label = "Newest" },
-			{ Id = "PRICE_LOW", Label = "Price ↑" },
-			{ Id = "MOST_LIKED", Label = "Most liked" },
-		}
-	do
-		local selected = self.graphicsMarketplaceSortBy == sort.Id
-		local chip =
-			Factory.Button(filters, sort.Label, UDim2.fromOffset(94, 30), nil, if selected then "primary" else nil)
-		self:_BindButton(chip)
-		chip.Activated:Connect(function()
-			self.graphicsMarketplaceSortBy = sort.Id
-			self:_RefreshGraphicsMarketplace(search.Text)
-			self:_RenderActivePage()
+	if showAllMethods then
+		local filters = Factory.New("ScrollingFrame", {
+			Position = UDim2.new(0.025, 0, 0, if self.compact then 248 else 198),
+			Size = UDim2.new(0.95, 0, 0, 34),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 0,
+			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			CanvasSize = UDim2.new(),
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			Parent = self.content,
+		})
+		Factory.List(filters, Enum.FillDirection.Horizontal, 7)
+		for _, mode in { { Id = "PROMPT", Label = "By prompt" }, { Id = "CREATOR", Label = "By creator" } } do
+			local selected = self.graphicsMarketplaceSearchBy == mode.Id
+			local chip =
+				Factory.Button(filters, mode.Label, UDim2.fromOffset(96, 30), nil, if selected then "primary" else nil)
+			self:_BindButton(chip)
+			chip.Activated:Connect(function()
+				self.graphicsMarketplaceSearchBy = mode.Id
+				self:_RefreshGraphicsMarketplace(search.Text)
+				self:_RenderActivePage()
+			end)
+		end
+		Factory.New("Frame", {
+			Size = UDim2.fromOffset(1, 22),
+			BackgroundColor3 = Colors.Line,
+			BackgroundTransparency = 0.4,
+			BorderSizePixel = 0,
+			Parent = filters,
+		})
+		for _, sort in
+			{
+				{ Id = "TRENDING", Label = "Trending" },
+				{ Id = "NEWEST", Label = "Newest" },
+				{ Id = "PRICE_LOW", Label = "Price ↑" },
+				{ Id = "MOST_LIKED", Label = "Most liked" },
+			}
+		do
+			local selected = self.graphicsMarketplaceSortBy == sort.Id
+			local chip =
+				Factory.Button(filters, sort.Label, UDim2.fromOffset(94, 30), nil, if selected then "primary" else nil)
+			self:_BindButton(chip)
+			chip.Activated:Connect(function()
+				self.graphicsMarketplaceSortBy = sort.Id
+				self:_RefreshGraphicsMarketplace(search.Text)
+				self:_RenderActivePage()
+			end)
+		end
+		local simpleChip = Factory.Button(filters, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
+		self:_BindButton(simpleChip)
+		simpleChip.Activated:Connect(function()
+			self:_UpdateSetting("simpleMode", true)
 		end)
 	end
 
+	-- Simple Mode skips the By prompt/creator + sort filter row above
+	-- entirely (tools row bottom: 242 compact / 192 desktop), and shows a
+	-- switch-to-Advanced link in that freed space instead of the filter row.
+	local toolsBottom = 144 + (if self.compact then 98 else 48)
+	local gridTop = if showAllMethods then (if self.compact then 306 else 256) else toolsBottom + 10 + 28 + 16
 	if self.graphicsMarketplaceItems == nil then
 		Factory.Label(self.content, "Loading trending graphics…", UDim2.new(1, -52, 0, 60), {
-			Position = UDim2.fromOffset(26, if self.compact then 330 else 260),
+			Position = UDim2.fromOffset(26, gridTop - 30),
 			AlignX = Enum.TextXAlignment.Center,
 			Color = Colors.TextMuted,
 			Font = Theme.Fonts.Bold,
@@ -7031,9 +7267,22 @@ function App:_RenderGraphicsDiscoverBody()
 		self:_RefreshGraphicsMarketplace(self.graphicsMarketplaceQuery)
 		return
 	end
+	if not showAllMethods then
+		local switchAdvanced = Factory.Button(
+			self.content,
+			"Switch to Advanced Mode for filters, sorting & buying →",
+			UDim2.new(0.95, 0, 0, 28),
+			UDim2.new(0.025, 0, 0, toolsBottom + 10),
+			nil
+		)
+		self:_BindButton(switchAdvanced)
+		switchAdvanced.Activated:Connect(function()
+			self:_UpdateSetting("simpleMode", false)
+		end)
+	end
 	local grid = Factory.New("ScrollingFrame", {
-		Position = UDim2.new(0.02, 0, 0, if self.compact then 306 else 256),
-		Size = UDim2.new(0.96, 0, 1, if self.compact then -322 else -272),
+		Position = UDim2.new(0.02, 0, 0, gridTop),
+		Size = UDim2.new(0.96, 0, 1, -(gridTop + 16)),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -7044,11 +7293,14 @@ function App:_RenderGraphicsDiscoverBody()
 	})
 	self:_TrackScroll(grid, "GraphicsDiscoverGrid")
 	Factory.ScalePadding(grid, 0.008, 0.008)
+	-- 300 left only 4px between the Buy row (bottom at 256) and the
+	-- like/favorite row below it (top at 260); grown 6px alongside that
+	-- row's own move so both gaps read as a real ~10px. Simple Mode skips
+	-- the price pill and Buy row (financial, Advanced-only) so its
+	-- like/favorite row moves up into that space and the card is shorter.
+	local cardHeight = if showAllMethods then 306 else 266
 	Factory.New("UIGridLayout", {
-		-- 300 left only 4px between the Buy row (bottom at 256) and the
-		-- like/favorite row below it (top at 260); grown 6px alongside that
-		-- row's own move so both gaps read as a real ~10px.
-		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 306),
+		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, cardHeight),
 		CellPadding = UDim2.fromOffset(12, 12),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = grid,
@@ -7066,7 +7318,7 @@ function App:_RenderGraphicsDiscoverBody()
 			Parent = card,
 		})
 		Factory.Corner(image, 11)
-		if graphic.isListed then
+		if showAllMethods and graphic.isListed then
 			Factory.Pill(card, string.format("R$ %d", graphic.listingPriceRobux), Colors.Mint, 68).Position =
 				UDim2.fromOffset(156, 18)
 		end
@@ -7123,47 +7375,50 @@ function App:_RenderGraphicsDiscoverBody()
 				end,
 			})
 		end)
-		local buy = Factory.Button(
-			card,
-			if graphic.isListed then "Buy copy" else "Not for sale",
-			UDim2.new(1, -20, 0, 34),
-			UDim2.fromOffset(10, 222),
-			if graphic.isListed then "mint" else nil
-		)
-		self:_BindButton(buy)
-		buy.Active = graphic.isListed == true
-		buy.Activated:Connect(function()
-			buy.Active = false
-			buy.Text = "Checking listing…"
-			task.spawn(function()
-				local success, errorCode =
-					self:_Invoke(Network.Actions.BeginGraphicPurchase, { graphicId = graphic.id })
-				if success then
-					self:_Toast("success", "Confirm the verified creator transfer in Roblox.")
-				elseif errorCode == "PLUS_REQUIRED" then
-					self:_ShowPlus()
-				elseif errorCode == "LISTING_UNAVAILABLE" then
-					self.graphicsMarketplaceItems = nil
-					self:_RefreshGraphicsMarketplace(search.Text)
-				end
-				if buy.Parent then
-					buy.Active = graphic.isListed == true
-					buy.Text = if graphic.isListed then "Buy copy" else "Not for sale"
-				end
+		if showAllMethods then
+			local buy = Factory.Button(
+				card,
+				if graphic.isListed then "Buy copy" else "Not for sale",
+				UDim2.new(1, -20, 0, 34),
+				UDim2.fromOffset(10, 222),
+				if graphic.isListed then "mint" else nil
+			)
+			self:_BindButton(buy)
+			buy.Active = graphic.isListed == true
+			buy.Activated:Connect(function()
+				buy.Active = false
+				buy.Text = "Checking listing…"
+				task.spawn(function()
+					local success, errorCode =
+						self:_Invoke(Network.Actions.BeginGraphicPurchase, { graphicId = graphic.id })
+					if success then
+						self:_Toast("success", "Confirm the verified creator transfer in Roblox.")
+					elseif errorCode == "PLUS_REQUIRED" then
+						self:_ShowPlus()
+					elseif errorCode == "LISTING_UNAVAILABLE" then
+						self.graphicsMarketplaceItems = nil
+						self:_RefreshGraphicsMarketplace(search.Text)
+					end
+					if buy.Parent then
+						buy.Active = graphic.isListed == true
+						buy.Text = if graphic.isListed then "Buy copy" else "Not for sale"
+					end
+				end)
 			end)
-		end)
+		end
+		local likeFavoriteY = if showAllMethods then 266 else 222
 		local like = Factory.Button(
 			card,
 			string.format("%s %s", if graphic.viewerLiked then "♥" else "♡", formatNumber(graphic.likes)),
 			UDim2.new(0.5, -15, 0, 30),
-			UDim2.fromOffset(10, 266),
+			UDim2.fromOffset(10, likeFavoriteY),
 			nil
 		)
 		local favorite = Factory.Button(
 			card,
 			string.format("%s %s", if graphic.viewerFavorited then "★" else "☆", formatNumber(graphic.favorites)),
 			UDim2.new(0.5, -15, 0, 30),
-			UDim2.new(0.5, 5, 0, 266),
+			UDim2.new(0.5, 5, 0, likeFavoriteY),
 			nil
 		)
 		self:_BindButton(like)
@@ -7201,9 +7456,13 @@ function App:_RenderGraphicsDiscoverBody()
 end
 
 function App:_RenderAvatarGraphics()
+	local simpleMode = self.state.profile.settings.simpleMode ~= false
+	local showAllMethods = not simpleMode
 	self:_PageHeader(
 		"Avatar Graphics",
-		"Turn your current Roblox avatar -- or just a prompt -- into a standalone piece of art -- no accessory, no 3D model, just a picture worth keeping."
+		if showAllMethods
+			then "Turn your current Roblox avatar -- or just a prompt -- into a standalone piece of art -- no accessory, no 3D model, just a picture worth keeping."
+			else "Turn a prompt or your avatar into a picture you can keep."
 	)
 
 	local tabs = Factory.New("Frame", {
@@ -7383,63 +7642,83 @@ function App:_RenderAvatarGraphics()
 		cursorY += 74
 	end
 
-	local styleStepLabel = if isTextMode then "1  CHOOSE A VISUAL STYLE" else "2  CHOOSE A VISUAL STYLE"
-	Factory.Label(composer, styleStepLabel, UDim2.new(1, -32, 0, 22), {
-		Position = UDim2.fromOffset(16, cursorY),
-		Font = Theme.Fonts.Bold,
-		TextSize = 12,
-		Color = Colors.Violet,
-	})
-	cursorY += 27
-	chipRow(Config.Generation.StylePresets, self.selectedStylePreset, cursorY, Colors.Violet, function(value)
-		self.selectedStylePreset = value
-		self:_RenderActivePage()
-	end)
-	cursorY += 46
+	-- Style and quality (a pricing-tier picker) are both Advanced-only --
+	-- Simple Mode leaves them at their defaults (AUTO style, LOW quality,
+	-- see App.new()) exactly like Create hides Style behind the same toggle.
+	if showAllMethods then
+		local simpleLink =
+			Factory.Button(composer, "← Simple Mode", UDim2.fromOffset(120, 24), UDim2.fromOffset(16, cursorY), nil)
+		self:_BindButton(simpleLink)
+		simpleLink.Activated:Connect(function()
+			self:_UpdateSetting("simpleMode", true)
+		end)
+		cursorY += 32
 
-	local qualityStepLabel = if isTextMode then "2  CHOOSE IMAGE QUALITY" else "3  CHOOSE IMAGE QUALITY"
-	Factory.Label(composer, qualityStepLabel, UDim2.new(1, -32, 0, 22), {
-		Position = UDim2.fromOffset(16, cursorY),
-		Font = Theme.Fonts.Bold,
-		TextSize = 12,
-		Color = Colors.Gold,
-	})
-	cursorY += 27
-	local qualityRow = Factory.New("ScrollingFrame", {
-		Position = UDim2.fromOffset(16, cursorY),
-		Size = UDim2.new(1, -32, 0, 38),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		ScrollBarThickness = 0,
-		AutomaticCanvasSize = Enum.AutomaticSize.X,
-		CanvasSize = UDim2.new(),
-		ScrollingDirection = Enum.ScrollingDirection.X,
-		Parent = composer,
-	})
-	Factory.List(qualityRow, Enum.FillDirection.Horizontal, 8)
-	for _, tier in Config.Generation.ImageQualityTiers do
-		local tierSelected = self.selectedImageQuality == tier.Id
-		local chip = Factory.Button(
-			qualityRow,
-			string.format("%s · R$ %d", tier.Label, self.state.prices[tier.ProductKey] or 0),
-			UDim2.fromOffset(146, 34),
-			nil,
-			if tierSelected then "primary" else nil
-		)
-		if tierSelected then
-			chip.BackgroundColor3 = Colors.Gold
-		end
-		self:_BindButton(chip)
-		chip.Activated:Connect(function()
-			self.selectedImageQuality = tier.Id
+		local styleStepLabel = if isTextMode then "1  CHOOSE A VISUAL STYLE" else "2  CHOOSE A VISUAL STYLE"
+		Factory.Label(composer, styleStepLabel, UDim2.new(1, -32, 0, 22), {
+			Position = UDim2.fromOffset(16, cursorY),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = Colors.Violet,
+		})
+		cursorY += 27
+		chipRow(Config.Generation.StylePresets, self.selectedStylePreset, cursorY, Colors.Violet, function(value)
+			self.selectedStylePreset = value
 			self:_RenderActivePage()
 		end)
-	end
-	cursorY += 46
+		cursorY += 46
 
-	local promptStepLabel = if isTextMode
-		then "3  DESCRIBE YOUR IMAGE (REQUIRED)"
-		else "4  DESCRIBE A SCENE OR THEME (OPTIONAL)"
+		local qualityStepLabel = if isTextMode then "2  CHOOSE IMAGE QUALITY" else "3  CHOOSE IMAGE QUALITY"
+		Factory.Label(composer, qualityStepLabel, UDim2.new(1, -32, 0, 22), {
+			Position = UDim2.fromOffset(16, cursorY),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = Colors.Gold,
+		})
+		cursorY += 27
+		local qualityRow = Factory.New("ScrollingFrame", {
+			Position = UDim2.fromOffset(16, cursorY),
+			Size = UDim2.new(1, -32, 0, 38),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 0,
+			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			CanvasSize = UDim2.new(),
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			Parent = composer,
+		})
+		Factory.List(qualityRow, Enum.FillDirection.Horizontal, 8)
+		for _, tier in Config.Generation.ImageQualityTiers do
+			local tierSelected = self.selectedImageQuality == tier.Id
+			local chip = Factory.Button(
+				qualityRow,
+				string.format("%s · R$ %d", tier.Label, self.state.prices[tier.ProductKey] or 0),
+				UDim2.fromOffset(146, 34),
+				nil,
+				if tierSelected then "primary" else nil
+			)
+			if tierSelected then
+				chip.BackgroundColor3 = Colors.Gold
+			end
+			self:_BindButton(chip)
+			chip.Activated:Connect(function()
+				self.selectedImageQuality = tier.Id
+				self:_RenderActivePage()
+			end)
+		end
+		cursorY += 46
+	end
+
+	local promptStepLabel
+	if isTextMode then
+		promptStepLabel = if showAllMethods
+			then "3  DESCRIBE YOUR IMAGE (REQUIRED)"
+			else "1  DESCRIBE YOUR IMAGE (REQUIRED)"
+	else
+		promptStepLabel = if showAllMethods
+			then "4  DESCRIBE A SCENE OR THEME (OPTIONAL)"
+			else "2  DESCRIBE A SCENE OR THEME (OPTIONAL)"
+	end
 	Factory.Label(composer, promptStepLabel, UDim2.new(1, -32, 0, 22), {
 		Position = UDim2.fromOffset(16, cursorY),
 		Font = Theme.Fonts.Bold,
@@ -7479,6 +7758,21 @@ function App:_RenderAvatarGraphics()
 		count.Text = string.format("%d / %d", #prompt.Text, Config.Generation.PromptMaxLength)
 	end)
 	cursorY += 72
+
+	if not showAllMethods then
+		local switchAdvanced = Factory.Button(
+			composer,
+			"Switch to Advanced Mode for style, quality & pricing →",
+			UDim2.new(1, -32, 0, 26),
+			UDim2.fromOffset(16, cursorY),
+			nil
+		)
+		self:_BindButton(switchAdvanced)
+		switchAdvanced.Activated:Connect(function()
+			self:_UpdateSetting("simpleMode", false)
+		end)
+		cursorY += 34
+	end
 
 	local safetyY = cursorY
 	local buttonY = if self.compact then safetyY + 39 else safetyY
@@ -7707,12 +8001,18 @@ function App:_RenderAvatarGraphics()
 		LayoutOrder = 4,
 		Parent = stack,
 	})
+	-- Simple Mode skips the title/description editor and the sharing/sales
+	-- block per card (same "financial and metadata editing are Advanced"
+	-- rule as My Studio/Discover/Avatar Lab) straight to the download link
+	-- and Delete, so its shorter shared card height drops the same ~160px
+	-- those two blocks would have cost.
+	local cardHeight = if showAllMethods then 460 else 310
 	Factory.New("UIGridLayout", {
 		-- +80 for the title/description editor inserted below the kind
 		-- label; every card in the grid shares one CellSize, so this height
 		-- covers both license branches even though only the shared content
 		-- (link/delete) below the editor visually differs by license.
-		CellSize = UDim2.new(1 / gridColumns, -12 * (gridColumns - 1) / gridColumns, 0, 460),
+		CellSize = UDim2.new(1 / gridColumns, -12 * (gridColumns - 1) / gridColumns, 0, cardHeight),
 		CellPadding = UDim2.fromOffset(12, 12),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = gallery,
@@ -7806,85 +8106,101 @@ function App:_RenderAvatarGraphics()
 				Color = Colors.TextMuted,
 				TextSize = 10,
 			})
-			-- Never shown publicly for a private/personal copy (its
-			-- visibility can never go public -- see the license branch
-			-- below), but harmless to let the owner keep one anyway, and
-			-- keeping this block unconditional means every card in the grid
-			-- shares the same layout below it regardless of license.
-			local titleBox =
-				self:_TextBox(card, "Untitled graphic", UDim2.new(1, -20, 0, 28), UDim2.fromOffset(10, 196), false)
-			titleBox.Text = graphic.title or ""
-			local descriptionBox =
-				self:_TextBox(card, "Add a description…", UDim2.new(1, -20, 0, 40), UDim2.fromOffset(10, 228), true)
-			descriptionBox.Text = graphic.description or ""
-			local function saveGraphicDetails()
-				task.spawn(function()
-					self:_Invoke(Network.Actions.SetGraphicDetails, {
-						graphicId = graphic.id,
-						title = titleBox.Text,
-						description = descriptionBox.Text,
+			-- Title/description editing and sharing/sales are both Advanced
+			-- Mode only (same rule as My Studio/Discover/Avatar Lab) --
+			-- Simple Mode goes straight from the kind label to the download
+			-- link and Delete, hence the two different linkY/deleteY below.
+			if showAllMethods then
+				-- Never shown publicly for a private/personal copy (its
+				-- visibility can never go public -- see the license branch
+				-- below), but harmless to let the owner keep one anyway, and
+				-- keeping this block unconditional means every card in the grid
+				-- shares the same layout below it regardless of license.
+				local titleBox =
+					self:_TextBox(card, "Untitled graphic", UDim2.new(1, -20, 0, 28), UDim2.fromOffset(10, 196), false)
+				titleBox.Text = graphic.title or ""
+				local descriptionBox = self:_TextBox(
+					card,
+					"Add a description…",
+					UDim2.new(1, -20, 0, 40),
+					UDim2.fromOffset(10, 228),
+					true
+				)
+				descriptionBox.Text = graphic.description or ""
+				local function saveGraphicDetails()
+					task.spawn(function()
+						self:_Invoke(Network.Actions.SetGraphicDetails, {
+							graphicId = graphic.id,
+							title = titleBox.Text,
+							description = descriptionBox.Text,
+						})
+					end)
+				end
+				titleBox.FocusLost:Connect(saveGraphicDetails)
+				descriptionBox.FocusLost:Connect(saveGraphicDetails)
+				if graphic.license == "PERSONAL_COPY" then
+					Factory.Label(card, "Personal copy · yours to keep, never resellable", UDim2.new(1, -20, 0, 60), {
+						Position = UDim2.fromOffset(10, 276),
+						Color = Colors.Gold,
+						TextSize = 11,
+						Wrapped = true,
+						AlignY = Enum.TextYAlignment.Top,
 					})
-				end)
-			end
-			titleBox.FocusLost:Connect(saveGraphicDetails)
-			descriptionBox.FocusLost:Connect(saveGraphicDetails)
-			if graphic.license == "PERSONAL_COPY" then
-				Factory.Label(card, "Personal copy · yours to keep, never resellable", UDim2.new(1, -20, 0, 60), {
-					Position = UDim2.fromOffset(10, 276),
-					Color = Colors.Gold,
-					TextSize = 11,
-					Wrapped = true,
-					AlignY = Enum.TextYAlignment.Top,
-				})
-			else
-				local visibility = Factory.Button(
-					card,
-					if graphic.visibility == "PUBLIC" then "Private" else "Share",
-					UDim2.new(0.48, -5, 0, 32),
-					UDim2.fromOffset(10, 276),
-					nil
-				)
-				self:_BindButton(visibility)
-				visibility.Activated:Connect(function()
-					task.spawn(function()
-						local success, data = self:_Invoke(Network.Actions.SetGraphicVisibility, {
-							graphicId = graphic.id,
-							isPublic = graphic.visibility ~= "PUBLIC",
-						})
-						if success then
-							self.state.profile.graphics[graphic.id] = data.graphic
-							self:_RenderActivePage()
-						end
+				else
+					local visibility = Factory.Button(
+						card,
+						if graphic.visibility == "PUBLIC" then "Private" else "Share",
+						UDim2.new(0.48, -5, 0, 32),
+						UDim2.fromOffset(10, 276),
+						nil
+					)
+					self:_BindButton(visibility)
+					visibility.Activated:Connect(function()
+						task.spawn(function()
+							local success, data = self:_Invoke(Network.Actions.SetGraphicVisibility, {
+								graphicId = graphic.id,
+								isPublic = graphic.visibility ~= "PUBLIC",
+							})
+							if success then
+								self.state.profile.graphics[graphic.id] = data.graphic
+								self:_RenderActivePage()
+							end
+						end)
 					end)
-				end)
-				local priceBox =
-					self:_TextBox(card, "R$ 10–500", UDim2.new(0.52, -5, 0, 32), UDim2.new(0.48, 5, 0, 276), false)
-				priceBox.Text = tostring(graphic.listingPriceRobux or 50)
-				priceBox.TextXAlignment = Enum.TextXAlignment.Center
-				priceBox.FocusLost:Connect(function()
-					priceBox.Text = tostring(math.clamp(math.floor(tonumber(priceBox.Text) or 50), 10, 500))
-				end)
-				local list = Factory.Button(
-					card,
-					if graphic.isListed then "End listing" else "List for sale",
-					UDim2.new(1, -20, 0, 32),
-					UDim2.fromOffset(10, 312),
-					"primary"
-				)
-				self:_BindButton(list)
-				list.Activated:Connect(function()
-					task.spawn(function()
-						local success, data = self:_Invoke(Network.Actions.SetGraphicListing, {
-							graphicId = graphic.id,
-							isListed = not graphic.isListed,
-							priceRobux = tonumber(priceBox.Text),
-						})
-						if success then
-							self.state.profile.graphics[graphic.id] = data.graphic
-							self:_RenderActivePage()
-						end
+					local priceBox = self:_TextBox(
+						card,
+						"R$ 10–500",
+						UDim2.new(0.52, -5, 0, 32),
+						UDim2.new(0.48, 5, 0, 276),
+						false
+					)
+					priceBox.Text = tostring(graphic.listingPriceRobux or 50)
+					priceBox.TextXAlignment = Enum.TextXAlignment.Center
+					priceBox.FocusLost:Connect(function()
+						priceBox.Text = tostring(math.clamp(math.floor(tonumber(priceBox.Text) or 50), 10, 500))
 					end)
-				end)
+					local list = Factory.Button(
+						card,
+						if graphic.isListed then "End listing" else "List for sale",
+						UDim2.new(1, -20, 0, 32),
+						UDim2.fromOffset(10, 312),
+						"primary"
+					)
+					self:_BindButton(list)
+					list.Activated:Connect(function()
+						task.spawn(function()
+							local success, data = self:_Invoke(Network.Actions.SetGraphicListing, {
+								graphicId = graphic.id,
+								isListed = not graphic.isListed,
+								priceRobux = tonumber(priceBox.Text),
+							})
+							if success then
+								self.state.profile.graphics[graphic.id] = data.graphic
+								self:_RenderActivePage()
+							end
+						end)
+					end)
+				end
 			end
 			-- Roblox experiences cannot save a file to the player's device --
 			-- there is no such API in the client sandbox, for any experience.
@@ -7894,16 +8210,18 @@ function App:_RenderAvatarGraphics()
 			-- server.ts) specifically so this link works from a plain browser
 			-- outside Roblox. TextEditable = false lets the player select and
 			-- copy it (Ctrl+A, Ctrl+C) without being able to edit it.
+			local linkLabelY = if showAllMethods then 350 else 200
+			local linkBoxY = if showAllMethods then 363 else 213
 			local hasLink = graphic.backendJobId ~= nil and graphic.backendJobId ~= ""
 			Factory.Label(
 				card,
 				if hasLink then "FULL-RES DOWNLOAD LINK · COPY INTO BROWSER" else "LINK UNAVAILABLE (STUDIO MOCK)",
 				UDim2.new(1, -20, 0, 12),
-				{ Position = UDim2.fromOffset(10, 350), Color = Colors.TextMuted, TextSize = 8 }
+				{ Position = UDim2.fromOffset(10, linkLabelY), Color = Colors.TextMuted, TextSize = 8 }
 			)
 			local linkBox = Factory.New("TextBox", {
 				Size = UDim2.new(1, -20, 0, 34),
-				Position = UDim2.fromOffset(10, 363),
+				Position = UDim2.fromOffset(10, linkBoxY),
 				BackgroundColor3 = Colors.Ink,
 				BackgroundTransparency = 0.12,
 				BorderSizePixel = 0,
@@ -7922,7 +8240,8 @@ function App:_RenderAvatarGraphics()
 			})
 			Factory.Corner(linkBox, 8)
 			Factory.Padding(linkBox, 6, 4)
-			local delete = Factory.Button(card, "Delete", UDim2.new(1, -20, 0, 30), UDim2.fromOffset(10, 406), nil)
+			local deleteY = if showAllMethods then 406 else 256
+			local delete = Factory.Button(card, "Delete", UDim2.new(1, -20, 0, 30), UDim2.fromOffset(10, deleteY), nil)
 			self:_BindButton(delete)
 			delete.Activated:Connect(function()
 				delete.Active = false
