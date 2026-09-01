@@ -8,6 +8,13 @@ return table.freeze({
 		Tagline = "Imagine it. Fit it. Wear it.",
 	},
 
+	-- Bump this only when the first-session explanation changes materially.
+	-- The client compares it with profile.tutorialVersion, so a new version
+	-- reaches existing players once without repeatedly interrupting them.
+	Tutorial = {
+		Version = 1,
+	},
+
 	Backend = {
 		BaseUrl = "https://meshyairoblox-production.up.railway.app", -- Example: https://forge-ugc-production.up.railway.app
 		SecretName = "FORGE_BACKEND_SECRET",
@@ -466,16 +473,12 @@ return table.freeze({
 	Studio = {
 		AllowMockPurchases = true,
 		AllowMockBackend = true,
-		-- Every Studio Bootstrap response reports onboarding incomplete,
-		-- generationsCompleted as 0, and settings.simpleMode as true (see
-		-- Main.server.luau's bootstrap()) regardless of what a prior Studio
-		-- run actually saved, so the first-timer flow -- landing straight
-		-- on Create instead of the launcher screen, in Simple Mode -- (see
-		-- App.luau's Bootstrap success handler and _RenderCreate) replays
-		-- on every playtest instead of only the first time a given account
-		-- is used. Never affects a live/published server, and never
-		-- touches the saved profile -- flip off to test the returning-
-		-- creator/Advanced-Mode state instead.
+		-- Every Studio Bootstrap response reports tutorialVersion 0,
+		-- onboarding incomplete, generationsCompleted 0, and Simple Mode true
+		-- (see Main.server.luau's bootstrap()) regardless of what a prior Studio
+		-- run saved. That replays the visual tutorial and first-timer Create
+		-- layout on every playtest without touching the saved profile. Flip this
+		-- off to test the returning-creator state instead.
 		AlwaysShowFirstTimerFlow = true,
 	},
 })

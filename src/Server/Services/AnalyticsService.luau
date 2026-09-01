@@ -24,7 +24,19 @@ local CLIENT_EVENTS = {
 	RunwayOpened = true,
 	ArcadeGameStarted = true,
 	FirstLookGuide = true,
+	VisualTutorialShown = true,
+	GenerationOfferShown = true,
 }
+
+local GENERATION_PRODUCT_VALUES: { [string]: boolean } = {
+	DirectGeneration = true,
+	ImagePreviewLow = true,
+	ImagePreviewMedium = true,
+	ImagePreviewHigh = true,
+	ImageConversion = true,
+	AvatarConversion = true,
+}
+local PAYMENT_METHOD_VALUES: { [string]: boolean } = { ROBUX = true, TOKENS = true }
 
 local ARCADE_GAME_VALUES: { [string]: boolean } = {}
 for _, gameKey in Config.Arcade.Games do
@@ -243,6 +255,21 @@ function AnalyticsService:TrackClient(player: Player, payload: any): (boolean, a
 		end
 		fields.stage = stage
 		fields.action = action
+	elseif payload.event == "GenerationOfferShown" then
+		local productKey = type(payload.fields) == "table" and payload.fields.productKey or nil
+		local paymentMethod = type(payload.fields) == "table" and payload.fields.paymentMethod or nil
+		if
+			type(productKey) ~= "string"
+			or not GENERATION_PRODUCT_VALUES[productKey]
+			or type(paymentMethod) ~= "string"
+			or not PAYMENT_METHOD_VALUES[paymentMethod]
+		then
+			return false, "INVALID_ANALYTICS_FIELDS"
+		end
+		fields.productKey = productKey
+		fields.paymentMethod = paymentMethod
+		fields.price = math.clamp(math.floor(tonumber(payload.fields.price) or 0), 0, 100000)
+		fields.simpleMode = payload.fields.simpleMode == true
 	end
 	self:Custom(player, payload.event, 1, fields)
 	if payload.event == "OnboardingStep" then

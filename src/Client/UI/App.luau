@@ -433,6 +433,9 @@ function App.new()
 		toastVersion = 0,
 		queuedSoundIds = {} :: { [string]: boolean },
 		completionShownIds = {} :: { [string]: boolean },
+		tutorialOverlay = nil :: Frame?,
+		visualTutorialShown = false,
+		generationOfferEvents = {} :: { [string]: boolean },
 		navButtons = {} :: { [string]: TextButton },
 		activeViewport = nil :: any,
 		ambientMotionEnabled = false,
@@ -695,6 +698,12 @@ function App:_BuildChrome()
 	self:_BindButton(launcher)
 	launcher.Activated:Connect(function()
 		self:_SetStudioOpen(true)
+		-- Create was prepared behind the closed shell during Bootstrap. Rebuild
+		-- it now that it is genuinely visible so impression analytics describe
+		-- what the player saw, not hidden UI.
+		if self.state then
+			self:_RenderActivePage()
+		end
 	end)
 	self.launcher = launcher
 
@@ -1480,7 +1489,11 @@ function App:_SetStudioOpen(open: boolean)
 	elseif changed then
 		self.sounds:Play("PanelClose")
 	end
-	if open then
+	-- The first Bootstrap opens Create behind the visual tutorial before the
+	-- player has chosen a path. Do not send the gated journey action early;
+	-- it would correctly fail ONBOARDING_REQUIRED and show a frightening,
+	-- generic error toast during the very first seconds of play.
+	if open and self.state and self.state.profile.onboarding.completed == true then
 		self:_MarkJourneyOpen()
 	end
 end
@@ -1609,6 +1622,323 @@ function App:_AnimateModalIn(overlay: Frame, modal: Frame)
 	)
 	local scale = Factory.New("UIScale", { Scale = 0.92, Parent = modal })
 	self:_Animate(scale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+end
+
+-- One short, visual explanation replaces the old multi-page onboarding. The
+-- audience skews young, so the hierarchy is circles first, verbs second, and
+-- supporting copy last: TRY -> MAKE -> WEAR. It is versioned server-side so a
+-- materially clearer edition can reach existing players once without becoming
+-- a modal they must dismiss every session.
+function App:_ShowVisualTutorial()
+	if not self.state then
+		return
+	end
+	if self.tutorialOverlay and self.tutorialOverlay.Parent then
+		return
+	end
+
+	local camera = Workspace.CurrentCamera
+	local viewport = if camera then camera.ViewportSize else Vector2.new(1200, 800)
+	local vertical = self.compact == true or viewport.X < 760
+	local modalWidth = math.floor(math.clamp(viewport.X * 0.9, 300, if vertical then 560 else 760))
+	local modalHeight =
+		math.floor(math.clamp(viewport.Y * 0.88, if vertical then 460 else 440, if vertical then 520 else 500))
+	local ZBASE = 350
+
+	local overlay = Factory.New("Frame", {
+		Name = "HowToPlay",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.fromRGB(5, 7, 20),
+		BackgroundTransparency = 0.08,
+		BorderSizePixel = 0,
+		Active = true,
+		ZIndex = ZBASE,
+		Parent = self.gui,
+	})
+	self.tutorialOverlay = overlay
+	local modal = Factory.New("Frame", {
+		Name = "TutorialCard",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(modalWidth, modalHeight),
+		BackgroundColor3 = Colors.Panel,
+		BorderSizePixel = 0,
+		ZIndex = ZBASE + 1,
+		Parent = overlay,
+	})
+	Factory.Corner(modal, 26)
+	Factory.Stroke(modal, Colors.Cyan, 0.18, 2)
+	Factory.Gradient(modal, { Color3.fromRGB(72, 67, 119), Colors.Panel, Color3.fromRGB(37, 45, 76) }, 125)
+
+	local badge = Factory.Pill(modal, "FREE START · NO ROBUX", Colors.Mint, 166)
+	badge.AnchorPoint = Vector2.new(0.5, 0)
+	badge.Position = UDim2.new(0.5, 0, 0, if vertical then 11 else 17)
+	badge.ZIndex = ZBASE + 3
+	Factory.Label(modal, "HOW TO PLAY", UDim2.new(1, -36, 0, if vertical then 28 else 34), {
+		Position = UDim2.fromOffset(18, if vertical then 38 else 49),
+		Font = Theme.Fonts.Black,
+		TextSize = if vertical then 23 else 29,
+		AlignX = Enum.TextXAlignment.Center,
+		ZIndex = ZBASE + 3,
+	})
+	Factory.Label(modal, "Try a look for free. Make your own when you're ready.", UDim2.new(1, -48, 0, 34), {
+		Position = UDim2.fromOffset(24, if vertical then 68 else 84),
+		Color = Colors.TextMuted,
+		TextSize = if vertical then 12 else 13,
+		Wrapped = true,
+		AlignX = Enum.TextXAlignment.Center,
+		AlignY = Enum.TextYAlignment.Top,
+		ZIndex = ZBASE + 3,
+	})
+
+	local steps = {
+		{ number = "1", word = "TRY", body = "Tap a free look", color = Colors.Mint },
+		{ number = "2", word = "MAKE", body = "Type your idea", color = Colors.Violet },
+		{ number = "3", word = "WEAR", body = "Fit it on your avatar", color = Colors.Cyan },
+	}
+	if vertical then
+		local connector = Factory.New("Frame", {
+			Position = UDim2.fromOffset(44, 128),
+			Size = UDim2.fromOffset(3, 132),
+			BackgroundColor3 = Colors.Line,
+			BackgroundTransparency = 0.35,
+			BorderSizePixel = 0,
+			ZIndex = ZBASE + 2,
+			Parent = modal,
+		})
+		Factory.Corner(connector, 2)
+		for index, step in steps do
+			local rowY = 106 + (index - 1) * 59
+			local circle = Factory.New("Frame", {
+				Position = UDim2.fromOffset(22, rowY),
+				Size = UDim2.fromOffset(47, 47),
+				BackgroundColor3 = step.color,
+				BorderSizePixel = 0,
+				ZIndex = ZBASE + 4,
+				Parent = modal,
+			})
+			Factory.Corner(circle, 24)
+			Factory.Stroke(circle, Colors.Text, 0.55, 1.5)
+			Factory.Label(circle, step.number, UDim2.fromScale(1, 1), {
+				Color = if index == 1 then Colors.Ink else Colors.Text,
+				Font = Theme.Fonts.Black,
+				TextSize = 20,
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+				ZIndex = ZBASE + 5,
+			})
+			Factory.Label(modal, step.word, UDim2.new(1, -112, 0, 22), {
+				Position = UDim2.fromOffset(86, rowY + 2),
+				Color = step.color,
+				Font = Theme.Fonts.Black,
+				TextSize = 17,
+				ZIndex = ZBASE + 4,
+			})
+			Factory.Label(modal, step.body, UDim2.new(1, -112, 0, 20), {
+				Position = UDim2.fromOffset(86, rowY + 25),
+				Color = Colors.TextMuted,
+				TextSize = 12,
+				ZIndex = ZBASE + 4,
+			})
+		end
+	else
+		local stepArea = Factory.New("Frame", {
+			Position = UDim2.fromOffset(24, 125),
+			Size = UDim2.new(1, -48, 0, 160),
+			BackgroundTransparency = 1,
+			ZIndex = ZBASE + 2,
+			Parent = modal,
+		})
+		for index, step in steps do
+			local card = Factory.New("Frame", {
+				Position = UDim2.new((index - 1) / 3, if index == 1 then 0 else 8, 0, 0),
+				Size = UDim2.new(1 / 3, -11, 1, 0),
+				BackgroundColor3 = Colors.PanelSoft,
+				BackgroundTransparency = 0.12,
+				BorderSizePixel = 0,
+				ZIndex = ZBASE + 3,
+				Parent = stepArea,
+			})
+			Factory.Corner(card, 18)
+			Factory.Stroke(card, step.color, 0.38, 1.4)
+			local circle = Factory.New("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0),
+				Position = UDim2.new(0.5, 0, 0, 13),
+				Size = UDim2.fromOffset(56, 56),
+				BackgroundColor3 = step.color,
+				BorderSizePixel = 0,
+				ZIndex = ZBASE + 4,
+				Parent = card,
+			})
+			Factory.Corner(circle, 28)
+			Factory.Label(circle, step.number, UDim2.fromScale(1, 1), {
+				Color = if index == 1 then Colors.Ink else Colors.Text,
+				Font = Theme.Fonts.Black,
+				TextSize = 23,
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Center,
+				ZIndex = ZBASE + 5,
+			})
+			Factory.Label(card, step.word, UDim2.new(1, -20, 0, 25), {
+				Position = UDim2.fromOffset(10, 79),
+				Color = step.color,
+				Font = Theme.Fonts.Black,
+				TextSize = 18,
+				AlignX = Enum.TextXAlignment.Center,
+				ZIndex = ZBASE + 4,
+			})
+			Factory.Label(card, step.body, UDim2.new(1, -20, 0, 30), {
+				Position = UDim2.fromOffset(10, 108),
+				Color = Colors.TextMuted,
+				TextSize = 12,
+				Wrapped = true,
+				AlignX = Enum.TextXAlignment.Center,
+				AlignY = Enum.TextYAlignment.Top,
+				ZIndex = ZBASE + 4,
+			})
+			if index < #steps then
+				Factory.Label(stepArea, "→", UDim2.fromOffset(28, 34), {
+					Position = UDim2.new(index / 3, -14, 0, 62),
+					Color = Colors.Gold,
+					Font = Theme.Fonts.Black,
+					TextSize = 25,
+					AlignX = Enum.TextXAlignment.Center,
+					ZIndex = ZBASE + 6,
+				})
+			end
+		end
+	end
+
+	local noteY = if vertical then 286 else 300
+	local note = Factory.New("Frame", {
+		Position = UDim2.fromOffset(22, noteY),
+		Size = UDim2.new(1, -44, 0, if vertical then 38 else 40),
+		BackgroundColor3 = Colors.Gold,
+		BackgroundTransparency = 0.86,
+		BorderSizePixel = 0,
+		ZIndex = ZBASE + 3,
+		Parent = modal,
+	})
+	Factory.Corner(note, 10)
+	Factory.Label(
+		note,
+		"Making your own can cost Robux. Roblox always asks before charging.",
+		UDim2.new(1, -18, 1, 0),
+		{
+			Position = UDim2.fromOffset(9, 0),
+			Color = Colors.Text,
+			Font = Theme.Fonts.Bold,
+			TextSize = if vertical then 10 else 11,
+			Wrapped = true,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			ZIndex = ZBASE + 4,
+		}
+	)
+
+	local primaryY = if vertical then 332 else 352
+	local primary = Factory.Button(
+		modal,
+		"START FREE LOOK  →",
+		UDim2.new(1, -44, 0, 42),
+		UDim2.fromOffset(22, primaryY),
+		"primary"
+	)
+	local makeOwn = Factory.Button(
+		modal,
+		"MAKE MY OWN",
+		if vertical then UDim2.new(1, -44, 0, 38) else UDim2.new(0.5, -28, 0, 42),
+		if vertical then UDim2.fromOffset(22, primaryY + 48) else UDim2.new(0.5, 6, 0, primaryY),
+		nil
+	)
+	if not vertical then
+		primary.Size = UDim2.new(0.5, -28, 0, 42)
+	end
+	primary.ZIndex = ZBASE + 4
+	makeOwn.ZIndex = ZBASE + 4
+	self:_BindButton(primary)
+	self:_BindButton(makeOwn)
+	local skipY = if vertical then primaryY + 91 else primaryY + 48
+	local skip = Factory.New("TextButton", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, skipY),
+		Size = UDim2.fromOffset(140, 26),
+		BackgroundTransparency = 1,
+		Text = "Skip tutorial",
+		TextColor3 = Colors.TextMuted,
+		BackgroundColor3 = Colors.PanelSoft,
+		BackgroundTransparency = 0.65,
+		Font = Theme.Fonts.Medium,
+		TextSize = 12,
+		ZIndex = ZBASE + 4,
+		Parent = modal,
+	})
+	Factory.Corner(skip, 13)
+	self:_BindButton(skip)
+
+	if not self.visualTutorialShown then
+		self.visualTutorialShown = true
+		self:_Track({ event = "VisualTutorialShown" })
+	end
+	local choosing = false
+	local function choose(choice: string)
+		if choosing then
+			return
+		end
+		choosing = true
+		primary.Active = false
+		makeOwn.Active = false
+		skip.Active = false
+		if choice == "START_FREE" then
+			primary.Text = "OPENING FREE LOOK…"
+		elseif choice == "MAKE_OWN" then
+			makeOwn.Text = "OPENING CREATOR…"
+		else
+			skip.Text = "Opening…"
+		end
+		task.spawn(function()
+			local success, result = self:_Invoke(Network.Actions.CompleteTutorial, { choice = choice })
+			if not success then
+				choosing = false
+				primary.Active = true
+				makeOwn.Active = true
+				skip.Active = true
+				primary.Text = "START FREE LOOK  →"
+				makeOwn.Text = "MAKE MY OWN"
+				skip.Text = "Skip tutorial"
+				return
+			end
+			self.state.profile.tutorialVersion = if type(result) == "table"
+				then tonumber(result.tutorialVersion) or Config.Tutorial.Version
+				else Config.Tutorial.Version
+			self.state.profile.onboarding.completed = true
+			self.state.profile.onboarding.step = math.max(self.state.profile.onboarding.step or 1, 2)
+			if self.tutorialOverlay == overlay then
+				self.tutorialOverlay = nil
+			end
+			overlay:Destroy()
+			self:_SetStudioOpen(true)
+			if choice == "START_FREE" then
+				self:_OpenPage(if self.state.policy.contentSharingAllowed then "Discover" else "Avatar Lab")
+			else
+				if choice == "MAKE_OWN" then
+					self.scrollPositions.Create = Vector2.new(0, 150)
+				end
+				self:_OpenPage("Create")
+			end
+		end)
+	end
+	primary.Activated:Connect(function()
+		choose("START_FREE")
+	end)
+	makeOwn.Activated:Connect(function()
+		choose("MAKE_OWN")
+	end)
+	skip.Activated:Connect(function()
+		choose("SKIP")
+	end)
+	self:_AnimateModalIn(overlay, modal)
+	GuiService.SelectedObject = primary
 end
 
 -- Shared by the Settings page's own Invite card and any other contextual
@@ -2241,24 +2571,12 @@ function App:_Bootstrap()
 		self:_OpenPage("Create")
 		self:_RefreshLocalizedPrices()
 		if (data.profile.stats.generationsCompleted or 0) == 0 then
-			-- A first-timer used to land on four equal launcher buttons,
-			-- then (briefly) a tutorial modal describing what they meant.
-			-- Both are gone: they now land directly on the Create page
-			-- itself, already collapsed to one method, a prompt box, and a
-			-- few tappable example ideas (see _RenderCreate) -- there's
-			-- nothing left worth explaining in a separate modal first, the
-			-- destination explains itself. _SetStudioOpen(true) already
-			-- reports OPEN_STUDIO to RetentionService, which is the real
-			-- driver of onboarding step 3 ("Opened free First Look") --
-			-- this just also closes out step 2 ("Chose a starting path"),
-			-- since landing here *is* that choice now that there's only
-			-- ever the one path to land on.
-			if not data.profile.onboarding.completed then
-				task.spawn(function()
-					self:_Invoke(Network.Actions.CompleteOnboarding, {})
-				end)
-			end
+			-- Open the useful destination immediately, but do not silently
+			-- complete onboarding. The visual tutorial records the path the
+			-- player actually chooses and then repeats OPEN_STUDIO after the
+			-- server permits the free First Look journey.
 			self:_SetStudioOpen(true)
+			self:_RenderActivePage()
 		elseif
 			data.dailyBrief
 			and (
@@ -2319,6 +2637,13 @@ function App:_Bootstrap()
 					data.dailyBrief.theme
 				)
 			)
+		end
+		if (tonumber(data.profile.tutorialVersion) or 0) < Config.Tutorial.Version then
+			task.defer(function()
+				if self.state == data and self.gui.Parent then
+					self:_ShowVisualTutorial()
+				end
+			end)
 		end
 	end)
 end
@@ -2752,7 +3077,11 @@ function App:_OpenPage(page: string)
 	-- unavailable) is now the actual free First Look. Record the journey
 	-- only when a player intentionally reaches it, not automatically while
 	-- their profile is merely booting behind the onboarding modal.
-	if page == "Discover" or page == "Avatar Lab" then
+	if
+		(page == "Discover" or page == "Avatar Lab")
+		and self.state
+		and self.state.profile.onboarding.completed == true
+	then
 		self:_MarkJourneyOpen()
 	end
 end
@@ -2915,12 +3244,33 @@ function App:_RenderCreate()
 	-- never removed, just not the default for an audience that skews young.
 	local simpleMode = self.state.profile.settings.simpleMode ~= false
 	local showAllMethods = not simpleMode
+	-- A player can enter Simple Mode after selecting an advanced method in the
+	-- same session. Keep the hidden state honest: the one visible creator is
+	-- always Direct Forge, never a stale image/avatar method with mismatched
+	-- copy and price.
+	if simpleMode then
+		self.selectedMethod = "TEXT_TO_3D"
+	end
 	self:_PageHeader(
-		if showAllMethods then "Create something impossible" else "Describe it. Wear it.",
+		if showAllMethods
+			then "Create something impossible"
+			else if self.compact then "Make an item" else "Make your own Roblox item",
 		if showAllMethods
 			then "Three paths, precise art direction, one Roblox-ready accessory. Every input is moderated."
-			else "Type what you want below and Forge builds a real, wearable Roblox accessory from it. Every input is moderated."
+			else "Pick an idea or type one. Roblox shows the price and asks before you buy."
 	)
+	local howToPlay = Factory.Button(
+		self.content,
+		if self.compact then "?" else "?  HOW TO PLAY",
+		UDim2.fromOffset(if self.compact then 34 else 122, 30),
+		UDim2.new(1, if self.compact then -46 else -138, 0, 16),
+		nil
+	)
+	howToPlay.TextSize = if self.compact then 10 else 11
+	self:_BindButton(howToPlay)
+	howToPlay.Activated:Connect(function()
+		self:_ShowVisualTutorial()
+	end)
 	local page = Factory.New("ScrollingFrame", {
 		Name = "CreateScroll",
 		Position = UDim2.new(0.02, 0, 0, 96),
@@ -2951,7 +3301,7 @@ function App:_RenderCreate()
 		local complete = firstLook.completed == true
 		local done = firstLook.done or {}
 		local card = Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 158 else 132), nil, "FirstLook")
-		card.LayoutOrder = -1
+		card.LayoutOrder = if simpleMode then -30 else -1
 		local icon = Factory.New("Frame", {
 			Size = UDim2.fromOffset(44, 44),
 			Position = UDim2.fromOffset(16, 16),
@@ -2970,7 +3320,7 @@ function App:_RenderCreate()
 		})
 		Factory.Label(
 			card,
-			if complete then "First Look complete" else "Start with a free First Look",
+			if complete then "First Look complete" else "Try a look for FREE",
 			UDim2.new(1, if self.compact then -88 else -240, 0, 26),
 			{
 				Position = UDim2.fromOffset(72, 13),
@@ -2983,7 +3333,7 @@ function App:_RenderCreate()
 			card,
 			if complete
 				then "Keep leveling up in six-minute Forge Runway style battles."
-				else "Try a featured creator accessory free, lock it in, and finish one runway round—no generation purchase needed.",
+				else "Put a creator's item on your avatar, then join a runway round. No Robux needed.",
 			UDim2.new(if self.compact then 1 else 0.68, if self.compact then -32 else -80, 0, 38),
 			{
 				Position = UDim2.fromOffset(if self.compact then 16 else 72, if self.compact then 67 else 42),
@@ -3015,7 +3365,7 @@ function App:_RenderCreate()
 			card,
 			if complete
 				then "Open Forge Runway"
-				else if not done.TRY_STYLE then "Try a free look →" else "Enter Forge Runway →",
+				else if not done.TRY_STYLE then "START FREE →" else "Enter Forge Runway →",
 			if self.compact then UDim2.new(1, -32, 0, 36) else UDim2.new(0.27, -12, 0, 42),
 			if self.compact then UDim2.fromOffset(16, 116) else UDim2.new(0.72, 0, 0, 45),
 			if complete then "mint" else "primary"
@@ -3045,8 +3395,10 @@ function App:_RenderCreate()
 	-- (see Config.Ads.WorstCaseAdRevenuePerAd), so this is purely a "you've
 	-- watched N today" stat, never a limiter on the button below.
 	local watchesToday = self.adWatchesToday or 0
-	local tokensDescriptionText = "Earn tokens by watching ads. Ad tokens fund generations or the Pass; "
-		.. "free tokens (achievements, streaks) fund the Pass only."
+	local tokensDescriptionText = if simpleMode
+		then "Watch ads for spendable tokens, or buy 70. Free reward tokens only speed up finished creations."
+		else "Earn tokens by watching ads. Ad tokens fund generations or the Pass; "
+			.. "free tokens (achievements, streaks) fund the Pass only."
 	-- Right-hand controls: on compact layouts this column collapses to full
 	-- width BELOW the balance/description, so its start (payLabelY) has to
 	-- clear however tall that description wraps to, not a number guessed
@@ -3217,11 +3569,11 @@ function App:_RenderCreate()
 	local allMethods = {
 		{
 			id = "TEXT_TO_3D",
-			title = "Direct Forge",
-			kicker = if showAllMethods then "FASTEST VALUE" else "START HERE",
+			title = if showAllMethods then "Direct Forge" else "Your custom item",
+			kicker = if showAllMethods then "FASTEST VALUE" else "AI CREATION",
 			body = if showAllMethods
 				then "Text → Smart Topology 3D. Lower cost and ideal for bold, simple silhouettes."
-				else "Describe anything you can imagine below and Forge builds a real, wearable Roblox accessory from it -- the fastest, cheapest way to create.",
+				else "Forge turns your words into one 3D item you can fit and wear in this game.",
 			price = self.state.prices.DirectGeneration,
 			color = Colors.Cyan,
 		},
@@ -3262,7 +3614,7 @@ function App:_RenderCreate()
 	local methodRow = Factory.New("Frame", {
 		Size = UDim2.new(1, 0, 0, if showAllMethods then (if self.compact then 656 else 364) else 210),
 		BackgroundTransparency = 1,
-		LayoutOrder = 1,
+		LayoutOrder = if simpleMode then -10 else 1,
 		Parent = stack,
 	})
 	for index, method in visibleMethods do
@@ -3404,10 +3756,13 @@ function App:_RenderCreate()
 	else
 		local cursorY = 14
 		local promptCard = Factory.Card(stack, UDim2.new(1, 0, 0, 560), nil, "PromptCard")
-		promptCard.LayoutOrder = 2
+		promptCard.LayoutOrder = if simpleMode then -20 else 2
 		Factory.Label(
 			promptCard,
-			if isAvatar then "1  STYLING NOTES (OPTIONAL)" else "1  DESCRIBE YOUR ACCESSORY",
+			if isAvatar
+				then "1  STYLING NOTES (OPTIONAL)"
+				elseif simpleMode then "1  TYPE YOUR IDEA"
+				else "1  DESCRIBE YOUR ACCESSORY",
 			UDim2.new(1, -32, 0, 24),
 			{
 				Position = UDim2.fromOffset(16, cursorY),
@@ -3421,7 +3776,9 @@ function App:_RenderCreate()
 			promptCard,
 			if isAvatar
 				then 'Optional -- e.g. "Make it glossy with a violet crystal accent." Leave blank to match your avatar as-is.'
-				else "Example: A glossy crescent-moon crown made of translucent violet crystal, chunky silhouette, no floating pieces",
+				else if simpleMode
+					then "Try: Glowing dragon wings, a crystal crown, or a neon sword…"
+					else "Example: A glossy crescent-moon crown made of translucent violet crystal, chunky silhouette, no floating pieces",
 			UDim2.new(1, -32, 0, 80),
 			UDim2.fromOffset(16, cursorY),
 			true
@@ -3747,7 +4104,7 @@ function App:_RenderCreate()
 		else
 			Factory.Label(
 				promptCard,
-				'Using default style and fit -- tap "Switch to Advanced Mode" above for full control.',
+				"We'll choose the best style and fit. Advanced Mode lets you change them.",
 				UDim2.new(1, -32, 0, 18),
 				{ Position = UDim2.fromOffset(16, cursorY), Color = Colors.TextMuted, TextSize = 10, Wrapped = true }
 			)
@@ -3755,15 +4112,31 @@ function App:_RenderCreate()
 		end
 
 		local safetyY = cursorY
-		local buttonY = if self.compact then safetyY + 39 else safetyY
+		local buttonY = if self.compact or not showAllMethods then safetyY + 39 else safetyY
+		local simpleRetryAvailable = (self.state.profile.retryCredits.DirectGeneration or 0) > 0
 		promptCard.Size = UDim2.new(1, 0, 0, buttonY + 58)
 		Factory.Label(
 			promptCard,
-			if isUpload
+			if simpleMode
+				then if simpleRetryAvailable
+					then "Your retry credit will be used · No Robux charge"
+					elseif
+						self.state.policy.commerceAllowed ~= true
+					then "Roblox has disabled purchases for this account · Try a free look instead"
+					elseif self.paymentMethod == "TOKENS" then string.format(
+						"One custom 3D accessory · %d ad tokens · Free reward tokens cannot pay for AI",
+						tokenPrice(self.state.prices.DirectGeneration, "DirectGeneration")
+					)
+					else string.format(
+						"One custom 3D accessory · Roblox asks before charging R$ %d · Nothing starts until you confirm",
+						self.state.prices.DirectGeneration
+					)
+				elseif
+					isUpload
 				then "Roblox asset moderation + ownership verification · no duplicate OpenAI image check"
 				elseif isAvatar then "Your avatar is fetched automatically · Roblox TextService + provider moderation"
 				else "Roblox TextService + provider moderation · 3,600 triangle target · 2K texture",
-			if self.compact then UDim2.new(1, -32, 0, 34) else UDim2.new(1, -462, 0, 42),
+			if self.compact or not showAllMethods then UDim2.new(1, -32, 0, 34) else UDim2.new(1, -462, 0, 42),
 			{
 				Position = UDim2.fromOffset(16, safetyY),
 				Color = Colors.TextMuted,
@@ -3792,12 +4165,41 @@ function App:_RenderCreate()
 		local priceText = if payWithTokens
 			then string.format("%d ad tokens", tokenPrice(price, generationProductKey))
 			else string.format("R$ %d", price)
+		local hasRetryCredit = (self.state.profile.retryCredits[generationProductKey] or 0) > 0
+		-- Do not count an offer rendered behind the first-session tutorial as
+		-- seen. It becomes a real impression only after the player exits that
+		-- overlay and Create is visible again.
+		if
+			self.shell.Visible
+			and not isUpload
+			and not hasRetryCredit
+			and self.state.policy.commerceAllowed == true
+			and (tonumber(self.state.profile.tutorialVersion) or 0) >= Config.Tutorial.Version
+		then
+			local offerKey = string.format("%s:%s:%s", generationProductKey, self.paymentMethod, tostring(simpleMode))
+			if not self.generationOfferEvents[offerKey] then
+				self.generationOfferEvents[offerKey] = true
+				self:_Track({
+					event = "GenerationOfferShown",
+					fields = {
+						productKey = generationProductKey,
+						paymentMethod = self.paymentMethod,
+						price = price,
+						simpleMode = simpleMode,
+					},
+				})
+			end
+		end
 		-- Simple Mode's button says what it does in plain words instead of
 		-- brand terms ("Forge 3D") a first-time young creator hasn't been
 		-- taught yet -- always the TEXT_TO_3D case, since that's the only
 		-- method Simple Mode ever leaves selected.
-		local actionText = if not showAllMethods
-			then string.format("Make It! · %s", priceText)
+		local actionText = if hasRetryCredit
+			then if not showAllMethods then "Retry My Accessory · FREE CREDIT" else "Use retry credit · FREE"
+			elseif
+				self.state.policy.commerceAllowed ~= true and not isUpload
+			then "Purchases unavailable on this account"
+			elseif not showAllMethods then string.format("Make My Accessory · %s", priceText)
 			elseif self.selectedMethod == "TEXT_TO_3D" then string.format("Forge 3D · %s", priceText)
 			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · %s", priceText)
 			elseif self.selectedMethod == "AVATAR_TO_3D" then string.format(
@@ -3808,10 +4210,17 @@ function App:_RenderCreate()
 		local generate = Factory.Button(
 			promptCard,
 			actionText,
-			if self.compact then UDim2.new(0.5, -20, 0, 42) else UDim2.new(0, 250, 0, 42),
-			if self.compact then UDim2.new(0.5, 5, 0, buttonY) else UDim2.new(1, -266, 0, buttonY),
+			if not showAllMethods
+				then UDim2.new(1, -32, 0, 42)
+				elseif self.compact then UDim2.new(0.5, -20, 0, 42)
+				else UDim2.new(0, 250, 0, 42),
+			if not showAllMethods
+				then UDim2.fromOffset(16, buttonY)
+				elseif self.compact then UDim2.new(0.5, 5, 0, buttonY)
+				else UDim2.new(1, -266, 0, buttonY),
 			"primary"
 		)
+		generate.Active = isUpload or hasRetryCredit or self.state.policy.commerceAllowed == true
 		self:_BindButton(generate)
 		-- The Priority Pass upsell -- a second button competing for
 		-- attention right beside the one action Simple Mode actually needs

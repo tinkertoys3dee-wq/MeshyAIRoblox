@@ -80,12 +80,21 @@ function CommerceService.new(
 		return self:_ProcessReceipt(receiptInfo)
 	end
 	MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId, productId, isPurchased)
-		if isPurchased then
-			return
-		end
 		local player = Players:GetPlayerByUserId(userId)
 		local productKey = self:_ProductKey(productId)
 		if not player or not productKey then
+			return
+		end
+		local configuredProduct = Config.Products[productKey]
+		local analyticsPrice = (self.priceCache and self.priceCache[productKey])
+			or (configuredProduct and configuredProduct.SuggestedPrice)
+			or 0
+		self.analytics:Custom(player, "ProductPromptClosed", 1, {
+			product = productKey,
+			price = analyticsPrice,
+			purchased = isPurchased,
+		})
+		if isPurchased then
 			return
 		end
 		local removed = false
@@ -335,6 +344,10 @@ function CommerceService:BeginIntent(
 		self.profiles:Save(player)
 		return false, "PURCHASE_PROMPT_FAILED"
 	end
+	self.analytics:Custom(player, "ProductPromptOpened", 1, {
+		product = productKey,
+		price = (self.priceCache and self.priceCache[productKey]) or product.SuggestedPrice,
+	})
 	return true, { intentId = intentId, prompted = true }
 end
 
@@ -561,6 +574,11 @@ function CommerceService:_ProcessReceipt(receiptInfo: { [string]: any }): Enum.P
 		})
 	end
 	self.analytics:Economy(player, tonumber(receiptInfo.CurrencySpent) or 0, productKey)
+	self.analytics:Custom(player, "ProductPurchaseCompleted", 1, {
+		product = productKey,
+		price = tonumber(receiptInfo.CurrencySpent) or 0,
+		firstPurchase = isFirstPurchase,
+	})
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 

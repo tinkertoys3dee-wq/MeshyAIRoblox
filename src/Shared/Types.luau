@@ -210,6 +210,7 @@ export type PlayerProfile = {
 	-- Free grants (achievements, daily check-in, invites, group join) — may
 	-- only ever buy the Priority Pass.
 	bonusTokens: number,
+	tutorialVersion: number,
 	adWatch: { day: number, count: number },
 	afk: { day: number, earned: number },
 	creator: {

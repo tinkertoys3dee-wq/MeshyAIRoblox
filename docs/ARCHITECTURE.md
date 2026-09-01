@@ -75,7 +75,7 @@ Forge Tokens are earned by watching a Roblox Rewarded Video ad (`Class.AdService
 - paid/ad Forge Token balance, free bonus-token balance, the daily ad counter, and AFK daily earnings;
 - First Look progress, Creator XP/level statistics, runway participation, daily first-round/Encore reward state, and idempotent weekly payout state;
 - processed developer-product receipt IDs;
-- settings, onboarding, streak, and analytics counters.
+- settings, the independently versioned visual tutorial, onboarding, streak, and analytics counters.
 
 `ForgeUGC_ItemIndex_v1` contains only public item IDs, owner IDs, current listing state/price, engagement counters, and ranking timestamps. Trending scores and cross-server listing availability are calculated from that index; the owner profile remains canonical for ownership, licensing, visibility, and the source model. This small shared index is necessary because Roblox DataStores cannot enumerate every player key for marketplace discovery.
 
@@ -83,7 +83,7 @@ The raw GLB/PNG bytes are never placed in a DataStore. Roblox DataStores are met
 
 ## First Look, Creator progression, and Forge Runway
 
-`RetentionService` owns the free four-step First Look journey. The client may report only `OPEN_STUDIO`; try-on, runway ready, and round completion advance from successful server branches. New players enter through Discover's featured public accessory, avoiding catalog-consent and purchase friction before their first visual payoff, then the same guide hands them to Runway. Onboarding steps three and four are emitted from the authoritative `OPEN_STUDIO` and successful `TRY_STYLE` mutations instead of being inferred from the welcome-modal click. Every step is idempotent and persists to the player profile. Its token grants use `bonusTokens`, so the journey can buy a Priority Pass but cannot fund OpenAI or Meshy work.
+`RetentionService` owns the free four-step First Look journey. Before it, the client renders one visual `TRY → MAKE → WEAR` tutorial and the server persists `profile.tutorialVersion` through an allowlisted `CompleteTutorial` choice. That request also unlocks the onboarding gate, but it never pretends the later try-on or runway actions happened. The client may report only `OPEN_STUDIO`; try-on, runway ready, and round completion advance from successful server branches. New players enter through Discover's featured public accessory, avoiding catalog-consent and purchase friction before their first visual payoff, then the same guide hands them to Runway. Onboarding steps three and four are emitted from the authoritative `OPEN_STUDIO` and successful `TRY_STYLE` mutations instead of being inferred from the tutorial choice. Every step is idempotent and persists to the player profile. Its token grants use `bonusTokens`, so the journey can buy a Priority Pass but cannot fund OpenAI or Meshy work.
 
 `ProgressionService` is the single authority for Creator XP. `CreatorProgression.luau` contains pure shared level/title math for display, while every award is applied on the server after a completed action. Generation completion IDs already make creation XP idempotent; weekly runway awards additionally store `profile.runway.weeklyPaidWeek`, making cross-server payout retries safe.
 
@@ -125,4 +125,4 @@ Trying on a public item is free and does not require Plus or an active listing. 
 
 ## Analytics boundary
 
-Only server-authored events and a small, tightly allowlisted set of client UI events reach `AnalyticsService`. Fields are enumerated or numeric, capped in count and length, and never contain prompts, item names, catalog queries, or provider responses. See `docs/ANALYTICS.md` for the launch scorecard and decision cadence.
+Only server-authored events and a small, tightly allowlisted set of client UI events reach `AnalyticsService`. Fields are enumerated or numeric, capped in count and length, and never contain prompts, item names, catalog queries, or provider responses. The client reports only the visual tutorial impression and a visible generation offer; tutorial choices, native commerce prompt open/close, and granted receipts are authored by the server. See `docs/ANALYTICS.md` for the launch scorecard and decision cadence.

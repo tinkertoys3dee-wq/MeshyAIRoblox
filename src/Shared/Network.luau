@@ -54,6 +54,7 @@ Network.Actions = table.freeze({
 	ResetAvatar = "ResetAvatar",
 	UpdateSettings = "UpdateSettings",
 	CompleteOnboarding = "CompleteOnboarding",
+	CompleteTutorial = "CompleteTutorial",
 	Track = "Track",
 	RequestRewardedAd = "RequestRewardedAd",
 	BuyTokens = "BuyTokens",

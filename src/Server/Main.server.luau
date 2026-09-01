@@ -144,6 +144,7 @@ local function initializePlayer(player: Player)
 		groupMember = playerStates:Get(player).groupMember,
 		plusSubscriber = playerStates:Get(player).plusSubscriber,
 		contentSharingAllowed = playerStates:Get(player).contentSharingAllowed,
+		commerceAllowed = playerStates:Get(player).commerceAllowed,
 	})
 	if playerStates:Get(player).groupMember then
 		achievements:Unlock(player, "GROUP_JOINED")
@@ -169,6 +170,7 @@ local function bootstrap(player: Player): (boolean, any)
 	-- fresh account or hand-editing their real profile.
 	if RunService:IsStudio() and Config.Studio.AlwaysShowFirstTimerFlow then
 		profile.onboarding = { completed = false, step = 1 }
+		profile.tutorialVersion = 0
 		profile.stats.generationsCompleted = 0
 		profile.settings.simpleMode = true
 	end
@@ -678,6 +680,55 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			analytics:Onboarding(player, 2, "Chose a starting path")
 		end
 		return true, {}
+	end,
+	[Network.Actions.CompleteTutorial] = function(player, payload)
+		local choice = type(payload) == "table" and payload.choice or nil
+		if choice ~= "START_FREE" and choice ~= "MAKE_OWN" and choice ~= "SKIP" then
+			return false, "INVALID_REQUEST"
+		end
+		local existingProfile = profiles:Get(player)
+		if not existingProfile then
+			return false, "PROFILE_UNAVAILABLE"
+		end
+		local tutorialVersion = Config.Tutorial.Version
+		local existingVersion = math.max(0, math.floor(tonumber(existingProfile.tutorialVersion) or 0))
+		if existingVersion >= tutorialVersion then
+			return true, { tutorialVersion = existingVersion }
+		end
+		local previousOnboardingStep = 1
+		local previousOnboardingCompleted = false
+		local mutateSuccess, mutateProblem = profiles:Mutate(player, function(profile)
+			previousOnboardingStep = math.clamp(math.floor(profile.onboarding.step or 1), 1, 4)
+			previousOnboardingCompleted = profile.onboarding.completed == true
+			profile.tutorialVersion = tutorialVersion
+			-- Every exit lands in a usable studio path, including Skip. Marking
+			-- onboarding complete is also what permits the free First Look's
+			-- OPEN_STUDIO journey action on the next client call.
+			profile.onboarding.completed = true
+			profile.onboarding.step = math.max(previousOnboardingStep, 2)
+		end)
+		if not mutateSuccess then
+			return false, mutateProblem or "PROFILE_UNAVAILABLE"
+		end
+		if not profiles:Save(player) then
+			-- Keep a transient DataStore failure from making the retry look
+			-- complete only in this server's memory. The next tap must retry the
+			-- durable save, not silently dismiss a tutorial that will reappear.
+			profiles:Mutate(player, function(profile)
+				profile.tutorialVersion = existingVersion
+				profile.onboarding.completed = previousOnboardingCompleted
+				profile.onboarding.step = previousOnboardingStep
+			end)
+			return false, "SAVE_FAILED"
+		end
+		analytics:Custom(player, "VisualTutorialCompleted", 1, {
+			choice = choice,
+			version = tutorialVersion,
+		})
+		if previousOnboardingStep < 2 then
+			analytics:Onboarding(player, 2, "Chose a starting path")
+		end
+		return true, { tutorialVersion = tutorialVersion }
 	end,
 	[Network.Actions.Track] = function(player, payload)
 		return analytics:TrackClient(player, payload)

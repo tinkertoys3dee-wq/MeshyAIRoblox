@@ -21,7 +21,7 @@ end
 local function defaultProfile(userId: number): { [string]: any }
 	local now = os.time()
 	return {
-		schemaVersion = 3,
+		schemaVersion = 4,
 		userId = userId,
 		items = {},
 		itemOrder = {},
@@ -100,6 +100,9 @@ local function defaultProfile(userId: number): { [string]: any }
 			catalogTryOns = 0,
 			likesReceived = 0,
 		},
+		-- Independent of the legacy onboarding step so a clearer tutorial can
+		-- be shown once to existing accounts as well as brand-new players.
+		tutorialVersion = 0,
 		daily = {
 			lastDay = 0,
 			streak = 0,
@@ -201,7 +204,7 @@ function ProfileService:Load(player: Player): (boolean, string?)
 			+ profile.retryCredits.ImagePreview
 		profile.retryCredits.ImagePreview = nil
 	end
-	profile.schemaVersion = 3
+	profile.schemaVersion = 4
 	profile.userId = player.UserId
 	profile.updatedAt = os.time()
 	profile.stats.sessions += 1
@@ -279,7 +282,7 @@ function ProfileService:ReadUser(userId: number): { [string]: any }?
 	if success and type(result) == "table" then
 		local profile = result :: { [string]: any }
 		reconcile(profile, defaultProfile(userId))
-		profile.schemaVersion = 3
+		profile.schemaVersion = 4
 		return profile
 	end
 	return nil
@@ -297,7 +300,7 @@ function ProfileService:MutateUser(userId: number, mutator: ({ [string]: any }) 
 		return self.store:UpdateAsync(keyFor(userId), function(stored)
 			local profile = if type(stored) == "table" then stored else defaultProfile(userId)
 			reconcile(profile, defaultProfile(userId))
-			profile.schemaVersion = 3
+			profile.schemaVersion = 4
 			mutator(profile)
 			profile.updatedAt = os.time()
 			return profile
