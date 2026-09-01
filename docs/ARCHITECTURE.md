@@ -54,6 +54,8 @@ The Art-Directed reference image has three purchasable quality tiers (`LOW`/`MED
 
 Developer-product intent data is saved before Roblox is prompted. Receipt grants use deterministic generation IDs, write the durable benefit and receipt marker to the player's profile before acknowledging Roblox, and submit the same backend request ID on every retry. Plus transfers likewise persist a source snapshot and transfer request ID before a sender receipt can grant a deterministic personal copy.
 
+Every generation record also carries a server-authored `entitlementSource`. The low-level preparer fails closed unless it receives one of the trusted sources supplied by the commerce/recovery paths (`ROBUX_RECEIPT`, eligible `TOKENS`, `RETRY_CREDIT`, Studio-only `STUDIO_MOCK`, or the already-owned `UPLOAD_PASS` for reference validation). This value is a function argument, never part of the client payload. Account age, onboarding state, and zero completed generations are deliberately not entitlement sources: a first-time player receives no free AI generation. The first-model fast lane changes queue timing only after one of the same paid or recovered entitlements has already been validated.
+
 ## Forge Tokens and rewarded ads
 
 Generation products and Priority Pass can be bought with Robux (`BeginIntent`) or Forge Tokens (`BeginIntentWithTokens`); token-currency products and the permanent game pass cannot buy themselves. The server recomputes the token price and eligible balance pool. `BeginIntentWithTokens` calls the same registered `GrantHandler` as a real receipt or Studio mock purchase, so benefit logic never trusts a client-supplied grant.
