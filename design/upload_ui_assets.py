@@ -3,6 +3,10 @@
 Assets API, in one command, and bake the resulting asset ids straight into
 src/Shared/UIAssets.luau.
 
+Runs entirely on your machine with only the Python 3 standard library --
+no pip install needed, and your API key never leaves this process (it's
+read from an environment variable and sent straight to Roblox's servers).
+
 Setup (one time):
   1. https://create.roblox.com/dashboard/credentials -> API Keys -> Create.
      Grant it the "Assets" API with "Create" access, scoped to either your
@@ -12,26 +16,61 @@ Setup (one time):
   4. export ROBLOX_CREATOR_ID="<your numeric user or group id>"
 
 Then:
-  python3 export_ui_assets.py   # if you haven't already
+  python3 export_ui_assets.py   # if you haven't already -- writes assets/*.png
   python3 upload_ui_assets.py
 
 Each upload goes through Roblox's normal moderation queue like any other
 asset -- this script polls until each one is done (or reports if one gets
 rejected) rather than assuming success. Safe to re-run: assets that already
 have an id in assets/asset_ids.json are skipped unless --force is passed.
+
+Output: prints "ok  <Name> -> <id>" per asset as it finishes, and leaves the
+final id for every asset in assets/asset_ids.json and src/Shared/UIAssets.luau.
 """
+
+from __future__ import annotations
 
 import argparse
 import json
+import mimetypes
 import os
 import sys
 import time
-
-import requests
+import urllib.error
+import urllib.request
+import uuid
 
 from ui_assets_common import ASSETS, load_manifest, load_ids, save_ids, write_luau_module
 
 API_BASE = "https://apis.roblox.com/assets/v1"
+
+
+def _multipart_body(request_payload: dict, file_path) -> tuple[bytes, str]:
+    boundary = uuid.uuid4().hex
+    content_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
+    parts = [
+        f'--{boundary}\r\n'
+        f'Content-Disposition: form-data; name="request"\r\n\r\n'
+        f'{json.dumps(request_payload)}\r\n'.encode("utf-8"),
+        f'--{boundary}\r\n'
+        f'Content-Disposition: form-data; name="fileContent"; filename="{file_path.name}"\r\n'
+        f'Content-Type: {content_type}\r\n\r\n'.encode("utf-8"),
+        file_path.read_bytes(),
+        f'\r\n--{boundary}--\r\n'.encode("utf-8"),
+    ]
+    return b"".join(parts), boundary
+
+
+def _request(method: str, url: str, api_key: str, body: bytes | None = None, extra_headers: dict | None = None) -> dict:
+    headers = {"x-api-key": api_key}
+    headers.update(extra_headers or {})
+    req = urllib.request.Request(url, data=body, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")
+        raise RuntimeError(f"{method} {url} failed ({exc.code}): {detail}") from None
 
 
 def upload_one(api_key: str, creator_type: str, creator_id: str, item: dict) -> int:
@@ -46,17 +85,14 @@ def upload_one(api_key: str, creator_type: str, creator_id: str, item: dict) -> 
             )
         },
     }
-    with open(path, "rb") as f:
-        response = requests.post(
-            f"{API_BASE}/assets",
-            headers={"x-api-key": api_key},
-            data={"request": json.dumps(request_payload)},
-            files={"fileContent": (path.name, f, "image/png")},
-            timeout=60,
-        )
-    if response.status_code >= 400:
-        raise RuntimeError(f"upload failed ({response.status_code}): {response.text}")
-    operation = response.json()
+    body, boundary = _multipart_body(request_payload, path)
+    operation = _request(
+        "POST",
+        f"{API_BASE}/assets",
+        api_key,
+        body=body,
+        extra_headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+    )
 
     if operation.get("done") and "response" in operation:
         return int(operation["response"]["assetId"])
@@ -64,9 +100,7 @@ def upload_one(api_key: str, creator_type: str, creator_id: str, item: dict) -> 
     op_path = operation["path"]
     for _ in range(60):  # ~5 minutes at 5s intervals
         time.sleep(5)
-        poll = requests.get(f"{API_BASE}/{op_path}", headers={"x-api-key": api_key}, timeout=30)
-        poll.raise_for_status()
-        result = poll.json()
+        result = _request("GET", f"{API_BASE}/{op_path}", api_key)
         if result.get("done"):
             if "error" in result:
                 raise RuntimeError(f"moderation/upload rejected: {result['error']}")

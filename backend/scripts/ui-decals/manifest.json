@@ -1,0 +1,254 @@
+[
+  {
+    "name": "PanelFrame",
+    "file": "panel_frame.png",
+    "kind": "slice",
+    "sliceCenter": [
+      78,
+      78,
+      162,
+      162
+    ],
+    "usage": "Factory.Card background"
+  },
+  {
+    "name": "ButtonPrimary",
+    "file": "button_primary.png",
+    "kind": "slice",
+    "sliceCenter": [
+      30,
+      30,
+      90,
+      90
+    ],
+    "usage": "Factory.Button kind='primary'/'mint' background"
+  },
+  {
+    "name": "ButtonDefault",
+    "file": "button_default.png",
+    "kind": "slice",
+    "sliceCenter": [
+      30,
+      30,
+      90,
+      90
+    ],
+    "usage": "Factory.Button default/danger background"
+  },
+  {
+    "name": "ButtonDanger",
+    "file": "button_danger.png",
+    "kind": "slice",
+    "sliceCenter": [
+      30,
+      30,
+      90,
+      90
+    ],
+    "usage": "Factory.Button kind='danger' background"
+  },
+  {
+    "name": "PillFrame",
+    "file": "pill_frame.png",
+    "kind": "slice",
+    "sliceCenter": [
+      22,
+      22,
+      58,
+      58
+    ],
+    "usage": "Factory.Pill background"
+  },
+  {
+    "name": "Logo",
+    "file": "logo.png",
+    "kind": "fit",
+    "usage": "topbar brand mark"
+  },
+  {
+    "name": "NavCreate",
+    "file": "navcreate.png",
+    "kind": "fit",
+    "usage": "sidebar nav icon for NavCreate"
+  },
+  {
+    "name": "NavStudio",
+    "file": "navstudio.png",
+    "kind": "fit",
+    "usage": "sidebar nav icon for NavStudio"
+  },
+  {
+    "name": "NavDiscover",
+    "file": "navdiscover.png",
+    "kind": "fit",
+    "usage": "sidebar nav icon for NavDiscover"
+  },
+  {
+    "name": "NavAvatarLab",
+    "file": "navavatarlab.png",
+    "kind": "fit",
+    "usage": "sidebar nav icon for NavAvatarLab"
+  },
+  {
+    "name": "NavAvatarArt",
+    "file": "navavatarart.png",
+    "kind": "fit",
+    "usage": "sidebar nav icon for NavAvatarArt"
+  },
+  {
+    "name": "NavSettings",
+    "file": "navsettings.png",
+    "kind": "fit",
+    "usage": "sidebar nav icon for NavSettings"
+  },
+  {
+    "name": "ItemWings",
+    "file": "item_wings.png",
+    "kind": "fit",
+    "usage": "standalone 'wings' item illustration (idea chips / gallery cards)"
+  },
+  {
+    "name": "ItemCrown",
+    "file": "item_crown.png",
+    "kind": "fit",
+    "usage": "standalone 'crown' item illustration (idea chips / gallery cards)"
+  },
+  {
+    "name": "ItemKatana",
+    "file": "item_katana.png",
+    "kind": "fit",
+    "usage": "standalone 'katana' item illustration (idea chips / gallery cards)"
+  },
+  {
+    "name": "ItemHat",
+    "file": "item_hat.png",
+    "kind": "fit",
+    "usage": "standalone 'hat' item illustration (idea chips / gallery cards)"
+  },
+  {
+    "name": "ItemButterfly",
+    "file": "item_butterfly.png",
+    "kind": "fit",
+    "usage": "standalone 'butterfly' item illustration (idea chips / gallery cards)"
+  },
+  {
+    "name": "ItemHalo",
+    "file": "item_halo.png",
+    "kind": "fit",
+    "usage": "standalone 'halo' item illustration (idea chips / gallery cards)"
+  },
+  {
+    "name": "ItemHorns",
+    "file": "item_horns.png",
+    "kind": "fit",
+    "usage": "standalone 'horns' item illustration (idea chips / gallery cards)"
+  },
+  {
+    "name": "ItemVisor",
+    "file": "item_visor.png",
+    "kind": "fit",
+    "usage": "standalone 'visor' item illustration (idea chips / gallery cards)"
+  },
+  {
+    "name": "ItemBackpack",
+    "file": "item_backpack.png",
+    "kind": "fit",
+    "usage": "standalone 'backpack' item illustration (idea chips / gallery cards)"
+  },
+  {
+    "name": "ItemAvatar",
+    "file": "item_avatar.png",
+    "kind": "fit",
+    "usage": "standalone 'avatar' item illustration (idea chips / gallery cards)"
+  },
+  {
+    "name": "ItemPicture",
+    "file": "item_picture.png",
+    "kind": "fit",
+    "usage": "standalone 'picture' item illustration (idea chips / gallery cards)"
+  },
+  {
+    "name": "ItemWand",
+    "file": "item_wand.png",
+    "kind": "fit",
+    "usage": "standalone 'wand' item illustration (idea chips / gallery cards)"
+  },
+  {
+    "name": "CrystalHero",
+    "file": "crystal_hero.png",
+    "kind": "fit",
+    "usage": "Direct Forge panel hero illustration"
+  },
+  {
+    "name": "EmberMascot",
+    "file": "ember_mascot.png",
+    "kind": "fit",
+    "usage": "prompt panel tip sprite"
+  },
+  {
+    "name": "PriceCartouche",
+    "file": "price_cartouche.png",
+    "kind": "fit",
+    "usage": "decorative price-tag frame (overlay a real TextLabel for the amount)"
+  },
+  {
+    "name": "CornerOrnament",
+    "file": "corner_ornament.png",
+    "kind": "fit",
+    "usage": "standalone gold-filigree corner scrollwork"
+  },
+  {
+    "name": "FlourishDivider",
+    "file": "flourish_divider.png",
+    "kind": "fit",
+    "usage": "horizontal gold divider with centre gem"
+  },
+  {
+    "name": "RivetStud",
+    "file": "rivet_stud.png",
+    "kind": "fit",
+    "usage": "small gold rivet/stud accent"
+  },
+  {
+    "name": "SparkleStar",
+    "file": "sparkle_star.png",
+    "kind": "fit",
+    "usage": "4-point sparkle accent"
+  },
+  {
+    "name": "GemCyan",
+    "file": "gem_cyan.png",
+    "kind": "fit",
+    "usage": "standalone gemCyan cut-gem stud"
+  },
+  {
+    "name": "GemRose",
+    "file": "gem_rose.png",
+    "kind": "fit",
+    "usage": "standalone gemRose cut-gem stud"
+  },
+  {
+    "name": "GemMint",
+    "file": "gem_mint.png",
+    "kind": "fit",
+    "usage": "standalone gemMint cut-gem stud"
+  },
+  {
+    "name": "GemAmethyst",
+    "file": "gem_amethyst.png",
+    "kind": "fit",
+    "usage": "standalone gemAmethyst cut-gem stud"
+  },
+  {
+    "name": "GemGold",
+    "file": "gem_gold.png",
+    "kind": "fit",
+    "usage": "standalone gemGold cut-gem stud"
+  },
+  {
+    "name": "GemRuby",
+    "file": "gem_ruby.png",
+    "kind": "fit",
+    "usage": "standalone gemRuby cut-gem stud"
+  }
+]
