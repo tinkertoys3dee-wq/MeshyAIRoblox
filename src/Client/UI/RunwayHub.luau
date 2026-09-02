@@ -142,7 +142,7 @@ function RunwayHub.Show(app: any)
 	app.runwayOverlay = overlay
 
 	local restingPosition = UDim2.fromScale(0.5, 0.5)
-	local modal = Factory.Card(
+	local modal = Factory.ImageCard(
 		overlay,
 		UDim2.new(0.94, 0, 0.9, 0),
 		if reduceMotion then restingPosition else restingPosition + UDim2.fromOffset(0, 20),
@@ -230,7 +230,7 @@ function RunwayHub.Show(app: any)
 		AlignX = Enum.TextXAlignment.Right,
 		ZIndex = 233,
 	})
-	local close = Factory.Button(header, "×", UDim2.fromOffset(38, 38), UDim2.new(1, -52, 0, 17), nil)
+	local close = Factory.ImageButton(header, "×", UDim2.fromOffset(38, 38), UDim2.new(1, -52, 0, 17), nil)
 	close.TextSize = 21
 	close.ZIndex = 234
 	app:_BindButton(close)
@@ -358,9 +358,9 @@ function RunwayHub.Show(app: any)
 		local compact = (camera and camera.ViewportSize.X or 1200) < 760
 		local phase = PHASE_COPY[state.phase] or PHASE_COPY.INTERMISSION
 		local heroHeight = if compact then 590 else 376
-		local hero = Factory.Card(stack, UDim2.new(1, 0, 0, heroHeight), nil, "RoundHero")
+		local hero = Factory.ImageCard(stack, UDim2.new(1, 0, 0, heroHeight), nil, "RoundHero")
 		hero.LayoutOrder = 1
-		local phasePill = Factory.Pill(hero, phase.label, phase.color, 116)
+		local phasePill = Factory.ImagePill(hero, phase.label, phase.color, 116)
 		phasePill.Position = UDim2.fromOffset(16, 14)
 		Factory.Label(hero, phase.instruction, UDim2.new(1, -160, 0, 38), {
 			Position = UDim2.fromOffset(144, 10),
@@ -395,7 +395,7 @@ function RunwayHub.Show(app: any)
 				ZIndex = 5,
 			}
 		)
-		local resetCamera = Factory.Button(preview, "↺", UDim2.fromOffset(32, 28), UDim2.new(1, -42, 0, 8), nil)
+		local resetCamera = Factory.ImageButton(preview, "↺", UDim2.fromOffset(32, 28), UDim2.new(1, -42, 0, 8), nil)
 		resetCamera.ZIndex = 5
 		app:_BindButton(resetCamera)
 		resetCamera.Activated:Connect(function()
@@ -540,7 +540,7 @@ function RunwayHub.Show(app: any)
 				then "Winner: " .. winner.name
 				else "Round complete · next theme soon"
 		end
-		local primary = Factory.Button(
+		local primary = Factory.ImageButton(
 			hero,
 			primaryText,
 			UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 42),
@@ -553,7 +553,7 @@ function RunwayHub.Show(app: any)
 			primary.Activated:Connect(primaryAction)
 		end
 
-		local lab = Factory.Button(
+		local lab = Factory.ImageButton(
 			hero,
 			if state.phase == "RESULTS" then "Forge next look" else "Open Avatar Lab",
 			UDim2.new(detailWidth.X.Scale / 2, detailWidth.X.Offset / 2 - 4, 0, 36),
@@ -562,7 +562,7 @@ function RunwayHub.Show(app: any)
 		)
 		app:_BindButton(lab)
 		lab.Activated:Connect(if state.phase == "RESULTS" then openCreate else openAvatarLab)
-		local invite = Factory.Button(
+		local invite = Factory.ImageButton(
 			hero,
 			"Invite friend",
 			UDim2.new(detailWidth.X.Scale / 2, detailWidth.X.Offset / 2 - 4, 0, 36),
@@ -591,7 +591,7 @@ function RunwayHub.Show(app: any)
 			end
 		end
 		if activeJobs > 0 then
-			local activity = Factory.Card(stack, UDim2.new(1, 0, 0, 60), nil, "RunwayForgeActivity")
+			local activity = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 60), nil, "RunwayForgeActivity")
 			activity.LayoutOrder = 2
 			Factory.Label(
 				activity,
@@ -620,8 +620,13 @@ function RunwayHub.Show(app: any)
 					Truncate = Enum.TextTruncate.AtEnd,
 				}
 			)
-			local viewActivity =
-				Factory.Button(activity, "View activity", UDim2.fromOffset(110, 32), UDim2.new(1, -126, 0, 14), nil)
+			local viewActivity = Factory.ImageButton(
+				activity,
+				"View activity",
+				UDim2.fromOffset(110, 32),
+				UDim2.new(1, -126, 0, 14),
+				nil
+			)
 			app:_BindButton(viewActivity)
 			viewActivity.Activated:Connect(function()
 				closeHub()
@@ -634,7 +639,7 @@ function RunwayHub.Show(app: any)
 		local journey = state.journeyState or (app.state and app.state.journeyState) or { done = {} }
 		local journeyComplete = journey.completed == true
 		local journeyHeight = 84 + #Config.Retention.FirstLookJourney * 34
-		local journeyCard = Factory.Card(stack, UDim2.new(1, 0, 0, journeyHeight), nil, "FirstLookJourney")
+		local journeyCard = Factory.ImageCard(stack, UDim2.new(1, 0, 0, journeyHeight), nil, "FirstLookJourney")
 		journeyCard.LayoutOrder = 3
 		Factory.Label(
 			journeyCard,
@@ -704,7 +709,7 @@ function RunwayHub.Show(app: any)
 		-- Participants and voting -------------------------------------------
 		local entries = state.entries or {}
 		local participantHeight = 76 + math.max(1, #entries) * 48
-		local participants = Factory.Card(stack, UDim2.new(1, 0, 0, participantHeight), nil, "Participants")
+		local participants = Factory.ImageCard(stack, UDim2.new(1, 0, 0, participantHeight), nil, "Participants")
 		participants.LayoutOrder = 4
 		Factory.Label(participants, "RUNWAY LINEUP", UDim2.new(1, -140, 0, 20), {
 			Position = UDim2.fromOffset(16, 13),
@@ -779,7 +784,7 @@ function RunwayHub.Show(app: any)
 					elseif state.votedFor == entry.userId then "✓"
 					elseif state.votedFor ~= nil then "Voted"
 					else "Vote"
-				local vote = Factory.Button(
+				local vote = Factory.ImageButton(
 					row,
 					voteLabel,
 					UDim2.fromOffset(58, 34),
@@ -806,7 +811,7 @@ function RunwayHub.Show(app: any)
 		end
 
 		-- Weekly standings ---------------------------------------------------
-		local standings = Factory.Card(stack, UDim2.new(1, 0, 0, 238), nil, "WeeklyStandings")
+		local standings = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 238), nil, "WeeklyStandings")
 		standings.LayoutOrder = 5
 		Factory.Label(standings, "WEEKLY SPOTLIGHT", UDim2.new(1, -170, 0, 20), {
 			Position = UDim2.fromOffset(16, 13),
@@ -830,7 +835,8 @@ function RunwayHub.Show(app: any)
 			UDim2.new(1, -32, 0, 16),
 			{ Position = UDim2.fromOffset(16, 50), Color = Colors.Gold, TextSize = 9 }
 		)
-		local refresh = Factory.Button(standings, "Refresh", UDim2.fromOffset(78, 34), UDim2.new(1, -94, 0, 9), nil)
+		local refresh =
+			Factory.ImageButton(standings, "Refresh", UDim2.fromOffset(78, 34), UDim2.new(1, -94, 0, 9), nil)
 		app:_BindButton(refresh)
 		refresh.Activated:Connect(function()
 			leaderboard = nil

@@ -210,7 +210,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		Parent = boardFrame,
 	})
 
-	local highestPill = Factory.Pill(root, "HIGHEST · 2", Colors.Cyan, 104)
+	local highestPill = Factory.ImagePill(root, "HIGHEST · 2", Colors.Cyan, 104)
 	highestPill.Name = "HighestPill"
 	highestPill.Position = UDim2.fromOffset(10, 8)
 	highestPill.ZIndex = 6

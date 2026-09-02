@@ -173,7 +173,7 @@ function GamesHub.Show(app: any)
 	-- the top/bottom of any shorter viewport with nothing to stop it)
 	-- shrinks to fit it.
 	local restingModalPosition = UDim2.fromScale(0.5, 0.5)
-	local modal = Factory.Card(
+	local modal = Factory.ImageCard(
 		overlay,
 		UDim2.new(1, -32, 0.94, -16),
 		if reduceMotion then restingModalPosition else restingModalPosition + UDim2.fromOffset(0, 18),

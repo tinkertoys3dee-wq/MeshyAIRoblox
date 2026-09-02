@@ -832,7 +832,7 @@ function App:_BuildChrome()
 		Parent = statusArea,
 	})
 	self.statusArea = statusArea
-	local closeStudio = Factory.Button(topbar, "×", UDim2.fromOffset(40, 40), UDim2.new(1, -54, 0.5, -20), nil)
+	local closeStudio = Factory.ImageButton(topbar, "×", UDim2.fromOffset(40, 40), UDim2.new(1, -54, 0.5, -20), nil)
 	closeStudio.Name = "CloseStudio"
 	closeStudio.TextSize = 21
 	closeStudio.ZIndex = 4
@@ -908,7 +908,7 @@ function App:_BuildChrome()
 		end)
 		self.navButtons[page] = button
 	end
-	local tip = Factory.Card(nav, UDim2.new(1, -24, 0, 142), UDim2.new(0, 12, 1, -160), "GroupTip")
+	local tip = Factory.ImageCard(nav, UDim2.new(1, -24, 0, 142), UDim2.new(0, 12, 1, -160), "GroupTip")
 	Factory.Label(tip, "GROUP BOOST", UDim2.new(1, -24, 0, 22), {
 		Position = UDim2.fromOffset(12, 12),
 		Color = Colors.Mint,
@@ -1083,7 +1083,8 @@ function App:_BuildAvatarPreviewPanel(backdrop: Frame)
 	Factory.Stroke(viewport, Colors.Violet, 0.45)
 	self.avatarPreviewViewport = viewport
 
-	local resetCameraButton = Factory.Button(viewport, "↺", UDim2.fromOffset(32, 28), UDim2.new(1, -42, 0, 8), nil)
+	local resetCameraButton =
+		Factory.ImageButton(viewport, "↺", UDim2.fromOffset(32, 28), UDim2.new(1, -42, 0, 8), nil)
 	resetCameraButton.Name = "ResetCamera"
 	resetCameraButton.TextSize = 15
 	resetCameraButton.ZIndex = 5
@@ -1360,7 +1361,8 @@ function App:_BuildWornRow(entry: { [string]: any })
 		Font = Theme.Fonts.Bold,
 		TextSize = 8,
 	})
-	local removeButton = Factory.Button(row, "Remove", UDim2.fromOffset(72, 26), UDim2.new(1, -78, 1, -32), "danger")
+	local removeButton =
+		Factory.ImageButton(row, "Remove", UDim2.fromOffset(72, 26), UDim2.new(1, -78, 1, -32), "danger")
 	removeButton.TextSize = 11
 	self:_BindButton(removeButton)
 	removeButton.Activated:Connect(function()
@@ -1582,7 +1584,7 @@ end
 -- persistent nav-rail button so it can be recreated each time that page
 -- renders, like every other page-scoped control.
 function App:_BuildSoundButton(parent: Instance, size: UDim2, position: UDim2): TextButton
-	local button = Factory.Button(parent, "", size, position, nil)
+	local button = Factory.ImageButton(parent, "", size, position, nil)
 	button.Name = "SoundToggle"
 	button.TextXAlignment = Enum.TextXAlignment.Left
 	Factory.Padding(button, 15, 0)
@@ -1688,7 +1690,7 @@ function App:_ShowVisualTutorial()
 	Factory.Stroke(modal, Colors.Cyan, 0.18, 2)
 	Factory.Gradient(modal, { Color3.fromRGB(72, 67, 119), Colors.Panel, Color3.fromRGB(37, 45, 76) }, 125)
 
-	local badge = Factory.Pill(modal, "FREE START · NO ROBUX", Colors.Mint, 166)
+	local badge = Factory.ImagePill(modal, "FREE START · NO ROBUX", Colors.Mint, 166)
 	badge.AnchorPoint = Vector2.new(0.5, 0)
 	badge.Position = UDim2.new(0.5, 0, 0, if vertical then 11 else 17)
 	badge.ZIndex = ZBASE + 3
@@ -1855,14 +1857,14 @@ function App:_ShowVisualTutorial()
 	)
 
 	local primaryY = if vertical then 332 else 352
-	local primary = Factory.Button(
+	local primary = Factory.ImageButton(
 		modal,
 		"START FREE LOOK  →",
 		UDim2.new(1, -44, 0, 42),
 		UDim2.fromOffset(22, primaryY),
 		"primary"
 	)
-	local makeOwn = Factory.Button(
+	local makeOwn = Factory.ImageButton(
 		modal,
 		"MAKE MY OWN",
 		if vertical then UDim2.new(1, -44, 0, 38) else UDim2.new(0.5, -28, 0, 42),
@@ -2355,7 +2357,8 @@ function App:_OpenAfkLounge()
 		):Play()
 	end
 
-	local leave = Factory.Button(overlay, "← Leave lounge", UDim2.fromOffset(154, 42), UDim2.fromOffset(24, 22), nil)
+	local leave =
+		Factory.ImageButton(overlay, "← Leave lounge", UDim2.fromOffset(154, 42), UDim2.fromOffset(24, 22), nil)
 	leave.ZIndex = 246
 	self:_BindButton(leave)
 	leave.Activated:Connect(function()
@@ -2429,7 +2432,7 @@ function App:_OpenAfkLounge()
 		AlignX = Enum.TextXAlignment.Center,
 		ZIndex = 244,
 	})
-	local adButton = Factory.Button(
+	local adButton = Factory.ImageButton(
 		center,
 		"Checking ad availability…",
 		UDim2.new(1, -70, 0, 48),
@@ -2773,7 +2776,7 @@ function App:_ShowCreationComplete(kind: string, record: { [string]: any }, comp
 		MaxSize = Vector2.new(570, 600),
 		Parent = card,
 	})
-	local badge = Factory.Pill(card, if kind == "MODEL" then "FORGED" else "CREATED", Colors.Mint, 112)
+	local badge = Factory.ImagePill(card, if kind == "MODEL" then "FORGED" else "CREATED", Colors.Mint, 112)
 	badge.AnchorPoint = Vector2.new(0.5, 0)
 	badge.Position = UDim2.new(0.5, 0, 0, 25)
 	badge.ZIndex = 304
@@ -2839,11 +2842,11 @@ function App:_ShowCreationComplete(kind: string, record: { [string]: any }, comp
 	else
 		previewHint.Text = "Roblox has not issued a preview yet. The creation is saved; open it again shortly."
 	end
-	local close = Factory.Button(card, "×", UDim2.fromOffset(38, 38), UDim2.new(1, -50, 0, 12), nil)
+	local close = Factory.ImageButton(card, "×", UDim2.fromOffset(38, 38), UDim2.new(1, -50, 0, 12), nil)
 	close.TextSize = 20
 	close.ZIndex = 305
 	self:_BindButton(close)
-	local view = Factory.Button(
+	local view = Factory.ImageButton(
 		card,
 		if kind == "MODEL" then "Fit this model" elseif kind == "REFERENCE" then "Review reference" else "Open gallery",
 		UDim2.new(0.5, -27, 0, 46),
@@ -2853,7 +2856,7 @@ function App:_ShowCreationComplete(kind: string, record: { [string]: any }, comp
 	view.ZIndex = 305
 	self:_BindButton(view)
 	local another =
-		Factory.Button(card, "Create another", UDim2.new(0.5, -27, 0, 46), UDim2.new(0.5, 9, 1, -64), "mint")
+		Factory.ImageButton(card, "Create another", UDim2.new(0.5, -27, 0, 46), UDim2.new(0.5, 9, 1, -64), "mint")
 	another.ZIndex = 305
 	self:_BindButton(another)
 
@@ -3062,21 +3065,21 @@ function App:_RenderStatus()
 	local daily = self.state.dailyBrief
 	local creator = self.state.creatorProgress
 	if creator then
-		Factory.Pill(self.statusArea, string.format("LV. %d CREATOR", creator.level or 1), Colors.Gold, 112).LayoutOrder =
+		Factory.ImagePill(self.statusArea, string.format("LV. %d CREATOR", creator.level or 1), Colors.Gold, 112).LayoutOrder =
 			1
 	end
 	if daily then
-		Factory.Pill(self.statusArea, string.format("🔥 %d DAY STREAK", daily.streak), Colors.Rose, 112).LayoutOrder =
+		Factory.ImagePill(self.statusArea, string.format("🔥 %d DAY STREAK", daily.streak), Colors.Rose, 112).LayoutOrder =
 			2
 	end
-	Factory.Pill(
+	Factory.ImagePill(
 		self.statusArea,
 		string.format("%d QUEUE SLOT%s", benefits.queueSlots, if benefits.queueSlots == 1 then "" else "S"),
 		Colors.Cyan,
 		118
 	).LayoutOrder =
 		3
-	Factory.Pill(
+	Factory.ImagePill(
 		self.statusArea,
 		if benefits.plusSubscriber then "PLUS ACTIVE" else "PLUS: SELL ONLY",
 		if benefits.plusSubscriber then Colors.Mint else Colors.Gold,
@@ -3277,7 +3280,7 @@ function App:_RenderCreate()
 			then "Three paths, precise art direction, one Roblox-ready accessory. Every input is moderated."
 			else "Pick an idea or type one. Roblox shows the price and asks before you buy."
 	)
-	local howToPlay = Factory.Button(
+	local howToPlay = Factory.ImageButton(
 		self.content,
 		if self.compact then "?" else "?  HOW TO PLAY",
 		UDim2.fromOffset(if self.compact then 34 else 122, 30),
@@ -3318,7 +3321,7 @@ function App:_RenderCreate()
 	if firstLook then
 		local complete = firstLook.completed == true
 		local done = firstLook.done or {}
-		local card = Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 158 else 132), nil, "FirstLook")
+		local card = Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 158 else 132), nil, "FirstLook")
 		card.LayoutOrder = if simpleMode then -30 else -1
 		local icon = Factory.New("Frame", {
 			Size = UDim2.fromOffset(44, 44),
@@ -3379,7 +3382,7 @@ function App:_RenderCreate()
 			Parent = track,
 		})
 		Factory.Corner(fill, 5)
-		local continue = Factory.Button(
+		local continue = Factory.ImageButton(
 			card,
 			if complete
 				then "Open Forge Runway"
@@ -3445,7 +3448,7 @@ function App:_RenderCreate()
 	local watchAdY = toggleY + 38
 	local buyTokensY = watchAdY + 42
 	local tokensCardHeight = if self.compact then buyTokensY + 30 + 16 else 156
-	local tokensCard = Factory.Card(stack, UDim2.new(1, 0, 0, tokensCardHeight), nil, "TokensCard")
+	local tokensCard = Factory.ImageCard(stack, UDim2.new(1, 0, 0, tokensCardHeight), nil, "TokensCard")
 	tokensCard.LayoutOrder = 0
 	Factory.Label(tokensCard, "FORGE TOKENS", UDim2.new(0.42, -16, 0, 18), {
 		Position = UDim2.fromOffset(16, 12),
@@ -3476,14 +3479,14 @@ function App:_RenderCreate()
 		Color = Colors.TextMuted,
 	})
 	local toggleWidth = UDim2.new(rightWidth / 2, -(inset + gap / 2), 0, 30)
-	local payRobux = Factory.Button(
+	local payRobux = Factory.ImageButton(
 		tokensCard,
 		"Robux",
 		toggleWidth,
 		UDim2.new(rightX, inset, 0, toggleY),
 		if self.paymentMethod == "ROBUX" then "primary" else nil
 	)
-	local payTokens = Factory.Button(
+	local payTokens = Factory.ImageButton(
 		tokensCard,
 		"Tokens",
 		toggleWidth,
@@ -3501,7 +3504,7 @@ function App:_RenderCreate()
 		self:_RenderActivePage()
 	end)
 	local watchAdActive = self.adAvailable == true
-	local watchAd = Factory.Button(
+	local watchAd = Factory.ImageButton(
 		tokensCard,
 		if self.adAvailabilityChecking
 			then "Checking for an ad…"
@@ -3551,7 +3554,7 @@ function App:_RenderCreate()
 			self:_RenderActivePage()
 		end)
 	end)
-	local buyTokens = Factory.Button(
+	local buyTokens = Factory.ImageButton(
 		tokensCard,
 		string.format(
 			"Buy %d token%s · R$ %d",
@@ -3644,13 +3647,17 @@ function App:_RenderCreate()
 		local col = (index - 1) % 2
 		local row = math.floor((index - 1) / 2)
 		local card = if not showAllMethods
-			then Factory.Card(methodRow, UDim2.new(1, 0, 0, 156))
-			elseif self.compact then Factory.Card(
+			then Factory.ImageCard(methodRow, UDim2.new(1, 0, 0, 156))
+			elseif self.compact then Factory.ImageCard(
 				methodRow,
 				UDim2.new(1, 0, 0, 144),
 				UDim2.fromOffset(0, (index - 1) * 156)
 			)
-			else Factory.Card(methodRow, UDim2.new(0.5, -6, 0, 156), UDim2.new(col * 0.5, col * 6, 0, row * 164))
+			else Factory.ImageCard(
+				methodRow,
+				UDim2.new(0.5, -6, 0, 156),
+				UDim2.new(col * 0.5, col * 6, 0, row * 164)
+			)
 		local selected = self.selectedMethod == method.id
 		local stroke = card:FindFirstChildOfClass("UIStroke")
 		if stroke then
@@ -3658,7 +3665,7 @@ function App:_RenderCreate()
 			stroke.Transparency = if selected then 0.12 else 0.55
 			stroke.Thickness = if selected then 2 else 1
 		end
-		Factory.Pill(card, method.kicker, method.color, 104).Position = UDim2.fromOffset(16, 14)
+		Factory.ImagePill(card, method.kicker, method.color, 104).Position = UDim2.fromOffset(16, 14)
 		Factory.Label(card, method.title, UDim2.new(1, -150, 0, 31), {
 			Position = UDim2.fromOffset(16, 46),
 			Font = Theme.Fonts.Black,
@@ -3694,7 +3701,7 @@ function App:_RenderCreate()
 		end)
 	end
 	if showAllMethods then
-		local collapse = Factory.Button(
+		local collapse = Factory.ImageButton(
 			methodRow,
 			"← Switch to Simple Mode",
 			UDim2.new(1, 0, 0, 34),
@@ -3710,8 +3717,12 @@ function App:_RenderCreate()
 			self:_UpdateSetting("simpleMode", true)
 		end)
 	else
-		local expand =
-			Factory.Button(methodRow, "Switch to Advanced Mode →", UDim2.new(1, 0, 0, 34), UDim2.fromOffset(0, 168))
+		local expand = Factory.ImageButton(
+			methodRow,
+			"Switch to Advanced Mode →",
+			UDim2.new(1, 0, 0, 34),
+			UDim2.fromOffset(0, 168)
+		)
 		self:_BindButton(expand)
 		expand.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", false)
@@ -3721,9 +3732,10 @@ function App:_RenderCreate()
 	local isUpload = self.selectedMethod == "IMAGE_UPLOAD"
 	local isAvatar = self.selectedMethod == "AVATAR_TO_3D"
 	if isUpload and not customUploadOwned then
-		local unlock = Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 246 else 196), nil, "UploadUnlock")
+		local unlock =
+			Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 246 else 196), nil, "UploadUnlock")
 		unlock.LayoutOrder = 2
-		Factory.Pill(unlock, "PERMANENT CREATOR TOOL", Colors.Gold, 164).Position = UDim2.fromOffset(16, 15)
+		Factory.ImagePill(unlock, "PERMANENT CREATOR TOOL", Colors.Gold, 164).Position = UDim2.fromOffset(16, 15)
 		Factory.Label(unlock, "Bring your own art direction", UDim2.new(1, -32, 0, 34), {
 			Position = UDim2.fromOffset(16, 48),
 			Font = Theme.Fonts.Black,
@@ -3744,7 +3756,7 @@ function App:_RenderCreate()
 				AlignY = Enum.TextYAlignment.Top,
 			}
 		)
-		local unlockButton = Factory.Button(
+		local unlockButton = Factory.ImageButton(
 			unlock,
 			string.format("Unlock forever · R$ %d", self.state.prices.CustomImageUpload),
 			if self.compact then UDim2.new(1, -32, 0, 44) else UDim2.fromOffset(244, 44),
@@ -3773,7 +3785,7 @@ function App:_RenderCreate()
 		end)
 	else
 		local cursorY = 14
-		local promptCard = Factory.Card(stack, UDim2.new(1, 0, 0, 560), nil, "PromptCard")
+		local promptCard = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 560), nil, "PromptCard")
 		promptCard.LayoutOrder = if simpleMode then -20 else 2
 		Factory.Label(
 			promptCard,
@@ -3878,7 +3890,7 @@ function App:_RenderCreate()
 					},
 				}
 			do
-				local chip = Factory.Button(sparkRow, spark.label, UDim2.fromOffset(140, 34))
+				local chip = Factory.ImageButton(sparkRow, spark.label, UDim2.fromOffset(140, 34))
 				self:_BindButton(chip)
 				-- These 5 idea chips are the one place a fixed, non-user-generated
 				-- item icon is honest: every other item image in the app is a real
@@ -3926,7 +3938,7 @@ function App:_RenderCreate()
 			Factory.List(row, Enum.FillDirection.Horizontal, 8)
 			for _, option in options do
 				local selected = selectedValue == option.Id
-				local chip = Factory.Button(
+				local chip = Factory.ImageButton(
 					row,
 					option.Label,
 					UDim2.fromOffset(98, 34),
@@ -4078,7 +4090,7 @@ function App:_RenderCreate()
 				Factory.List(qualityRow, Enum.FillDirection.Horizontal, 8)
 				for _, tier in Config.Generation.ImageQualityTiers do
 					local tierSelected = self.selectedImageQuality == tier.Id
-					local chip = Factory.Button(
+					local chip = Factory.ImageButton(
 						qualityRow,
 						string.format("%s · R$ %d", tier.Label, self.state.prices[tier.ProductKey] or 0),
 						UDim2.fromOffset(146, 34),
@@ -4126,8 +4138,13 @@ function App:_RenderCreate()
 			Factory.List(chipRow, Enum.FillDirection.Horizontal, 8)
 			for typeName, label in ACCESSORY_LABELS do
 				local selected = self.selectedAccessoryType == typeName
-				local chip =
-					Factory.Button(chipRow, label, UDim2.fromOffset(88, 34), nil, if selected then "primary" else nil)
+				local chip = Factory.ImageButton(
+					chipRow,
+					label,
+					UDim2.fromOffset(88, 34),
+					nil,
+					if selected then "primary" else nil
+				)
 				self:_BindButton(chip)
 				chip.Activated:Connect(function()
 					self.selectedAccessoryType = typeName
@@ -4241,7 +4258,7 @@ function App:_RenderCreate()
 				priceText
 			)
 			else "Moderate my reference · Included"
-		local generate = Factory.Button(
+		local generate = Factory.ImageButton(
 			promptCard,
 			actionText,
 			if not showAllMethods
@@ -4265,7 +4282,7 @@ function App:_RenderCreate()
 		-- see or reach.
 		local availablePasses = self.state.profile.retryCredits.PriorityPass or 0
 		if showAllMethods then
-			local priority = Factory.Button(
+			local priority = Factory.ImageButton(
 				promptCard,
 				if availablePasses > 0
 					then string.format(
@@ -4368,7 +4385,7 @@ function App:_RenderCreate()
 	end
 	if readyImage then
 		local reference =
-			Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 382 else 210), nil, "ReferenceReview")
+			Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 382 else 210), nil, "ReferenceReview")
 		reference.LayoutOrder = 3
 		local image = Factory.New("ImageLabel", {
 			Size = if self.compact then UDim2.fromOffset(132, 132) else UDim2.fromOffset(172, 172),
@@ -4448,7 +4465,7 @@ function App:_RenderCreate()
 		local conversionPriceText = if self.paymentMethod == "TOKENS"
 			then string.format("%d ad tokens", tokenPrice(self.state.prices.ImageConversion, "ImageConversion"))
 			else string.format("R$ %d", self.state.prices.ImageConversion)
-		local approve = Factory.Button(
+		local approve = Factory.ImageButton(
 			reference,
 			if self.compact
 				then string.format("Build · %s", conversionPriceText)
@@ -4486,7 +4503,7 @@ function App:_RenderCreate()
 				end
 			end)
 		end)
-		local reroll = Factory.Button(
+		local reroll = Factory.ImageButton(
 			reference,
 			if readyImage.method == "IMAGE_UPLOAD"
 				then (if self.compact then "Replace" else "Use another image")
@@ -4525,7 +4542,7 @@ function App:_RenderCreate()
 	end
 	local showUpsell = hasQueuedRow and availablePasses <= 0
 	local activityHeight = (if rowCount == 0 then 140 else 45 + rowCount * 50 + 14) + (if showUpsell then 46 else 0)
-	local activity = Factory.Card(stack, UDim2.new(1, 0, 0, activityHeight), nil, "Activity")
+	local activity = Factory.ImageCard(stack, UDim2.new(1, 0, 0, activityHeight), nil, "Activity")
 	activity.LayoutOrder = 4
 	Factory.Label(activity, "LIVE CREATION ACTIVITY", UDim2.new(1, -32, 0, 24), {
 		Position = UDim2.fromOffset(16, 13),
@@ -4698,7 +4715,7 @@ function App:_RenderCreate()
 	if brief then
 		local hasMilestoneBanner = brief.milestoneReward ~= nil
 		local cardHeight = 222 + (if hasMilestoneBanner then 36 else 0)
-		local daily = Factory.Card(stack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyBrief")
+		local daily = Factory.ImageCard(stack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyBrief")
 		daily.LayoutOrder = 5
 
 		-- Flame badge: the same streak iconography as the status-bar pill,
@@ -4901,7 +4918,7 @@ function App:_RenderCreate()
 		end
 		local allDone = doneCount >= #quests
 		local cardHeight = #quests * 46 + (if allDone then 122 else 46)
-		local questCard = Factory.Card(stack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyQuests")
+		local questCard = Factory.ImageCard(stack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyQuests")
 		questCard.LayoutOrder = 6
 		Factory.Label(questCard, "DAILY QUESTS", UDim2.new(1, -100, 0, 20), {
 			Position = UDim2.fromOffset(16, 13),
@@ -5045,7 +5062,7 @@ function App:_RenderStudio()
 			else "Tap an item below, then equip it or publish it as a real Roblox wearable."
 	)
 	if #profile.itemOrder == 0 then
-		local empty = Factory.Card(self.content, UDim2.new(0.95, 0, 0, 260), UDim2.new(0.025, 0, 0, 112))
+		local empty = Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, 260), UDim2.new(0.025, 0, 0, 112))
 		Factory.Label(empty, "◇", UDim2.new(1, 0, 0, 70), {
 			Position = UDim2.fromOffset(0, 34),
 			AlignX = Enum.TextXAlignment.Center,
@@ -5059,7 +5076,7 @@ function App:_RenderStudio()
 			Font = Theme.Fonts.Black,
 			TextSize = 20,
 		})
-		local create = Factory.Button(
+		local create = Factory.ImageButton(
 			empty,
 			"Create your first accessory",
 			UDim2.fromOffset(220, 44),
@@ -5082,7 +5099,7 @@ function App:_RenderStudio()
 	-- preset below (one item's transform, reusable on a different item).
 	local outfitsHeight = 100
 	local outfits =
-		Factory.Card(self.content, UDim2.new(0.95, 0, 0, outfitsHeight), UDim2.new(0.025, 0, 0, 100), "Outfits")
+		Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, outfitsHeight), UDim2.new(0.025, 0, 0, 100), "Outfits")
 	Factory.Label(outfits, "OUTFITS", UDim2.new(0.4, 0, 0, 24), {
 		Position = UDim2.fromOffset(14, 10),
 		Font = Theme.Fonts.Bold,
@@ -5096,7 +5113,7 @@ function App:_RenderStudio()
 		-- Bold 14px -- the label nearly touched the pill's own edges. Widened
 		-- to fit the text with real breathing room and a clean 10px gap from
 		-- the name box.
-		Factory.Button(outfits, "Save current look", UDim2.fromOffset(170, 30), UDim2.new(1, -184, 0, 36), "mint")
+		Factory.ImageButton(outfits, "Save current look", UDim2.fromOffset(170, 30), UDim2.new(1, -184, 0, 36), "mint")
 	self:_BindButton(saveOutfitButton)
 	saveOutfitButton.Activated:Connect(function()
 		saveOutfitButton.Active = false
@@ -5151,7 +5168,7 @@ function App:_RenderStudio()
 					Parent = outfitList,
 				})
 				local apply =
-					Factory.Button(chip, record.name, UDim2.fromOffset(nameWidth, 24), UDim2.fromOffset(0, 0), nil)
+					Factory.ImageButton(chip, record.name, UDim2.fromOffset(nameWidth, 24), UDim2.fromOffset(0, 0), nil)
 				apply.TextTruncate = Enum.TextTruncate.AtEnd
 				self:_BindButton(apply)
 				apply.Activated:Connect(function()
@@ -5169,8 +5186,13 @@ function App:_RenderStudio()
 						end
 					end)
 				end)
-				local remove =
-					Factory.Button(chip, "×", UDim2.fromOffset(26, 24), UDim2.fromOffset(nameWidth + 8, 0), "danger")
+				local remove = Factory.ImageButton(
+					chip,
+					"×",
+					UDim2.fromOffset(26, 24),
+					UDim2.fromOffset(nameWidth + 8, 0),
+					"danger"
+				)
 				self:_BindButton(remove)
 				remove.Activated:Connect(function()
 					task.spawn(function()
@@ -5191,8 +5213,13 @@ function App:_RenderStudio()
 
 	local topOffset = 100 + outfitsHeight + 14
 	local collection = if self.compact
-		then Factory.Card(self.content, UDim2.new(0.95, 0, 0, 164), UDim2.new(0.025, 0, 0, topOffset), "Collection")
-		else Factory.Card(
+		then Factory.ImageCard(
+			self.content,
+			UDim2.new(0.95, 0, 0, 164),
+			UDim2.new(0.025, 0, 0, topOffset),
+			"Collection"
+		)
+		else Factory.ImageCard(
 			self.content,
 			UDim2.new(0.39, 0, 1, -18 - topOffset),
 			UDim2.new(0.02, 0, 0, topOffset),
@@ -5312,13 +5339,13 @@ function App:_RenderStudio()
 	end
 
 	local inspector = if self.compact
-		then Factory.Card(
+		then Factory.ImageCard(
 			self.content,
 			UDim2.new(0.95, 0, 1, -10 - (topOffset + 164 + 10)),
 			UDim2.new(0.025, 0, 0, topOffset + 164 + 10),
 			"Inspector"
 		)
-		else Factory.Card(
+		else Factory.ImageCard(
 			self.content,
 			UDim2.new(0.56, 0, 1, -18 - topOffset),
 			UDim2.new(0.42, 0, 0, topOffset),
@@ -5346,14 +5373,14 @@ function App:_RenderStudio()
 		TextSize = 20,
 		Truncate = Enum.TextTruncate.AtEnd,
 	})
-	Factory.Pill(
+	Factory.ImagePill(
 		header,
 		if selected.license == "PERSONAL_COPY" then "PERSONAL COPY" else "ORIGINAL",
 		if selected.license == "PERSONAL_COPY" then Colors.Gold else Colors.Mint,
 		106
 	).Position =
 		UDim2.fromOffset(16, 47)
-	Factory.Pill(
+	Factory.ImagePill(
 		header,
 		string.format(
 			"%s · %s",
@@ -5375,13 +5402,13 @@ function App:_RenderStudio()
 	Factory.Stroke(viewport, Colors.Violet, 0.45)
 	local controller = ViewportController.new(viewport, selected.id)
 	self.activeViewport = controller
-	local orbitHint = Factory.Pill(viewport, "DRAG ORBIT · RIGHT/SHIFT DRAG PAN", Colors.Cyan, 234)
+	local orbitHint = Factory.ImagePill(viewport, "DRAG ORBIT · RIGHT/SHIFT DRAG PAN", Colors.Cyan, 234)
 	orbitHint.Position = UDim2.fromOffset(12, 12)
 	orbitHint.ZIndex = 5
-	local zoomHint = Factory.Pill(viewport, "WHEEL ZOOM", Colors.Violet, 92)
+	local zoomHint = Factory.ImagePill(viewport, "WHEEL ZOOM", Colors.Violet, 92)
 	zoomHint.Position = UDim2.fromOffset(12, 43)
 	zoomHint.ZIndex = 5
-	local resetCamera = Factory.Button(viewport, "↺", UDim2.fromOffset(38, 34), UDim2.new(1, -50, 0, 10), nil)
+	local resetCamera = Factory.ImageButton(viewport, "↺", UDim2.fromOffset(38, 34), UDim2.new(1, -50, 0, 10), nil)
 	resetCamera.Name = "ResetCamera"
 	resetCamera.TextSize = 18
 	resetCamera.ZIndex = 5
@@ -5402,7 +5429,7 @@ function App:_RenderStudio()
 	previewStatus.BackgroundTransparency = 0.08
 	Factory.Corner(previewStatus, 8)
 	local retryPreview =
-		Factory.Button(viewport, "Retry preview", UDim2.fromOffset(104, 38), UDim2.new(1, -116, 1, -50), "primary")
+		Factory.ImageButton(viewport, "Retry preview", UDim2.fromOffset(104, 38), UDim2.new(1, -116, 1, -50), "primary")
 	retryPreview.ZIndex = 6
 	retryPreview.Visible = false
 	self:_BindButton(retryPreview)
@@ -5642,7 +5669,8 @@ function App:_RenderStudio()
 				TextSize = 18,
 				Color = if axis == "x" then Colors.Rose elseif axis == "y" then Colors.Mint else Colors.Cyan,
 			})
-			local minus = Factory.Button(controls, "−", UDim2.new(0.075, -4, 0, 45), UDim2.new(0.08, 0, 0, y), nil)
+			local minus =
+				Factory.ImageButton(controls, "−", UDim2.new(0.075, -4, 0, 45), UDim2.new(0.08, 0, 0, y), nil)
 			Factory.New("UISizeConstraint", { MinSize = Vector2.new(42, 45), Parent = minus })
 			local track = Factory.New("TextButton", {
 				Position = UDim2.new(0.17, 0, 0, y + 6),
@@ -5672,7 +5700,7 @@ function App:_RenderStudio()
 			})
 			Factory.Corner(knob, 99)
 			Factory.Stroke(knob, Colors.Cyan, 0.15)
-			local plus = Factory.Button(controls, "+", UDim2.new(0.075, -4, 0, 45), UDim2.new(0.735, 0, 0, y), nil)
+			local plus = Factory.ImageButton(controls, "+", UDim2.new(0.075, -4, 0, 45), UDim2.new(0.735, 0, 0, y), nil)
 			Factory.New("UISizeConstraint", { MinSize = Vector2.new(42, 45), Parent = plus })
 			local valueLabel = Factory.Label(controls, "", UDim2.new(0.17, -10, 0, 45), {
 				Position = UDim2.new(0.82, 0, 0, y),
@@ -5828,7 +5856,7 @@ function App:_RenderStudio()
 		local presetNameBox =
 			self:_TextBox(presets, "Name this fit", UDim2.new(1, -122, 0, 32), UDim2.fromOffset(14, 52), false)
 		local savePresetButton =
-			Factory.Button(presets, "Save preset", UDim2.fromOffset(96, 32), UDim2.new(1, -110, 0, 52), "mint")
+			Factory.ImageButton(presets, "Save preset", UDim2.fromOffset(96, 32), UDim2.new(1, -110, 0, 52), "mint")
 		self:_BindButton(savePresetButton)
 		savePresetButton.Activated:Connect(function()
 			savePresetButton.Active = false
@@ -5881,7 +5909,7 @@ function App:_RenderStudio()
 						BackgroundTransparency = 1,
 						Parent = presetList,
 					})
-					local apply = Factory.Button(
+					local apply = Factory.ImageButton(
 						chip,
 						preset.name,
 						UDim2.fromOffset(nameWidth, 30),
@@ -5897,7 +5925,7 @@ function App:_RenderStudio()
 						self:_Track({ event = "FitPresetApplied", fields = {} })
 						self:_RenderActivePage()
 					end)
-					local remove = Factory.Button(
+					local remove = Factory.ImageButton(
 						chip,
 						"×",
 						UDim2.fromOffset(26, 30),
@@ -5924,24 +5952,34 @@ function App:_RenderStudio()
 
 		local actionsY = presetsY + presetsHeight + 16
 		local isEquipped = table.find(profile.equippedItemIds or {}, selected.id) ~= nil
-		local save =
-			Factory.Button(body, "Save fit", UDim2.new(0.25, -22, 0, 42), UDim2.fromOffset(16, actionsY), "primary")
-		local equip = Factory.Button(
+		local save = Factory.ImageButton(
+			body,
+			"Save fit",
+			UDim2.new(0.25, -22, 0, 42),
+			UDim2.fromOffset(16, actionsY),
+			"primary"
+		)
+		local equip = Factory.ImageButton(
 			body,
 			if isEquipped then "Unequip" else "Equip in game",
 			UDim2.new(0.25, -12, 0, 42),
 			UDim2.new(0.25, 6, 0, actionsY),
 			if isEquipped then "danger" else "mint"
 		)
-		local publish = Factory.Button(
+		local publish = Factory.ImageButton(
 			body,
 			if selected.publishedAssetId then "Published ✓" else "Publish wearable",
 			UDim2.new(0.25, -12, 0, 42),
 			UDim2.new(0.5, 6, 0, actionsY),
 			nil
 		)
-		local resetFit =
-			Factory.Button(body, "↺ Reset fit", UDim2.new(0.25, -22, 0, 42), UDim2.new(0.75, 6, 0, actionsY), nil)
+		local resetFit = Factory.ImageButton(
+			body,
+			"↺ Reset fit",
+			UDim2.new(0.25, -22, 0, 42),
+			UDim2.new(0.75, 6, 0, actionsY),
+			nil
+		)
 		for _, button in { save, equip, publish, resetFit } do
 			self:_BindButton(button)
 		end
@@ -6095,7 +6133,7 @@ function App:_RenderStudio()
 				true
 			)
 			descriptionBox.Text = selected.description or ""
-			local saveDetails = Factory.Button(
+			local saveDetails = Factory.ImageButton(
 				details,
 				"Save details",
 				UDim2.fromOffset(120, 32),
@@ -6160,7 +6198,7 @@ function App:_RenderStudio()
 				Color = Colors.Rose,
 				TextSize = 11,
 			})
-			local visibility = Factory.Button(
+			local visibility = Factory.ImageButton(
 				social,
 				if selected.visibility == "PUBLIC" then "Private" else "Share",
 				if self.compact then UDim2.new(0.31, -8, 0, 38) else UDim2.fromOffset(132, 38),
@@ -6189,7 +6227,7 @@ function App:_RenderStudio()
 			)
 			priceBox.Text = tostring(selected.listingPriceRobux or 50)
 			priceBox.TextXAlignment = Enum.TextXAlignment.Center
-			local list = Factory.Button(
+			local list = Factory.ImageButton(
 				social,
 				if selected.isListed then "End listing" else "List for sale",
 				if self.compact then UDim2.new(0.38, -24, 0, 38) else UDim2.fromOffset(126, 38),
@@ -6242,14 +6280,14 @@ function App:_RenderStudio()
 		-- draft to ever drift from what the server already has saved.
 		local actionsY = 128
 		local isEquipped = table.find(profile.equippedItemIds or {}, selected.id) ~= nil
-		local equip = Factory.Button(
+		local equip = Factory.ImageButton(
 			body,
 			if isEquipped then "Unequip" else "Equip in game",
 			UDim2.new(0.5, -22, 0, 46),
 			UDim2.fromOffset(16, actionsY),
 			if isEquipped then "danger" else "mint"
 		)
-		local publish = Factory.Button(
+		local publish = Factory.ImageButton(
 			body,
 			if selected.publishedAssetId then "Published ✓" else "Publish wearable",
 			UDim2.new(0.5, -22, 0, 46),
@@ -6332,7 +6370,7 @@ function App:_RenderStudio()
 		)
 
 		local switchY = noteY + 44
-		local switchAdvanced = Factory.Button(
+		local switchAdvanced = Factory.ImageButton(
 			body,
 			"Switch to Advanced Mode for fit, pricing & sharing →",
 			UDim2.new(1, -32, 0, 30),
@@ -6417,7 +6455,7 @@ function App:_RenderDiscoverFirstLook(topY: number): number
 	local done = journey.done or {}
 	local height = if self.compact then 190 else 146
 	local card =
-		Factory.Card(self.content, UDim2.new(0.95, 0, 0, height), UDim2.new(0.025, 0, 0, topY), "FirstLookGuide")
+		Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, height), UDim2.new(0.025, 0, 0, topY), "FirstLookGuide")
 	Factory.Stroke(card, if done.TRY_STYLE then Colors.Mint else Colors.Cyan, 0.18, 1.5)
 
 	local featured = self.featuredCommunityItem
@@ -6512,10 +6550,10 @@ function App:_RenderDiscoverFirstLook(topY: number): number
 		Wrapped = true,
 		AlignY = Enum.TextYAlignment.Top,
 	})
-	local badge = Factory.Pill(card, badgeText, if done.TRY_STYLE then Colors.Mint else Colors.Cyan, 112)
+	local badge = Factory.ImagePill(card, badgeText, if done.TRY_STYLE then Colors.Mint else Colors.Cyan, 112)
 	badge.Position = UDim2.fromOffset(textX, if self.compact then 101 else 103)
 
-	local action = Factory.Button(
+	local action = Factory.ImageButton(
 		card,
 		buttonText,
 		if self.compact then UDim2.new(1, -28, 0, 42) else UDim2.fromOffset(218, 46),
@@ -6578,7 +6616,7 @@ function App:_RenderDiscover()
 			else "Try on things other players made. Tap Try on, then Like the ones you love."
 	)
 	if not self.state.policy.contentSharingAllowed then
-		local blocked = Factory.Card(self.content, UDim2.new(0.95, 0, 0, 230), UDim2.new(0.025, 0, 0, 112))
+		local blocked = Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, 230), UDim2.new(0.025, 0, 0, 112))
 		Factory.Label(blocked, "Shared creations are unavailable", UDim2.new(1, -40, 0, 38), {
 			Position = UDim2.fromOffset(20, 38),
 			AlignX = Enum.TextXAlignment.Center,
@@ -6622,7 +6660,7 @@ function App:_RenderDiscover()
 		false
 	)
 	search.Text = self.marketplaceQuery
-	local refresh = Factory.Button(
+	local refresh = Factory.ImageButton(
 		tools,
 		"Search",
 		if self.compact then UDim2.new(0.5, -5, 0, 40) else UDim2.fromOffset(96, 42),
@@ -6643,7 +6681,7 @@ function App:_RenderDiscover()
 	end)
 
 	if showAllMethods then
-		local plus = Factory.Button(
+		local plus = Factory.ImageButton(
 			tools,
 			if self.state.benefits.plusSubscriber then "Plus active ✓" else "Get Roblox Plus",
 			if self.compact then UDim2.new(0.5, -5, 0, 40) else UDim2.fromOffset(110, 42),
@@ -6674,8 +6712,13 @@ function App:_RenderDiscover()
 		Factory.List(filters, Enum.FillDirection.Horizontal, 7)
 		for _, mode in { { Id = "NAME", Label = "By name" }, { Id = "CREATOR", Label = "By creator" } } do
 			local selected = self.marketplaceSearchBy == mode.Id
-			local chip =
-				Factory.Button(filters, mode.Label, UDim2.fromOffset(96, 30), nil, if selected then "primary" else nil)
+			local chip = Factory.ImageButton(
+				filters,
+				mode.Label,
+				UDim2.fromOffset(96, 30),
+				nil,
+				if selected then "primary" else nil
+			)
 			self:_BindButton(chip)
 			chip.Activated:Connect(function()
 				self.marketplaceSearchBy = mode.Id
@@ -6699,8 +6742,13 @@ function App:_RenderDiscover()
 			}
 		do
 			local selected = self.marketplaceSortBy == sort.Id
-			local chip =
-				Factory.Button(filters, sort.Label, UDim2.fromOffset(94, 30), nil, if selected then "primary" else nil)
+			local chip = Factory.ImageButton(
+				filters,
+				sort.Label,
+				UDim2.fromOffset(94, 30),
+				nil,
+				if selected then "primary" else nil
+			)
 			self:_BindButton(chip)
 			chip.Activated:Connect(function()
 				self.marketplaceSortBy = sort.Id
@@ -6708,12 +6756,13 @@ function App:_RenderDiscover()
 				self:_RenderActivePage()
 			end)
 		end
-		local leaderboardChip = Factory.Button(filters, "🏆 Top Creators", UDim2.fromOffset(130, 30), nil, "mint")
+		local leaderboardChip =
+			Factory.ImageButton(filters, "🏆 Top Creators", UDim2.fromOffset(130, 30), nil, "mint")
 		self:_BindButton(leaderboardChip)
 		leaderboardChip.Activated:Connect(function()
 			self:_ShowLeaderboard()
 		end)
-		local simpleChip = Factory.Button(filters, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
+		local simpleChip = Factory.ImageButton(filters, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
 		self:_BindButton(simpleChip)
 		simpleChip.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", true)
@@ -6722,7 +6771,7 @@ function App:_RenderDiscover()
 		gridY = filtersY + 58
 	else
 		local switchY = toolsY + toolsHeight + 10
-		local switchAdvanced = Factory.Button(
+		local switchAdvanced = Factory.ImageButton(
 			self.content,
 			"Switch to Advanced Mode for filters, sorting & buying →",
 			UDim2.new(0.95, 0, 0, 28),
@@ -6768,7 +6817,7 @@ function App:_RenderDiscover()
 		Parent = grid,
 	})
 	for index, item in self.marketplaceItems do
-		local card = Factory.Card(grid, UDim2.fromScale(1, 1), nil, "CommunityItem")
+		local card = Factory.ImageCard(grid, UDim2.fromScale(1, 1), nil, "CommunityItem")
 		card.LayoutOrder = index
 		local image = Factory.New("ImageLabel", {
 			Size = UDim2.new(1, -20, 0, 176),
@@ -6794,7 +6843,7 @@ function App:_RenderDiscover()
 		Factory.Corner(imageHint, 8)
 		self:_WatchImageLoad(image, imageHint, thumbnail(item.modelAssetId, 420))
 		if showAllMethods and item.isListed then
-			Factory.Pill(card, string.format("R$ %d", item.listingPriceRobux), Colors.Mint, 68).Position =
+			Factory.ImagePill(card, string.format("R$ %d", item.listingPriceRobux), Colors.Mint, 68).Position =
 				UDim2.fromOffset(156, 18)
 		end
 		Factory.Label(card, item.title or item.name, UDim2.new(1, -20, 0, 27), {
@@ -6866,7 +6915,7 @@ function App:_RenderDiscover()
 		-- right edge (and an equally cramped 5px between the two buttons);
 		-- widened both gaps to a real ~10px.
 		local isCommunityTryOn = self.communityTryOnItem ~= nil and self.communityTryOnItem.id == item.id
-		local try = Factory.Button(
+		local try = Factory.ImageButton(
 			card,
 			if isCommunityTryOn then "Remove" else "Try on",
 			if showAllMethods then UDim2.new(0.48, -14, 0, 38) else UDim2.new(1, -20, 0, 38),
@@ -6878,7 +6927,7 @@ function App:_RenderDiscover()
 			self:_ApplyCommunityTryOn(item, try, "GRID")
 		end)
 		if showAllMethods then
-			local buy = Factory.Button(
+			local buy = Factory.ImageButton(
 				card,
 				if item.isListed then "Buy copy" else "Not for sale",
 				UDim2.new(0.52, -14, 0, 38),
@@ -6908,14 +6957,14 @@ function App:_RenderDiscover()
 				end)
 			end)
 		end
-		local like = Factory.Button(
+		local like = Factory.ImageButton(
 			card,
 			string.format("%s %s", if item.viewerLiked then "♥" else "♡", formatNumber(item.likes)),
 			UDim2.new(0.5, -15, 0, 30),
 			UDim2.fromOffset(10, 298),
 			nil
 		)
-		local favorite = Factory.Button(
+		local favorite = Factory.ImageButton(
 			card,
 			string.format("%s %s", if item.viewerFavorited then "★" else "☆", formatNumber(item.favorites)),
 			UDim2.new(0.5, -15, 0, 30),
@@ -7098,7 +7147,7 @@ function App:_RenderAvatarLab()
 	local controlsTop = if runwayJoined then 164 else 94
 	if runwayJoined then
 		local runwayBanner =
-			Factory.Card(self.content, UDim2.new(0.95, 0, 0, 54), UDim2.new(0.025, 0, 0, 94), "RunwayReturn")
+			Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, 54), UDim2.new(0.025, 0, 0, 94), "RunwayReturn")
 		local runwayLabel = Factory.Label(runwayBanner, "", UDim2.new(1, -154, 1, 0), {
 			Position = UDim2.fromOffset(14, 0),
 			Font = Theme.Fonts.Bold,
@@ -7106,7 +7155,7 @@ function App:_RenderAvatarLab()
 			Color = Colors.Rose,
 			Truncate = Enum.TextTruncate.AtEnd,
 		})
-		local returnButton = Factory.Button(
+		local returnButton = Factory.ImageButton(
 			runwayBanner,
 			if runwayState.ready then "View round" else "Return & lock in",
 			UDim2.fromOffset(126, 34),
@@ -7136,7 +7185,7 @@ function App:_RenderAvatarLab()
 			end
 		end)
 	end
-	local controls = Factory.Card(
+	local controls = Factory.ImageCard(
 		self.content,
 		UDim2.new(0.95, 0, 0, controlsHeight),
 		UDim2.new(0.025, 0, 0, controlsTop),
@@ -7150,21 +7199,21 @@ function App:_RenderAvatarLab()
 		false
 	)
 	search.Text = self.catalogQuery
-	local searchButton = Factory.Button(
+	local searchButton = Factory.ImageButton(
 		controls,
 		"Search",
 		if self.compact then UDim2.new(0.32, -8, 0, 36) else UDim2.fromOffset(92, 42),
 		if self.compact then UDim2.fromOffset(14, 59) else UDim2.new(1, -322, 0, 13),
 		"primary"
 	)
-	local saveAvatar = Factory.Button(
+	local saveAvatar = Factory.ImageButton(
 		controls,
 		if self.compact then "Save" else "Save avatar",
 		if self.compact then UDim2.new(0.34, -8, 0, 36) else UDim2.fromOffset(100, 42),
 		if self.compact then UDim2.new(0.32, 7, 0, 59) else UDim2.new(1, -220, 0, 13),
 		"mint"
 	)
-	local reset = Factory.Button(
+	local reset = Factory.ImageButton(
 		controls,
 		if self.compact then "Reset" else "Reset look",
 		if self.compact then UDim2.new(0.34, -20, 0, 36) else UDim2.fromOffset(96, 42),
@@ -7219,7 +7268,7 @@ function App:_RenderAvatarLab()
 	})
 	Factory.List(chips, Enum.FillDirection.Horizontal, 7)
 	for typeName, label in ACCESSORY_LABELS do
-		local chip = Factory.Button(
+		local chip = Factory.ImageButton(
 			chips,
 			label,
 			UDim2.fromOffset(86, 30),
@@ -7234,7 +7283,7 @@ function App:_RenderAvatarLab()
 		end)
 	end
 	if showAllMethods then
-		local filtersToggle = Factory.Button(
+		local filtersToggle = Factory.ImageButton(
 			chips,
 			if filtersExpanded then "Filters ▲" elseif filtersActive then "Filters ✓" else "Filters ▾",
 			UDim2.fromOffset(if filtersActive and not filtersExpanded then 92 else 78, 30),
@@ -7246,7 +7295,7 @@ function App:_RenderAvatarLab()
 			self.catalogFiltersExpanded = not filtersExpanded
 			self:_RenderActivePage()
 		end)
-		local simpleChip = Factory.Button(chips, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
+		local simpleChip = Factory.ImageButton(chips, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
 		self:_BindButton(simpleChip)
 		simpleChip.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", true)
@@ -7285,7 +7334,7 @@ function App:_RenderAvatarLab()
 		})
 		Factory.List(sortChips, Enum.FillDirection.Horizontal, 7)
 		for _, sortKey in CATALOG_SORT_ORDER do
-			local chip = Factory.Button(
+			local chip = Factory.ImageButton(
 				sortChips,
 				CATALOG_SORT_LABELS[sortKey],
 				UDim2.fromOffset(math.max(72, #CATALOG_SORT_LABELS[sortKey] * 7 + 24), 30),
@@ -7300,7 +7349,7 @@ function App:_RenderAvatarLab()
 			end)
 		end
 	else
-		local switchAdvanced = Factory.Button(
+		local switchAdvanced = Factory.ImageButton(
 			controls,
 			"Switch to Advanced Mode for filters, sorting & buying →",
 			UDim2.new(1, -28, 0, 28),
@@ -7377,7 +7426,7 @@ function App:_RenderAvatarLab()
 		if self.catalogAccess == nil and not self.catalogAccessPrompting then
 			self:_RequestCatalogAccess()
 		end
-		local access = Factory.Card(
+		local access = Factory.ImageCard(
 			self.content,
 			UDim2.new(0.95, 0, 0, 190),
 			UDim2.new(0.025, 0, 0, controlsTop + controlsHeight + 16),
@@ -7401,7 +7450,7 @@ function App:_RenderAvatarLab()
 				AlignY = Enum.TextYAlignment.Top,
 			}
 		)
-		local enable = Factory.Button(
+		local enable = Factory.ImageButton(
 			access,
 			if self.catalogAccessPrompting then "Waiting for Roblox…" else "Enable catalog",
 			UDim2.new(0.42, 0, 0, 40),
@@ -7452,7 +7501,7 @@ function App:_RenderAvatarLab()
 	for index, item in self.catalogResults or {} do
 		local assetId = tonumber(item.Id or item.AssetId) or 0
 		if assetId > 0 then
-			local card = Factory.Card(grid, UDim2.fromScale(1, 1), nil, "CatalogItem")
+			local card = Factory.ImageCard(grid, UDim2.fromScale(1, 1), nil, "CatalogItem")
 			card.LayoutOrder = index
 			local image = Factory.New("ImageLabel", {
 				Size = UDim2.new(1, -20, 0, 180),
@@ -7487,7 +7536,7 @@ function App:_RenderAvatarLab()
 			-- The old -12/-8 split left "Buy" only ~4px from the card's own
 			-- right edge; widened both the outer and inter-button gaps to a
 			-- real ~10px (matching the CellSize bump above).
-			local try = Factory.Button(
+			local try = Factory.ImageButton(
 				card,
 				if self.triedOnAssetIds[assetId] then "Unequip" else "Try",
 				if showAllMethods then UDim2.new(0.45, -14, 0, 38) else UDim2.new(1, -20, 0, 38),
@@ -7496,7 +7545,8 @@ function App:_RenderAvatarLab()
 			)
 			self:_BindButton(try)
 			if showAllMethods then
-				local buy = Factory.Button(card, "Buy", UDim2.new(0.55, -14, 0, 38), UDim2.new(0.45, 4, 0, 248), "mint")
+				local buy =
+					Factory.ImageButton(card, "Buy", UDim2.new(0.55, -14, 0, 38), UDim2.new(0.45, 4, 0, 248), "mint")
 				self:_BindButton(buy)
 				buy.Activated:Connect(function()
 					local success, problem = pcall(function()
@@ -7587,7 +7637,7 @@ function App:_RenderGraphicsDiscoverBody()
 	local simpleMode = self.state.profile.settings.simpleMode ~= false
 	local showAllMethods = not simpleMode
 	if not self.state.policy.contentSharingAllowed then
-		local blocked = Factory.Card(self.content, UDim2.new(0.95, 0, 0, 200), UDim2.new(0.025, 0, 0, 150))
+		local blocked = Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, 200), UDim2.new(0.025, 0, 0, 150))
 		Factory.Label(blocked, "Shared graphics are unavailable", UDim2.new(1, -40, 0, 32), {
 			Position = UDim2.fromOffset(20, 30),
 			AlignX = Enum.TextXAlignment.Center,
@@ -7622,7 +7672,7 @@ function App:_RenderGraphicsDiscoverBody()
 		false
 	)
 	search.Text = self.graphicsMarketplaceQuery
-	local refresh = Factory.Button(
+	local refresh = Factory.ImageButton(
 		tools,
 		"Search",
 		if self.compact then UDim2.new(1, 0, 0, 40) else UDim2.fromOffset(96, 42),
@@ -7654,8 +7704,13 @@ function App:_RenderGraphicsDiscoverBody()
 		Factory.List(filters, Enum.FillDirection.Horizontal, 7)
 		for _, mode in { { Id = "PROMPT", Label = "By prompt" }, { Id = "CREATOR", Label = "By creator" } } do
 			local selected = self.graphicsMarketplaceSearchBy == mode.Id
-			local chip =
-				Factory.Button(filters, mode.Label, UDim2.fromOffset(96, 30), nil, if selected then "primary" else nil)
+			local chip = Factory.ImageButton(
+				filters,
+				mode.Label,
+				UDim2.fromOffset(96, 30),
+				nil,
+				if selected then "primary" else nil
+			)
 			self:_BindButton(chip)
 			chip.Activated:Connect(function()
 				self.graphicsMarketplaceSearchBy = mode.Id
@@ -7679,8 +7734,13 @@ function App:_RenderGraphicsDiscoverBody()
 			}
 		do
 			local selected = self.graphicsMarketplaceSortBy == sort.Id
-			local chip =
-				Factory.Button(filters, sort.Label, UDim2.fromOffset(94, 30), nil, if selected then "primary" else nil)
+			local chip = Factory.ImageButton(
+				filters,
+				sort.Label,
+				UDim2.fromOffset(94, 30),
+				nil,
+				if selected then "primary" else nil
+			)
 			self:_BindButton(chip)
 			chip.Activated:Connect(function()
 				self.graphicsMarketplaceSortBy = sort.Id
@@ -7688,7 +7748,7 @@ function App:_RenderGraphicsDiscoverBody()
 				self:_RenderActivePage()
 			end)
 		end
-		local simpleChip = Factory.Button(filters, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
+		local simpleChip = Factory.ImageButton(filters, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
 		self:_BindButton(simpleChip)
 		simpleChip.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", true)
@@ -7711,7 +7771,7 @@ function App:_RenderGraphicsDiscoverBody()
 		return
 	end
 	if not showAllMethods then
-		local switchAdvanced = Factory.Button(
+		local switchAdvanced = Factory.ImageButton(
 			self.content,
 			"Switch to Advanced Mode for filters, sorting & buying →",
 			UDim2.new(0.95, 0, 0, 28),
@@ -7749,7 +7809,7 @@ function App:_RenderGraphicsDiscoverBody()
 		Parent = grid,
 	})
 	for index, graphic in self.graphicsMarketplaceItems do
-		local card = Factory.Card(grid, UDim2.fromScale(1, 1), nil, "CommunityGraphic")
+		local card = Factory.ImageCard(grid, UDim2.fromScale(1, 1), nil, "CommunityGraphic")
 		card.LayoutOrder = index
 		local image = Factory.New("ImageLabel", {
 			Size = UDim2.new(1, -20, 0, 150),
@@ -7762,7 +7822,7 @@ function App:_RenderGraphicsDiscoverBody()
 		})
 		Factory.Corner(image, 11)
 		if showAllMethods and graphic.isListed then
-			Factory.Pill(card, string.format("R$ %d", graphic.listingPriceRobux), Colors.Mint, 68).Position =
+			Factory.ImagePill(card, string.format("R$ %d", graphic.listingPriceRobux), Colors.Mint, 68).Position =
 				UDim2.fromOffset(156, 18)
 		end
 		local graphicTitle = if type(graphic.title) == "string" and graphic.title ~= ""
@@ -7819,7 +7879,7 @@ function App:_RenderGraphicsDiscoverBody()
 			})
 		end)
 		if showAllMethods then
-			local buy = Factory.Button(
+			local buy = Factory.ImageButton(
 				card,
 				if graphic.isListed then "Buy copy" else "Not for sale",
 				UDim2.new(1, -20, 0, 34),
@@ -7850,14 +7910,14 @@ function App:_RenderGraphicsDiscoverBody()
 			end)
 		end
 		local likeFavoriteY = if showAllMethods then 266 else 222
-		local like = Factory.Button(
+		local like = Factory.ImageButton(
 			card,
 			string.format("%s %s", if graphic.viewerLiked then "♥" else "♡", formatNumber(graphic.likes)),
 			UDim2.new(0.5, -15, 0, 30),
 			UDim2.fromOffset(10, likeFavoriteY),
 			nil
 		)
-		local favorite = Factory.Button(
+		local favorite = Factory.ImageButton(
 			card,
 			string.format("%s %s", if graphic.viewerFavorited then "★" else "☆", formatNumber(graphic.favorites)),
 			UDim2.new(0.5, -15, 0, 30),
@@ -7918,7 +7978,7 @@ function App:_RenderAvatarGraphics()
 	for _, tab in { { Id = "CREATE", Label = "Create" }, { Id = "DISCOVER", Label = "Discover" } } do
 		local selected = self.graphicsTab == tab.Id
 		local chip =
-			Factory.Button(tabs, tab.Label, UDim2.fromOffset(120, 34), nil, if selected then "primary" else nil)
+			Factory.ImageButton(tabs, tab.Label, UDim2.fromOffset(120, 34), nil, if selected then "primary" else nil)
 		self:_BindButton(chip)
 		chip.Activated:Connect(function()
 			self.graphicsTab = tab.Id
@@ -7962,7 +8022,7 @@ function App:_RenderAvatarGraphics()
 	Factory.List(stack, Enum.FillDirection.Vertical, 14)
 
 	local isTextMode = self.graphicMode == "TEXT"
-	local composer = Factory.Card(stack, UDim2.new(1, 0, 0, 460), nil, "GraphicComposer")
+	local composer = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 460), nil, "GraphicComposer")
 	composer.LayoutOrder = 1
 	local cursorY = 16
 
@@ -7979,14 +8039,14 @@ function App:_RenderAvatarGraphics()
 		BackgroundTransparency = 1,
 		Parent = composer,
 	})
-	local fromAvatar = Factory.Button(
+	local fromAvatar = Factory.ImageButton(
 		sourceRow,
 		"🧑 From My Avatar",
 		UDim2.new(0.5, -5, 1, 0),
 		nil,
 		if isTextMode then nil else "primary"
 	)
-	local fromText = Factory.Button(
+	local fromText = Factory.ImageButton(
 		sourceRow,
 		"✍ Text Prompt",
 		UDim2.new(0.5, -5, 1, 0),
@@ -8026,8 +8086,13 @@ function App:_RenderAvatarGraphics()
 		Factory.List(row, Enum.FillDirection.Horizontal, 8)
 		for _, option in options do
 			local selected = selectedValue == option.Id
-			local chip =
-				Factory.Button(row, option.Label, UDim2.fromOffset(98, 34), nil, if selected then "primary" else nil)
+			local chip = Factory.ImageButton(
+				row,
+				option.Label,
+				UDim2.fromOffset(98, 34),
+				nil,
+				if selected then "primary" else nil
+			)
 			if selected then
 				chip.BackgroundColor3 = color
 			end
@@ -8089,8 +8154,13 @@ function App:_RenderAvatarGraphics()
 	-- Simple Mode leaves them at their defaults (AUTO style, LOW quality,
 	-- see App.new()) exactly like Create hides Style behind the same toggle.
 	if showAllMethods then
-		local simpleLink =
-			Factory.Button(composer, "← Simple Mode", UDim2.fromOffset(120, 24), UDim2.fromOffset(16, cursorY), nil)
+		local simpleLink = Factory.ImageButton(
+			composer,
+			"← Simple Mode",
+			UDim2.fromOffset(120, 24),
+			UDim2.fromOffset(16, cursorY),
+			nil
+		)
 		self:_BindButton(simpleLink)
 		simpleLink.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", true)
@@ -8133,7 +8203,7 @@ function App:_RenderAvatarGraphics()
 		Factory.List(qualityRow, Enum.FillDirection.Horizontal, 8)
 		for _, tier in Config.Generation.ImageQualityTiers do
 			local tierSelected = self.selectedImageQuality == tier.Id
-			local chip = Factory.Button(
+			local chip = Factory.ImageButton(
 				qualityRow,
 				string.format("%s · R$ %d", tier.Label, self.state.prices[tier.ProductKey] or 0),
 				UDim2.fromOffset(146, 34),
@@ -8203,7 +8273,7 @@ function App:_RenderAvatarGraphics()
 	cursorY += 72
 
 	if not showAllMethods then
-		local switchAdvanced = Factory.Button(
+		local switchAdvanced = Factory.ImageButton(
 			composer,
 			"Switch to Advanced Mode for style, quality & pricing →",
 			UDim2.new(1, -32, 0, 26),
@@ -8249,7 +8319,7 @@ function App:_RenderAvatarGraphics()
 		else string.format("R$ %d", price)
 	local actionText =
 		string.format(if isTextMode then "Create image · %s" else "Create avatar graphic · %s", priceText)
-	local generate = Factory.Button(
+	local generate = Factory.ImageButton(
 		composer,
 		actionText,
 		if self.compact then UDim2.new(1, -32, 0, 42) else UDim2.new(0, 260, 0, 42),
@@ -8325,7 +8395,7 @@ function App:_RenderAvatarGraphics()
 	end
 	if inFlightCount > 0 then
 		local activityHeight = 45 + inFlightCount * 50 + 14
-		local activity = Factory.Card(stack, UDim2.new(1, 0, 0, activityHeight), nil, "GraphicActivity")
+		local activity = Factory.ImageCard(stack, UDim2.new(1, 0, 0, activityHeight), nil, "GraphicActivity")
 		activity.LayoutOrder = 2
 		Factory.Label(activity, "IN PROGRESS", UDim2.new(1, -32, 0, 24), {
 			Position = UDim2.fromOffset(16, 13),
@@ -8463,7 +8533,7 @@ function App:_RenderAvatarGraphics()
 	for index, graphicId in self.state.profile.graphicOrder do
 		local graphic = self.state.profile.graphics[graphicId]
 		if graphic then
-			local card = Factory.Card(gallery, UDim2.fromScale(1, 1), nil, "GraphicItem")
+			local card = Factory.ImageCard(gallery, UDim2.fromScale(1, 1), nil, "GraphicItem")
 			card.LayoutOrder = index
 			local previewSource = directImage(graphic.previewAssetId)
 			local image = Factory.New("ImageLabel", {
@@ -8590,7 +8660,7 @@ function App:_RenderAvatarGraphics()
 						AlignY = Enum.TextYAlignment.Top,
 					})
 				else
-					local visibility = Factory.Button(
+					local visibility = Factory.ImageButton(
 						card,
 						if graphic.visibility == "PUBLIC" then "Private" else "Share",
 						UDim2.new(0.48, -5, 0, 32),
@@ -8622,7 +8692,7 @@ function App:_RenderAvatarGraphics()
 					priceBox.FocusLost:Connect(function()
 						priceBox.Text = tostring(math.clamp(math.floor(tonumber(priceBox.Text) or 50), 10, 500))
 					end)
-					local list = Factory.Button(
+					local list = Factory.ImageButton(
 						card,
 						if graphic.isListed then "End listing" else "List for sale",
 						UDim2.new(1, -20, 0, 32),
@@ -8684,7 +8754,8 @@ function App:_RenderAvatarGraphics()
 			Factory.Corner(linkBox, 8)
 			Factory.Padding(linkBox, 6, 4)
 			local deleteY = if showAllMethods then 406 else 256
-			local delete = Factory.Button(card, "Delete", UDim2.new(1, -20, 0, 30), UDim2.fromOffset(10, deleteY), nil)
+			local delete =
+				Factory.ImageButton(card, "Delete", UDim2.new(1, -20, 0, 30), UDim2.fromOffset(10, deleteY), nil)
 			self:_BindButton(delete)
 			delete.Activated:Connect(function()
 				delete.Active = false
@@ -8759,9 +8830,9 @@ function App:_RenderSettings()
 	-- "Switch to Advanced/Simple Mode" links); this card exists so it's
 	-- somewhere a player -- or a parent -- would think to look for it, not
 	-- only stumbled into mid-creation.
-	local createMode = Factory.Card(stack, UDim2.new(1, 0, 0, 168), nil, "CreateMode")
+	local createMode = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 168), nil, "CreateMode")
 	createMode.LayoutOrder = 0
-	Factory.Pill(createMode, "CREATE PAGE", Colors.Mint, 140).Position = UDim2.fromOffset(16, 14)
+	Factory.ImagePill(createMode, "CREATE PAGE", Colors.Mint, 140).Position = UDim2.fromOffset(16, 14)
 	Factory.Label(createMode, "Simple Mode", UDim2.new(1, -32, 0, 22), {
 		Position = UDim2.fromOffset(16, 52),
 		Font = Theme.Fonts.Bold,
@@ -8769,7 +8840,7 @@ function App:_RenderSettings()
 	})
 	local simpleModeOn = settings.simpleMode ~= false
 	local nextSimpleMode = not simpleModeOn
-	local simpleModeButton = Factory.Button(
+	local simpleModeButton = Factory.ImageButton(
 		createMode,
 		if simpleModeOn then "Simple Mode · ON" else "Simple Mode · OFF",
 		UDim2.new(1, -32, 0, 40),
@@ -8801,9 +8872,9 @@ function App:_RenderSettings()
 
 	-- ACCESSIBILITY -----------------------------------------------------
 	local accessibility =
-		Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 396 else 320), nil, "Accessibility")
+		Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 396 else 320), nil, "Accessibility")
 	accessibility.LayoutOrder = 1
-	Factory.Pill(accessibility, "ACCESSIBILITY", Colors.Cyan, 140).Position = UDim2.fromOffset(16, 14)
+	Factory.ImagePill(accessibility, "ACCESSIBILITY", Colors.Cyan, 140).Position = UDim2.fromOffset(16, 14)
 	Factory.Label(accessibility, "Interface size", UDim2.new(1, -32, 0, 22), {
 		Position = UDim2.fromOffset(16, 52),
 		Font = Theme.Fonts.Bold,
@@ -8826,7 +8897,7 @@ function App:_RenderSettings()
 		}
 	do
 		local isSelected = math.abs(currentScale - option.Value) < 0.01
-		local chip = Factory.Button(
+		local chip = Factory.ImageButton(
 			scaleRow,
 			option.Label,
 			UDim2.fromOffset(if self.compact then 84 else 108, 34),
@@ -8852,7 +8923,7 @@ function App:_RenderSettings()
 		{ Position = UDim2.fromOffset(16, 120), Color = Colors.TextMuted, TextSize = 11 }
 	)
 
-	local highContrastButton = Factory.Button(
+	local highContrastButton = Factory.ImageButton(
 		accessibility,
 		if settings.highContrast then "High contrast · ON" else "High contrast · OFF",
 		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.new(0.5, -22, 0, 40),
@@ -8866,7 +8937,7 @@ function App:_RenderSettings()
 		self:_UpdateSetting("highContrast", enabled)
 	end)
 
-	local reduceMotionButton = Factory.Button(
+	local reduceMotionButton = Factory.ImageButton(
 		accessibility,
 		if settings.reduceMotion then "Reduce motion · ON" else "Reduce motion · OFF",
 		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.new(0.5, -22, 0, 40),
@@ -8903,15 +8974,15 @@ function App:_RenderSettings()
 	)
 
 	-- AUDIO ---------------------------------------------------------------
-	local audio = Factory.Card(stack, UDim2.new(1, 0, 0, 108), nil, "Audio")
+	local audio = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 108), nil, "Audio")
 	audio.LayoutOrder = 2
-	Factory.Pill(audio, "AUDIO", Colors.Violet, 90).Position = UDim2.fromOffset(16, 14)
+	Factory.ImagePill(audio, "AUDIO", Colors.Violet, 90).Position = UDim2.fromOffset(16, 14)
 	self:_BuildSoundButton(audio, UDim2.new(1, -32, 0, 42), UDim2.fromOffset(16, 52))
 
 	-- INVITE FRIENDS --------------------------------------------------------
-	local invite = Factory.Card(stack, UDim2.new(1, 0, 0, if self.compact then 158 else 108), nil, "InviteFriends")
+	local invite = Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 158 else 108), nil, "InviteFriends")
 	invite.LayoutOrder = 3
-	Factory.Pill(invite, "GROW THE STUDIO", Colors.Rose, 150).Position = UDim2.fromOffset(16, 14)
+	Factory.ImagePill(invite, "GROW THE STUDIO", Colors.Rose, 150).Position = UDim2.fromOffset(16, 14)
 	Factory.Label(
 		invite,
 		"Send a Roblox invite to a friend for a small one-time Forge Token reward.",
@@ -8924,7 +8995,7 @@ function App:_RenderSettings()
 			AlignY = Enum.TextYAlignment.Top,
 		}
 	)
-	local inviteButton = Factory.Button(
+	local inviteButton = Factory.ImageButton(
 		invite,
 		"Invite a friend",
 		if self.compact then UDim2.new(1, -32, 0, 42) else UDim2.fromOffset(200, 42),
@@ -8940,9 +9011,9 @@ function App:_RenderSettings()
 	local profile = self.state.profile
 	local equippedIds = profile.equippedItemIds or {}
 	local loadout =
-		Factory.Card(stack, UDim2.new(1, 0, 0, math.max(140, 70 + math.max(1, #equippedIds) * 66)), nil, "Loadout")
+		Factory.ImageCard(stack, UDim2.new(1, 0, 0, math.max(140, 70 + math.max(1, #equippedIds) * 66)), nil, "Loadout")
 	loadout.LayoutOrder = 4
-	Factory.Pill(loadout, string.format("EQUIPPED · %d", #equippedIds), Colors.Mint, 130).Position =
+	Factory.ImagePill(loadout, string.format("EQUIPPED · %d", #equippedIds), Colors.Mint, 130).Position =
 		UDim2.fromOffset(16, 14)
 	if #equippedIds == 0 then
 		Factory.Label(loadout, "Nothing equipped yet. Equip an item from My Studio.", UDim2.new(1, -32, 0, 40), {
@@ -8986,7 +9057,8 @@ function App:_RenderSettings()
 					Color = Colors.TextMuted,
 					TextSize = 11,
 				})
-				local unequip = Factory.Button(row, "Unequip", UDim2.fromOffset(120, 38), UDim2.new(1, -128, 0, 9), nil)
+				local unequip =
+					Factory.ImageButton(row, "Unequip", UDim2.fromOffset(120, 38), UDim2.new(1, -128, 0, 9), nil)
 				self:_BindButton(unequip)
 				unequip.Activated:Connect(function()
 					unequip.Active = false
@@ -9023,10 +9095,14 @@ function App:_RenderSettings()
 	local achievementColumns = if self.compact then 1 else 2
 	local achievementRows = math.ceil(#Achievements.List / achievementColumns)
 	local achievementTileHeight = 74
-	local achievements =
-		Factory.Card(stack, UDim2.new(1, 0, 0, 58 + achievementRows * (achievementTileHeight + 8)), nil, "Achievements")
+	local achievements = Factory.ImageCard(
+		stack,
+		UDim2.new(1, 0, 0, 58 + achievementRows * (achievementTileHeight + 8)),
+		nil,
+		"Achievements"
+	)
 	achievements.LayoutOrder = 5
-	Factory.Pill(
+	Factory.ImagePill(
 		achievements,
 		string.format("ACHIEVEMENTS · %d/%d", unlockedCount, #Achievements.List),
 		Colors.Gold,
@@ -9145,7 +9221,7 @@ function App:_ShowPlus()
 		ZIndex = 210,
 		Parent = self.gui,
 	})
-	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, 400), UDim2.fromScale(0.5, 0.5), "PlusModal")
+	local modal = Factory.ImageCard(overlay, UDim2.new(1, -32, 0, 400), UDim2.fromScale(0.5, 0.5), "PlusModal")
 	modal.AnchorPoint = Vector2.new(0.5, 0.5)
 	modal.ClipsDescendants = false
 	modal.ZIndex = 211
@@ -9261,8 +9337,9 @@ function App:_ShowPlus()
 	end
 
 	local subscribe =
-		Factory.Button(modal, "View Roblox Plus", UDim2.new(0.5, -24, 0, 44), UDim2.fromOffset(16, 316), "mint")
-	local closeButton = Factory.Button(modal, "Maybe later", UDim2.new(0.5, -24, 0, 44), UDim2.new(0.5, 8, 0, 316), nil)
+		Factory.ImageButton(modal, "View Roblox Plus", UDim2.new(0.5, -24, 0, 44), UDim2.fromOffset(16, 316), "mint")
+	local closeButton =
+		Factory.ImageButton(modal, "Maybe later", UDim2.new(0.5, -24, 0, 44), UDim2.new(0.5, 8, 0, 316), nil)
 	subscribe.ZIndex = 213
 	closeButton.ZIndex = 213
 	self:_BindButton(subscribe)
@@ -9290,14 +9367,14 @@ function App:_ShowLeaderboard()
 		ZIndex = 210,
 		Parent = self.gui,
 	})
-	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, 480), UDim2.fromScale(0.5, 0.5), "LeaderboardModal")
+	local modal = Factory.ImageCard(overlay, UDim2.new(1, -32, 0, 480), UDim2.fromScale(0.5, 0.5), "LeaderboardModal")
 	modal.AnchorPoint = Vector2.new(0.5, 0.5)
 	modal.ZIndex = 211
 	Factory.New("UISizeConstraint", {
 		MaxSize = Vector2.new(440, 480),
 		Parent = modal,
 	})
-	local topCreatorsPill = Factory.Pill(modal, "TOP CREATORS", Colors.Gold, 130)
+	local topCreatorsPill = Factory.ImagePill(modal, "TOP CREATORS", Colors.Gold, 130)
 	topCreatorsPill.Position = UDim2.fromOffset(16, 16)
 	-- Every other element in this modal explicitly escalates ZIndex past the
 	-- overlay/modal's own (210/211) since this app's ScreenGui compares
@@ -9318,7 +9395,7 @@ function App:_ShowLeaderboard()
 			ZIndex = 212,
 		}
 	)
-	local closeButton = Factory.Button(modal, "×", UDim2.fromOffset(34, 34), UDim2.new(1, -50, 0, 14), nil)
+	local closeButton = Factory.ImageButton(modal, "×", UDim2.fromOffset(34, 34), UDim2.new(1, -50, 0, 14), nil)
 	closeButton.ZIndex = 213
 	self:_BindButton(closeButton)
 	closeButton.Activated:Connect(function()
@@ -9488,7 +9565,8 @@ function App:_ShowContentDetail(descriptor: { [string]: any })
 	local isOwnContent = descriptor.ownerUserId == Players.LocalPlayer.UserId
 	local showTip = not isOwnContent
 	local modalHeight = if showTip then 606 else 522
-	local modal = Factory.Card(overlay, UDim2.new(1, -32, 0, modalHeight), UDim2.fromScale(0.5, 0.5), "ContentDetail")
+	local modal =
+		Factory.ImageCard(overlay, UDim2.new(1, -32, 0, modalHeight), UDim2.fromScale(0.5, 0.5), "ContentDetail")
 	modal.AnchorPoint = Vector2.new(0.5, 0.5)
 	modal.ClipsDescendants = false
 	modal.ZIndex = ZBASE + 1
@@ -9507,7 +9585,7 @@ function App:_ShowContentDetail(descriptor: { [string]: any })
 	-- Top-left instead of top-right (and above the preview image's own
 	-- ZIndex, since it now sits over that image's corner rather than beside
 	-- it) per the user's request to move this one specifically.
-	local closeButton = Factory.Button(modal, "×", UDim2.fromOffset(34, 34), UDim2.fromOffset(14, 14), nil)
+	local closeButton = Factory.ImageButton(modal, "×", UDim2.fromOffset(34, 34), UDim2.fromOffset(14, 14), nil)
 	closeButton.ZIndex = ZBASE + 4
 	self:_BindButton(closeButton)
 	closeButton.Activated:Connect(function()
@@ -9551,7 +9629,8 @@ function App:_ShowContentDetail(descriptor: { [string]: any })
 		self:_WatchImageLoad(previewImage, previewHint, thumbnail(descriptor.modelAssetId, 420))
 	end
 	if descriptor.isListed then
-		local pricePill = Factory.Pill(modal, string.format("R$ %d", descriptor.listingPriceRobux), Colors.Mint, 76)
+		local pricePill =
+			Factory.ImagePill(modal, string.format("R$ %d", descriptor.listingPriceRobux), Colors.Mint, 76)
 		pricePill.Position = UDim2.new(1, -90, 0, 24)
 		pricePill.ZIndex = ZBASE + 3
 	end
@@ -9608,7 +9687,7 @@ function App:_ShowContentDetail(descriptor: { [string]: any })
 		else Network.Actions.ToggleGraphicFavorite
 	local idField = if descriptor.kind == "ITEM" then "itemId" else "graphicId"
 
-	local like = Factory.Button(
+	local like = Factory.ImageButton(
 		modal,
 		string.format("%s %s", if descriptor.viewerLiked then "♥" else "♡", formatNumber(descriptor.likes)),
 		UDim2.new(0.5, -18, 0, 36),
@@ -9616,7 +9695,7 @@ function App:_ShowContentDetail(descriptor: { [string]: any })
 		nil
 	)
 	like.ZIndex = ZBASE + 2
-	local favorite = Factory.Button(
+	local favorite = Factory.ImageButton(
 		modal,
 		string.format("%s %s", if descriptor.viewerFavorited then "★" else "☆", formatNumber(descriptor.favorites)),
 		UDim2.new(0.5, -18, 0, 36),
@@ -9667,7 +9746,7 @@ function App:_ShowContentDetail(descriptor: { [string]: any })
 	end)
 
 	if descriptor.isListed and not isOwnContent then
-		local buy = Factory.Button(
+		local buy = Factory.ImageButton(
 			modal,
 			string.format("Buy copy · R$ %d", descriptor.listingPriceRobux),
 			UDim2.new(1, -28, 0, 40),
@@ -9726,7 +9805,7 @@ function App:_ShowContentDetail(descriptor: { [string]: any })
 		Factory.List(tipRow, Enum.FillDirection.Horizontal, 8)
 		local tierButtons: { TextButton } = {}
 		for _, amount in Config.Marketplace.TipTiers do
-			local tier = Factory.Button(tipRow, string.format("R$ %d", amount), UDim2.fromOffset(84, 40), nil, nil)
+			local tier = Factory.ImageButton(tipRow, string.format("R$ %d", amount), UDim2.fromOffset(84, 40), nil, nil)
 			tier.ZIndex = ZBASE + 2
 			self:_BindButton(tier)
 			table.insert(tierButtons, tier)

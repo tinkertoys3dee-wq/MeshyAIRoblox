@@ -433,7 +433,7 @@ function GameShell.new(
 	-- not the hubButton's own bottom edge (236) rounded up -- 244 left only
 	-- an 8px gap under the "Back to Arcade" button, under this codebase's own
 	-- established 10px minimum clearance.
-	local card = Factory.Card(overlay, UDim2.fromOffset(252, 250), UDim2.fromScale(0.5, 0.45), "GameOverCard")
+	local card = Factory.ImageCard(overlay, UDim2.fromOffset(252, 250), UDim2.fromScale(0.5, 0.45), "GameOverCard")
 	card.AnchorPoint = Vector2.new(0.5, 0.5)
 	card.ZIndex = 31
 	local badge = Factory.New("Frame", {
@@ -494,7 +494,7 @@ function GameShell.new(
 	})
 	Factory.Corner(retryShadow, Theme.SmallCorner)
 	local retryButton =
-		Factory.Button(card, "Play Again", UDim2.fromOffset(200, 42), UDim2.new(0.5, -100, 0, 156), "mint")
+		Factory.ImageButton(card, "Play Again", UDim2.fromOffset(200, 42), UDim2.new(0.5, -100, 0, 156), "mint")
 	retryButton.ZIndex = 32
 	retryButton.TextXAlignment = Enum.TextXAlignment.Right
 	Factory.Gradient(retryButton, { Color3.fromRGB(150, 255, 210), Colors.Mint }, 90)
@@ -521,7 +521,7 @@ function GameShell.new(
 	sounds:Bind(retryButton)
 
 	local hubButton =
-		Factory.Button(card, "Back to Arcade", UDim2.fromOffset(200, 34), UDim2.new(0.5, -100, 0, 202), nil)
+		Factory.ImageButton(card, "Back to Arcade", UDim2.fromOffset(200, 34), UDim2.new(0.5, -100, 0, 202), nil)
 	hubButton.ZIndex = 32
 	hubButton.TextXAlignment = Enum.TextXAlignment.Right
 	local hubIcon = Factory.New("Frame", {
