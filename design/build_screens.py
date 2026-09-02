@@ -264,7 +264,7 @@ def glyph_backpack(cx, cy, s=1.0):
   </g>'''
 
 
-def glyph_avatar(cx, cy, s=1.0):
+def glyph_avatar(cx, cy, s=1.0, outfit="gemAmethyst", edge="#F1E4FF"):
     """Blocky Roblox-style avatar bust."""
     return f'''
   <g transform="translate({cx},{cy}) scale({s})">
@@ -272,9 +272,9 @@ def glyph_avatar(cx, cy, s=1.0):
     <rect x="-17" y="-42" width="10" height="13" rx="3" fill="#2A1206"/>
     <rect x="7" y="-42" width="10" height="13" rx="3" fill="#2A1206"/>
     <path d="M-12 -20 q12 9 24 0" fill="none" stroke="#2A1206" stroke-width="3" stroke-linecap="round"/>
-    <rect x="-26" y="0" width="52" height="46" rx="8" fill="url(#gemAmethyst)" stroke="#F1E4FF" stroke-width="2.4"/>
-    <rect x="-46" y="2" width="16" height="40" rx="7" fill="url(#gemAmethyst)" stroke="#F1E4FF" stroke-width="2.2"/>
-    <rect x="30" y="2" width="16" height="40" rx="7" fill="url(#gemAmethyst)" stroke="#F1E4FF" stroke-width="2.2"/>
+    <rect x="-26" y="0" width="52" height="46" rx="8" fill="url(#{outfit})" stroke="{edge}" stroke-width="2.4"/>
+    <rect x="-46" y="2" width="16" height="40" rx="7" fill="url(#{outfit})" stroke="{edge}" stroke-width="2.2"/>
+    <rect x="30" y="2" width="16" height="40" rx="7" fill="url(#{outfit})" stroke="{edge}" stroke-width="2.2"/>
   </g>'''
 
 
@@ -440,9 +440,54 @@ def chrome(active, title, subtitle, flourish_x=470):
     return out
 
 
-def document(title, body):
+def document(title, body, extra_defs=""):
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">\n'
-            f'  <title>{title}</title>\n  <defs>{DEFS}</defs>\n{body}\n</svg>\n')
+            f'  <title>{title}</title>\n  <defs>{DEFS}{extra_defs}</defs>\n{body}\n</svg>\n')
+
+
+MODAL_DEFS = '''
+    <linearGradient id="rainbow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FF5B97"/>
+      <stop offset="34%" stop-color="#FFC452"/>
+      <stop offset="67%" stop-color="#37DCFF"/>
+      <stop offset="100%" stop-color="#4CEFAF"/>
+    </linearGradient>
+    <radialGradient id="spotlight" cx="50%" cy="0%" r="80%">
+      <stop offset="0%" stop-color="#FFE6B0" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#FFE6B0" stop-opacity="0"/>
+    </radialGradient>
+'''
+
+
+def modal_backdrop(active="Create"):
+    """The app behind, dimmed, so the panel reads as an overlay."""
+    return chrome(active, "", "") + '''
+  <rect width="1920" height="1080" fill="#0A0518" opacity="0.74"/>
+  <ellipse cx="960" cy="540" rx="900" ry="620" fill="#7FD8FF" opacity="0.05"/>'''
+
+
+def modal_panel(x, y, w, h, accent=True):
+    out = panel(x, y, w, h, rx=30, s=1.0, sheen=110)
+    if accent:
+        out += f'''
+  <rect x="{x+26}" y="{y+6}" width="{w-52}" height="7" rx="3.5" fill="url(#rainbow)" opacity="0.95"/>'''
+    return out
+
+
+def close_button(cx, cy):
+    return f'''
+  <g transform="translate({cx},{cy})">
+    <circle r="24" fill="#241645" stroke="url(#goldBar)" stroke-width="2.6"/>
+    <path d="M-8 -8 L8 8 M8 -8 L-8 8" stroke="#FFD98A" stroke-width="3.2" stroke-linecap="round"/>
+  </g>'''
+
+
+def portrait(x, y, s, tint="gemAmethyst", edge="#F1E4FF"):
+    """Small framed avatar bust used in runway entries."""
+    return f'''
+  <rect x="{x}" y="{y}" width="{s}" height="{s}" rx="16" fill="#100A22" stroke="url(#goldBar)" stroke-width="2.2"/>
+  <ellipse cx="{x+s/2}" cy="{y+s*0.86}" rx="{s*0.34}" ry="{s*0.08}" fill="#7FD8FF" opacity="0.12"/>''' + \
+        glyph_avatar(x + s / 2, y + s * 0.52, s / 150, tint, edge)
 
 
 # --------------------------------------------------------------------------
@@ -794,12 +839,179 @@ def settings():
 
 
 # --------------------------------------------------------------------------
+def arcade():
+    b = modal_backdrop("Create")
+    b += modal_panel(300, 108, 1440, 904)
+    b += close_button(1692, 160)
+
+    # header
+    b += f'''
+  <g transform="translate(376,178)">
+    <circle r="38" fill="#FF5B97" fill-opacity="0.22" stroke="url(#goldBar)" stroke-width="3"/>
+    <circle r="29" fill="none" stroke="#FF9ED6" stroke-width="1.2" opacity="0.6"/>
+    <text x="0" y="13" font-size="34" text-anchor="middle">🕹️</text>
+  </g>
+  <text x="436" y="176" font-family="{SERIF}" font-size="42" font-weight="700" fill="url(#goldEdge)" letter-spacing="4">ARCADE</text>
+  <text x="438" y="206" font-family="{SANS}" font-size="16" fill="#CDBBEE">11 games, one weekly leaderboard. Play free, earn Forge Tokens.</text>'''
+
+    # weekly reward banner
+    b += f'''
+  <rect x="1064" y="146" width="580" height="64" rx="20" fill="#2E1B54" stroke="url(#goldBar)" stroke-width="2.4"/>
+  <rect x="1072" y="154" width="564" height="48" rx="15" fill="none" stroke="#FFD98A" stroke-width="1" opacity="0.3"/>
+  <path d="M1104 168 l5.6 13.6 13.6 5.6 -13.6 5.6 -5.6 13.6 -5.6 -13.6 -13.6 -5.6 13.6 -5.6 z" fill="url(#gemGold)"/>
+  <text x="1136" y="174" font-family="{SERIF}" font-size="15" font-weight="700" fill="#FFE3A6" letter-spacing="1.8">WEEKLY TOP 3, EVERY GAME</text>
+  <text x="1136" y="196" font-family="{SANS}" font-size="13.5" fill="#C6AE7A">150 · 83 · 33 tokens, reset every Monday</text>'''
+    b += f'''
+  <path d="M340 250 h1360" stroke="url(#goldSoft)" stroke-width="1" opacity="0.3"/>
+  <use href="#flourish" transform="translate(1020,250) scale(0.55)"/>'''
+
+    games = [
+        ("#37DCFF", "🐦", "Flappy Bird", "Flap through the gap.", "42"),
+        ("#4CEFAF", "🦖", "Dino Runner", "Jump the cacti.", "318"),
+        ("#FF5B97", "🎨", "Color Switch", "Bounce through the right colour.", "27"),
+        ("#875EFF", "🐍", "Neon Snake", "Grow without biting yourself.", "96"),
+        ("#FF5B6A", "🧱", "Block Stacker", "Stack it straight, don't miss.", "54"),
+        ("#FF9542", "🏓", "Brick Breaker", "Steer the paddle, clear the bricks.", "1,204"),
+        ("#2DCDC4", "🎯", "Reflex Tap", "Tap the lit tile before it's gone.", "63"),
+        ("#745CFF", "🔷", "Prism Merge", "Merge prisms, chase huge chains.", "8,410"),
+        ("#2CC4FF", "🚀", "Meteor Rush", "Dodge meteors, collect cores.", "742"),
+        ("#78C8FF", "☁️", "Sky Hopper", "Bounce higher, don't fall behind.", "211"),
+        ("#FFC452", "🔔", "Echo Match", "Watch the pattern, echo it back.", "19"),
+    ]
+    for i, (col, icon, name, blurb, best) in enumerate(games):
+        gx = 340 + (i % 4) * 345
+        gy = 288 + (i // 4) * 228
+        b += f'''
+  <rect x="{gx}" y="{gy}" width="325" height="206" rx="22" fill="url(#panelGlass)" stroke="url(#goldBar)" stroke-width="2.4"/>
+  <rect x="{gx+8}" y="{gy+8}" width="309" height="190" rx="16" fill="none" stroke="{col}" stroke-width="1.2" opacity="0.35"/>
+  <rect x="{gx+8}" y="{gy+8}" width="309" height="58" rx="16" fill="url(#panelSheen)"/>
+  <g transform="translate({gx+58},{gy+58})">
+    <circle r="32" fill="{col}" fill-opacity="0.2" stroke="{col}" stroke-width="2.6"/>
+    <circle r="24" fill="none" stroke="#FFFFFF" stroke-width="1" opacity="0.25"/>
+    <text x="0" y="11" font-size="28" text-anchor="middle">{icon}</text>
+  </g>
+  <text x="{gx+102}" y="{gy+52}" font-family="{SERIF}" font-size="21" font-weight="700" fill="#FFE9BC">{name}</text>
+  <text x="{gx+102}" y="{gy+76}" font-family="{SANS}" font-size="12.5" fill="#9C8CC0">{blurb}</text>
+  <path d="M{gx+20} {gy+108} h285" stroke="url(#goldSoft)" stroke-width="1" opacity="0.25"/>
+  <text x="{gx+24}" y="{gy+134}" font-family="{SANS}" font-size="11.5" font-weight="700" fill="#8E7FB4" letter-spacing="1.6">YOUR BEST</text>
+  <text x="{gx+24}" y="{gy+170}" font-family="{SERIF}" font-size="30" font-weight="700" fill="{col}">{best}</text>'''
+        b += molten_hex(gx + 172, gy + 128, 134, 54, "▶ GO", 19)
+
+    # leaderboard tile
+    lx, ly = 340 + 3 * 345, 288 + 2 * 228
+    b += f'''
+  <g filter="url(#goldGlow)"><rect x="{lx}" y="{ly}" width="325" height="206" rx="22" fill="#2E1B54" stroke="url(#goldBar)" stroke-width="3"/></g>
+  <rect x="{lx+8}" y="{ly+8}" width="309" height="190" rx="16" fill="none" stroke="#FFD98A" stroke-width="1.2" opacity="0.45"/>
+  <g transform="translate({lx+58},{ly+58})">
+    <circle r="32" fill="#FFC452" fill-opacity="0.22" stroke="url(#goldBar)" stroke-width="2.6"/>
+    <text x="0" y="11" font-size="28" text-anchor="middle">🏆</text>
+  </g>
+  <text x="{lx+102}" y="{ly+52}" font-family="{SERIF}" font-size="21" font-weight="700" fill="#FFE9BC">Leaderboard</text>
+  <text x="{lx+102}" y="{ly+76}" font-family="{SANS}" font-size="12.5" fill="#9C8CC0">Global and friends standings.</text>
+  <path d="M{lx+20} {ly+108} h285" stroke="url(#goldSoft)" stroke-width="1" opacity="0.25"/>
+  <text x="{lx+24}" y="{ly+134}" font-family="{SANS}" font-size="11.5" font-weight="700" fill="#8E7FB4" letter-spacing="1.6">YOUR BEST RANK</text>
+  <text x="{lx+24}" y="{ly+170}" font-family="{SERIF}" font-size="30" font-weight="700" fill="#FFC452">#4</text>'''
+    b += molten_hex(lx + 172, ly + 128, 134, 54, "OPEN", 19)
+    return document("Forge — Arcade", b, MODAL_DEFS)
+
+
+def runway():
+    b = modal_backdrop("Create")
+    b += modal_panel(300, 108, 1440, 904)
+    b += f'''
+  <ellipse cx="1020" cy="130" rx="520" ry="240" fill="url(#spotlight)"/>'''
+    b += close_button(1692, 160)
+
+    # header
+    b += f'''
+  <g transform="translate(376,180)">
+    <circle r="38" fill="#FF5B97" fill-opacity="0.2" stroke="url(#goldBar)" stroke-width="3"/>
+    <circle r="29" fill="none" stroke="#FF9ED6" stroke-width="1.2" opacity="0.6"/>
+    <path d="M0 -17 l17 17 -17 17 -17 -17 z" fill="url(#gemRose)" stroke="#FFD3EC" stroke-width="1.6"/>
+  </g>
+  <text x="436" y="176" font-family="{SERIF}" font-size="42" font-weight="700" fill="url(#goldEdge)" letter-spacing="3">FORGE RUNWAY</text>
+  <text x="438" y="208" font-family="{SANS}" font-size="16" fill="#CDBBEE">Tonight's theme · <tspan fill="#FF9ED6" font-weight="700">Neon Royalty</tspan> — lock a look, then vote.</text>'''
+
+    # countdown
+    b += f'''
+  <g transform="translate(1592,182)">
+    <circle r="54" fill="#160E30" stroke="url(#goldBar)" stroke-width="3"/>
+    <circle r="44" fill="none" stroke="#3A2560" stroke-width="8"/>
+    <circle r="44" fill="none" stroke="url(#fillGold)" stroke-width="8" stroke-linecap="round" stroke-dasharray="176 100" transform="rotate(-90)"/>
+    <text x="0" y="2" font-family="{SERIF}" font-size="26" font-weight="700" fill="url(#goldEdge)" text-anchor="middle">4:12</text>
+    <text x="0" y="22" font-family="{SANS}" font-size="9.5" font-weight="700" fill="#C6AE7A" letter-spacing="1.8" text-anchor="middle">LEFT</text>
+  </g>'''
+    b += ghost_hex(1180, 156, 232, 52, "↺ View activity", 16)
+    b += f'''
+  <path d="M340 254 h1360" stroke="url(#goldSoft)" stroke-width="1" opacity="0.3"/>
+  <use href="#flourish" transform="translate(1020,254) scale(0.55)"/>'''
+
+    # lineup
+    b += panel(340, 292, 780, 692, rx=26, s=0.9, sheen=76)
+    b += banner(730, 280, 340, "RUNWAY LINEUP · 6 JOINED", "#FF9ED6")
+    entries = [("@zaraBuilds", "Crystal Dragon Wings", "24", True, "gemCyan", "#D9F6FF"),
+               ("@kit_9", "Neon Jellyfish Backpack", "18", False, "gemMint", "#DDFFF0"),
+               ("@mossy", "Tiny Mushroom Crown", "15", False, "gemRose", "#FFE0F2"),
+               ("@pix", "Moth Queen Wings", "9", False, "gemAmethyst", "#F1E4FF"),
+               ("@ember", "Molten Lava Horns", "6", False, "gemRuby", "#FFE0E4")]
+    for i, (who, look, votes, leading, tint, edge) in enumerate(entries):
+        y = 344 + i * 126
+        stroke = "url(#goldBar)" if leading else "#C9A24A"
+        b += f'''
+  <rect x="368" y="{y}" width="724" height="110" rx="20" fill="{'#3A1F52' if leading else '#241645'}" fill-opacity="{1 if leading else 0.72}" stroke="{stroke}" stroke-width="{2.6 if leading else 1.4}" stroke-opacity="{1 if leading else 0.5}"/>'''
+        b += portrait(384, y + 12, 86, tint, edge)
+        b += f'''
+  <text x="490" y="{y+46}" font-family="{SERIF}" font-size="21" font-weight="700" fill="#FFE9BC">{who}</text>
+  <text x="490" y="{y+72}" font-family="{SANS}" font-size="13.5" fill="#9C8CC0">{look}</text>'''
+        if leading:
+            b += f'''
+  <path d="M{462} {y+22} l5 -5 5 5 -5 5 z" fill="url(#gemGold)"/>
+  <text x="490" y="{y+94}" font-family="{SANS}" font-size="11.5" font-weight="700" fill="#FFC85A" letter-spacing="1.4">LEADING THE ROUND</text>'''
+        b += molten_hex(902, y + 30, 174, 50, f"♥ Vote · {votes}", 17) if leading \
+            else ghost_hex(902, y + 30, 174, 50, f"♥ Vote · {votes}", 17)
+
+    # your look
+    b += panel(1150, 292, 550, 320, rx=26, s=0.85, sheen=70)
+    b += banner(1425, 280, 260, "YOUR LOOK", "#9DF5CE")
+    b += portrait(1184, 336, 132)
+    b += f'''
+  <text x="1342" y="376" font-family="{SERIF}" font-size="22" font-weight="700" fill="#FFE9BC">Sunspire Crown</text>
+  <text x="1342" y="402" font-family="{SANS}" font-size="13.5" fill="#9C8CC0">+ Crystal Dragon Wings</text>
+  <text x="1342" y="432" font-family="{SANS}" font-size="13" fill="#8E7FB4">Change it in My Studio before you lock.</text>'''
+    b += molten_rect(1184, 496, 484, 74, "Lock in my look", 24, rx=24, glow=False)
+    b += f'''
+  <text x="1426" y="596" font-family="{SANS}" font-size="13" fill="#9C8CC0" text-anchor="middle">Free to enter · one look per round</text>'''
+
+    # weekly spotlight
+    b += panel(1150, 638, 550, 346, rx=26, s=0.85, sheen=70)
+    b += banner(1425, 626, 300, "WEEKLY SPOTLIGHT")
+    b += f'''
+  <text x="1425" y="692" font-family="{SANS}" font-size="12.5" fill="#9C8CC0" text-anchor="middle">Rounds, votes cast and received, placements</text>'''
+    board = [("1", "@zaraBuilds", "1,240", "url(#gemGold)", "#3A1206"),
+             ("2", "@mossy", "980", "url(#gemCyan)", "#0E3550"),
+             ("3", "@kit_9", "845", "url(#gemRose)", "#4A0E2E"),
+             ("4", "You", "612", "#2E1B54", "#FFE3A6"),
+             ("5", "@pix", "430", "#2E1B54", "#FFE3A6")]
+    for i, (rank, who, pts, medal, ink) in enumerate(board):
+        y = 712 + i * 52
+        me = who == "You"
+        b += f'''
+  <rect x="1184" y="{y}" width="484" height="44" rx="14" fill="{'#3A1F52' if me else '#241645'}" fill-opacity="{1 if me else 0.6}" stroke="{'url(#goldBar)' if me else '#C9A24A'}" stroke-width="{2.2 if me else 1.2}" stroke-opacity="{1 if me else 0.45}"/>
+  <circle cx="1220" cy="{y+22}" r="15" fill="{medal}" stroke="url(#goldBar)" stroke-width="2"/>
+  <text x="1220" y="{y+28}" font-family="{SERIF}" font-size="16" font-weight="700" fill="{ink}" text-anchor="middle">{rank}</text>
+  <text x="1248" y="{y+28}" font-family="{SANS}" font-size="15" font-weight="700" fill="{'#FFE9BC' if me else '#EBDCFF'}">{who}</text>
+  <text x="1648" y="{y+28}" font-family="{SERIF}" font-size="16" font-weight="700" fill="#FFC85A" text-anchor="end">{pts} pts</text>'''
+    return document("Forge — Runway", b, MODAL_DEFS)
+
+
 SCREENS = {
     "forge-my-studio.svg": my_studio,
     "forge-discover.svg": discover,
     "forge-avatar-lab.svg": avatar_lab,
     "forge-avatar-graphics.svg": avatar_graphics,
     "forge-settings.svg": settings,
+    "forge-arcade.svg": arcade,
+    "forge-runway.svg": runway,
 }
 
 if __name__ == "__main__":
