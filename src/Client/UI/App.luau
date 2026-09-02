@@ -784,20 +784,27 @@ function App:_BuildChrome()
 		BorderSizePixel = 0,
 		Parent = topbar,
 	})
-	local logoMark = Factory.New("Frame", {
-		Size = UDim2.fromOffset(43, 43),
-		Position = UDim2.fromOffset(20, 17),
-		BackgroundColor3 = Colors.Violet,
-		BorderSizePixel = 0,
-		Parent = topbar,
-	})
-	Factory.Corner(logoMark, 13)
-	Factory.Gradient(logoMark, { Colors.Rose, Colors.Violet, Colors.Cyan }, 35)
-	Factory.Label(logoMark, "F", UDim2.fromScale(1, 1), {
-		Font = Theme.Fonts.Black,
-		TextSize = 24,
-		AlignX = Enum.TextXAlignment.Center,
-	})
+	-- Factory.Icon returns nil until design/upload_ui_assets.py (or
+	-- apply_asset_ids.py) has actually put a real id in UIAssets.Logo, so
+	-- the original flat-color mark stays as the fallback rather than
+	-- leaving a blank corner before that upload happens.
+	local logoIcon = Factory.Icon(topbar, "Logo", UDim2.fromOffset(43, 43), UDim2.fromOffset(20, 17))
+	if not logoIcon then
+		local logoMark = Factory.New("Frame", {
+			Size = UDim2.fromOffset(43, 43),
+			Position = UDim2.fromOffset(20, 17),
+			BackgroundColor3 = Colors.Violet,
+			BorderSizePixel = 0,
+			Parent = topbar,
+		})
+		Factory.Corner(logoMark, 13)
+		Factory.Gradient(logoMark, { Colors.Rose, Colors.Violet, Colors.Cyan }, 35)
+		Factory.Label(logoMark, "F", UDim2.fromScale(1, 1), {
+			Font = Theme.Fonts.Black,
+			TextSize = 24,
+			AlignX = Enum.TextXAlignment.Center,
+		})
+	end
 	Factory.Label(topbar, Config.Brand.Name, UDim2.fromOffset(170, 29), {
 		Position = UDim2.fromOffset(76, 14),
 		Font = Theme.Fonts.Black,
@@ -878,12 +885,23 @@ function App:_BuildChrome()
 
 	for index, page in { "Create", "My Studio", "Discover", "Avatar Lab", "Avatar Graphics", "Settings" } do
 		local symbols = { "✦", "◈", "◎", "◇", "❑", "⚙" }
-		local button = Factory.Button(navStack, symbols[index] .. "   " .. page, UDim2.new(1, 0, 0, 48), nil, nil)
+		-- One id per nav row: NavCreate, NavStudio, NavDiscover, NavAvatarLab,
+		-- NavAvatarArt, NavSettings -- see design/export_ui_assets.py.
+		local iconKeys = { "NavCreate", "NavStudio", "NavDiscover", "NavAvatarLab", "NavAvatarArt", "NavSettings" }
+		local button = Factory.ImageButton(navStack, symbols[index] .. "   " .. page, UDim2.new(1, 0, 0, 48), nil, nil)
 		button.Name = page
 		button.LayoutOrder = index
 		button.TextXAlignment = Enum.TextXAlignment.Left
 		button.Selectable = true
 		Factory.Padding(button, 15, 0)
+		-- Only swap the unicode symbol for the decal icon once it's actually
+		-- uploaded (Factory.Icon returns nil until then) -- otherwise the
+		-- symbol stays exactly as it always has.
+		local icon = Factory.Icon(button, iconKeys[index], UDim2.fromOffset(22, 22), UDim2.fromOffset(10, 13))
+		if icon then
+			icon.ZIndex = 2
+			button.Text = "      " .. page
+		end
 		self.sounds:Bind(button)
 		button.Activated:Connect(function()
 			self:_OpenPage(page)

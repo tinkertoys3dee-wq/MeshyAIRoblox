@@ -1,0 +1,104 @@
+[
+  {
+    "name": "PanelFrame",
+    "file": "panel_frame.png",
+    "kind": "slice",
+    "sliceCenter": [
+      78,
+      78,
+      162,
+      162
+    ],
+    "usage": "Factory.Card background"
+  },
+  {
+    "name": "ButtonPrimary",
+    "file": "button_primary.png",
+    "kind": "slice",
+    "sliceCenter": [
+      30,
+      30,
+      90,
+      90
+    ],
+    "usage": "Factory.Button kind='primary'/'mint' background"
+  },
+  {
+    "name": "ButtonDefault",
+    "file": "button_default.png",
+    "kind": "slice",
+    "sliceCenter": [
+      30,
+      30,
+      90,
+      90
+    ],
+    "usage": "Factory.Button default/danger background"
+  },
+  {
+    "name": "ButtonDanger",
+    "file": "button_danger.png",
+    "kind": "slice",
+    "sliceCenter": [
+      30,
+      30,
+      90,
+      90
+    ],
+    "usage": "Factory.Button kind='danger' background"
+  },
+  {
+    "name": "PillFrame",
+    "file": "pill_frame.png",
+    "kind": "slice",
+    "sliceCenter": [
+      22,
+      22,
+      58,
+      58
+    ],
+    "usage": "Factory.Pill background"
+  },
+  {
+    "name": "Logo",
+    "file": "logo.png",
+    "kind": "fit",
+    "usage": "topbar brand mark"
+  },
+  {
+    "name": "NavCreate",
+    "file": "navcreate.png",
+    "kind": "fit",
+    "usage": "sidebar nav icon for NavCreate"
+  },
+  {
+    "name": "NavStudio",
+    "file": "navstudio.png",
+    "kind": "fit",
+    "usage": "sidebar nav icon for NavStudio"
+  },
+  {
+    "name": "NavDiscover",
+    "file": "navdiscover.png",
+    "kind": "fit",
+    "usage": "sidebar nav icon for NavDiscover"
+  },
+  {
+    "name": "NavAvatarLab",
+    "file": "navavatarlab.png",
+    "kind": "fit",
+    "usage": "sidebar nav icon for NavAvatarLab"
+  },
+  {
+    "name": "NavAvatarArt",
+    "file": "navavatarart.png",
+    "kind": "fit",
+    "usage": "sidebar nav icon for NavAvatarArt"
+  },
+  {
+    "name": "NavSettings",
+    "file": "navsettings.png",
+    "kind": "fit",
+    "usage": "sidebar nav icon for NavSettings"
+  }
+]

@@ -4,8 +4,20 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Colors = Theme.Colors
+local UIAssets = require(ReplicatedStorage:WaitForChild("UIAssets"))
 
 local Factory = {}
+
+-- design/manifest.json's sliceCenter for each 9-sliced decal, mirrored here
+-- since Luau can't read that JSON file at runtime. Keep in sync if
+-- design/export_ui_assets.py's PANEL_SLICE/BTN_SLICE/PILL_SLICE ever change.
+local SLICE_CENTER = {
+	PanelFrame = Rect.new(78, 78, 162, 162),
+	ButtonPrimary = Rect.new(30, 30, 90, 90),
+	ButtonDefault = Rect.new(30, 30, 90, 90),
+	ButtonDanger = Rect.new(30, 30, 90, 90),
+	PillFrame = Rect.new(22, 22, 58, 58),
+}
 
 function Factory.New(className: string, properties: { [string]: any }?, children: { Instance }?): any
 	local instance = Instance.new(className)
@@ -297,6 +309,87 @@ function Factory.List(parent: Instance, direction: Enum.FillDirection, gap: numb
 		VerticalAlignment = Enum.VerticalAlignment.Top,
 		Parent = parent,
 	})
+end
+
+-- ============================================================================
+-- Decal-backed chrome
+--
+-- Each function below is a thin wrapper around its plain code-drawn
+-- counterpart above (Card/Button/Pill): it builds the exact same instance
+-- first, then -- only if design/upload_ui_assets.py (or apply_asset_ids.py)
+-- has actually put a nonzero id in UIAssets for that piece -- swaps the flat
+-- BackgroundColor3/Gradient fill for a 9-sliced decal from design/assets/,
+-- inserted at ZIndex 0 so it stays behind the existing Gloss/Shade/
+-- DropShadow overlays and text exactly as the flat fill did. Everything
+-- interactive (the TextButton/TextLabel itself, its Activated event, text)
+-- is completely unchanged -- only the art *behind* it differs. With every
+-- id still 0 (the checked-in default), these behave identically to calling
+-- Card/Button/Pill directly.
+-- ============================================================================
+
+local function attachDecal(target: GuiObject, assetKey: string): boolean
+	local assetId = (UIAssets :: any)[assetKey]
+	if type(assetId) ~= "number" or assetId == 0 then
+		return false
+	end
+	target.BackgroundTransparency = 1
+	local decal = Factory.New("ImageLabel", {
+		Name = "Decal",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Image = `rbxassetid://{assetId}`,
+		ScaleType = Enum.ScaleType.Slice,
+		SliceCenter = SLICE_CENTER[assetKey],
+		ZIndex = 0,
+		Parent = target,
+	})
+	decal:SetAttribute("ForgeDecal", true)
+	return decal ~= nil
+end
+
+function Factory.ImageCard(parent: Instance, size: UDim2, position: UDim2?, name: string?): Frame
+	local card = Factory.Card(parent, size, position, name)
+	attachDecal(card, "PanelFrame")
+	return card
+end
+
+function Factory.ImageButton(parent: Instance, text: string, size: UDim2, position: UDim2?, kind: string?): TextButton
+	local button = Factory.Button(parent, text, size, position, kind)
+	local assetKey = if kind == "primary" or kind == "mint"
+		then "ButtonPrimary"
+		elseif kind == "danger" then "ButtonDanger"
+		else "ButtonDefault"
+	attachDecal(button, assetKey)
+	return button
+end
+
+function Factory.ImagePill(parent: Instance, text: string, color: Color3?, width: number?): TextLabel
+	local pill = Factory.Pill(parent, text, color, width)
+	attachDecal(pill, "PillFrame")
+	return pill
+end
+
+-- Small square medallion icon (nav row, brand mark, ...). Returns nil when
+-- that asset hasn't been uploaded yet, so a call site can keep its existing
+-- code-drawn icon visible as a fallback instead of showing a blank square --
+-- see App.luau's nav-row loop for the pattern (build the icon, only hide the
+-- unicode-symbol label if this returns non-nil).
+function Factory.Icon(parent: Instance, assetKey: string, size: UDim2, position: UDim2?): ImageLabel?
+	local assetId = (UIAssets :: any)[assetKey]
+	if type(assetId) ~= "number" or assetId == 0 then
+		return nil
+	end
+	return Factory.New("ImageLabel", {
+		Name = assetKey,
+		Size = size,
+		Position = position or UDim2.new(),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Image = `rbxassetid://{assetId}`,
+		ScaleType = Enum.ScaleType.Fit,
+		Parent = parent,
+	}) :: ImageLabel
 end
 
 return Factory
