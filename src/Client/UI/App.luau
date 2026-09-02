@@ -3850,31 +3850,47 @@ function App:_RenderCreate()
 						label = "🐉 Dragon Wings",
 						text = "A pair of large translucent dragon wings backpack, glowing red veins, leathery texture, folded slightly for a battle-ready silhouette",
 						accessoryType = "BackAccessory",
+						icon = "ItemWings",
 					},
 					{
 						label = "👑 Crystal Crown",
 						text = "A glossy crescent-moon crown made of translucent violet crystal, chunky silhouette, no floating pieces",
 						accessoryType = "Hat",
+						icon = "ItemCrown",
 					},
 					{
 						label = "⚔️ Neon Katana",
 						text = "A neon-edged katana strapped to the back, glowing cyan blade, sleek black hilt, faint energy trail",
 						accessoryType = "BackAccessory",
+						icon = "ItemKatana",
 					},
 					{
 						label = "🎩 Steampunk Hat",
 						text = "A steampunk top hat with brass gears, a small ticking clock face on the brim, weathered leather band",
 						accessoryType = "Hat",
+						icon = "ItemHat",
 					},
 					{
 						label = "🦋 Fairy Wings",
 						text = "A pair of iridescent fairy wings, delicate vein patterns, glowing softly at the edges, lightweight and symmetrical",
 						accessoryType = "BackAccessory",
+						icon = "ItemButterfly",
 					},
 				}
 			do
 				local chip = Factory.Button(sparkRow, spark.label, UDim2.fromOffset(140, 34))
 				self:_BindButton(chip)
+				-- These 5 idea chips are the one place a fixed, non-user-generated
+				-- item icon is honest: every other item image in the app is a real
+				-- render of generated content, but these example prompts always
+				-- describe the same 5 things. Factory.Icon returns nil (still 0 in
+				-- UIAssets) until an upload happens, so the emoji-prefixed label
+				-- stays exactly as it always has until then.
+				local chipIcon = Factory.Icon(chip, spark.icon, UDim2.fromOffset(20, 20), UDim2.fromOffset(8, 7))
+				if chipIcon then
+					chipIcon.ZIndex = 2
+					chip.Text = "   " .. spark.label:gsub("^%S+%s*", "")
+				end
 				chip.Activated:Connect(function()
 					prompt.Text = spark.text
 					prompt.CursorPosition = #spark.text + 1

@@ -8,10 +8,12 @@ upload_ui_assets.py with an Open Cloud API key.
    resulting decal/image asset id for each.
 3. Edit assets/asset_ids.json -- create it if it doesn't exist -- as a flat
    {"AssetName": 123456789, ...} object. Asset names match manifest.json's
-   "name" field (PanelFrame, ButtonPrimary, ButtonDefault, ButtonDanger,
-   PillFrame, Logo, NavCreate, NavStudio, NavDiscover, NavAvatarLab,
-   NavAvatarArt, NavSettings). You don't need every one filled in at once --
-   missing entries just stay 0 (code-drawn fallback) until you add them.
+   "name" field -- see that file for the full list (shared chrome like
+   PanelFrame/ButtonPrimary/NavCreate, plus every individual item glyph,
+   CrystalHero, EmberMascot, PriceCartouche, and the standalone ornament/gem
+   pieces). You don't need every one filled in at once -- missing entries
+   just stay 0 (code-drawn fallback, or simply "not used yet" for the
+   decorative-only pieces) until you add them.
 4. python3 apply_asset_ids.py            # writes src/Shared/UIAssets.luau
 
 Re-run step 4 any time you add more ids to assets/asset_ids.json.

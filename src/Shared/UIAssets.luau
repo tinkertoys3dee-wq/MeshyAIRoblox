@@ -21,9 +21,34 @@ local UIAssets = {
 	NavAvatarLab = 0,
 	NavAvatarArt = 0,
 	NavSettings = 0,
+	ItemWings = 0,
+	ItemCrown = 0,
+	ItemKatana = 0,
+	ItemHat = 0,
+	ItemButterfly = 0,
+	ItemHalo = 0,
+	ItemHorns = 0,
+	ItemVisor = 0,
+	ItemBackpack = 0,
+	ItemAvatar = 0,
+	ItemPicture = 0,
+	ItemWand = 0,
+	CrystalHero = 0,
+	EmberMascot = 0,
+	PriceCartouche = 0,
+	CornerOrnament = 0,
+	FlourishDivider = 0,
+	RivetStud = 0,
+	SparkleStar = 0,
+	GemCyan = 0,
+	GemRose = 0,
+	GemMint = 0,
+	GemAmethyst = 0,
+	GemGold = 0,
+	GemRuby = 0,
 }
 
--- 0/12 assets have a real id right now.
+-- 0/37 assets have a real id right now.
 UIAssets.Ready = false
 
 return UIAssets
