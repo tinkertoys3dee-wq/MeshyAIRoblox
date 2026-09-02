@@ -66,6 +66,13 @@ python3 apply_asset_ids.py      # first run just creates assets/asset_ids.json
 python3 apply_asset_ids.py      # bakes them into src/Shared/UIAssets.luau
 ```
 
+**Automatic, from Railway** (no Python available there, only Node): the same
+one-command upload exists as a Node script at
+`backend/scripts/ui-decals/upload.mjs` — same manifest and images, same API,
+zero `npm install` needed. See that folder's README for how to run it from
+Railway's Shell/Terminal tab and how to get the resulting ids back into this
+repo.
+
 ## What ships even with zero ids
 
 `src/Shared/UIAssets.luau` is checked in with every id at `0`. Factory's
