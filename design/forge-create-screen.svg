@@ -1,0 +1,652 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <title>Forge — Create screen concept</title>
+
+  <defs>
+    <!-- ============ BACKDROP ============ -->
+    <linearGradient id="sky" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0%" stop-color="#160E33"/>
+      <stop offset="38%" stop-color="#2A1355"/>
+      <stop offset="70%" stop-color="#4B1B60"/>
+      <stop offset="100%" stop-color="#7E2A4A"/>
+    </linearGradient>
+    <radialGradient id="emberGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFA23A" stop-opacity="0.62"/>
+      <stop offset="45%" stop-color="#FF6B2B" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#FF6B2B" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="arcaneGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7FD8FF" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#7FD8FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rayFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFE6B0" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#FFE6B0" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- ============ GOLD METAL ============ -->
+    <linearGradient id="goldBar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF0C0"/>
+      <stop offset="28%" stop-color="#F7CB66"/>
+      <stop offset="55%" stop-color="#D69A2C"/>
+      <stop offset="78%" stop-color="#F3C561"/>
+      <stop offset="100%" stop-color="#9C6A18"/>
+    </linearGradient>
+    <linearGradient id="goldSoft" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFE7A8"/>
+      <stop offset="100%" stop-color="#C4901F"/>
+    </linearGradient>
+    <linearGradient id="goldEdge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF6D8"/>
+      <stop offset="100%" stop-color="#C08C22"/>
+    </linearGradient>
+
+    <!-- ============ PANEL GLASS ============ -->
+    <linearGradient id="panelGlass" x1="0" y1="0" x2="0.25" y2="1">
+      <stop offset="0%" stop-color="#33205E"/>
+      <stop offset="45%" stop-color="#241645"/>
+      <stop offset="100%" stop-color="#1A1035"/>
+    </linearGradient>
+    <linearGradient id="panelSheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.13"/>
+      <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="inkWell" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#120B26"/>
+      <stop offset="100%" stop-color="#1D1240"/>
+    </linearGradient>
+
+    <!-- ============ MOLTEN CTA ============ -->
+    <linearGradient id="molten" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFDE8A"/>
+      <stop offset="22%" stop-color="#FFA53C"/>
+      <stop offset="58%" stop-color="#F4682A"/>
+      <stop offset="100%" stop-color="#C13A1E"/>
+    </linearGradient>
+    <linearGradient id="moltenSheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- ============ GEMS ============ -->
+    <linearGradient id="gemCyan" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#C8F6FF"/>
+      <stop offset="45%" stop-color="#49C9F0"/>
+      <stop offset="100%" stop-color="#1A6FA8"/>
+    </linearGradient>
+    <linearGradient id="gemRose" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#FFD3EC"/>
+      <stop offset="45%" stop-color="#FF74C0"/>
+      <stop offset="100%" stop-color="#A62A7A"/>
+    </linearGradient>
+    <linearGradient id="gemMint" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#CFFFEA"/>
+      <stop offset="45%" stop-color="#4FE0A6"/>
+      <stop offset="100%" stop-color="#177C56"/>
+    </linearGradient>
+    <linearGradient id="gemAmethyst" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#E8D6FF"/>
+      <stop offset="45%" stop-color="#A879FF"/>
+      <stop offset="100%" stop-color="#5B2C9E"/>
+    </linearGradient>
+    <linearGradient id="gemGold" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#FFF3C4"/>
+      <stop offset="45%" stop-color="#FFC444"/>
+      <stop offset="100%" stop-color="#A96C10"/>
+    </linearGradient>
+    <linearGradient id="gemRuby" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#FFD0D6"/>
+      <stop offset="45%" stop-color="#FF5F72"/>
+      <stop offset="100%" stop-color="#96162C"/>
+    </linearGradient>
+
+    <!-- crystal faces for the illustration -->
+    <linearGradient id="facetA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#EAFBFF"/>
+      <stop offset="100%" stop-color="#6FD4F5"/>
+    </linearGradient>
+    <linearGradient id="facetB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7ED6F7"/>
+      <stop offset="100%" stop-color="#2A73C9"/>
+    </linearGradient>
+    <linearGradient id="facetC" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#B9ECFF"/>
+      <stop offset="100%" stop-color="#3E97DA"/>
+    </linearGradient>
+
+    <!-- progress troughs -->
+    <linearGradient id="fillGold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFE7A0"/>
+      <stop offset="50%" stop-color="#FFB43C"/>
+      <stop offset="100%" stop-color="#D77C14"/>
+    </linearGradient>
+    <linearGradient id="fillMint" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#B8FFE2"/>
+      <stop offset="50%" stop-color="#43DFA0"/>
+      <stop offset="100%" stop-color="#189367"/>
+    </linearGradient>
+    <linearGradient id="fillCyan" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#CDF3FF"/>
+      <stop offset="50%" stop-color="#4EC8F2"/>
+      <stop offset="100%" stop-color="#1B7BB0"/>
+    </linearGradient>
+
+    <linearGradient id="emberSprite" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF0AE"/>
+      <stop offset="45%" stop-color="#FFB03C"/>
+      <stop offset="100%" stop-color="#F0632A"/>
+    </linearGradient>
+
+    <!-- ============ FILTERS ============ -->
+    <filter id="deepShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#080416" flood-opacity="0.72"/>
+    </filter>
+    <filter id="popShadow" x="-40%" y="-40%" width="180%" height="200%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#0A0518" flood-opacity="0.6"/>
+    </filter>
+    <filter id="goldGlow" x="-45%" y="-45%" width="190%" height="190%">
+      
+      <feDropShadow dx="0" dy="0" stdDeviation="11" flood-color="#FFC24A" flood-opacity="0.75"/>
+    </filter>
+    <filter id="moltenGlow" x="-25%" y="-80%" width="150%" height="260%">
+      <feDropShadow dx="0" dy="0" stdDeviation="22" flood-color="#FF8A2B" flood-opacity="0.8"/>
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#080416" flood-opacity="0.65"/>
+    </filter>
+    <filter id="arcGlow" x="-45%" y="-45%" width="190%" height="190%">
+      <feDropShadow dx="0" dy="0" stdDeviation="9" flood-color="#66D9FF" flood-opacity="0.85"/>
+    </filter>
+    <filter id="softBlur" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+    <filter id="tinyBlur" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="1.6"/>
+    </filter>
+
+    <!-- ============ ORNAMENTS ============ -->
+    <g id="cornerOrn">
+      <path d="M7 44 C7 22 22 7 44 7" fill="none" stroke="url(#goldBar)" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M7 62 C7 31 31 7 62 7" fill="none" stroke="url(#goldSoft)" stroke-width="1.2" opacity="0.7"/>
+      <path d="M20 20 l7.5 -7.5 7.5 7.5 -7.5 7.5 z" fill="url(#goldBar)"/>
+      <path d="M44 7 c9 0 14 -2.5 17 -7" fill="none" stroke="url(#goldSoft)" stroke-width="1.6" stroke-linecap="round" opacity="0.9"/>
+      <path d="M7 44 c0 9 -2.5 14 -7 17" fill="none" stroke="url(#goldSoft)" stroke-width="1.6" stroke-linecap="round" opacity="0.9"/>
+      <circle cx="62" cy="7" r="2.4" fill="url(#goldBar)"/>
+      <circle cx="7" cy="62" r="2.4" fill="url(#goldBar)"/>
+    </g>
+
+    <g id="rivet">
+      <circle r="5" fill="url(#goldBar)"/>
+      <circle r="2.4" fill="#FFF4CE" opacity="0.9"/>
+      <circle r="5" fill="none" stroke="#6E4410" stroke-width="0.9" opacity="0.8"/>
+    </g>
+
+    <g id="flourish">
+      <path d="M-132 0 C -92 -13, -48 -13, -17 0" fill="none" stroke="url(#goldSoft)" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M132 0 C 92 -13, 48 -13, 17 0" fill="none" stroke="url(#goldSoft)" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M-132 0 c -10 0 -16 5 -18 12" fill="none" stroke="url(#goldSoft)" stroke-width="1.6" stroke-linecap="round" opacity="0.85"/>
+      <path d="M132 0 c 10 0 16 5 18 12" fill="none" stroke="url(#goldSoft)" stroke-width="1.6" stroke-linecap="round" opacity="0.85"/>
+      <path d="M0 -11 l11 11 -11 11 -11 -11 z" fill="url(#gemGold)" stroke="#8A5A12" stroke-width="1"/>
+      <circle cx="-24" cy="2" r="2.6" fill="url(#goldBar)"/>
+      <circle cx="24" cy="2" r="2.6" fill="url(#goldBar)"/>
+    </g>
+
+    <g id="sparkle">
+      <path d="M0 -16 C2 -5 5 -2 16 0 C5 2 2 5 0 16 C-2 5 -5 2 -16 0 C-5 -2 -2 -5 0 -16 Z" fill="#FFF6D8"/>
+    </g>
+  </defs>
+
+  <!-- ================= BACKDROP ================= -->
+  <rect width="1920" height="1080" fill="url(#sky)"/>
+  <ellipse cx="960" cy="1130" rx="1080" ry="430" fill="url(#emberGlow)"/>
+  <ellipse cx="330" cy="150" rx="620" ry="420" fill="url(#arcaneGlow)"/>
+
+  <!-- light rays -->
+  <g opacity="0.55">
+    <path d="M700 -40 L860 -40 L560 620 L470 620 Z" fill="url(#rayFade)"/>
+    <path d="M1010 -40 L1090 -40 L960 520 L890 520 Z" fill="url(#rayFade)"/>
+    <path d="M1320 -40 L1440 -40 L1260 560 L1180 560 Z" fill="url(#rayFade)"/>
+  </g>
+
+  <!-- arcane circle -->
+  <g opacity="0.15" fill="none" stroke="#8FE4FF">
+    <circle cx="900" cy="600" r="452" stroke-width="1.6"/>
+    <circle cx="900" cy="600" r="430" stroke-width="0.9" stroke-dasharray="3 13"/>
+    <circle cx="900" cy="600" r="372" stroke-width="1.1" stroke-dasharray="34 20"/>
+    <circle cx="900" cy="600" r="300" stroke-width="0.9"/>
+  </g>
+  <g opacity="0.22" stroke="#FFD98A" stroke-width="1.4">
+    <path d="M900 130 v22 M900 1048 v-22 M430 600 h22 M1370 600 h-22"/>
+    <path d="M566 266 l16 16 M1234 934 l-16 -16 M566 934 l16 -16 M1234 266 l-16 16"/>
+  </g>
+
+  <!-- drifting embers -->
+  <g filter="url(#softBlur)">
+    <circle cx="640" cy="250" r="5" fill="#FFC46A" opacity="0.75"/>
+    <circle cx="1180" cy="330" r="4" fill="#FF9A5E" opacity="0.6"/>
+    <circle cx="500" cy="760" r="6" fill="#FFB255" opacity="0.5"/>
+    <circle cx="1620" cy="230" r="4.5" fill="#FFD08A" opacity="0.55"/>
+    <circle cx="820" cy="1010" r="7" fill="#FF8F3C" opacity="0.55"/>
+    <circle cx="1290" cy="980" r="5" fill="#FFB25E" opacity="0.45"/>
+  </g>
+  <g fill="#FFF6D8">
+    <use href="#sparkle" transform="translate(1268,142) scale(0.72)" opacity="0.85"/>
+    <use href="#sparkle" transform="translate(1786,206) scale(0.95)" opacity="0.7"/>
+    <use href="#sparkle" transform="translate(276,700) scale(0.66)" opacity="0.6"/>
+    <use href="#sparkle" transform="translate(1560,616) scale(0.55)" opacity="0.5"/>
+  </g>
+
+  <!-- ================= TOP BAR ================= -->
+  <path d="M0 0 H1920 V72 C1480 104, 440 104, 0 72 Z" fill="#150C2E" fill-opacity="0.82"/>
+  <path d="M0 72 C440 104, 1480 104, 1920 72" fill="none" stroke="url(#goldBar)" stroke-width="3"/>
+  <path d="M0 79 C440 111, 1480 111, 1920 79" fill="none" stroke="#FFD98A" stroke-width="1" opacity="0.35"/>
+
+  <!-- brand medallion -->
+  <g transform="translate(66,46)">
+    <g filter="url(#goldGlow)">
+      <circle r="31" fill="url(#panelGlass)" stroke="url(#goldBar)" stroke-width="3.4"/>
+    </g>
+    <circle r="24" fill="none" stroke="#FFD98A" stroke-width="1" opacity="0.45"/>
+    <g stroke="url(#goldSoft)" stroke-width="2" stroke-linecap="round">
+      <path d="M-38 0 c-6 -8 -12 -10 -18 -8"/>
+      <path d="M38 0 c6 -8 12 -10 18 -8"/>
+    </g>
+    <path d="M0 -17 l4.6 11.4 11.4 4.6 -11.4 4.6 -4.6 11.4 -4.6 -11.4 -11.4 -4.6 11.4 -4.6 z" fill="url(#gemGold)" stroke="#8A5A12" stroke-width="0.9"/>
+    <circle cx="0" cy="0" r="3" fill="#FFF7E0"/>
+  </g>
+  <text x="112" y="45" font-family="'Cinzel','Liberation Serif','DejaVu Serif',Georgia,serif" font-size="33" font-weight="700" fill="url(#goldEdge)" letter-spacing="5">FORGE</text>
+  <text x="114" y="66" font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif" font-size="10.5" font-weight="700" fill="#E6C98A" letter-spacing="3.4" opacity="0.85">MAKE ANYTHING · WEAR IT</text>
+
+  <!-- status gem badges -->
+  <g font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif">
+    <g transform="translate(1340,44)">
+      <path d="M-64 -19 h112 l16 19 -16 19 h-112 l-16 -19 z" fill="url(#panelGlass)" stroke="url(#goldBar)" stroke-width="2.2"/>
+      <path d="M-42 -12 l7 -7 7 7 -7 7 z" fill="url(#gemGold)"/>
+      <text x="14" y="6" font-size="15" font-weight="800" fill="#FFE3A6" text-anchor="middle">LV 7</text>
+    </g>
+    <g transform="translate(1520,44)">
+      <path d="M-72 -19 h128 l16 19 -16 19 h-128 l-16 -19 z" fill="url(#panelGlass)" stroke="url(#goldBar)" stroke-width="2.2"/>
+      <path d="M-50 -12 l7 -7 7 7 -7 7 z" fill="url(#gemRuby)"/>
+      <text x="16" y="6" font-size="15" font-weight="800" fill="#FFC9C9" text-anchor="middle">5 DAY STREAK</text>
+    </g>
+    <g transform="translate(1698,44)">
+      <path d="M-58 -19 h100 l16 19 -16 19 h-100 l-16 -19 z" fill="url(#panelGlass)" stroke="url(#goldBar)" stroke-width="2.2"/>
+      <path d="M-38 -12 l7 -7 7 7 -7 7 z" fill="url(#gemCyan)"/>
+      <text x="12" y="6" font-size="15" font-weight="800" fill="#BFEEFF" text-anchor="middle">2 SLOTS</text>
+    </g>
+    <g transform="translate(1846,44)">
+      <path d="M-44 -19 h72 l16 19 -16 19 h-72 l-16 -19 z" fill="url(#panelGlass)" stroke="url(#goldBar)" stroke-width="2.2"/>
+      <path d="M-28 -12 l7 -7 7 7 -7 7 z" fill="url(#gemRose)"/>
+      <text x="10" y="6" font-size="15" font-weight="800" fill="#FFD2EE" text-anchor="middle">PLUS</text>
+    </g>
+  </g>
+
+  <!-- ================= SIDEBAR PANEL ================= -->
+  <g filter="url(#deepShadow)">
+    <rect x="16" y="112" width="232" height="952" rx="28" fill="url(#panelGlass)"/>
+  </g>
+  <rect x="16" y="112" width="232" height="952" rx="28" fill="none" stroke="url(#goldBar)" stroke-width="3"/>
+  <rect x="25" y="121" width="214" height="934" rx="21" fill="none" stroke="#FFD98A" stroke-width="1" opacity="0.22"/>
+  <rect x="25" y="121" width="214" height="300" rx="21" fill="url(#panelSheen)"/>
+  <use href="#cornerOrn" transform="translate(16,112)"/>
+  <use href="#cornerOrn" transform="translate(248,112) scale(-1,1)"/>
+  <use href="#cornerOrn" transform="translate(16,1064) scale(1,-1)"/>
+  <use href="#cornerOrn" transform="translate(248,1064) scale(-1,-1)"/>
+
+  <g font-family="'Cinzel','Liberation Serif','DejaVu Serif',Georgia,serif">
+    <!-- Create : active -->
+    <g filter="url(#goldGlow)">
+      <rect x="32" y="150" width="204" height="58" rx="18" fill="url(#molten)" stroke="url(#goldBar)" stroke-width="2.8"/>
+    </g>
+    <rect x="38" y="156" width="192" height="20" rx="10" fill="url(#moltenSheen)" opacity="0.5"/>
+    <circle cx="62" cy="179" r="17" fill="#2A1240" stroke="url(#goldBar)" stroke-width="2.2"/>
+    <path d="M62 168 l3.2 7.8 7.8 3.2 -7.8 3.2 -3.2 7.8 -3.2 -7.8 -7.8 -3.2 7.8 -3.2 z" fill="#FFD98A"/>
+    <text x="90" y="186" font-size="20" font-weight="700" fill="#3A1206">Create</text>
+
+    <!-- inactive entries -->
+    <g>
+      <rect x="32" y="224" width="204" height="54" rx="17" fill="#3A2560" fill-opacity="0.42" stroke="#C9A24A" stroke-width="1.4" stroke-opacity="0.55"/>
+      <circle cx="62" cy="251" r="16" fill="#1E1238" stroke="url(#goldSoft)" stroke-width="1.8"/>
+      <g transform="translate(62,251)" fill="none" stroke="#8FE4FF" stroke-width="1.9" stroke-linejoin="round">
+        <path d="M0 -8 L7 -4 L7 4 L0 8 L-7 4 L-7 -4 Z"/>
+        <path d="M-7 -4 L0 0 L7 -4 M0 0 L0 8"/>
+      </g>
+      <text x="90" y="258" font-size="18" fill="#EBDCFF">My Studio</text>
+    </g>
+    <g>
+      <rect x="32" y="292" width="204" height="54" rx="17" fill="#3A2560" fill-opacity="0.42" stroke="#C9A24A" stroke-width="1.4" stroke-opacity="0.55"/>
+      <circle cx="62" cy="319" r="16" fill="#1E1238" stroke="url(#goldSoft)" stroke-width="1.8"/>
+      <g transform="translate(62,319)">
+        <circle r="7.5" fill="none" stroke="#FF9ED6" stroke-width="1.9"/>
+        <path d="M3.6 -3.6 L-1 1 L-3.6 3.6 L1 -1 Z" fill="#FF9ED6"/>
+      </g>
+      <text x="90" y="326" font-size="18" fill="#EBDCFF">Discover</text>
+    </g>
+    <g>
+      <rect x="32" y="360" width="204" height="54" rx="17" fill="#3A2560" fill-opacity="0.42" stroke="#C9A24A" stroke-width="1.4" stroke-opacity="0.55"/>
+      <circle cx="62" cy="387" r="16" fill="#1E1238" stroke="url(#goldSoft)" stroke-width="1.8"/>
+      <g transform="translate(62,387)" fill="none" stroke="#7FF0C0" stroke-width="1.9" stroke-linecap="round">
+        <circle cx="0" cy="-3.5" r="3.6"/>
+        <path d="M-6.5 8 C-6.5 1.5 6.5 1.5 6.5 8"/>
+      </g>
+      <text x="90" y="394" font-size="18" fill="#EBDCFF">Avatar Lab</text>
+    </g>
+    <g>
+      <rect x="32" y="428" width="204" height="54" rx="17" fill="#3A2560" fill-opacity="0.42" stroke="#C9A24A" stroke-width="1.4" stroke-opacity="0.55"/>
+      <circle cx="62" cy="455" r="16" fill="#1E1238" stroke="url(#goldSoft)" stroke-width="1.8"/>
+      <g transform="translate(62,455)">
+        <rect x="-8" y="-6.5" width="16" height="13" rx="2.5" fill="none" stroke="#C6A6FF" stroke-width="1.9"/>
+        <path d="M-8 3 L-2.5 -2.5 L1.5 1.5 L4 -1 L8 3" fill="none" stroke="#C6A6FF" stroke-width="1.9" stroke-linejoin="round"/>
+      </g>
+      <text x="90" y="462" font-size="18" fill="#EBDCFF">Avatar Art</text>
+    </g>
+    <g>
+      <rect x="32" y="496" width="204" height="54" rx="17" fill="#3A2560" fill-opacity="0.42" stroke="#C9A24A" stroke-width="1.4" stroke-opacity="0.55"/>
+      <circle cx="62" cy="523" r="16" fill="#1E1238" stroke="url(#goldSoft)" stroke-width="1.8"/>
+      <g transform="translate(62,523)" fill="none" stroke="#D8CBEF" stroke-width="1.9">
+        <circle r="3.2"/>
+        <circle r="7.4" stroke-dasharray="3.4 2.8"/>
+      </g>
+      <text x="90" y="530" font-size="18" fill="#EBDCFF">Settings</text>
+    </g>
+  </g>
+
+  <use href="#flourish" transform="translate(134,600) scale(0.62)"/>
+  <g transform="translate(134,714)">
+    <circle r="60" fill="#160E30" fill-opacity="0.7" stroke="url(#goldSoft)" stroke-width="1.4"/>
+    <circle r="52" fill="url(#panelGlass)" stroke="url(#goldBar)" stroke-width="3"/>
+    <circle r="44" fill="none" stroke="#3A2560" stroke-width="7"/>
+    <circle r="44" fill="none" stroke="url(#fillGold)" stroke-width="7" stroke-linecap="round"
+            stroke-dasharray="198 78" transform="rotate(-90)"/>
+    <circle r="34" fill="none" stroke="#FFD98A" stroke-width="1" opacity="0.35"/>
+    <text x="0" y="6" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="34" font-weight="700"
+          fill="url(#goldEdge)" text-anchor="middle">7</text>
+    <text x="0" y="26" font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif" font-size="9.5"
+          font-weight="700" fill="#C6AE7A" letter-spacing="2" text-anchor="middle">LEVEL</text>
+    <path d="M0 -63 l6 -6 6 6 -6 6 z" transform="translate(-6,0)" fill="url(#gemGold)"/>
+    <path d="M0 57 l6 -6 6 6 -6 6 z" transform="translate(-6,0)" fill="url(#gemGold)"/>
+    <path d="M-66 0 l6 -6 6 6 -6 6 z" fill="url(#gemGold)" opacity="0.8"/>
+    <path d="M54 0 l6 -6 6 6 -6 6 z" fill="url(#gemGold)" opacity="0.8"/>
+  </g>
+  <text x="134" y="806" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="12.5" font-weight="700"
+        fill="#E6C98A" letter-spacing="2.2" text-anchor="middle">CREATOR RANK</text>
+  <text x="134" y="828" font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif" font-size="12"
+        fill="#9C8CC0" text-anchor="middle">1,180 / 1,600 XP</text>
+  <use href="#flourish" transform="translate(134,856) scale(0.5)"/>
+
+
+  <!-- mode selector -->
+  <rect x="32" y="900" width="204" height="140" rx="20" fill="#160E30" fill-opacity="0.75" stroke="url(#goldSoft)" stroke-width="1.8"/>
+  <text x="134" y="932" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="13" font-weight="700" fill="#E6C98A" letter-spacing="2.6" text-anchor="middle">MODE</text>
+  <g filter="url(#popShadow)">
+    <rect x="46" y="944" width="176" height="46" rx="15" fill="url(#gemMint)" stroke="url(#goldBar)" stroke-width="2.2"/>
+  </g>
+  <rect x="52" y="949" width="164" height="15" rx="7.5" fill="#FFFFFF" opacity="0.3"/>
+  <text x="134" y="974" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="17" font-weight="700" fill="#08331F" text-anchor="middle">Simple</text>
+  <rect x="46" y="998" width="176" height="30" rx="12" fill="#2A1B4C" stroke="#8E76B8" stroke-width="1.3" stroke-opacity="0.6"/>
+  <text x="134" y="1019" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="15" fill="#A594C4" text-anchor="middle">Advanced</text>
+
+  <!-- ================= PAGE TITLE ================= -->
+  <text x="296" y="172" font-family="'Cinzel','Liberation Serif','DejaVu Serif',Georgia,serif" font-size="52" font-weight="700" fill="url(#goldEdge)" filter="url(#popShadow)">Describe it. Wear it.</text>
+  <use href="#flourish" transform="translate(470,196) scale(0.8)"/>
+  <text x="296" y="228" font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif" font-size="17" fill="#D9C7F5">Type what you want below and Forge builds a real, wearable Roblox accessory from it. Every input is moderated.</text>
+
+  <!-- ================= DIRECT FORGE PANEL ================= -->
+  <g filter="url(#deepShadow)">
+    <rect x="296" y="256" width="1004" height="208" rx="26" fill="url(#panelGlass)"/>
+  </g>
+  <rect x="296" y="256" width="1004" height="208" rx="26" fill="none" stroke="url(#goldBar)" stroke-width="3"/>
+  <rect x="305" y="265" width="986" height="190" rx="19" fill="none" stroke="#FFD98A" stroke-width="1" opacity="0.24"/>
+  <rect x="305" y="265" width="986" height="86" rx="19" fill="url(#panelSheen)"/>
+  <use href="#cornerOrn" transform="translate(296,256)"/>
+  <use href="#cornerOrn" transform="translate(1300,256) scale(-1,1)"/>
+  <use href="#cornerOrn" transform="translate(296,464) scale(1,-1)"/>
+  <use href="#cornerOrn" transform="translate(1300,464) scale(-1,-1)"/>
+  <use href="#rivet" transform="translate(640,262)"/>
+  <use href="#rivet" transform="translate(956,262)"/>
+  <use href="#rivet" transform="translate(640,458)"/>
+  <use href="#rivet" transform="translate(956,458)"/>
+
+  <!-- START HERE ribbon -->
+  <g filter="url(#popShadow)">
+    <path d="M334 236 h176 l-16 22 16 22 h-176 l-16 -22 z" fill="url(#molten)" stroke="url(#goldBar)" stroke-width="2.6"/>
+  </g>
+  <path d="M340 243 h164 l-9 12 h-164 z" fill="#FFFFFF" opacity="0.24"/>
+  <text x="422" y="266" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="17" font-weight="700" fill="#3A1206" letter-spacing="2" text-anchor="middle">START HERE</text>
+
+  <text x="332" y="338" font-family="'Cinzel','Liberation Serif','DejaVu Serif',Georgia,serif" font-size="40" font-weight="700" fill="#FFE9BC">Direct Forge</text>
+  <text x="332" y="378" font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif" font-size="16.5" fill="#CDBBEE">Describe anything you can imagine and Forge builds a real,</text>
+  <text x="332" y="404" font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif" font-size="16.5" fill="#CDBBEE">wearable Roblox accessory — the fastest way to create.</text>
+
+  <!-- faceted crystal -->
+  <g transform="translate(1010,360)" filter="url(#arcGlow)">
+    <path d="M0 -62 L26 -22 L16 40 L-16 40 L-26 -22 Z" fill="url(#facetC)"/>
+    <path d="M0 -62 L0 40 L-16 40 L-26 -22 Z" fill="url(#facetB)" opacity="0.92"/>
+    <path d="M0 -62 L26 -22 L0 -8 Z" fill="url(#facetA)" opacity="0.95"/>
+    <path d="M-26 -22 L0 -8 L0 40 L-16 40 Z" fill="#2E7FC4" opacity="0.55"/>
+    <path d="M0 -62 L26 -22 L16 40 L-16 40 L-26 -22 Z" fill="none" stroke="#EAFBFF" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M0 -62 L0 40 M-26 -22 L26 -22 M-26 -22 L0 -8 L26 -22" fill="none" stroke="#EAFBFF" stroke-width="1.3" opacity="0.75"/>
+    <path d="M6 -46 L14 -26" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+  </g>
+  <use href="#sparkle" transform="translate(1058,300) scale(0.62)" fill="#FFF6D8" opacity="0.9"/>
+  <use href="#sparkle" transform="translate(966,414) scale(0.4)" fill="#BFF0FF" opacity="0.8"/>
+
+  <!-- price cartouche -->
+  <g transform="translate(1188,352)">
+    <path d="M-88 -46 h176 v56 q0 22 -30 30 l-58 16 l-58 -16 q-30 -8 -30 -30 z" fill="#180F32" stroke="url(#goldBar)" stroke-width="2.8"/>
+    <path d="M-79 -37 h158 v46 q0 16 -23 23 l-56 15 l-56 -15 q-23 -7 -23 -23 z" fill="none" stroke="#FFD98A" stroke-width="1" opacity="0.35"/>
+    <text x="0" y="2" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="32" font-weight="700" fill="url(#goldEdge)" text-anchor="middle">R$ 159</text>
+    <text x="0" y="26" font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif" font-size="11.5" font-weight="700" fill="#C6AE7A" letter-spacing="1.6" text-anchor="middle">ONE ACCESSORY</text>
+  </g>
+
+  <!-- ================= ADVANCED MODE LINK ================= -->
+  <g>
+    <path d="M296 500 h1004" stroke="url(#goldSoft)" stroke-width="1" opacity="0.3"/>
+    <rect x="470" y="480" width="656" height="42" rx="21" fill="#2A1B4C" fill-opacity="0.55" stroke="url(#goldSoft)" stroke-width="1.6"/>
+    <text x="798" y="507" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="16" fill="#E9D9FF" text-anchor="middle">Switch to Advanced Mode  ✦</text>
+    <use href="#flourish" transform="translate(388,501) scale(0.42)"/>
+    <use href="#flourish" transform="translate(1208,501) scale(0.42)"/>
+  </g>
+
+  <!-- ================= PROMPT PANEL ================= -->
+  <g filter="url(#deepShadow)">
+    <rect x="296" y="544" width="1004" height="374" rx="26" fill="url(#panelGlass)"/>
+  </g>
+  <rect x="296" y="544" width="1004" height="374" rx="26" fill="none" stroke="url(#goldBar)" stroke-width="3"/>
+  <rect x="305" y="553" width="986" height="356" rx="19" fill="none" stroke="#FFD98A" stroke-width="1" opacity="0.24"/>
+  <rect x="305" y="553" width="986" height="90" rx="19" fill="url(#panelSheen)"/>
+  <use href="#cornerOrn" transform="translate(296,544)"/>
+  <use href="#cornerOrn" transform="translate(1300,544) scale(-1,1)"/>
+  <use href="#cornerOrn" transform="translate(296,918) scale(1,-1)"/>
+  <use href="#cornerOrn" transform="translate(1300,918) scale(-1,-1)"/>
+
+  <text x="332" y="594" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="15" font-weight="700" fill="#E6C98A" letter-spacing="2.6">NEED AN IDEA?  TAP ONE</text>
+  <path d="M600 588 h668" stroke="url(#goldSoft)" stroke-width="1" opacity="0.28"/>
+
+  <!-- idea gems -->
+  <g font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif" font-size="15.5" font-weight="700">
+    <g transform="translate(332,610)">
+      <path d="M18 0 h150 l18 21 -18 21 h-150 l-18 -21 z" fill="#241645" stroke="url(#goldBar)" stroke-width="2.2"/>
+      <path d="M24 5 h138 l-9 11 h-138 z" fill="#FFFFFF" opacity="0.07"/>
+      <path d="M4 21 l7.5 -7.5 7.5 7.5 -7.5 7.5 z" fill="url(#gemMint)" transform="translate(22,0)"/>
+      <text x="107" y="27" fill="#EBDCFF" text-anchor="middle">Dragon Wings</text>
+    </g>
+    <g transform="translate(532,610)">
+      <path d="M18 0 h150 l18 21 -18 21 h-150 l-18 -21 z" fill="#241645" stroke="url(#goldBar)" stroke-width="2.2"/>
+      <path d="M24 5 h138 l-9 11 h-138 z" fill="#FFFFFF" opacity="0.07"/>
+      <path d="M4 21 l7.5 -7.5 7.5 7.5 -7.5 7.5 z" fill="url(#gemGold)" transform="translate(22,0)"/>
+      <text x="107" y="27" fill="#EBDCFF" text-anchor="middle">Crystal Crown</text>
+    </g>
+    <g transform="translate(732,610)">
+      <path d="M18 0 h140 l18 21 -18 21 h-140 l-18 -21 z" fill="#241645" stroke="url(#goldBar)" stroke-width="2.2"/>
+      <path d="M24 5 h128 l-9 11 h-128 z" fill="#FFFFFF" opacity="0.07"/>
+      <path d="M4 21 l7.5 -7.5 7.5 7.5 -7.5 7.5 z" fill="url(#gemCyan)" transform="translate(22,0)"/>
+      <text x="102" y="27" fill="#EBDCFF" text-anchor="middle">Neon Katana</text>
+    </g>
+    <g transform="translate(922,610)">
+      <path d="M18 0 h156 l18 21 -18 21 h-156 l-18 -21 z" fill="#241645" stroke="url(#goldBar)" stroke-width="2.2"/>
+      <path d="M24 5 h144 l-9 11 h-144 z" fill="#FFFFFF" opacity="0.07"/>
+      <path d="M4 21 l7.5 -7.5 7.5 7.5 -7.5 7.5 z" fill="url(#gemRuby)" transform="translate(22,0)"/>
+      <text x="110" y="27" fill="#EBDCFF" text-anchor="middle">Steampunk Hat</text>
+    </g>
+    <g transform="translate(1128,610)">
+      <path d="M18 0 h134 l18 21 -18 21 h-134 l-18 -21 z" fill="#241645" stroke="url(#goldBar)" stroke-width="2.2"/>
+      <path d="M24 5 h122 l-9 11 h-122 z" fill="#FFFFFF" opacity="0.07"/>
+      <path d="M4 21 l7.5 -7.5 7.5 7.5 -7.5 7.5 z" fill="url(#gemAmethyst)" transform="translate(22,0)"/>
+      <text x="99" y="27" fill="#EBDCFF" text-anchor="middle">Fairy Wings</text>
+    </g>
+  </g>
+
+  <!-- inscription well -->
+  <g filter="url(#arcGlow)">
+    <rect x="332" y="676" width="932" height="132" rx="20" fill="url(#inkWell)" stroke="#7FD8FF" stroke-width="2.4"/>
+  </g>
+  <rect x="340" y="684" width="916" height="116" rx="15" fill="none" stroke="#FFD98A" stroke-width="1" opacity="0.28"/>
+  <g fill="#7FD8FF" opacity="0.75">
+    <path d="M356 700 l5 -5 5 5 -5 5 z"/><path d="M374 700 l3.5 -3.5 3.5 3.5 -3.5 3.5 z" opacity="0.65"/>
+    <path d="M1230 700 l5 -5 5 5 -5 5 z"/><path d="M1212 700 l3.5 -3.5 3.5 3.5 -3.5 3.5 z" opacity="0.65"/>
+  </g>
+  <text x="366" y="740" font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif" font-size="25" fill="#F4ECFF">glowing blue dragon wings made of crystal</text>
+  <rect x="852" y="718" width="2.6" height="30" rx="1.3" fill="#8FE4FF"/>
+  <text x="1240" y="788" font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif" font-size="13.5" font-weight="700" fill="#8E7FB4" text-anchor="end">41 / 500</text>
+
+  <!-- ember sprite guide -->
+  <g transform="translate(372,858)">
+    <g filter="url(#softBlur)" opacity="0.65">
+      <circle r="30" fill="#FF9436"/>
+    </g>
+    <path d="M0 -34 C12 -18 25 -12 25 4 C25 21 13 33 0 33 C-13 33 -25 21 -25 4 C-25 -12 -12 -18 0 -34 Z" fill="url(#emberSprite)" stroke="#FFE7B0" stroke-width="2.4"/>
+    <path d="M0 -18 C7 -8 13 -4 13 5 C13 15 7 22 0 22 C-7 22 -13 15 -13 5 C-13 -4 -7 -8 0 -18 Z" fill="#FFE9A8" opacity="0.55"/>
+    <ellipse cx="-8.5" cy="0" rx="6" ry="7.2" fill="#2A1206"/>
+    <ellipse cx="8.5" cy="0" rx="6" ry="7.2" fill="#2A1206"/>
+    <circle cx="-6.5" cy="-2.4" r="2.2" fill="#FFFFFF"/>
+    <circle cx="10.5" cy="-2.4" r="2.2" fill="#FFFFFF"/>
+    <path d="M-7 12 Q0 19 7 12" fill="none" stroke="#2A1206" stroke-width="2.6" stroke-linecap="round"/>
+  </g>
+  <path d="M418 858 L400 848 L400 868 Z" fill="#241645"/>
+  <rect x="416" y="832" width="600" height="52" rx="18" fill="#241645" stroke="url(#goldSoft)" stroke-width="1.6"/>
+  <text x="440" y="864" font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif" font-size="15.5" fill="#D9C7F5">A colour + a material + a shape works best — “gold crown made of lava”.</text>
+
+  <text x="1264" y="864" font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif" font-size="13.5" fill="#9C8CC0" text-anchor="end">Default style &amp; fit</text>
+
+  <!-- ================= MAKE IT ================= -->
+  <g filter="url(#moltenGlow)">
+    <rect x="296" y="948" width="1004" height="88" rx="30" fill="url(#molten)" stroke="url(#goldBar)" stroke-width="3.4"/>
+  </g>
+  <rect x="308" y="958" width="980" height="30" rx="15" fill="url(#moltenSheen)" opacity="0.6"/>
+  <rect x="306" y="958" width="984" height="68" rx="24" fill="none" stroke="#FFF0C0" stroke-width="1.2" opacity="0.5"/>
+  <use href="#rivet" transform="translate(330,992) scale(0.9)"/>
+  <use href="#rivet" transform="translate(1266,992) scale(0.9)"/>
+  <g transform="translate(430,992)">
+    <circle r="22" fill="#3A1206" fill-opacity="0.35" stroke="url(#goldBar)" stroke-width="2.2"/>
+    <path d="M0 -13 l3.6 8.9 8.9 3.6 -8.9 3.6 -3.6 8.9 -3.6 -8.9 -8.9 -3.6 8.9 -3.6 z" fill="#FFF0C0"/>
+  </g>
+  <g transform="translate(1166,992)">
+    <circle r="22" fill="#3A1206" fill-opacity="0.35" stroke="url(#goldBar)" stroke-width="2.2"/>
+    <path d="M0 -13 l3.6 8.9 8.9 3.6 -8.9 3.6 -3.6 8.9 -3.6 -8.9 -8.9 -3.6 8.9 -3.6 z" fill="#FFF0C0"/>
+  </g>
+  <text x="798" y="1005" font-family="'Cinzel','Liberation Serif','DejaVu Serif',Georgia,serif" font-size="38" font-weight="700" fill="#3A1206" letter-spacing="1.5" text-anchor="middle">Make It!  ·  R$ 159</text>
+
+  <!-- ================= RIGHT RAIL : TOKENS ================= -->
+  <g filter="url(#deepShadow)">
+    <rect x="1332" y="256" width="548" height="120" rx="24" fill="url(#panelGlass)"/>
+  </g>
+  <rect x="1332" y="256" width="548" height="120" rx="24" fill="none" stroke="url(#goldBar)" stroke-width="2.8"/>
+  <rect x="1340" y="264" width="532" height="104" rx="18" fill="none" stroke="#FFD98A" stroke-width="1" opacity="0.24"/>
+  <use href="#cornerOrn" transform="translate(1332,256) scale(0.8)"/>
+  <use href="#cornerOrn" transform="translate(1880,256) scale(-0.8,0.8)"/>
+
+  <g transform="translate(1392,316)">
+    <circle r="30" fill="url(#gemGold)" stroke="url(#goldBar)" stroke-width="3"/>
+    <circle r="22" fill="none" stroke="#8A5A12" stroke-width="1.2" opacity="0.7"/>
+    <path d="M0 -15 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4 z" fill="#7A4E0C"/>
+  </g>
+  <text x="1440" y="304" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="13" font-weight="700" fill="#E6C98A" letter-spacing="2.2">FORGE TOKENS</text>
+  <text x="1440" y="344" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="34" font-weight="700" fill="url(#goldEdge)">1,240</text>
+  <g filter="url(#popShadow)">
+    <path d="M1716 292 h116 l16 24 -16 24 h-116 l-16 -24 z" fill="url(#molten)" stroke="url(#goldBar)" stroke-width="2.4"/>
+  </g>
+  <path d="M1722 299 h104 l-8 12 h-104 z" fill="#FFFFFF" opacity="0.22"/>
+  <text x="1774" y="323" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="17" font-weight="700" fill="#3A1206" text-anchor="middle">Get more</text>
+
+  <!-- ================= RIGHT RAIL : QUESTS ================= -->
+  <g filter="url(#deepShadow)">
+    <rect x="1332" y="396" width="548" height="266" rx="24" fill="url(#panelGlass)"/>
+  </g>
+  <rect x="1332" y="396" width="548" height="266" rx="24" fill="none" stroke="url(#goldBar)" stroke-width="2.8"/>
+  <rect x="1340" y="404" width="532" height="250" rx="18" fill="none" stroke="#FFD98A" stroke-width="1" opacity="0.24"/>
+  <use href="#cornerOrn" transform="translate(1332,396) scale(0.8)"/>
+  <use href="#cornerOrn" transform="translate(1880,396) scale(-0.8,0.8)"/>
+  <use href="#cornerOrn" transform="translate(1332,662) scale(0.8,-0.8)"/>
+  <use href="#cornerOrn" transform="translate(1880,662) scale(-0.8,-0.8)"/>
+
+  <g filter="url(#popShadow)">
+    <path d="M1424 384 h364 l-14 20 14 20 h-364 l-14 -20 z" fill="#2E1B54" stroke="url(#goldBar)" stroke-width="2.2"/>
+  </g>
+  <text x="1606" y="411" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="16" font-weight="700" fill="#FFE3A6" letter-spacing="2.4" text-anchor="middle">DAILY QUESTS</text>
+
+  <g font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif">
+    <text x="1364" y="456" font-size="15.5" font-weight="700" fill="#EBDCFF">Forge your first accessory</text>
+    <text x="1848" y="456" font-size="14" font-weight="800" fill="#FFC85A" text-anchor="end">+15</text>
+    <rect x="1364" y="466" width="484" height="16" rx="8" fill="#140C2C" stroke="url(#goldSoft)" stroke-width="1.4"/>
+    <text x="1364" y="500" font-size="12.5" fill="#9C8CC0">0 of 1</text>
+
+    <text x="1364" y="536" font-size="15.5" font-weight="700" fill="#EBDCFF">Try on 3 community looks</text>
+    <text x="1848" y="536" font-size="14" font-weight="800" fill="#FFC85A" text-anchor="end">+10</text>
+    <rect x="1364" y="546" width="484" height="16" rx="8" fill="#140C2C" stroke="url(#goldSoft)" stroke-width="1.4"/>
+    <rect x="1367" y="549" width="317" height="10" rx="5" fill="url(#fillMint)"/>
+    <text x="1364" y="580" font-size="12.5" fill="#9C8CC0">2 of 3</text>
+
+    <text x="1364" y="616" font-size="15.5" font-weight="700" fill="#EBDCFF">Play one Arcade round</text>
+    <text x="1848" y="616" font-size="14" font-weight="800" fill="#5CF0B0" text-anchor="end">DONE</text>
+    <rect x="1364" y="626" width="484" height="16" rx="8" fill="#140C2C" stroke="url(#goldSoft)" stroke-width="1.4"/>
+    <rect x="1367" y="629" width="478" height="10" rx="5" fill="url(#fillGold)"/>
+  </g>
+
+  <!-- ================= RIGHT RAIL : LIVE ================= -->
+  <g filter="url(#deepShadow)">
+    <rect x="1332" y="694" width="548" height="230" rx="24" fill="url(#panelGlass)"/>
+  </g>
+  <rect x="1332" y="694" width="548" height="230" rx="24" fill="none" stroke="url(#goldBar)" stroke-width="2.8"/>
+  <rect x="1340" y="702" width="532" height="214" rx="18" fill="none" stroke="#FFD98A" stroke-width="1" opacity="0.24"/>
+  <use href="#cornerOrn" transform="translate(1332,694) scale(0.8)"/>
+  <use href="#cornerOrn" transform="translate(1880,694) scale(-0.8,0.8)"/>
+  <use href="#cornerOrn" transform="translate(1332,924) scale(0.8,-0.8)"/>
+  <use href="#cornerOrn" transform="translate(1880,924) scale(-0.8,-0.8)"/>
+
+  <g filter="url(#popShadow)">
+    <path d="M1436 682 h340 l-14 20 14 20 h-340 l-14 -20 z" fill="#2E1B54" stroke="url(#goldBar)" stroke-width="2.2"/>
+  </g>
+  <text x="1606" y="709" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="16" font-weight="700" fill="#BFEEFF" letter-spacing="2.4" text-anchor="middle">IN THE FORGE</text>
+
+  <g font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif">
+    <circle cx="1388" cy="762" r="19" fill="#241645" stroke="url(#gemAmethyst)" stroke-width="2.4"/>
+    <text x="1388" y="769" font-size="15" font-weight="800" fill="#D8BFFF" text-anchor="middle">Z</text>
+    <text x="1420" y="758" font-size="15" font-weight="700" fill="#EBDCFF">@zaraBuilds · molten lava horns</text>
+    <text x="1848" y="758" font-size="13.5" font-weight="800" fill="#8FE4FF" text-anchor="end">78%</text>
+    <rect x="1420" y="768" width="428" height="12" rx="6" fill="#140C2C" stroke="url(#goldSoft)" stroke-width="1.2"/>
+    <rect x="1423" y="771" width="330" height="6" rx="3" fill="url(#fillCyan)"/>
+
+    <circle cx="1388" cy="826" r="19" fill="#241645" stroke="url(#gemCyan)" stroke-width="2.4"/>
+    <text x="1388" y="833" font-size="15" font-weight="800" fill="#BFEEFF" text-anchor="middle">K</text>
+    <text x="1420" y="822" font-size="15" font-weight="700" fill="#EBDCFF">@kit_9 · neon jellyfish backpack</text>
+    <text x="1848" y="822" font-size="13.5" font-weight="800" fill="#8FE4FF" text-anchor="end">42%</text>
+    <rect x="1420" y="832" width="428" height="12" rx="6" fill="#140C2C" stroke="url(#goldSoft)" stroke-width="1.2"/>
+    <rect x="1423" y="835" width="178" height="6" rx="3" fill="url(#fillCyan)"/>
+
+    <circle cx="1388" cy="890" r="19" fill="#241645" stroke="url(#gemMint)" stroke-width="2.4"/>
+    <text x="1388" y="897" font-size="15" font-weight="800" fill="#9DF5CE" text-anchor="middle">M</text>
+    <text x="1420" y="886" font-size="15" font-weight="700" fill="#EBDCFF">@mossy · tiny mushroom hat</text>
+    <text x="1848" y="886" font-size="13.5" font-weight="800" fill="#5CF0B0" text-anchor="end">DONE</text>
+    <rect x="1420" y="896" width="428" height="12" rx="6" fill="#140C2C" stroke="url(#goldSoft)" stroke-width="1.2"/>
+    <rect x="1423" y="899" width="422" height="6" rx="3" fill="url(#fillMint)"/>
+  </g>
+
+  <!-- ================= RIGHT RAIL : QUEUE ================= -->
+  <rect x="1332" y="948" width="548" height="88" rx="26" fill="#1B1138" fill-opacity="0.9" stroke="url(#goldBar)" stroke-width="2.6"/>
+  <rect x="1340" y="956" width="532" height="72" rx="20" fill="none" stroke="#7FD8FF" stroke-width="1" opacity="0.3"/>
+  <g transform="translate(1392,992)">
+    <circle r="24" fill="#241645" stroke="url(#gemCyan)" stroke-width="2.4"/>
+    <path d="M4 -13 L-8 4 L-1 4 L-5 15 L8 -2 L1 -2 Z" fill="#8FE4FF"/>
+  </g>
+  <text x="1432" y="986" font-family="'Cinzel','Liberation Serif',Georgia,serif" font-size="18" font-weight="700" fill="#BFEEFF">2 queue slots open</text>
+  <text x="1432" y="1010" font-family="'Liberation Sans','DejaVu Sans',Arial,sans-serif" font-size="13.5" fill="#9C8CC0">Your item takes about 90 seconds</text>
+</svg>
