@@ -49,6 +49,20 @@ local function darken(color: Color3, amount: number): Color3
 	return Color3.fromHSV(h, s, math.clamp(v - amount, 0, 1))
 end
 
+-- Thousands separators for the concept art's big personal-best figure --
+-- a five-digit arcade score is unreadable as a bare run of digits at the
+-- 24px this is drawn at.
+local function formatScore(value: number): string
+	local text = tostring(math.floor(value))
+	while true do
+		local replaced, count = string.gsub(text, "^(-?%d+)(%d%d%d)", "%1,%2")
+		text = replaced
+		if count == 0 then
+			return text
+		end
+	end
+end
+
 local GAMES = {
 	{
 		game = FlappyBird,
@@ -303,9 +317,11 @@ function GamesHub.Show(app: any)
 		ZIndex = 213,
 		Parent = modal,
 	})
-	Factory.Corner(headerIcon, 16)
+	-- Round and gold-rimmed, as the concept art draws every hub's title
+	-- mark -- not a rounded square with an ink outline.
+	Factory.Corner(headerIcon, 26)
 	Factory.Gradient(headerIcon, { lighten(Colors.Rose, 0.08), darken(Colors.Rose, 0.12) }, 120)
-	Factory.Stroke(headerIcon, Colors.Ink, 0.5, 1.5)
+	Factory.Stroke(headerIcon, Colors.Gold, 0.15, 2)
 	Factory.Label(headerIcon, "🕹️", UDim2.fromScale(1, 1), {
 		TextSize = 26,
 		AlignX = Enum.TextXAlignment.Center,
@@ -322,15 +338,20 @@ function GamesHub.Show(app: any)
 		Truncate = Enum.TextTruncate.AtEnd,
 		ZIndex = 213,
 	})
-	Factory.Label(modal, string.format("%d games, one weekly leaderboard.", #GAMES), UDim2.new(1, -220, 0, 18), {
-		Position = UDim2.fromOffset(78, 38),
-		Font = Theme.Fonts.Medium,
-		TextSize = 12,
-		Color = Colors.TextMuted,
-		AlignX = Enum.TextXAlignment.Left,
-		Truncate = Enum.TextTruncate.AtEnd,
-		ZIndex = 213,
-	})
+	Factory.Label(
+		modal,
+		string.format("%d games, one weekly leaderboard. Play free, earn Forge Tokens.", #GAMES),
+		UDim2.new(1, -220, 0, 18),
+		{
+			Position = UDim2.fromOffset(78, 38),
+			Font = Theme.Fonts.Medium,
+			TextSize = 12,
+			Color = Colors.TextMuted,
+			AlignX = Enum.TextXAlignment.Left,
+			Truncate = Enum.TextTruncate.AtEnd,
+			ZIndex = 213,
+		}
+	)
 
 	local rewardBanner = Factory.New("Frame", {
 		Name = "RewardBanner",
@@ -345,24 +366,40 @@ function GamesHub.Show(app: any)
 	Factory.Corner(rewardBanner, 10)
 	Factory.Stroke(rewardBanner, Colors.Gold, 0.65, 1)
 	local rewards = Config.Arcade.WeeklyRewards
+	-- The concept art leads this with its gold sparkle and states the prize
+	-- as the three token figures plus when they reset, rather than as a
+	-- sentence about them.
+	local rewardStar = Factory.Icon(rewardBanner, "SparkleStar", UDim2.fromOffset(20, 20), UDim2.fromOffset(9, 5))
+	if rewardStar then
+		rewardStar.ZIndex = 213
+	end
+	local rewardTextX = if rewardStar then 36 else 10
 	Factory.Label(
 		rewardBanner,
 		string.format(
-			"🏆  Top 3 each game get a weekly Forge Token bonus — 1st +%d · 2nd +%d · 3rd +%d",
+			"WEEKLY TOP 3, EVERY GAME  ·  %d · %d · %d tokens, reset every Monday",
 			rewards[1],
 			rewards[2],
 			rewards[3]
 		),
-		UDim2.new(1, -20, 1, 0),
+		UDim2.new(1, -(rewardTextX + 10), 1, 0),
 		{
-			Position = UDim2.fromOffset(10, 0),
+			Position = UDim2.fromOffset(rewardTextX, 0),
 			Color = Colors.Gold,
-			Font = Theme.Fonts.Medium,
+			Font = Theme.Fonts.Bold,
 			TextSize = 11,
 			Truncate = Enum.TextTruncate.AtEnd,
 			ZIndex = 213,
 		}
 	)
+	-- The single centred flourish the art hangs between a hub's header and
+	-- its content. Shown only over the tile picker, like the banner above
+	-- it -- a game or the standings list gets that row back.
+	local headerFlourish =
+		Factory.Icon(modal, "FlourishDivider", UDim2.fromOffset(110, 16), UDim2.new(0.5, -55, 0, 106))
+	if headerFlourish then
+		headerFlourish.ZIndex = 213
+	end
 
 	local closeButton = Factory.New("TextButton", {
 		Name = "CloseButton",
@@ -380,7 +417,7 @@ function GamesHub.Show(app: any)
 		Parent = modal,
 	})
 	Factory.Corner(closeButton, 17)
-	Factory.Stroke(closeButton, Colors.Line, 0.5, 1.5)
+	Factory.Stroke(closeButton, Colors.Gold, 0.25, 1.5)
 	app:_BindButton(closeButton)
 
 	-- Three views share the same footprint below the header and are swapped
@@ -392,8 +429,10 @@ function GamesHub.Show(app: any)
 	-- (a short viewport, or the modal's own MinSize clamp above).
 	local hubView = Factory.New("ScrollingFrame", {
 		Name = "HubView",
-		Position = UDim2.fromOffset(12, 116),
-		Size = UDim2.new(1, -24, 1, -128),
+		-- 116 before the header flourish above was added; the extra 10px is
+		-- that ornament's own band.
+		Position = UDim2.fromOffset(12, 126),
+		Size = UDim2.new(1, -24, 1, -138),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 4,
@@ -512,6 +551,9 @@ function GamesHub.Show(app: any)
 			-- Only relevant while picking what to play; hiding it elsewhere
 			-- gives gameView/leaderboardView the extra row they're sized for.
 			rewardBanner.Visible = true
+			if headerFlourish then
+				headerFlourish.Visible = true
+			end
 			if shell then
 				shell:Stop()
 			end
@@ -524,6 +566,9 @@ function GamesHub.Show(app: any)
 			leaderboardView.Visible = false
 			gameView.Visible = true
 			rewardBanner.Visible = false
+			if headerFlourish then
+				headerFlourish.Visible = false
+			end
 			if not shell then
 				shell = GameShell.new(gameView, app.sounds, showHub, submitScore, fetchWeeklyTop, reduceMotion)
 			end
@@ -956,6 +1001,9 @@ function GamesHub.Show(app: any)
 			gameView.Visible = false
 			leaderboardView.Visible = true
 			rewardBanner.Visible = false
+			if headerFlourish then
+				headerFlourish.Visible = false
+			end
 			if shell then
 				shell:Stop()
 			end
@@ -982,9 +1030,8 @@ function GamesHub.Show(app: any)
 		-- 84px-tall one.
 		local tileHeight = size.Y.Offset
 		local roomy = tileHeight >= 150
-		local badgeSize = if roomy then 48 else 30
-		local badgeIconSize = if roomy then 24 else 15
-		local scrimHeight = if roomy then 76 else 48
+		local badgeSize = if roomy then 52 else 40
+		local badgeIconSize = if roomy then 24 else 18
 
 		-- A soft colored glow behind the tile, echoing its own accent color
 		-- -- a "spotlight" sitting behind the shadow, the same depth trick
@@ -1026,10 +1073,17 @@ function GamesHub.Show(app: any)
 		})
 		Factory.Corner(shadow, 20)
 
+		-- The concept art draws these as dark panels ringed in the game's own
+		-- colour, with that colour carried by the icon medallion and the
+		-- personal-best figure -- not as saturated colour cards. Everything
+		-- decorative below (the gloss, the sweeping shine, the coloured glow
+		-- behind the tile) still reads on the darker fill; what goes away is
+		-- the bottom scrim, which only existed to keep light text legible
+		-- over a bright card.
 		local button = Factory.New("TextButton", {
 			Size = size,
 			Position = position,
-			BackgroundColor3 = color,
+			BackgroundColor3 = Colors.PanelRaised,
 			BorderSizePixel = 0,
 			AutoButtonColor = false,
 			Text = "",
@@ -1038,8 +1092,8 @@ function GamesHub.Show(app: any)
 			Parent = hubView,
 		})
 		Factory.Corner(button, 20)
-		Factory.Stroke(button, Colors.Ink, 0.4, 2)
-		Factory.Gradient(button, { lighten(color, 0.1), darken(color, 0.18) }, 130)
+		Factory.Stroke(button, color, 0.3, 2)
+		Factory.Gradient(button, { lighten(Colors.PanelRaised, 0.06), darken(Colors.Ink, 0.02) }, 130)
 		local gloss = Factory.New("Frame", {
 			Name = "Gloss",
 			Size = UDim2.new(1, -2, 0, math.min(44, tileHeight * 0.35)),
@@ -1118,8 +1172,9 @@ function GamesHub.Show(app: any)
 			ZIndex = 215,
 			Parent = button,
 		})
-		Factory.Corner(iconBadge, if roomy then 15 else 10)
-		Factory.Stroke(iconBadge, Color3.new(1, 1, 1), 0.85, 1)
+		-- Circular and ringed in the game's colour, as the art draws it.
+		Factory.Corner(iconBadge, badgeSize / 2)
+		Factory.Stroke(iconBadge, color, 0.1, 2)
 		Factory.Gradient(iconBadge, {
 			Color3.fromRGB(56, 60, 82),
 			Color3.fromRGB(30, 33, 50),
@@ -1131,61 +1186,97 @@ function GamesHub.Show(app: any)
 			ZIndex = 216,
 		})
 
-		-- A real personal-best-this-week chip, not a fabricated stat --
-		-- fetched lazily after the tile is already visible so it never
-		-- blocks the picker screen from showing up, and only revealed once
-		-- (if) an actual score comes back. Wide-mode tiles only: there's no
-		-- clean spot for it on compact's much shorter ones.
-		local statsChip: Frame? = nil
-		local statsLabel: TextLabel? = nil
-		if roomy and statsGameKey then
-			statsChip = Factory.New("Frame", {
-				Name = "StatsChip",
-				Size = UDim2.fromOffset(108, 22),
-				AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, -10, 0, 14),
-				BackgroundColor3 = Colors.Ink,
-				BackgroundTransparency = 0.35,
-				BorderSizePixel = 0,
-				Visible = false,
-				ZIndex = 215,
-				Parent = button,
-			})
-			Factory.Corner(statsChip, 11)
-			Factory.Stroke(statsChip, Color3.new(1, 1, 1), 0.85, 1)
-			statsLabel = Factory.Label(statsChip, "", UDim2.new(1, -16, 1, 0), {
-				Position = UDim2.fromOffset(8, 0),
+		-- The concept art puts the title and its one-line blurb beside the
+		-- medallion, and gives the bottom of the tile to a "YOUR BEST"
+		-- figure in the game's colour and a molten GO button.
+		local textX = badgeSize + (if roomy then 26 else 22)
+		Factory.Label(button, title, UDim2.new(1, -(textX + 14), 0, 22), {
+			Position = UDim2.fromOffset(textX, if roomy then 16 else 14),
+			Font = Theme.Fonts.Black,
+			TextSize = if roomy then 16 else 14,
+			Color = Colors.Text,
+			Truncate = Enum.TextTruncate.AtEnd,
+			ZIndex = 216,
+		})
+		Factory.Label(button, blurb, UDim2.new(1, -(textX + 14), 0, if roomy then 30 else 20), {
+			Position = UDim2.fromOffset(textX, if roomy then 38 else 36),
+			Font = Theme.Fonts.Medium,
+			TextSize = if roomy then 11 else 10,
+			Color = Colors.TextMuted,
+			Wrapped = roomy,
+			AlignY = Enum.TextYAlignment.Top,
+			Truncate = Enum.TextTruncate.AtEnd,
+			ZIndex = 216,
+		})
+
+		-- The Leaderboard tile has no score of its own, so it takes the
+		-- art's other bottom row: OPEN in place of GO, and no best figure.
+		local play = Factory.New("TextButton", {
+			Name = "PlayPill",
+			Size = UDim2.fromOffset(if roomy then 82 else 70, if roomy then 36 else 32),
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, -14, 1, if roomy then -14 else -12),
+			BackgroundColor3 = Colors.Gold,
+			BorderSizePixel = 0,
+			AutoButtonColor = false,
+			Text = if statsGameKey then "▶ GO" else "OPEN",
+			TextColor3 = Color3.fromRGB(58, 18, 6),
+			Font = Theme.Fonts.Black,
+			TextSize = if roomy then 13 else 12,
+			ZIndex = 216,
+			-- Purely an affordance: the whole tile is the real button, and a
+			-- second live TextButton on top of it would swallow the tap.
+			Active = false,
+			Selectable = false,
+			Parent = button,
+		})
+		Factory.Corner(play, if roomy then 10 else 9)
+		Factory.Gradient(play, { Color3.fromRGB(255, 196, 92), Colors.Gold }, 90)
+		Factory.Stroke(play, Colors.Gold, 0.2, 1.5)
+
+		-- A real personal-best figure, not a fabricated stat -- fetched
+		-- lazily after the tile is already visible so it never blocks the
+		-- picker screen from showing up, and left as a dash until (if) an
+		-- actual score comes back.
+		if statsGameKey then
+			Factory.Label(button, "YOUR BEST", UDim2.fromOffset(120, 14), {
+				Position = UDim2.fromOffset(16, tileHeight - (if roomy then 58 else 40)),
 				Font = Theme.Fonts.Bold,
-				TextSize = 10,
-				Color = Colors.Text,
-				AlignX = Enum.TextXAlignment.Center,
-				AlignY = Enum.TextYAlignment.Center,
+				TextSize = 9,
+				Color = Colors.TextMuted,
+				ZIndex = 216,
+			})
+			local bestLabel = Factory.Label(button, "—", UDim2.fromOffset(140, 28), {
+				Position = UDim2.fromOffset(16, tileHeight - (if roomy then 44 else 28)),
+				Font = Theme.Fonts.Black,
+				TextSize = if roomy then 24 else 18,
+				Color = color,
 				Truncate = Enum.TextTruncate.AtEnd,
 				ZIndex = 216,
 			})
 			task.spawn(function()
 				local result = fetchWeeklyTop(statsGameKey)
-				local chip, label = statsChip, statsLabel
-				if result and result.self and chip and chip.Parent and label then
-					label.Text = string.format("⚡ This week: %d", result.self.score)
-					chip.Visible = true
+				if result and result.self and bestLabel.Parent then
+					bestLabel.Text = formatScore(result.self.score)
 				end
 			end)
 
 			-- Today's Daily Challenge target -- a pure local computation
-			-- (see Shared/DailyChallenge.luau), so unlike the stats chip
-			-- above it needs no round trip and is visible immediately.
+			-- (see Shared/DailyChallenge.luau), so unlike the best figure
+			-- above it needs no round trip and is visible immediately. The
+			-- art has no counterpart for it, so it takes the top-right
+			-- corner the art leaves empty.
 			local challengeTarget = DailyChallenge.GetTarget(statsGameKey, math.floor(os.time() / 86400))
-			if challengeTarget then
+			if roomy and challengeTarget then
 				local challengeChip = Factory.New("Frame", {
 					Name = "ChallengeChip",
-					Size = UDim2.fromOffset(108, 22),
+					Size = UDim2.fromOffset(102, 22),
 					AnchorPoint = Vector2.new(1, 0),
-					Position = UDim2.new(1, -10, 0, 40),
+					Position = UDim2.new(1, -12, 0, 12),
 					BackgroundColor3 = Colors.Gold,
 					BackgroundTransparency = 0.25,
 					BorderSizePixel = 0,
-					ZIndex = 215,
+					ZIndex = 217,
 					Parent = button,
 				})
 				Factory.Corner(challengeChip, 11)
@@ -1202,79 +1293,10 @@ function GamesHub.Show(app: any)
 						AlignX = Enum.TextXAlignment.Center,
 						AlignY = Enum.TextYAlignment.Center,
 						Truncate = Enum.TextTruncate.AtEnd,
-						ZIndex = 216,
+						ZIndex = 218,
 					}
 				)
 			end
-		end
-
-		-- A bottom scrim so the title/blurb stay legible in light text no
-		-- matter how bright the tile's own accent color is, the same trick a
-		-- media/game-store card uses over a busy thumbnail.
-		local scrim = Factory.New("Frame", {
-			Name = "Scrim",
-			AnchorPoint = Vector2.new(0, 1),
-			Position = UDim2.new(0, 0, 1, 0),
-			Size = UDim2.new(1, 0, 0, scrimHeight),
-			BackgroundColor3 = Colors.Ink,
-			BackgroundTransparency = 1,
-			BorderSizePixel = 0,
-			ZIndex = 215,
-			Parent = button,
-		})
-		Factory.New("UIGradient", {
-			Color = ColorSequence.new(Colors.Ink),
-			Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 1),
-				NumberSequenceKeypoint.new(1, 0.15),
-			}),
-			Rotation = 90,
-			Parent = scrim,
-		})
-
-		Factory.Label(scrim, title, UDim2.new(1, -70, 0, 22), {
-			Position = UDim2.fromOffset(16, scrimHeight - (if roomy then 46 else 32)),
-			Font = Theme.Fonts.Black,
-			TextSize = if roomy then 17 else 14,
-			Color = Colors.Text,
-			AlignX = Enum.TextXAlignment.Left,
-			Truncate = Enum.TextTruncate.AtEnd,
-			ZIndex = 216,
-		})
-		Factory.Label(scrim, blurb, UDim2.new(1, -70, 0, 30), {
-			Position = UDim2.fromOffset(16, scrimHeight - (if roomy then 24 else 15)),
-			Font = Theme.Fonts.Medium,
-			TextSize = if roomy then 11 else 10,
-			Color = Colors.TextMuted,
-			Wrapped = true,
-			AlignX = Enum.TextXAlignment.Left,
-			Truncate = Enum.TextTruncate.AtEnd,
-			ZIndex = 216,
-		})
-		-- The "▶ GO" affordance chip only fits comfortably on the taller
-		-- wide-mode tiles -- skipped on compact's shorter ones rather than
-		-- cramped in.
-		if roomy then
-			local playPill = Factory.New("Frame", {
-				Name = "PlayPill",
-				Size = UDim2.fromOffset(44, 22),
-				AnchorPoint = Vector2.new(1, 1),
-				Position = UDim2.new(1, -12, 1, -10),
-				BackgroundColor3 = Color3.new(1, 1, 1),
-				BackgroundTransparency = 0.12,
-				BorderSizePixel = 0,
-				ZIndex = 216,
-				Parent = scrim,
-			})
-			Factory.Corner(playPill, 11)
-			Factory.Label(playPill, "▶ GO", UDim2.fromScale(1, 1), {
-				Font = Theme.Fonts.Black,
-				TextSize = 10,
-				Color = darken(color, 0.25),
-				AlignX = Enum.TextXAlignment.Center,
-				AlignY = Enum.TextYAlignment.Center,
-				ZIndex = 217,
-			})
 		end
 
 		app.sounds:Bind(button)
