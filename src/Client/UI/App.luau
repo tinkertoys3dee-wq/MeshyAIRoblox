@@ -3462,6 +3462,37 @@ function App:_TextBox(parent: Instance, placeholder: string, size: UDim2, positi
 	return box
 end
 
+-- The concept art gives exactly one field per page the "glowing inscription
+-- well" treatment -- Create's idea prompt, Discover's and Avatar Lab's
+-- search bars -- rather than every textbox _TextBox builds across the app,
+-- so this overrides that one instance's stroke instead of the default.
+-- `studCorners` adds the small diamond accents the art puts on the taller
+-- multi-line wells; a single-line search bar has no room for them, and the
+-- art doesn't draw them there either.
+function App:_GlowField(box: TextBox, studCorners: boolean?)
+	local stroke = box:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = Colors.Cyan
+		stroke.Transparency = 0.3
+		stroke.Thickness = 1.6
+	end
+	if not studCorners then
+		return
+	end
+	for _, corner in { "left", "right" } do
+		local stud = Factory.Icon(
+			box,
+			"SparkleStar",
+			UDim2.fromOffset(10, 10),
+			if corner == "left" then UDim2.fromOffset(6, 6) else UDim2.new(1, -16, 0, 6)
+		)
+		if stud then
+			stud.ZIndex = 6
+			stud.ImageColor3 = Colors.Cyan
+		end
+	end
+end
+
 function App:_RenderCreate()
 	-- Simple Mode is a real, persisted setting (profile.settings.
 	-- simpleMode, defaulting true for every account -- see ProfileService's
@@ -4142,30 +4173,7 @@ function App:_RenderCreate()
 			true
 		)
 		prompt.Text = self.draftPrompt
-		-- The concept art's one signature "glowing inscription well" is this
-		-- exact field -- the main idea prompt -- not every other textbox
-		-- _TextBox is used for elsewhere in the app, so this overrides just
-		-- this instance's stroke rather than _TextBox's own default.
-		local promptStroke = prompt:FindFirstChildOfClass("UIStroke")
-		if promptStroke then
-			promptStroke.Color = Colors.Cyan
-			promptStroke.Transparency = 0.3
-			promptStroke.Thickness = 1.6
-		end
-		-- The concept art studs this well's top two corners with a small
-		-- diamond accent.
-		for _, corner in { "left", "right" } do
-			local stud = Factory.Icon(
-				prompt,
-				"SparkleStar",
-				UDim2.fromOffset(10, 10),
-				if corner == "left" then UDim2.fromOffset(6, 6) else UDim2.new(1, -16, 0, 6)
-			)
-			if stud then
-				stud.ZIndex = 6
-				stud.ImageColor3 = Colors.Cyan
-			end
-		end
+		self:_GlowField(prompt, true)
 		local count = Factory.Label(
 			promptCard,
 			string.format("%d / %d", #self.draftPrompt, Config.Generation.PromptMaxLength),
@@ -7177,21 +7185,30 @@ function App:_RenderDiscoverFirstLook(topY: number): number
 		badgeText = "FIRST LOOK"
 	end
 
+	-- The concept art leads with the step badge and reads downward from it
+	-- into the heading and the line of copy -- the step you are on is the
+	-- first thing to land, not a footnote under the description.
+	local badge = Factory.ImagePill(card, badgeText, if done.TRY_STYLE then Colors.Mint else Colors.Cyan, 124)
+	badge.Position = UDim2.fromOffset(textX, 14)
+	local badgeStud = Factory.Icon(badge, if done.TRY_STYLE then "GemMint" else "GemCyan", UDim2.fromOffset(12, 12))
+	if badgeStud then
+		badgeStud.Position = UDim2.fromOffset(10, 8)
+		badgeStud.ZIndex = 2
+		badge.Text = "   " .. badge.Text
+	end
 	Factory.Label(card, heading, headingWidth, {
-		Position = UDim2.fromOffset(textX, 15),
+		Position = UDim2.fromOffset(textX, 44),
 		Font = Theme.Fonts.Black,
 		TextSize = if self.compact then 17 else 20,
 		Truncate = Enum.TextTruncate.AtEnd,
 	})
 	Factory.Label(card, description, if self.compact then UDim2.new(1, -112, 0, 48) else UDim2.new(1, -390, 0, 48), {
-		Position = UDim2.fromOffset(textX, 46),
+		Position = UDim2.fromOffset(textX, 76),
 		Color = Colors.TextMuted,
 		TextSize = if self.compact then 10 else 12,
 		Wrapped = true,
 		AlignY = Enum.TextYAlignment.Top,
 	})
-	local badge = Factory.ImagePill(card, badgeText, if done.TRY_STYLE then Colors.Mint else Colors.Cyan, 112)
-	badge.Position = UDim2.fromOffset(textX, if self.compact then 101 else 103)
 
 	local action = Factory.ImageButton(
 		card,
@@ -7253,7 +7270,8 @@ function App:_RenderDiscover()
 		"Discover",
 		if showAllMethods
 			then "Try on every public design for free. Like, favorite, and support creators through verified Plus transfers."
-			else "Try on things other players made. Tap Try on, then Like the ones you love."
+			else "Try on things other players made. Tap Try on, then Like the ones you love.",
+		true
 	)
 	if not self.state.policy.contentSharingAllowed then
 		local blocked = Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, 230), UDim2.new(0.025, 0, 0, 112))
@@ -7300,6 +7318,16 @@ function App:_RenderDiscover()
 		false
 	)
 	search.Text = self.marketplaceQuery
+	-- The concept art draws this bar as the page's glowing well, with a
+	-- magnifier sitting inside its right edge rather than on the button.
+	self:_GlowField(search)
+	Factory.Label(search, "🔍", UDim2.fromOffset(24, 24), {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		AlignX = Enum.TextXAlignment.Center,
+		TextSize = 16,
+		Color = Colors.Cyan,
+	})
 	local refresh = Factory.ImageButton(
 		tools,
 		"Search",
@@ -7410,19 +7438,27 @@ function App:_RenderDiscover()
 
 		gridY = filtersY + 58
 	else
+		-- Centred and flanked by a flourish either side, exactly as the
+		-- concept art draws every one of these mode-switch links. Fixed
+		-- width in wide layouts so the flourishes pair to its real edges;
+		-- compact keeps the full-width bar, where 440px would overflow.
 		local switchY = toolsY + toolsHeight + 10
 		local switchAdvanced = Factory.ImageButton(
 			self.content,
-			"Switch to Advanced Mode for filters, sorting & buying →",
-			UDim2.new(0.95, 0, 0, 28),
-			UDim2.new(0.025, 0, 0, switchY),
+			"Switch to Advanced Mode for filters, sorting & buying ✦",
+			if self.compact then UDim2.new(0.95, 0, 0, 30) else UDim2.fromOffset(440, 30),
+			if self.compact then UDim2.new(0.025, 0, 0, switchY) else UDim2.new(0.5, -220, 0, switchY),
 			nil
 		)
+		switchAdvanced.TextSize = 12
+		if not self.compact then
+			Factory.FlourishFlank(self.content, switchY + 15, 238)
+		end
 		self:_BindButton(switchAdvanced)
 		switchAdvanced.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", false)
 		end)
-		gridY = switchY + 28 + 16
+		gridY = switchY + 30 + 16
 	end
 
 	if self.marketplaceItems == nil then
@@ -7469,6 +7505,9 @@ function App:_RenderDiscover()
 			Parent = card,
 		})
 		Factory.Corner(image, 11)
+		-- The concept art frames each gallery preview in its own thin gold
+		-- rim rather than letting the render sit flush on the card.
+		Factory.Stroke(image, Colors.Gold, 0.45)
 		local imageHint = Factory.Label(image, "Preview processing on Roblox…", UDim2.new(1, -16, 0, 34), {
 			AnchorPoint = Vector2.new(0, 1),
 			Position = UDim2.new(0, 8, 1, -8),
@@ -7486,8 +7525,14 @@ function App:_RenderDiscover()
 			Factory.ImagePill(card, string.format("R$ %d", item.listingPriceRobux), Colors.Mint, 68).Position =
 				UDim2.fromOffset(156, 18)
 		end
+		-- The concept art centres a gallery card's title over its byline and
+		-- drops the style/detail metadata from it: in Simple Mode "AUTO /
+		-- BALANCED" is art-direction jargon for settings that page can't
+		-- even change. Advanced Mode keeps the full line, where those two
+		-- values are things the player picked.
 		Factory.Label(card, item.title or item.name, UDim2.new(1, -20, 0, 27), {
 			Position = UDim2.fromOffset(10, 194),
+			AlignX = if showAllMethods then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center,
 			Font = Theme.Fonts.Bold,
 			TextSize = 14,
 			Truncate = Enum.TextTruncate.AtEnd,
@@ -7499,10 +7544,13 @@ function App:_RenderDiscover()
 		)
 		Factory.Label(
 			card,
-			string.format("by @%s · %s", tostring(item.ownerName), itemMeta),
+			if showAllMethods
+				then string.format("by @%s · %s", tostring(item.ownerName), itemMeta)
+				else string.format("by @%s", tostring(item.ownerName)),
 			UDim2.new(1, -20, 0, 22),
 			{
 				Position = UDim2.fromOffset(10, 221),
+				AlignX = if showAllMethods then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center,
 				Color = Colors.TextMuted,
 				TextSize = 11,
 				Truncate = Enum.TextTruncate.AtEnd,
@@ -7597,20 +7645,39 @@ function App:_RenderDiscover()
 				end)
 			end)
 		end
+		-- Coloured glyphs, per the concept art's red heart and gold star --
+		-- a TextButton has one TextColor3, so each glyph is its own label
+		-- sitting beside a count-only button rather than one two-tone string.
 		local like = Factory.ImageButton(
 			card,
-			string.format("%s %s", if item.viewerLiked then "♥" else "♡", formatNumber(item.likes)),
+			formatNumber(item.likes),
 			UDim2.new(0.5, -15, 0, 30),
 			UDim2.fromOffset(10, 298),
 			nil
 		)
 		local favorite = Factory.ImageButton(
 			card,
-			string.format("%s %s", if item.viewerFavorited then "★" else "☆", formatNumber(item.favorites)),
+			formatNumber(item.favorites),
 			UDim2.new(0.5, -15, 0, 30),
 			UDim2.new(0.5, 5, 0, 298),
 			nil
 		)
+		for _, glyph in
+			{
+				{ button = like, text = if item.viewerLiked then "♥" else "♡", color = Colors.Rose },
+				{ button = favorite, text = if item.viewerFavorited then "★" else "☆", color = Colors.Gold },
+			}
+		do
+			Factory.Label(glyph.button, glyph.text, UDim2.fromOffset(20, 30), {
+				Position = UDim2.fromOffset(10, 0),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = 14,
+				Color = glyph.color,
+				ZIndex = 6,
+			})
+			glyph.button.Text = "   " .. glyph.button.Text
+		end
 		self:_BindButton(like)
 		self:_BindButton(favorite)
 		like.Activated:Connect(function()
