@@ -58,6 +58,9 @@ Uploads everything in one command, polls Roblox's moderation queue per
 asset, and bakes the results straight into `src/Shared/UIAssets.luau`. Safe
 to re-run — already-uploaded assets are skipped unless you pass `--force`.
 
+**Then run the required follow-up step below** — the ids this writes aren't
+usable in the actual UI yet.
+
 **Manual** (upload yourself via Studio's Asset Manager):
 
 ```
@@ -71,7 +74,41 @@ one-command upload exists as a Node script at
 `backend/scripts/ui-decals/upload.mjs` — same manifest and images, same API,
 zero `npm install` needed. See that folder's README for how to run it from
 Railway's Shell/Terminal tab and how to get the resulting ids back into this
-repo.
+repo. **This also needs the follow-up step below.**
+
+## Required follow-up: resolving to the real, GUI-usable id
+
+Whichever path you used above, the id you get back from Roblox's Open Cloud
+Assets API is a Decal *wrapper* id (Roblox `AssetTypeId` 13) — it works fine
+as a 3D `Decal.Texture`, but **not** as an `ImageLabel`/`ImageButton.Image`,
+which is what every one of these decals actually needs. GUI images need the
+raw texture id nested inside that wrapper, and there's no public HTTP API to
+get it (a known, long-standing Roblox platform gap — see
+[this DevForum thread](https://devforum.roblox.com/t/provide-a-stable-open-cloud-api-to-get-an-image-id-from-a-decal-id/3594046)
+asking Roblox to add one). The only reliable way is to have the Roblox
+engine itself load the asset and read the real id back out.
+
+Also note: newly-uploaded images can pass Roblox's 3D-decal moderation
+review well before they clear the *separate* review pass specifically for
+GUI-displayed images — so a freshly-uploaded id can render fine as a 3D
+decal while still failing to load in an `ImageLabel` for a while after.
+
+Once ids show as cleared (Roblox's dashboard, or a `ContentProvider:PreloadAsync`
+check returning `Success` rather than `Failure` — note that call is known to
+be unreliable specifically when run from Studio's Command Bar, so prefer
+checking from an actual running client/LocalScript if you want to rely on
+it), resolve them:
+
+1. Open this place in Studio, make sure it's synced to the latest
+   `UIAssets.luau`.
+2. Paste `design/tools/resolve_decal_ids.lua` into the Command Bar (Edit
+   mode is fine) and run it. It reads the wrapper ids straight out of the
+   currently-synced `UIAssets` module, resolves each one via
+   `InsertService:LoadAsset`, and prints a ready-to-paste block of the real
+   ids.
+3. Paste that block's values into `assets/asset_ids.json`, then run
+   `python3 apply_asset_ids.py` to bake the real ids into
+   `src/Shared/UIAssets.luau`.
 
 ## What ships even with zero ids
 
@@ -102,8 +139,9 @@ so gate any layout changes on that the same way `App.luau` already does.
 | File | What it does |
 |---|---|
 | `export_ui_assets.py` | Renders `assets/*.png` + `assets/manifest.json` from the shared `<defs>`. |
-| `upload_ui_assets.py` | Uploads via Open Cloud, writes `src/Shared/UIAssets.luau`. |
+| `upload_ui_assets.py` | Uploads via Open Cloud, writes `src/Shared/UIAssets.luau` (with wrapper ids — see the follow-up step above). |
 | `apply_asset_ids.py` | Same output, from ids you paste into `assets/asset_ids.json` by hand. |
 | `ui_assets_common.py` | Shared manifest/Luau-writing helpers used by both upload paths. |
+| `tools/resolve_decal_ids.lua` | Run in Studio's Command Bar to resolve wrapper ids to the real, GUI-usable ids. |
 | `assets/manifest.json` | Name, file, 9-slice center, and intended use of each asset. |
 | `assets/asset_ids.json` | Your working copy of `{name: assetId}` — gets created/updated by the scripts above. |

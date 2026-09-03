@@ -35,6 +35,15 @@
 // this container's filesystem won't survive a redeploy -- prints the full
 // {name: id} map again at the end as one copy-pasteable block. Copy that
 // block out of the terminal before you close it.
+//
+// IMPORTANT -- one required follow-up step: Open Cloud hands back a Decal
+// *wrapper* id (Roblox AssetTypeId 13), which works fine as a 3D
+// Decal.Texture but NOT as an ImageLabel/ImageButton.Image -- GUI images
+// need the raw texture id nested inside that wrapper, and there's no public
+// HTTP API to get it. After these ids clear Roblox's separate GUI-image
+// moderation pass (which can lag behind 3D-decal approval), run
+// design/tools/resolve_decal_ids.lua in Studio's Command Bar to resolve
+// every id to its real, GUI-usable form.
 
 import { readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -179,6 +188,13 @@ async function main() {
   } else {
     console.log("\nAll assets uploaded.");
   }
+
+  console.log(
+    "\nOne more required step: the ids above are Decal wrapper ids, which don't\n" +
+      "render in ImageLabel/ImageButton (only in a 3D Decal.Texture). Open Studio,\n" +
+      "paste design/tools/resolve_decal_ids.lua into the Command Bar, and feed the\n" +
+      "block it prints back through apply_asset_ids.py to get the real, GUI-usable ids."
+  );
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

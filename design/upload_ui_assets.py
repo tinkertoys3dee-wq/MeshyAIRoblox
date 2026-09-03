@@ -24,6 +24,16 @@ asset -- this script polls until each one is done (or reports if one gets
 rejected) rather than assuming success. Safe to re-run: assets that already
 have an id in assets/asset_ids.json are skipped unless --force is passed.
 
+IMPORTANT -- one required follow-up step: Open Cloud hands back a Decal
+*wrapper* id (Roblox AssetTypeId 13), which works fine as a 3D Decal.Texture
+but NOT as an ImageLabel/ImageButton.Image -- GUI images need the raw
+texture id nested inside that wrapper, and there's no public HTTP API to
+get it. After this script finishes (and each id clears Roblox's separate
+GUI-image moderation pass, which can lag behind 3D-decal approval), run
+design/tools/resolve_decal_ids.lua in Studio's Command Bar to resolve every
+id to its real, GUI-usable form, then feed the result back through
+apply_asset_ids.py. See that file's header comment for the full why.
+
 Output: prints "ok  <Name> -> <id>" per asset as it finishes, and leaves the
 final id for every asset in assets/asset_ids.json and src/Shared/UIAssets.luau.
 """
@@ -152,7 +162,14 @@ def main():
         print(f"\n{len(missing)} asset(s) still missing an id: {', '.join(missing)}")
         print("Re-run this script (already-uploaded ones are skipped) once those clear moderation or are fixed.")
     else:
-        print("\nAll assets uploaded and baked into src/Shared/UIAssets.luau.")
+        print("\nAll assets uploaded.")
+
+    print(
+        "\nOne more required step: the ids just written are Decal *wrapper* ids, which\n"
+        "don't render in ImageLabel/ImageButton (only in a 3D Decal.Texture). Open Studio,\n"
+        "paste design/tools/resolve_decal_ids.lua into the Command Bar, and feed the block\n"
+        "it prints back through apply_asset_ids.py to get the real, GUI-usable ids."
+    )
 
 
 if __name__ == "__main__":
