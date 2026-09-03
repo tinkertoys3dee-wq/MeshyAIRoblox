@@ -333,6 +333,41 @@ local function attachDecal(target: GuiObject, assetKey: string): boolean
 		return false
 	end
 	target.BackgroundTransparency = 1
+
+	-- A TextButton/TextLabel's own native Text always renders BELOW every
+	-- child it has, no matter what ZIndex the child is given -- ZIndex only
+	-- orders children against each other, never against the parent's own
+	-- text/background paint. Left alone, the decal (a child) would always
+	-- hide the button/pill's own label. Keep the native Text property as
+	-- the live value callers all over App.luau keep reading and writing
+	-- after creation (nav labels, idea-chip icons, ...) -- just hide its
+	-- own rendering and mirror it into a real child that can sit above the
+	-- decal.
+	if target:IsA("TextButton") or target:IsA("TextLabel") then
+		local textHolder = target :: TextButton | TextLabel
+		local label = Factory.New("TextLabel", {
+			Name = "Label",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			Text = textHolder.Text,
+			TextColor3 = textHolder.TextColor3,
+			Font = textHolder.Font,
+			TextSize = textHolder.TextSize,
+			TextWrapped = textHolder.TextWrapped,
+			TextXAlignment = textHolder.TextXAlignment,
+			TextYAlignment = textHolder.TextYAlignment,
+			ZIndex = 5,
+			Parent = target,
+		}) :: TextLabel
+		textHolder.TextTransparency = 1
+		textHolder:GetPropertyChangedSignal("Text"):Connect(function()
+			label.Text = textHolder.Text
+		end)
+		textHolder:GetPropertyChangedSignal("TextColor3"):Connect(function()
+			label.TextColor3 = textHolder.TextColor3
+		end)
+	end
+
 	local decal = Factory.New("ImageLabel", {
 		Name = "Decal",
 		Size = UDim2.fromScale(1, 1),
