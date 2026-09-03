@@ -3954,40 +3954,48 @@ function App:_RenderCreate()
 			AlignY = Enum.TextYAlignment.Top,
 		})
 		local priceText = method.priceText or string.format("R$ %d", method.price)
-		if method.id == "TEXT_TO_3D" and not showAllMethods then
-			-- The concept art's price cartouche frame, behind the price text
-			-- only on this one card (the single full-width Direct Forge
-			-- panel a first-timer sees) -- everywhere else keeps the plain
-			-- price label as-is.
-			-- -139 put this hard against the card's right edge, under the
-			-- corner filigree, with the crystal below landing on top of it.
-			local cartouche = Factory.Icon(card, "PriceCartouche", UDim2.fromOffset(124, 54), UDim2.new(1, -146, 0, 32))
-			if cartouche then
-				cartouche.ZIndex = 1
-			end
+		-- The concept art's price cartouche frame, behind the price text
+		-- only on this one card (the single full-width Direct Forge panel
+		-- a first-timer sees) -- everywhere else keeps the plain price
+		-- label as-is.
+		local cartouche = if method.id == "TEXT_TO_3D" and not showAllMethods
+			then Factory.Icon(card, "PriceCartouche", UDim2.fromOffset(124, 58), UDim2.new(1, -148, 0, 30))
+			else nil
+		if cartouche then
+			cartouche.ZIndex = 1
 		end
-		Factory.Label(card, priceText, UDim2.fromOffset(106, 35), {
-			AnchorPoint = Vector2.new(1, 0),
-			-- Centred inside the cartouche on the card that has one (it
-			-- ends at -22), against the card's own edge everywhere else.
-			Position = if method.id == "TEXT_TO_3D" and not showAllMethods
-				then UDim2.new(1, -32, 0, 42)
-				else UDim2.new(1, -15, 0, 48),
-			AlignX = Enum.TextXAlignment.Right,
-			Font = Theme.Fonts.Black,
-			TextSize = 18,
-			Color = method.color,
-			ZIndex = 2,
-		})
+		-- Parented to the cartouche and centred when there is one, rather
+		-- than positioned against the card's edge and hoping the two line
+		-- up: Icon draws with ScaleType.Fit, which letterboxes the art
+		-- inside its box, so a card-relative offset drifted off the shape
+		-- as the card's width changed. Centring inside the same box tracks
+		-- the art exactly, since Fit centres it there too.
+		Factory.Label(
+			cartouche or card,
+			priceText,
+			if cartouche then UDim2.fromScale(1, 1) else UDim2.fromOffset(106, 35),
+			{
+				AnchorPoint = if cartouche then Vector2.new(0, 0) else Vector2.new(1, 0),
+				Position = if cartouche then UDim2.fromScale(0, 0) else UDim2.new(1, -15, 0, 48),
+				AlignX = if cartouche then Enum.TextXAlignment.Center else Enum.TextXAlignment.Right,
+				AlignY = if cartouche then Enum.TextYAlignment.Center else Enum.TextYAlignment.Top,
+				Font = Theme.Fonts.Black,
+				TextSize = 18,
+				Color = method.color,
+				ZIndex = 2,
+			}
+		)
 		if method.id == "TEXT_TO_3D" and not showAllMethods then
 			-- The concept art's signature touch on this exact card -- a
 			-- small corner accent, kept clear of the kicker pill/title/body/
 			-- price text above and below it rather than resized into their
 			-- space, since none of that layout can be visually re-verified
 			-- from here.
-			-- Sits to the LEFT of the price cartouche above (which now ends
-			-- at -146), not on top of it -- at -70 the two fully overlapped.
-			local crystal = Factory.Icon(card, "CrystalHero", UDim2.fromOffset(50, 58), UDim2.new(1, -206, 0, 12))
+			-- Sits to the LEFT of the price cartouche above (which starts at
+			-- -148), not on top of it -- at -70 the two fully overlapped --
+			-- and on the same vertical band, so the pair reads as one
+			-- group instead of a sliver floating above the price.
+			local crystal = Factory.Icon(card, "CrystalHero", UDim2.fromOffset(54, 58), UDim2.new(1, -212, 0, 30))
 			if crystal then
 				crystal.ZIndex = 2
 			end
@@ -4875,7 +4883,9 @@ function App:_RenderCreate()
 			if self.compact
 				then string.format("Build · %s", conversionPriceText)
 				else string.format("Approve & build · %s", conversionPriceText),
-			if self.compact then UDim2.new(0.5, -22, 0, 42) else UDim2.fromOffset(210, 42),
+			-- Sized off the card rather than a flat 210px so it always
+			-- stops short of the reroll button pinned to the right edge.
+			if self.compact then UDim2.new(0.5, -22, 0, 42) else UDim2.new(0.72, -226, 0, 42),
 			if self.compact then UDim2.new(0, 14, 1, -58) else UDim2.fromOffset(210, 174),
 			"mint"
 		)
@@ -4913,10 +4923,19 @@ function App:_RenderCreate()
 			if readyImage.method == "IMAGE_UPLOAD"
 				then (if self.compact then "Replace" else "Use another image")
 				else (if self.compact then "Reroll" else "Reroll · new reference"),
-			if self.compact then UDim2.new(0.5, -22, 0, 42) else UDim2.fromOffset(178, 42),
-			if self.compact then UDim2.new(0.5, 8, 1, -58) else UDim2.fromOffset(430, 150),
+			if self.compact then UDim2.new(0.5, -22, 0, 42) else UDim2.new(0.26, 0, 0, 42),
+			-- Was a flat x=430 offset, from when this card ran near the
+			-- page's full width -- in the left column that put the button
+			-- past the card's own right edge, over the next column. It is
+			-- pinned to the card's right edge now, so it stays inside at
+			-- any width, and shares the approve button's row (that moved
+			-- to y=174 when the description above it grew; this did not).
+			if self.compact then UDim2.new(0.5, 8, 1, -58) else UDim2.new(1, -16, 0, 174),
 			nil
 		)
+		if not self.compact then
+			reroll.AnchorPoint = Vector2.new(1, 0)
+		end
 		self:_BindButton(reroll)
 		reroll.Activated:Connect(function()
 			self.selectedMethod = if readyImage.method == "IMAGE_UPLOAD" then "IMAGE_UPLOAD" else "IMAGE_PREVIEW"
