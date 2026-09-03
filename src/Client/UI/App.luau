@@ -3631,7 +3631,12 @@ function App:_RenderCreate()
 	local inset = 16
 	local gap = 8
 	local tokensDescriptionY = 70
-	local tokensDescriptionHeight = 46
+	-- Was 46, sized back when this label was only ever 42% of a much wider
+	-- card (see the width fix below) -- at this card's real width now
+	-- (always narrow: the compact single stack, or the ~37%-wide right
+	-- rail) the same copy wraps to more, shorter lines and needs more
+	-- room, or it overflows past this box's bottom edge into "PAY WITH".
+	local tokensDescriptionHeight = 64
 	local payLabelY = tokensDescriptionY + tokensDescriptionHeight + 12
 	local toggleY = payLabelY + 20
 	local watchAdY = toggleY + 38
@@ -3650,7 +3655,10 @@ function App:_RenderCreate()
 		Font = Theme.Fonts.Black,
 		TextSize = 28,
 	})
-	Factory.Label(tokensCard, tokensDescriptionText, UDim2.new(0.42, -16, 0, tokensDescriptionHeight), {
+	-- Full card width now (was 0.42, left over from when "PAY WITH" sat
+	-- beside this description in a wide card) -- the card is always
+	-- narrow now, so there's no side-by-side column to leave room for.
+	Factory.Label(tokensCard, tokensDescriptionText, UDim2.new(1, -32, 0, tokensDescriptionHeight), {
 		Position = UDim2.fromOffset(16, tokensDescriptionY),
 		Color = Colors.TextMuted,
 		TextSize = 11,
@@ -3889,7 +3897,12 @@ function App:_RenderCreate()
 			})
 			Factory.Corner(ribbon, 4)
 		end
-		Factory.ImagePill(card, method.kicker, method.color, 104).Position = UDim2.fromOffset(16, 14)
+		-- The START HERE ribbon above claims the top-left corner (out to
+		-- roughly x=92 once its rotation is accounted for) on this one
+		-- card -- shift the kicker pill clear of it there instead of
+		-- overlapping.
+		local kickerX = if method.id == "TEXT_TO_3D" and not showAllMethods then 100 else 16
+		Factory.ImagePill(card, method.kicker, method.color, 104).Position = UDim2.fromOffset(kickerX, 14)
 		Factory.Label(card, method.title, UDim2.new(1, -150, 0, 31), {
 			Position = UDim2.fromOffset(16, 46),
 			Font = Theme.Fonts.Black,
@@ -4722,7 +4735,7 @@ function App:_RenderCreate()
 	end
 	if readyImage then
 		local reference =
-			Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 382 else 210), nil, "ReferenceReview")
+			Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 382 else 234), nil, "ReferenceReview")
 		reference.LayoutOrder = 3
 		local image = Factory.New("ImageLabel", {
 			Size = if self.compact then UDim2.fromOffset(132, 132) else UDim2.fromOffset(172, 172),
@@ -4787,7 +4800,10 @@ function App:_RenderCreate()
 					then "You can submit another owned image at no extra charge."
 					else "A reroll creates a new paid reference."
 			),
-			if self.compact then UDim2.new(1, -36, 0, 66) else UDim2.new(1, -232, 0, 54),
+			-- Was 54 -- sized for a near-full-page card; the left column
+			-- is always narrower now (see `stack`/`columns` above), so
+			-- this same copy wraps to more lines and needs more room.
+			if self.compact then UDim2.new(1, -36, 0, 66) else UDim2.new(1, -232, 0, 78),
 			{
 				Position = if self.compact then UDim2.fromOffset(18, 220) else UDim2.fromOffset(210, 84),
 				AlignX = if self.compact then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left,
@@ -4808,7 +4824,7 @@ function App:_RenderCreate()
 				then string.format("Build · %s", conversionPriceText)
 				else string.format("Approve & build · %s", conversionPriceText),
 			if self.compact then UDim2.new(0.5, -22, 0, 42) else UDim2.fromOffset(210, 42),
-			if self.compact then UDim2.new(0, 14, 1, -58) else UDim2.fromOffset(210, 150),
+			if self.compact then UDim2.new(0, 14, 1, -58) else UDim2.fromOffset(210, 174),
 			"mint"
 		)
 		self:_BindButton(approve)
@@ -5075,7 +5091,7 @@ function App:_RenderCreate()
 	local openQueueSlots = math.max(0, totalQueueSlots - activeGenerations)
 	local queueCard = Factory.New("Frame", {
 		Name = "QueueSlots",
-		Size = UDim2.new(1, 0, 0, 70),
+		Size = UDim2.new(1, 0, 0, 82),
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.1,
 		BorderSizePixel = 0,
@@ -5116,11 +5132,13 @@ function App:_RenderCreate()
 			totalQueueSlots,
 			if totalQueueSlots == 1 then "" else "s"
 		),
-		UDim2.new(1, -72, 0, 18),
+		UDim2.new(1, -82, 0, 32),
 		{
 			Position = UDim2.fromOffset(66, 34),
 			Color = Colors.TextMuted,
 			TextSize = 11,
+			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
 		}
 	)
 
