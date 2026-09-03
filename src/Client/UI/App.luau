@@ -3435,12 +3435,13 @@ function App:_PageHeader(title: string, subtitle: string, accent: boolean?)
 		TextSize = 28,
 	})
 	if accent then
-		-- The concept art's small flourish ornament next to the page
-		-- title -- only Create opts in for now (accent is optional and
-		-- defaults to off) since it's the only page checked pixel-for-
-		-- pixel against its mockup so far. Anchored to the header's own
-		-- right edge rather than after the title text, since a
-		-- TextLabel's rendered width isn't available synchronously here.
+		-- The concept art's small flourish ornament next to the page title.
+		-- All six studio pages opt in now, each having been checked against
+		-- its own mockup; the parameter stays optional so a page added later
+		-- starts without it rather than inheriting an ornament nobody has
+		-- placed. Anchored to the header's own right edge rather than after
+		-- the title text, since a TextLabel's rendered width isn't available
+		-- synchronously here.
 		Factory.Icon(self.content, "FlourishDivider", UDim2.fromOffset(26, 15), UDim2.new(0.95, -26, 0, 32))
 	end
 	Factory.Label(self.content, subtitle, UDim2.new(0.95, 0, 0, 32), {
