@@ -516,6 +516,13 @@ function Factory.RadialRing(
 		Size = size,
 		Position = position or UDim2.new(),
 		BackgroundTransparency = 1,
+		-- Safety net: Roblox's ClipsDescendants is unreliable against a
+		-- ROTATED descendant (the masks below rotate) -- a known engine
+		-- limitation, not something the viewport/mask structure itself
+		-- gets wrong. container never rotates, so clipping here isn't
+		-- subject to that bug, and caps any escaped mask geometry to this
+		-- container's own bounds even if the inner clip still doesn't hold.
+		ClipsDescendants = true,
 		Parent = parent,
 	})
 	Factory.New("ImageLabel", {

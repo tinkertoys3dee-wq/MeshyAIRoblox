@@ -962,6 +962,14 @@ function App:_BuildChrome()
 		Size = UDim2.fromOffset(84, 84),
 		BackgroundColor3 = ringTrackColor,
 		BorderSizePixel = 0,
+		-- Safety net for Factory.RadialRing's rotating masks: Roblox's
+		-- ClipsDescendants is unreliable against a ROTATED descendant (a
+		-- known engine limitation, not specific to this code), which let
+		-- the oversized mask rectangles render past their own viewports.
+		-- ringWrap itself never rotates, so clipping here isn't subject to
+		-- that bug -- it caps any escaped mask to this circle's bounds
+		-- (via Corner below) even if the inner clip still doesn't hold.
+		ClipsDescendants = true,
 		Parent = rankCard,
 	})
 	Factory.Corner(ringWrap, 42)
