@@ -3476,13 +3476,42 @@ function App:_RenderCreate()
 	})
 	self:_TrackScroll(page, "Create")
 	Factory.ScalePadding(page, 0.012, 0.012)
+	-- The concept art runs a narrower right rail (Tokens/Daily Quests/In
+	-- the Forge/queue) alongside the main Direct Forge + prompt column
+	-- instead of stacking everything in one long scroll. `columns` only
+	-- exists in wide layouts -- compact keeps the old single-column stack,
+	-- since a ~37%-width rail would be unreadable at phone-ish widths.
+	-- `rightStack` collapsing back to the same `stack` in compact mode
+	-- means every card below just keeps working unchanged there.
+	local columns = if self.compact
+		then nil
+		else Factory.New("Frame", {
+			Size = UDim2.new(1, -8, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Parent = page,
+		})
+	if columns then
+		Factory.List(columns, Enum.FillDirection.Horizontal, 20)
+	end
 	local stack = Factory.New("Frame", {
-		Size = UDim2.new(1, -8, 0, 0),
+		Size = if self.compact then UDim2.new(1, -8, 0, 0) else UDim2.new(0.63, -10, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
-		Parent = page,
+		Parent = if self.compact then page else columns,
 	})
 	Factory.List(stack, Enum.FillDirection.Vertical, 14)
+	local rightStack = if self.compact
+		then stack
+		else Factory.New("Frame", {
+			Size = UDim2.new(0.37, -10, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Parent = columns,
+		})
+	if not self.compact then
+		Factory.List(rightStack, Enum.FillDirection.Vertical, 14)
+	end
 
 	-- The real first-session path, kept visible on Create until completed.
 	-- It produces a satisfying outfit/runway result without requiring a paid
@@ -3590,35 +3619,27 @@ function App:_RenderCreate()
 		then "Watch ads for spendable tokens, or buy 70. Free reward tokens only speed up finished creations."
 		else "Earn tokens by watching ads. Ad tokens fund generations or the Pass; "
 			.. "free tokens (achievements, streaks) fund the Pass only."
-	-- Right-hand controls: on compact layouts this column collapses to full
-	-- width BELOW the balance/description, so its start (payLabelY) has to
-	-- clear however tall that description wraps to, not a number guessed
-	-- once and left to drift the next time the copy changes — that mismatch
-	-- is exactly how the description text overlapping "PAY WITH" would
-	-- happen. On wide layouts the column sits beside the description
-	-- instead, so its position is independent of the description's height.
-	local rightX = if self.compact then 0 else 0.46
-	local rightWidth = if self.compact then 1 else 0.54
-	-- Wide mode used to leave this at 0 -- the right column's buttons then
-	-- sat flush against the card's own right edge with no breathing room,
-	-- unlike every other card in the app (14-16px is the norm). Matching
-	-- compact's inset here fixes that instead of introducing a new number.
+	-- Right-hand controls: this card now always sits in a narrow column --
+	-- the page-compact single stack, or the desktop right rail (~37% of
+	-- content width, see `columns`/`rightStack` above) -- so the "PAY
+	-- WITH" column always collapses to full width BELOW the balance/
+	-- description now, the way it used to only in compact. Its start
+	-- (payLabelY) has to clear however tall that description wraps to,
+	-- not a number guessed once and left to drift the next time the copy
+	-- changes -- that mismatch is exactly how the description text
+	-- overlapping "PAY WITH" would happen.
+	local rightX = 0
+	local rightWidth = 1
 	local inset = 16
 	local gap = 8
 	local tokensDescriptionY = 70
-	-- Scaled from the previous copy's proven-good 32/50 at a proportional
-	-- length increase (97 -> ~130 chars) rather than re-guessed from
-	-- scratch — there is no layout pass to measure the actual wrapped height
-	-- against here, so anchoring to a dimension that already shipped
-	-- correctly beats a fresh pixel estimate for text this codebase can't
-	-- measure at render time.
-	local tokensDescriptionHeight = if self.compact then 46 else 68
-	local payLabelY = if self.compact then tokensDescriptionY + tokensDescriptionHeight + 12 else 12
+	local tokensDescriptionHeight = 46
+	local payLabelY = tokensDescriptionY + tokensDescriptionHeight + 12
 	local toggleY = payLabelY + 20
 	local watchAdY = toggleY + 38
 	local buyTokensY = watchAdY + 42
-	local tokensCardHeight = if self.compact then buyTokensY + 30 + 16 else 156
-	local tokensCard = Factory.ImageCard(stack, UDim2.new(1, 0, 0, tokensCardHeight), nil, "TokensCard")
+	local tokensCardHeight = buyTokensY + 30 + 16
+	local tokensCard = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, tokensCardHeight), nil, "TokensCard")
 	tokensCard.LayoutOrder = 0
 	Factory.Label(tokensCard, "FORGE TOKENS", UDim2.new(0.42, -16, 0, 18), {
 		Position = UDim2.fromOffset(16, 12),
@@ -4860,9 +4881,15 @@ function App:_RenderCreate()
 	end
 	local showUpsell = hasQueuedRow and availablePasses <= 0
 	local activityHeight = (if rowCount == 0 then 140 else 45 + rowCount * 50 + 14) + (if showUpsell then 46 else 0)
-	local activity = Factory.ImageCard(stack, UDim2.new(1, 0, 0, activityHeight), nil, "Activity")
-	activity.LayoutOrder = 4
-	Factory.Label(activity, "LIVE CREATION ACTIVITY", UDim2.new(1, -32, 0, 24), {
+	local activity = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, activityHeight), nil, "Activity")
+	activity.LayoutOrder = 2
+	-- Concept art labels this panel "IN THE FORGE" and shows a global feed
+	-- of OTHER creators' in-progress items -- an aspirational social feed
+	-- with no server support (no broadcast of anonymized generation events
+	-- exists). This keeps the real, honest data (the player's own queue)
+	-- under the concept art's label, rather than fabricating other players'
+	-- activity.
+	Factory.Label(activity, "IN THE FORGE", UDim2.new(1, -32, 0, 24), {
 		Position = UDim2.fromOffset(16, 13),
 		Font = Theme.Fonts.Bold,
 		TextSize = 12,
@@ -5029,12 +5056,84 @@ function App:_RenderCreate()
 		)
 	end
 
+	-- Concept art's queue-slots footer. self.state.benefits.queueSlots is
+	-- the same total already shown as the topbar's "N SLOTS" pill; this
+	-- pairs it with how many of those slots are free right now, counted
+	-- from the player's own active (non-terminal) generations -- the same
+	-- terminal-stage set GenerationService uses server-side
+	-- (SUCCEEDED/FAILED/IMAGE_READY), so this can't drift out of sync with
+	-- what actually blocks a new submission.
+	local activeGenerations = 0
+	for _, generationId in self.state.profile.generationOrder do
+		local generation = self.state.profile.generations[generationId]
+		if generation then
+			local stage = generation.stage
+			if stage ~= "SUCCEEDED" and stage ~= "FAILED" and stage ~= "IMAGE_READY" then
+				activeGenerations += 1
+			end
+		end
+	end
+	local totalQueueSlots = self.state.benefits.queueSlots or 1
+	local openQueueSlots = math.max(0, totalQueueSlots - activeGenerations)
+	local queueCard = Factory.New("Frame", {
+		Name = "QueueSlots",
+		Size = UDim2.new(1, 0, 0, 70),
+		BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.1,
+		BorderSizePixel = 0,
+		LayoutOrder = 3,
+		Parent = rightStack,
+	})
+	Factory.Corner(queueCard, 20)
+	Factory.Stroke(queueCard, Colors.Cyan, 0.6, 1.4)
+	local queueBadge = Factory.New("Frame", {
+		Size = UDim2.fromOffset(40, 40),
+		Position = UDim2.fromOffset(15, 15),
+		BackgroundColor3 = Colors.Ink,
+		BorderSizePixel = 0,
+		Parent = queueCard,
+	})
+	Factory.Corner(queueBadge, 20)
+	Factory.Stroke(queueBadge, Colors.Cyan, 0.3, 1.6)
+	Factory.Label(queueBadge, "⚡", UDim2.fromScale(1, 1), {
+		TextSize = 16,
+		AlignX = Enum.TextXAlignment.Center,
+		AlignY = Enum.TextYAlignment.Center,
+	})
+	Factory.Label(
+		queueCard,
+		string.format("%d queue slot%s open", openQueueSlots, if openQueueSlots == 1 then "" else "s"),
+		UDim2.new(1, -72, 0, 20),
+		{
+			Position = UDim2.fromOffset(66, 13),
+			Font = Theme.Fonts.Bold,
+			TextSize = 14,
+			Color = Colors.Cyan,
+		}
+	)
+	Factory.Label(
+		queueCard,
+		string.format(
+			"Up to %d generation%s running at once",
+			totalQueueSlots,
+			if totalQueueSlots == 1 then "" else "s"
+		),
+		UDim2.new(1, -72, 0, 18),
+		{
+			Position = UDim2.fromOffset(66, 34),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+		}
+	)
+
 	local brief = self.state.dailyBrief
 	if brief then
 		local hasMilestoneBanner = brief.milestoneReward ~= nil
 		local cardHeight = 222 + (if hasMilestoneBanner then 36 else 0)
-		local daily = Factory.ImageCard(stack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyBrief")
-		daily.LayoutOrder = 5
+		local daily = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyBrief")
+		-- Extra content beyond the concept art (which has no streak-calendar
+		-- panel) -- kept, but after every panel the mockup does show.
+		daily.LayoutOrder = 4
 
 		-- Flame badge: the same streak iconography as the status-bar pill,
 		-- now with its own gradient + stroke instead of a flat text pill.
@@ -5236,8 +5335,8 @@ function App:_RenderCreate()
 		end
 		local allDone = doneCount >= #quests
 		local cardHeight = #quests * 46 + (if allDone then 122 else 46)
-		local questCard = Factory.ImageCard(stack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyQuests")
-		questCard.LayoutOrder = 6
+		local questCard = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyQuests")
+		questCard.LayoutOrder = 1
 		Factory.Label(questCard, "DAILY QUESTS", UDim2.new(1, -100, 0, 20), {
 			Position = UDim2.fromOffset(16, 13),
 			Font = Theme.Fonts.Bold,
