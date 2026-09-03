@@ -3713,6 +3713,18 @@ function App:_RenderCreate()
 			TextSize = 18,
 			Color = method.color,
 		})
+		if method.id == "TEXT_TO_3D" and not showAllMethods then
+			-- The concept art's signature touch on this exact card (the
+			-- single full-width Direct Forge panel a first-timer sees) -- a
+			-- small corner accent, kept clear of the kicker pill/title/body/
+			-- price text above and below it rather than resized into their
+			-- space, since none of that layout can be visually re-verified
+			-- from here.
+			local crystal = Factory.Icon(card, "CrystalHero", UDim2.fromOffset(58, 62), UDim2.new(1, -70, 0, 8))
+			if crystal then
+				crystal.ZIndex = 2
+			end
+		end
 		local choose = Factory.New("TextButton", {
 			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
@@ -3839,6 +3851,16 @@ function App:_RenderCreate()
 			true
 		)
 		prompt.Text = self.draftPrompt
+		-- The concept art's one signature "glowing inscription well" is this
+		-- exact field -- the main idea prompt -- not every other textbox
+		-- _TextBox is used for elsewhere in the app, so this overrides just
+		-- this instance's stroke rather than _TextBox's own default.
+		local promptStroke = prompt:FindFirstChildOfClass("UIStroke")
+		if promptStroke then
+			promptStroke.Color = Colors.Cyan
+			promptStroke.Transparency = 0.3
+			promptStroke.Thickness = 1.6
+		end
 		local count = Factory.Label(
 			promptCard,
 			string.format("%d / %d", #self.draftPrompt, Config.Generation.PromptMaxLength),
@@ -4298,6 +4320,21 @@ function App:_RenderCreate()
 		)
 		generate.Active = isUpload or hasRetryCredit or self.state.policy.commerceAllowed == true
 		self:_BindButton(generate)
+		-- The concept art's molten CTA has a small gold rivet stud near each
+		-- end -- a light corner accent that scales with the button's own
+		-- width via scale-based offsets, so it holds up across Simple Mode's
+		-- full-width layout and Advanced Mode's fixed-width one alike.
+		for _, edge in { "left", "right" } do
+			local rivet = Factory.Icon(
+				generate,
+				"RivetStud",
+				UDim2.fromOffset(13, 13),
+				if edge == "left" then UDim2.fromOffset(9, 15) else UDim2.new(1, -22, 0, 15)
+			)
+			if rivet then
+				rivet.ZIndex = 6
+			end
+		end
 		-- The Priority Pass upsell -- a second button competing for
 		-- attention right beside the one action Simple Mode actually needs
 		-- -- only shows in Advanced Mode. Both places that switch into
