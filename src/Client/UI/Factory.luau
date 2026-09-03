@@ -405,6 +405,31 @@ function Factory.ImagePill(parent: Instance, text: string, color: Color3?, width
 	return pill
 end
 
+-- Swaps a Factory.ImageCard/ImageButton/ImagePill's live decal to a
+-- different asset key -- e.g. toggling a nav button between "ButtonDefault"
+-- and "ButtonPrimary" for an inactive/active state, the decal equivalent of
+-- what used to be a plain BackgroundColor3 change before attachDecal made
+-- that invisible (a decal-covered target's own background is fully
+-- transparent, so recoloring it no longer shows). No-op, keeping whatever
+-- image is already showing, if that asset key's id is still 0 or the
+-- target never had a decal attached in the first place.
+function Factory.SwapDecal(target: Instance, assetKey: string): boolean
+	local decal = target:FindFirstChild("Decal")
+	if not decal or not decal:IsA("ImageLabel") then
+		return false
+	end
+	local assetId = (UIAssets :: any)[assetKey]
+	if type(assetId) ~= "number" or assetId == 0 then
+		return false
+	end
+	decal.Image = `rbxassetid://{assetId}`
+	local sliceCenter = SLICE_CENTER[assetKey]
+	if sliceCenter then
+		decal.SliceCenter = sliceCenter
+	end
+	return true
+end
+
 -- Small square medallion icon (nav row, brand mark, ...). Returns nil when
 -- that asset hasn't been uploaded yet, so a call site can keep its existing
 -- code-drawn icon visible as a fallback instead of showing a blank square --

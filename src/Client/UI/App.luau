@@ -771,16 +771,15 @@ function App:_BuildChrome()
 	local topbar = Factory.New("Frame", {
 		Name = "Topbar",
 		Size = UDim2.new(1, 0, 0, 78),
-		BackgroundColor3 = Colors.Ink,
-		BackgroundTransparency = 0.12,
+		BackgroundColor3 = Color3.fromRGB(21, 12, 46),
+		BackgroundTransparency = 0.18,
 		BorderSizePixel = 0,
 		Parent = shell,
 	})
 	Factory.New("Frame", {
-		Size = UDim2.new(1, 0, 0, 1),
-		Position = UDim2.new(0, 0, 1, -1),
-		BackgroundColor3 = Colors.Line,
-		BackgroundTransparency = 0.45,
+		Size = UDim2.new(1, 0, 0, 2),
+		Position = UDim2.new(0, 0, 1, -2),
+		BackgroundColor3 = Colors.Gold,
 		BorderSizePixel = 0,
 		Parent = topbar,
 	})
@@ -3064,28 +3063,47 @@ function App:_RenderStatus()
 	local benefits = self.state.benefits
 	local daily = self.state.dailyBrief
 	local creator = self.state.creatorProgress
+	-- Small cut-gem stud on the left of each badge, matching the concept
+	-- art's status pills -- a no-op (pill just keeps its plain look) while
+	-- that gem asset's id is still 0.
+	local function gemIcon(pill: TextLabel, assetKey: string)
+		local icon = Factory.Icon(pill, assetKey, UDim2.fromOffset(14, 14), UDim2.fromOffset(10, 6))
+		if icon then
+			icon.ZIndex = 6
+		end
+	end
 	if creator then
-		Factory.ImagePill(self.statusArea, string.format("LV. %d CREATOR", creator.level or 1), Colors.Gold, 112).LayoutOrder =
-			1
+		local pill =
+			Factory.ImagePill(self.statusArea, string.format("LV. %d CREATOR", creator.level or 1), Colors.Gold, 112)
+		pill.LayoutOrder = 1
+		gemIcon(pill, "GemGold")
 	end
 	if daily then
-		Factory.ImagePill(self.statusArea, string.format("🔥 %d DAY STREAK", daily.streak), Colors.Rose, 112).LayoutOrder =
-			2
+		local pill =
+			Factory.ImagePill(self.statusArea, string.format("🔥 %d DAY STREAK", daily.streak), Colors.Rose, 112)
+		pill.LayoutOrder = 2
+		gemIcon(pill, "GemRuby")
 	end
-	Factory.ImagePill(
-		self.statusArea,
-		string.format("%d QUEUE SLOT%s", benefits.queueSlots, if benefits.queueSlots == 1 then "" else "S"),
-		Colors.Cyan,
-		118
-	).LayoutOrder =
-		3
-	Factory.ImagePill(
-		self.statusArea,
-		if benefits.plusSubscriber then "PLUS ACTIVE" else "PLUS: SELL ONLY",
-		if benefits.plusSubscriber then Colors.Mint else Colors.Gold,
-		124
-	).LayoutOrder =
-		4
+	do
+		local pill = Factory.ImagePill(
+			self.statusArea,
+			string.format("%d QUEUE SLOT%s", benefits.queueSlots, if benefits.queueSlots == 1 then "" else "S"),
+			Colors.Cyan,
+			118
+		)
+		pill.LayoutOrder = 3
+		gemIcon(pill, "GemCyan")
+	end
+	do
+		local pill = Factory.ImagePill(
+			self.statusArea,
+			if benefits.plusSubscriber then "PLUS ACTIVE" else "PLUS: SELL ONLY",
+			if benefits.plusSubscriber then Colors.Mint else Colors.Gold,
+			124
+		)
+		pill.LayoutOrder = 4
+		gemIcon(pill, if benefits.plusSubscriber then "GemMint" else "GemRose")
+	end
 end
 
 function App:_OpenPage(page: string)
@@ -3115,6 +3133,13 @@ function App:_HighlightNavigation()
 			TweenInfo.new(0.16, Enum.EasingStyle.Quad),
 			{ BackgroundColor3 = if active then Colors.Violet else Colors.PanelSoft }
 		)
+		-- Once a real PanelFrame/ButtonPrimary/etc. decal is live, the button's
+		-- own BackgroundColor3 above is invisible (its background is fully
+		-- transparent behind the opaque image) -- swap the decal itself
+		-- between the molten ButtonPrimary look and the plain ButtonDefault
+		-- one instead, a no-op fallback to the tween above while either id is
+		-- still 0.
+		Factory.SwapDecal(button, if active then "ButtonPrimary" else "ButtonDefault")
 		self:_Animate(
 			button,
 			TweenInfo.new(0.16, Enum.EasingStyle.Quad),
