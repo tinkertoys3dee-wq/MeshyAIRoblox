@@ -489,14 +489,30 @@ end
 -- sits on the side the state is on, and the state's word on the other.
 -- Every one of Settings' real boolean options is drawn this way there
 -- instead of as another full-width button.
+local SWITCH_KNOB = 24
+
+-- Moves a Factory.Switch to a state without rebuilding it, for a caller
+-- that flips one optimistically and may have to roll it back (the sound
+-- toggle, which reverts if the server rejects the change).
+function Factory.SetSwitch(switch: GuiObject, on: boolean)
+	switch.BackgroundColor3 = if on then Colors.Mint else Color3.fromRGB(42, 27, 76)
+	local label = switch:FindFirstChild("Label")
+	if label and label:IsA("TextLabel") then
+		label.Text = if on then "ON" else "OFF"
+		label.TextColor3 = if on then Colors.Ink else Colors.TextMuted
+		label.Position = if on then UDim2.fromOffset(6, 0) else UDim2.fromOffset(SWITCH_KNOB + 6, 0)
+	end
+	local knob = switch:FindFirstChild("Knob")
+	if knob and knob:IsA("Frame") then
+		knob.Position = if on then UDim2.new(1, -(SWITCH_KNOB + 4), 0.5, 0) else UDim2.new(0, 4, 0.5, 0)
+	end
+end
+
 function Factory.Switch(parent: Instance, on: boolean, position: UDim2?, width: number?): TextButton
-	local size = width or 92
-	local knob = 24
 	local switch = Factory.New("TextButton", {
 		Name = "Switch",
-		Size = UDim2.fromOffset(size, 32),
+		Size = UDim2.fromOffset(width or 92, 32),
 		Position = position or UDim2.new(),
-		BackgroundColor3 = if on then Colors.Mint else Color3.fromRGB(42, 27, 76),
 		BorderSizePixel = 0,
 		AutoButtonColor = false,
 		-- The visible caption is a child label below, so the knob can never
@@ -506,26 +522,24 @@ function Factory.Switch(parent: Instance, on: boolean, position: UDim2?, width: 
 	})
 	Factory.Corner(switch, 99)
 	Factory.Stroke(switch, Colors.Gold, 0.25, 1.4)
-	Factory.Label(switch, if on then "ON" else "OFF", UDim2.new(1, -(knob + 12), 1, 0), {
-		Position = if on then UDim2.fromOffset(6, 0) else UDim2.fromOffset(knob + 6, 0),
+	Factory.Label(switch, "", UDim2.new(1, -(SWITCH_KNOB + 12), 1, 0), {
 		AlignX = Enum.TextXAlignment.Center,
 		Font = Theme.Fonts.Black,
 		TextSize = 11,
-		Color = if on then Colors.Ink else Colors.TextMuted,
 	})
 	local dot = Factory.New("Frame", {
 		Name = "Knob",
 		AnchorPoint = Vector2.new(0, 0.5),
-		Position = if on then UDim2.new(1, -(knob + 4), 0.5, 0) else UDim2.new(0, 4, 0.5, 0),
-		Size = UDim2.fromOffset(knob, knob),
+		Size = UDim2.fromOffset(SWITCH_KNOB, SWITCH_KNOB),
 		BackgroundColor3 = Colors.Gold,
 		BorderSizePixel = 0,
 		ZIndex = 2,
 		Parent = switch,
 	})
-	Factory.Corner(dot, knob / 2)
+	Factory.Corner(dot, SWITCH_KNOB / 2)
 	Factory.Gradient(dot, { Color3.fromRGB(255, 243, 196), Colors.Gold }, 90)
 	Factory.Stroke(dot, Color3.fromRGB(255, 243, 196), 0.35, 1)
+	Factory.SetSwitch(switch, on)
 	return switch
 end
 

@@ -1755,18 +1755,18 @@ function App:_UpdateSoundButton()
 		return
 	end
 	local enabled = not self.state or self.state.profile.settings.soundsEnabled ~= false
-	self.soundButton.Text = if enabled then "♪   UI sound on" else "×   UI sound off"
-	self.soundButton.BackgroundColor3 = if enabled then Colors.PanelSoft else Color3.fromRGB(47, 31, 48)
+	Factory.SetSwitch(self.soundButton, enabled)
 end
 
 -- Builds the sound toggle used on the Settings page. Extracted from the old
 -- persistent nav-rail button so it can be recreated each time that page
--- renders, like every other page-scoped control.
-function App:_BuildSoundButton(parent: Instance, size: UDim2, position: UDim2): TextButton
-	local button = Factory.ImageButton(parent, "", size, position, nil)
+-- renders, like every other page-scoped control. Drawn as the concept
+-- art's gold switch -- it flips optimistically and rolls back if the server
+-- rejects the change, so it is moved between states in place rather than
+-- rebuilt.
+function App:_BuildSoundButton(parent: Instance, position: UDim2): TextButton
+	local button = Factory.Switch(parent, true, position)
 	button.Name = "SoundToggle"
-	button.TextXAlignment = Enum.TextXAlignment.Left
-	Factory.Padding(button, 15, 0)
 	self:_BindButton(button)
 	self.soundButton = button
 	self:_UpdateSoundButton()
@@ -9652,7 +9652,8 @@ end
 function App:_RenderSettings()
 	self:_PageHeader(
 		"Settings",
-		"Simple/Advanced Create mode, accessibility, audio, what's equipped right now, and your achievements."
+		"Simple/Advanced Create mode, accessibility, audio, what's equipped right now, and your achievements.",
+		true
 	)
 	local page = Factory.New("ScrollingFrame", {
 		Name = "SettingsScroll",
@@ -9668,17 +9669,45 @@ function App:_RenderSettings()
 	})
 	self:_TrackScroll(page, "Settings")
 	Factory.ScalePadding(page, 0.012, 0.012)
+	-- The concept art runs Settings as two even columns -- the three things
+	-- you change on the left, the two things you look at on the right --
+	-- rather than one tall stack. Compact collapses to that single stack,
+	-- where a half-width Equipped/Achievements panel would be unreadable.
+	-- The 22px row gap (not 14) leaves room for each panel's banner tab,
+	-- which overhangs 12px above the card it titles.
+	local columns = if self.compact
+		then nil
+		else Factory.New("Frame", {
+			Size = UDim2.new(1, -8, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Parent = page,
+		})
+	if columns then
+		Factory.List(columns, Enum.FillDirection.Horizontal, 20)
+	end
 	local stack = Factory.New("Frame", {
-		Size = UDim2.new(1, -8, 0, 0),
+		Size = if self.compact then UDim2.new(1, -8, 0, 0) else UDim2.new(0.5, -10, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
-		Parent = page,
+		Parent = if self.compact then page else columns,
 	})
-	Factory.List(stack, Enum.FillDirection.Vertical, 14)
+	Factory.List(stack, Enum.FillDirection.Vertical, 22)
+	local rightStack = if self.compact
+		then stack
+		else Factory.New("Frame", {
+			Size = UDim2.new(0.5, -10, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Parent = columns,
+		})
+	if not self.compact then
+		Factory.List(rightStack, Enum.FillDirection.Vertical, 22)
+	end
 
 	local settings = self.state.profile.settings
 
-	-- CREATE PAGE ---------------------------------------------------------
+	-- CREATE MODE ---------------------------------------------------------
 	-- The single most consequential setting for Forge's actual audience
 	-- (young creators): whether Create shows one method, a text box, and a
 	-- few example ideas, or the full four-method art-direction toolkit.
@@ -9688,140 +9717,225 @@ function App:_RenderSettings()
 	-- only stumbled into mid-creation.
 	local createMode = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 168), nil, "CreateMode")
 	createMode.LayoutOrder = 0
-	Factory.ImagePill(createMode, "CREATE PAGE", Colors.Mint, 140).Position = UDim2.fromOffset(16, 14)
-	Factory.Label(createMode, "Simple Mode", UDim2.new(1, -32, 0, 22), {
-		Position = UDim2.fromOffset(16, 52),
-		Font = Theme.Fonts.Bold,
-		TextSize = 13,
-	})
+	Factory.SectionBanner(createMode, "Create Mode")
 	local simpleModeOn = settings.simpleMode ~= false
-	local nextSimpleMode = not simpleModeOn
-	local simpleModeButton = Factory.ImageButton(
-		createMode,
-		if simpleModeOn then "Simple Mode · ON" else "Simple Mode · OFF",
-		UDim2.new(1, -32, 0, 40),
-		UDim2.fromOffset(16, 78),
-		if simpleModeOn then "mint" else nil
-	)
-	self:_BindButton(simpleModeButton)
-	simpleModeButton.Activated:Connect(function()
-		if nextSimpleMode then
-			-- Turning Simple Mode ON: Create's Priority Pass toggle is
-			-- about to disappear -- if it was left on, the next generation
-			-- would otherwise silently spend a pass with no visible way
-			-- left to turn it back off.
-			self.usePriority = false
-		end
-		self:_UpdateSetting("simpleMode", nextSimpleMode)
-	end)
+	Factory.Label(createMode, "Simple Mode", UDim2.new(1, -32, 0, 26), {
+		Position = UDim2.fromOffset(16, 32),
+		Font = Theme.Fonts.Black,
+		TextSize = 17,
+	})
 	Factory.Label(
 		createMode,
-		"Simple Mode keeps Create down to one way to make something, a text box, and a few example ideas to tap. Turn it off to unlock every generation method plus style and fit-region controls.",
-		UDim2.new(1, -32, 0, 34),
+		"One way to make something, a text box, and a few ideas to tap. Turn it off to unlock every method, style, fit, pricing and sharing.",
+		UDim2.new(1, -32, 0, 44),
 		{
-			Position = UDim2.fromOffset(16, 126),
+			Position = UDim2.fromOffset(16, 60),
 			Color = Colors.TextMuted,
 			TextSize = 11,
 			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
 		}
 	)
+	-- Two buttons, one lit -- the concept art states the current mode
+	-- rather than asking the player to read a single button's label and
+	-- work out whether it reports the state or the action.
+	local simpleButton = Factory.ImageButton(
+		createMode,
+		if simpleModeOn then "Simple Mode · ON" else "Simple Mode",
+		UDim2.new(0.5, -22, 0, 44),
+		UDim2.fromOffset(16, 110),
+		if simpleModeOn then "primary" else nil
+	)
+	local advancedButton = Factory.ImageButton(
+		createMode,
+		if simpleModeOn then "Advanced Mode" else "Advanced Mode · ON",
+		UDim2.new(0.5, -22, 0, 44),
+		UDim2.new(0.5, 6, 0, 110),
+		if simpleModeOn then nil else "primary"
+	)
+	self:_BindButton(simpleButton)
+	self:_BindButton(advancedButton)
+	simpleButton.Activated:Connect(function()
+		if simpleModeOn then
+			return
+		end
+		-- Turning Simple Mode ON: Create's Priority Pass toggle is about to
+		-- disappear -- if it was left on, the next generation would
+		-- otherwise silently spend a pass with no visible way left to turn
+		-- it back off.
+		self.usePriority = false
+		self:_UpdateSetting("simpleMode", true)
+	end)
+	advancedButton.Activated:Connect(function()
+		if not simpleModeOn then
+			return
+		end
+		self:_UpdateSetting("simpleMode", false)
+	end)
 
 	-- ACCESSIBILITY -----------------------------------------------------
-	local accessibility =
-		Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 396 else 320), nil, "Accessibility")
+	local keyboardNoteHeight = if self.compact then 60 else 44
+	local accessibility = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 232 + keyboardNoteHeight), nil, "Accessibility")
 	accessibility.LayoutOrder = 1
-	Factory.ImagePill(accessibility, "ACCESSIBILITY", Colors.Cyan, 140).Position = UDim2.fromOffset(16, 14)
+	Factory.SectionBanner(accessibility, "Accessibility")
+	-- One row per option: what it is, what it does, and the concept art's
+	-- gold switch showing (and setting) its state -- not a full-width
+	-- button whose own label has to double as the readout.
+	local function toggleRow(title: string, description: string, on: boolean, y: number, onFlip: (boolean) -> ())
+		Factory.Label(accessibility, title, UDim2.new(1, -140, 0, 22), {
+			Position = UDim2.fromOffset(16, y),
+			Font = Theme.Fonts.Bold,
+			TextSize = 13,
+		})
+		Factory.Label(accessibility, description, UDim2.new(1, -140, 0, 20), {
+			Position = UDim2.fromOffset(16, y + 22),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Truncate = Enum.TextTruncate.AtEnd,
+		})
+		local switch = Factory.Switch(accessibility, on, UDim2.new(1, -108, 0, y + 10))
+		self:_BindButton(switch)
+		switch.Activated:Connect(function()
+			onFlip(not on)
+		end)
+	end
+	toggleRow(
+		"Reduce motion",
+		"Turns off pulses, drifting embers and sweeps.",
+		settings.reduceMotion == true,
+		36,
+		function(enabled)
+			self:_UpdateSetting("reduceMotion", enabled)
+		end
+	)
+	toggleRow(
+		"High contrast",
+		"Darker panels, brighter text and borders.",
+		settings.highContrast == true,
+		96,
+		function(enabled)
+			self:_SetHighContrast(enabled)
+			self:_UpdateSetting("highContrast", enabled)
+		end
+	)
+
+	-- Interface size: a real slider, as the concept art draws it, over the
+	-- same 0.8-1.4 range the server accepts (see Main.server's
+	-- UpdateSettings validation). The scale is applied live while dragging
+	-- and only persisted on release -- _UpdateSetting re-renders the page,
+	-- which would destroy the slider mid-drag.
+	local scaleMinimum, scaleMaximum, scaleStep = 0.8, 1.4, 0.05
 	Factory.Label(accessibility, "Interface size", UDim2.new(1, -32, 0, 22), {
-		Position = UDim2.fromOffset(16, 52),
+		Position = UDim2.fromOffset(16, 156),
 		Font = Theme.Fonts.Bold,
 		TextSize = 13,
 	})
-	local scaleRow = Factory.New("Frame", {
-		Position = UDim2.fromOffset(16, 78),
-		Size = UDim2.new(1, -32, 0, 36),
-		BackgroundTransparency = 1,
+	local scaleTrack = Factory.New("TextButton", {
+		Position = UDim2.new(0.42, 0, 0, 162),
+		Size = UDim2.new(0.58, -16, 0, 16),
+		BackgroundColor3 = Colors.Ink,
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		Text = "",
 		Parent = accessibility,
 	})
-	Factory.List(scaleRow, Enum.FillDirection.Horizontal, 8)
-	local currentScale = tonumber(settings.uiScale) or 1
-	for _, option in
-		{
-			{ Label = "Small", Value = 0.9 },
-			{ Label = "Default", Value = 1 },
-			{ Label = "Large", Value = 1.15 },
-			{ Label = "Extra large", Value = 1.3 },
-		}
-	do
-		local isSelected = math.abs(currentScale - option.Value) < 0.01
-		local chip = Factory.ImageButton(
-			scaleRow,
-			option.Label,
-			UDim2.fromOffset(if self.compact then 84 else 108, 34),
-			nil,
-			if isSelected then "primary" else nil
-		)
-		self:_BindButton(chip)
-		chip.Activated:Connect(function()
-			self.uiScaleInstance.Scale = option.Value
-			if self.arcadeUiScale then
-				self.arcadeUiScale.Scale = option.Value
-			end
-			if self.runwayUiScale then
-				self.runwayUiScale.Scale = option.Value
-			end
-			self:_UpdateSetting("uiScale", option.Value)
-		end)
+	Factory.Corner(scaleTrack, 8)
+	Factory.Stroke(scaleTrack, Colors.Gold, 0.5)
+	local scaleFill = Factory.New("Frame", {
+		Size = UDim2.fromScale(0, 1),
+		BackgroundColor3 = Colors.Gold,
+		BorderSizePixel = 0,
+		Parent = scaleTrack,
+	})
+	Factory.Corner(scaleFill, 8)
+	local scaleKnob = Factory.New("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0, 0.5),
+		Size = UDim2.fromOffset(22, 22),
+		BackgroundColor3 = Colors.Gold,
+		BorderSizePixel = 0,
+		ZIndex = 2,
+		Parent = scaleTrack,
+	})
+	Factory.Corner(scaleKnob, 11)
+	Factory.Gradient(scaleKnob, { Color3.fromRGB(255, 243, 196), Colors.Gold }, 90)
+	Factory.Stroke(scaleKnob, Color3.fromRGB(255, 243, 196), 0.35)
+	local scaleValueLabel = Factory.Label(accessibility, "", UDim2.new(1, -32, 0, 18), {
+		Position = UDim2.fromOffset(16, 180),
+		Color = Colors.TextMuted,
+		TextSize = 11,
+	})
+	local currentScale = math.clamp(tonumber(settings.uiScale) or 1, scaleMinimum, scaleMaximum)
+	local function showScale(value: number)
+		local alpha = (value - scaleMinimum) / (scaleMaximum - scaleMinimum)
+		scaleFill.Size = UDim2.fromScale(alpha, 1)
+		scaleKnob.Position = UDim2.fromScale(alpha, 0.5)
+		scaleValueLabel.Text = string.format("%d%%", math.floor(value * 100 + 0.5))
 	end
-	Factory.Label(
-		accessibility,
-		"Scales every control and label together, including touch and click targets.",
-		UDim2.new(1, -32, 0, 20),
-		{ Position = UDim2.fromOffset(16, 120), Color = Colors.TextMuted, TextSize = 11 }
-	)
-
-	local highContrastButton = Factory.ImageButton(
-		accessibility,
-		if settings.highContrast then "High contrast · ON" else "High contrast · OFF",
-		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.new(0.5, -22, 0, 40),
-		UDim2.fromOffset(16, 156),
-		if settings.highContrast then "mint" else nil
-	)
-	self:_BindButton(highContrastButton)
-	highContrastButton.Activated:Connect(function()
-		local enabled = not settings.highContrast
-		self:_SetHighContrast(enabled)
-		self:_UpdateSetting("highContrast", enabled)
+	local function applyScale(value: number)
+		self.uiScaleInstance.Scale = value
+		if self.arcadeUiScale then
+			self.arcadeUiScale.Scale = value
+		end
+		if self.runwayUiScale then
+			self.runwayUiScale.Scale = value
+		end
+	end
+	local function scaleFromPointer(pointerX: number): number
+		if scaleTrack.AbsoluteSize.X <= 0 then
+			return currentScale
+		end
+		local alpha = math.clamp((pointerX - scaleTrack.AbsolutePosition.X) / scaleTrack.AbsoluteSize.X, 0, 1)
+		local steps = math.floor(((scaleMaximum - scaleMinimum) * alpha) / scaleStep + 0.5)
+		return math.clamp(scaleMinimum + steps * scaleStep, scaleMinimum, scaleMaximum)
+	end
+	showScale(currentScale)
+	local scaleDragging = false
+	local scaleDragTouch = nil :: InputObject?
+	scaleTrack.InputBegan:Connect(function(input: InputObject)
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
+			scaleDragging = true
+			scaleDragTouch = if input.UserInputType == Enum.UserInputType.Touch then input else nil
+			currentScale = scaleFromPointer(input.Position.X)
+			showScale(currentScale)
+			applyScale(currentScale)
+		end
 	end)
-
-	local reduceMotionButton = Factory.ImageButton(
-		accessibility,
-		if settings.reduceMotion then "Reduce motion · ON" else "Reduce motion · OFF",
-		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.new(0.5, -22, 0, 40),
-		if self.compact then UDim2.fromOffset(16, 202) else UDim2.new(0.5, 6, 0, 156),
-		if settings.reduceMotion then "mint" else nil
+	table.insert(
+		self.pageConnections,
+		UserInputService.InputChanged:Connect(function(input: InputObject)
+			if
+				scaleDragging
+				and (input.UserInputType == Enum.UserInputType.MouseMovement or input == scaleDragTouch)
+			then
+				currentScale = scaleFromPointer(input.Position.X)
+				showScale(currentScale)
+				applyScale(currentScale)
+			end
+		end)
 	)
-	self:_BindButton(reduceMotionButton)
-	reduceMotionButton.Activated:Connect(function()
-		self:_UpdateSetting("reduceMotion", not settings.reduceMotion)
-	end)
-
+	table.insert(
+		self.pageConnections,
+		UserInputService.InputEnded:Connect(function(input: InputObject)
+			if not scaleDragging then
+				return
+			end
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input == scaleDragTouch then
+				scaleDragging = false
+				scaleDragTouch = nil
+				self:_UpdateSetting("uiScale", currentScale)
+			end
+		end)
+	)
 	Factory.Label(
 		accessibility,
-		"Brighter borders and text for low-vision contrast · fewer sliding/fading animations for motion sensitivity.",
-		UDim2.new(1, -32, 0, 34),
+		"Scales every control and label together, including touch and click targets. Keyboard & gamepad: press Tab, or a gamepad's Y button, any time to jump into the navigation rail and move through the studio with arrows or the D-pad.",
+		UDim2.new(1, -32, 0, keyboardNoteHeight),
 		{
-			Position = UDim2.fromOffset(16, if self.compact then 250 else 204),
-			Color = Colors.TextMuted,
-			TextSize = 11,
-			Wrapped = true,
-		}
-	)
-	Factory.Label(
-		accessibility,
-		"Keyboard & gamepad: press Tab, or a gamepad's Y button, any time to jump into the navigation rail and move through the studio with arrows or the D-pad.",
-		UDim2.new(1, -32, 0, if self.compact then 60 else 44),
-		{
-			Position = UDim2.fromOffset(16, if self.compact then 292 else 246),
+			Position = UDim2.fromOffset(16, 208),
 			Color = Colors.TextMuted,
 			TextSize = 11,
 			Wrapped = true,
@@ -9830,21 +9944,32 @@ function App:_RenderSettings()
 	)
 
 	-- AUDIO ---------------------------------------------------------------
-	local audio = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 108), nil, "Audio")
+	local audio = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 104), nil, "Audio")
 	audio.LayoutOrder = 2
-	Factory.ImagePill(audio, "AUDIO", Colors.Violet, 90).Position = UDim2.fromOffset(16, 14)
-	self:_BuildSoundButton(audio, UDim2.new(1, -32, 0, 42), UDim2.fromOffset(16, 52))
+	Factory.SectionBanner(audio, "Audio")
+	Factory.Label(audio, "Sound effects", UDim2.new(1, -140, 0, 22), {
+		Position = UDim2.fromOffset(16, 38),
+		Font = Theme.Fonts.Bold,
+		TextSize = 13,
+	})
+	Factory.Label(audio, "Taps, forge chimes and reward stings.", UDim2.new(1, -140, 0, 20), {
+		Position = UDim2.fromOffset(16, 60),
+		Color = Colors.TextMuted,
+		TextSize = 11,
+		Truncate = Enum.TextTruncate.AtEnd,
+	})
+	self:_BuildSoundButton(audio, UDim2.new(1, -108, 0, 48))
 
 	-- INVITE FRIENDS --------------------------------------------------------
-	local invite = Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 158 else 108), nil, "InviteFriends")
+	local invite = Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 150 else 104), nil, "InviteFriends")
 	invite.LayoutOrder = 3
-	Factory.ImagePill(invite, "GROW THE STUDIO", Colors.Rose, 150).Position = UDim2.fromOffset(16, 14)
+	Factory.SectionBanner(invite, "Grow the Studio")
 	Factory.Label(
 		invite,
 		"Send a Roblox invite to a friend for a small one-time Forge Token reward.",
-		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.new(1, -260, 0, 40),
+		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.new(1, -240, 0, 44),
 		{
-			Position = UDim2.fromOffset(16, 48),
+			Position = UDim2.fromOffset(16, 38),
 			Color = Colors.TextMuted,
 			TextSize = 12,
 			Wrapped = true,
@@ -9854,8 +9979,8 @@ function App:_RenderSettings()
 	local inviteButton = Factory.ImageButton(
 		invite,
 		"Invite a friend",
-		if self.compact then UDim2.new(1, -32, 0, 42) else UDim2.fromOffset(200, 42),
-		if self.compact then UDim2.fromOffset(16, 100) else UDim2.new(1, -216, 0, 33),
+		if self.compact then UDim2.new(1, -32, 0, 42) else UDim2.fromOffset(190, 42),
+		if self.compact then UDim2.fromOffset(16, 92) else UDim2.new(1, -206, 0, 40),
 		"mint"
 	)
 	self:_BindButton(inviteButton)
@@ -9867,19 +9992,18 @@ function App:_RenderSettings()
 	local profile = self.state.profile
 	local equippedIds = profile.equippedItemIds or {}
 	local loadout =
-		Factory.ImageCard(stack, UDim2.new(1, 0, 0, math.max(140, 70 + math.max(1, #equippedIds) * 66)), nil, "Loadout")
+		Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, 46 + math.max(1, #equippedIds) * 62), nil, "Loadout")
 	loadout.LayoutOrder = 4
-	Factory.ImagePill(loadout, string.format("EQUIPPED · %d", #equippedIds), Colors.Mint, 130).Position =
-		UDim2.fromOffset(16, 14)
+	Factory.SectionBanner(loadout, string.format("Equipped Now · %d", #equippedIds))
 	if #equippedIds == 0 then
 		Factory.Label(loadout, "Nothing equipped yet. Equip an item from My Studio.", UDim2.new(1, -32, 0, 40), {
-			Position = UDim2.fromOffset(16, 52),
+			Position = UDim2.fromOffset(16, 42),
 			Color = Colors.TextMuted,
 			TextSize = 12,
 			Wrapped = true,
 		})
 	else
-		local y = 54
+		local y = 38
 		for _, itemId in equippedIds do
 			local item = profile.items[itemId]
 			if item then
@@ -9892,6 +10016,7 @@ function App:_RenderSettings()
 					Parent = loadout,
 				})
 				Factory.Corner(row, 10)
+				Factory.Stroke(row, Colors.Gold, 0.55)
 				local image = Factory.New("ImageLabel", {
 					Size = UDim2.fromOffset(44, 44),
 					Position = UDim2.fromOffset(6, 6),
@@ -9902,19 +10027,23 @@ function App:_RenderSettings()
 					Parent = row,
 				})
 				Factory.Corner(image, 8)
-				Factory.Label(row, item.name, UDim2.new(1, -204, 0, 24), {
+				Factory.Stroke(image, Colors.Gold, 0.45)
+				Factory.Label(row, item.name, UDim2.new(1, -180, 0, 24), {
 					Position = UDim2.fromOffset(58, 8),
 					Font = Theme.Fonts.Bold,
 					TextSize = 13,
 					Truncate = Enum.TextTruncate.AtEnd,
 				})
-				Factory.Label(row, ACCESSORY_LABELS[item.fit.accessoryType] or "Accessory", UDim2.new(1, -204, 0, 20), {
+				Factory.Label(row, ACCESSORY_LABELS[item.fit.accessoryType] or "Accessory", UDim2.new(1, -180, 0, 20), {
 					Position = UDim2.fromOffset(58, 30),
 					Color = Colors.TextMuted,
 					TextSize = 11,
 				})
+				-- "Remove", per the concept art -- "Unequip" is Studio's word
+				-- for the same action, next to the fit controls that make it
+				-- mean something specific.
 				local unequip =
-					Factory.ImageButton(row, "Unequip", UDim2.fromOffset(120, 38), UDim2.new(1, -128, 0, 9), nil)
+					Factory.ImageButton(row, "Remove", UDim2.fromOffset(104, 38), UDim2.new(1, -112, 0, 9), nil)
 				self:_BindButton(unequip)
 				unequip.Activated:Connect(function()
 					unequip.Active = false
@@ -9933,7 +10062,7 @@ function App:_RenderSettings()
 						end
 						if unequip.Parent then
 							unequip.Active = true
-							unequip.Text = "Unequip"
+							unequip.Text = "Remove"
 						end
 					end)
 				end)
@@ -9948,25 +10077,23 @@ function App:_RenderSettings()
 	for _ in unlockedAchievements do
 		unlockedCount += 1
 	end
-	local achievementColumns = if self.compact then 1 else 2
+	-- Circular medallions in a wide grid, the way the concept art draws
+	-- them, rather than a two-column list of text rows. Each keeps its
+	-- description line, which the art has no room for and which is the only
+	-- thing on the page that says how a locked one is earned.
+	local achievementColumns = if self.compact then 2 else 4
 	local achievementRows = math.ceil(#Achievements.List / achievementColumns)
-	local achievementTileHeight = 74
+	local achievementTileHeight = 122
 	local achievements = Factory.ImageCard(
-		stack,
-		UDim2.new(1, 0, 0, 58 + achievementRows * (achievementTileHeight + 8)),
+		rightStack,
+		UDim2.new(1, 0, 0, 46 + achievementRows * (achievementTileHeight + 8)),
 		nil,
 		"Achievements"
 	)
 	achievements.LayoutOrder = 5
-	Factory.ImagePill(
-		achievements,
-		string.format("ACHIEVEMENTS · %d/%d", unlockedCount, #Achievements.List),
-		Colors.Gold,
-		170
-	).Position =
-		UDim2.fromOffset(16, 14)
+	Factory.SectionBanner(achievements, string.format("Achievements · %d/%d", unlockedCount, #Achievements.List))
 	local achievementGrid = Factory.New("Frame", {
-		Position = UDim2.fromOffset(16, 50),
+		Position = UDim2.fromOffset(16, 38),
 		Size = UDim2.new(1, -32, 0, achievementRows * (achievementTileHeight + 8)),
 		BackgroundTransparency = 1,
 		Parent = achievements,
@@ -9985,42 +10112,52 @@ function App:_RenderSettings()
 	for index, definition in Achievements.List do
 		local unlocked = unlockedAchievements[definition.id] ~= nil
 		local tile = Factory.New("Frame", {
-			BackgroundColor3 = if unlocked then Colors.Ink else Colors.Panel,
-			BorderSizePixel = 0,
+			BackgroundTransparency = 1,
 			LayoutOrder = index,
 			Parent = achievementGrid,
 		})
-		Factory.Corner(tile, 11)
-		Factory.Stroke(tile, if unlocked then Colors.Gold else Colors.Line, if unlocked then 0.3 else 0.6)
-		Factory.Label(tile, if unlocked then "✓" else "○", UDim2.fromOffset(24, 24), {
-			Position = UDim2.fromOffset(10, 8),
-			Font = Theme.Fonts.Black,
-			TextSize = 15,
+		local medallion = Factory.New("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, 2),
+			Size = UDim2.fromOffset(54, 54),
+			BackgroundColor3 = if unlocked then Colors.Ink else Colors.Panel,
+			BackgroundTransparency = if unlocked then 0 else 0.35,
+			BorderSizePixel = 0,
+			Parent = tile,
+		})
+		Factory.Corner(medallion, 27)
+		Factory.Stroke(medallion, if unlocked then Colors.Gold else Colors.Line, if unlocked then 0.1 else 0.55, 2)
+		if unlocked then
+			Factory.Gradient(medallion, { Color3.fromRGB(58, 40, 96), Colors.Ink }, 90)
+		end
+		Factory.Label(medallion, if unlocked then "✦" else "🔒", UDim2.fromScale(1, 1), {
 			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			Font = Theme.Fonts.Black,
+			TextSize = if unlocked then 24 else 18,
 			Color = if unlocked then Colors.Gold else Colors.TextMuted,
 		})
-		Factory.Label(tile, definition.name, UDim2.new(1, -80, 0, 20), {
-			Position = UDim2.fromOffset(36, 8),
+		Factory.Label(tile, definition.name, UDim2.new(1, 0, 0, 18), {
+			Position = UDim2.fromOffset(0, 60),
+			AlignX = Enum.TextXAlignment.Center,
 			Font = Theme.Fonts.Bold,
-			TextSize = 13,
+			TextSize = 12,
 			Color = if unlocked then Colors.Text else Colors.TextMuted,
 			Truncate = Enum.TextTruncate.AtEnd,
 		})
-		Factory.Label(tile, string.format("+%d", definition.tokens), UDim2.fromOffset(44, 20), {
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -10, 0, 8),
-			AlignX = Enum.TextXAlignment.Right,
-			Font = Theme.Fonts.Bold,
-			TextSize = 12,
-			Color = if unlocked then Colors.Gold else Colors.TextMuted,
-		})
-		Factory.Label(tile, definition.description, UDim2.new(1, -48, 0, 38), {
-			Position = UDim2.fromOffset(36, 30),
-			Color = Colors.TextMuted,
-			TextSize = 11,
-			Wrapped = true,
-			AlignY = Enum.TextYAlignment.Top,
-		})
+		Factory.Label(
+			tile,
+			string.format("%s · +%d", definition.description, definition.tokens),
+			UDim2.new(1, -6, 0, 40),
+			{
+				Position = UDim2.fromOffset(3, 78),
+				AlignX = Enum.TextXAlignment.Center,
+				Color = if unlocked then Colors.Gold else Colors.TextMuted,
+				TextSize = 9,
+				Wrapped = true,
+				AlignY = Enum.TextYAlignment.Top,
+			}
+		)
 	end
 end
 
