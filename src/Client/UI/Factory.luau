@@ -479,88 +479,57 @@ function Factory.Icon(parent: Instance, assetKey: string, size: UDim2, position:
 	}) :: ImageLabel
 end
 
--- A circular 0-100% progress ring (e.g. the Creator Rank crest) from a
--- single full-circle image -- Roblox has no native way to draw a partial
--- arc, so this reveals a slice of the image via two rotating clip-masked
--- frames instead of needing one image per possible progress value.
+-- A circular 0-100% progress ring (the Creator Rank crest), built from
+-- many small segment frames laid around a circle.
 --
--- Geometry (verified against 0%, 50%, 100%): a fixed right-half viewport
--- (ClipsDescendants) holds an oversized square mask pinned at its own
--- left-edge midpoint, which sits exactly on the ring's center; rotating
--- that mask clockwise sweeps its covered range from [12 o'clock, 6
--- o'clock] down to empty as it turns 0->180 degrees, so intersecting it
--- against the viewport's fixed half yields a *shrinking* covered wedge
--- from 12 o'clock down to the current angle -- i.e. a growing reveal from
--- 12 o'clock clockwise. A mirrored left-half viewport/mask (pinned at its
--- right edge) does the same for the 6-to-12 o'clock half, active only past
--- 50%. trackColor should match whatever the ring sits on (its own parent's
--- background, or a dedicated track circle behind it), since the masks are
--- opaque frames of that color covering the not-yet-filled arc.
+-- Roblox can't draw a partial-arc stroke, and the usual trick for this --
+-- revealing one full-circle image through rotating clip-masks -- is
+-- unusable here: ClipsDescendants does NOT clip a *rotated* descendant.
+-- That was confirmed in-engine rather than assumed; the masks rendered
+-- clear across the sidebar and out past the app window, and adding
+-- ClipsDescendants on unrotated ancestors above them changed nothing.
+-- Rotation on its own renders correctly though, so this rotates many
+-- tiny segments into place and just recolours them -- no clipping, no
+-- image, and nothing that depends on the engine quirk above.
 --
--- Returns an updater to call with the current 0-1 progress fraction, or
--- nil if the asset hasn't been uploaded yet (same fallback contract as
--- every other Factory image helper).
+-- Returns an updater to call with the current 0-1 progress fraction.
 function Factory.RadialRing(
 	parent: Instance,
-	assetKey: string,
-	size: UDim2,
-	position: UDim2?,
-	trackColor: Color3
-): ((number) -> ())?
-	local assetId = (UIAssets :: any)[assetKey]
-	if type(assetId) ~= "number" or assetId == 0 then
-		return nil
-	end
-	local container = Factory.New("Frame", {
-		Name = "RadialRing",
-		Size = size,
-		Position = position or UDim2.new(),
-		BackgroundTransparency = 1,
-		-- Safety net: Roblox's ClipsDescendants is unreliable against a
-		-- ROTATED descendant (the masks below rotate) -- a known engine
-		-- limitation, not something the viewport/mask structure itself
-		-- gets wrong. container never rotates, so clipping here isn't
-		-- subject to that bug, and caps any escaped mask geometry to this
-		-- container's own bounds even if the inner clip still doesn't hold.
-		ClipsDescendants = true,
-		Parent = parent,
-	})
-	Factory.New("ImageLabel", {
-		Size = UDim2.fromScale(1, 1),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		Image = `rbxassetid://{assetId}`,
-		ZIndex = 1,
-		Parent = container,
-	})
-	local function buildMask(pivotX: number, viewportX: number): Frame
-		local viewport = Factory.New("Frame", {
-			Size = UDim2.fromScale(0.5, 1),
-			Position = UDim2.fromScale(viewportX, 0),
-			BackgroundTransparency = 1,
-			BorderSizePixel = 0,
-			ClipsDescendants = true,
-			ZIndex = 2,
-			Parent = container,
-		}) :: Frame
-		return Factory.New("Frame", {
-			AnchorPoint = Vector2.new(pivotX, 0.5),
-			Position = UDim2.new(pivotX, 0, 0.5, 0),
-			-- Oversized (2x the viewport in each axis) so its far corners
-			-- clear the ring's radius at every rotation, no gaps at the
-			-- edge of the swept wedge.
-			Size = UDim2.fromScale(2, 2),
+	diameter: number,
+	thickness: number,
+	fillColor: Color3,
+	trackColor: Color3,
+	segments: number?
+): (number) -> ()
+	local count = segments or 60
+	local radius = (diameter - thickness) / 2
+	-- One segment's own width is the arc it has to span, plus a little
+	-- overlap so neighbours meet as a continuous band rather than a
+	-- dashed one.
+	local segmentWidth = math.max(3, math.ceil(2 * math.pi * radius / count) + 2)
+	local arc: { Frame } = {}
+	for index = 1, count do
+		-- -90 puts the first segment at 12 o'clock and runs them
+		-- clockwise; +90 on Rotation turns each one tangent to the
+		-- circle, so they form a ring rather than radial spokes.
+		local degrees = (index - 1) / count * 360 - 90
+		local radians = math.rad(degrees)
+		arc[index] = Factory.New("Frame", {
+			Name = string.format("Segment%d", index),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, math.cos(radians) * radius, 0.5, math.sin(radians) * radius),
+			Size = UDim2.fromOffset(segmentWidth, thickness),
+			Rotation = degrees + 90,
 			BackgroundColor3 = trackColor,
 			BorderSizePixel = 0,
-			Parent = viewport,
-		}) :: Frame
+			Parent = parent,
+		})
 	end
-	local maskRight = buildMask(0, 0.5)
-	local maskLeft = buildMask(1, 0)
 	return function(progress: number)
-		local degrees = math.clamp(progress, 0, 1) * 360
-		maskRight.Rotation = math.clamp(degrees, 0, 180)
-		maskLeft.Rotation = math.clamp(degrees - 180, 0, 180)
+		local filled = math.floor(math.clamp(progress, 0, 1) * count + 0.5)
+		for index, segment in arc do
+			segment.BackgroundColor3 = if index <= filled then fillColor else trackColor
+		end
 	end
 end
 
