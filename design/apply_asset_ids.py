@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 """Manual path, if you'd rather upload the PNGs yourself (e.g. via Studio's
 Asset Manager -> right-click -> Upload) instead of running
-upload_ui_assets.py with an Open Cloud API key.
+upload_ui_assets.py with an Open Cloud API key. This is also the second
+half of the *automatic* path: upload_ui_assets.py / upload.mjs hand back a
+Decal wrapper id that isn't directly usable in an ImageLabel/ImageButton --
+you resolve those to the real ids via tools/resolve_decal_ids.lua in Studio,
+then feed the result through this script. See design/README.md's "Required
+follow-up" section for why.
 
 1. python3 export_ui_assets.py          # writes assets/*.png
 2. Upload each PNG in assets/ to Roblox however you like, and note the
-   resulting decal/image asset id for each.
+   resulting decal/image asset id for each. If you uploaded via Open Cloud,
+   resolve each id to its real, GUI-usable form with
+   tools/resolve_decal_ids.lua first (a raw Open Cloud id will look correct
+   everywhere except actually rendering in the app).
 3. Edit assets/asset_ids.json -- create it if it doesn't exist -- as a flat
    {"AssetName": 123456789, ...} object. Asset names match manifest.json's
    "name" field -- see that file for the full list (shared chrome like
