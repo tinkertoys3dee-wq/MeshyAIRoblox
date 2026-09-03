@@ -3339,12 +3339,21 @@ function App:_RenderActivePage()
 	self:_SyncAvatarPreviewPanel()
 end
 
-function App:_PageHeader(title: string, subtitle: string)
+function App:_PageHeader(title: string, subtitle: string, accent: boolean?)
 	Factory.Label(self.content, title, UDim2.new(0.95, 0, 0, 42), {
 		Position = UDim2.new(0.025, 0, 0, 18),
 		Font = Theme.Fonts.Black,
 		TextSize = 28,
 	})
+	if accent then
+		-- The concept art's small flourish ornament next to the page
+		-- title -- only Create opts in for now (accent is optional and
+		-- defaults to off) since it's the only page checked pixel-for-
+		-- pixel against its mockup so far. Anchored to the header's own
+		-- right edge rather than after the title text, since a
+		-- TextLabel's rendered width isn't available synchronously here.
+		Factory.Icon(self.content, "FlourishDivider", UDim2.fromOffset(26, 15), UDim2.new(0.95, -26, 0, 32))
+	end
 	Factory.Label(self.content, subtitle, UDim2.new(0.95, 0, 0, 32), {
 		Position = UDim2.new(0.025, 0, 0, 57),
 		Color = Colors.TextMuted,
@@ -3405,7 +3414,8 @@ function App:_RenderCreate()
 			else if self.compact then "Make an item" else "Make your own Roblox item",
 		if showAllMethods
 			then "Three paths, precise art direction, one Roblox-ready accessory. Every input is moderated."
-			else "Pick an idea or type one. Roblox shows the price and asks before you buy."
+			else "Pick an idea or type one. Roblox shows the price and asks before you buy.",
+		true
 	)
 	local howToPlay = Factory.ImageButton(
 		self.content,
@@ -3792,6 +3802,41 @@ function App:_RenderCreate()
 			stroke.Transparency = if selected then 0.12 else 0.55
 			stroke.Thickness = if selected then 2 else 1
 		end
+		if method.id == "TEXT_TO_3D" and not showAllMethods then
+			-- The concept art's mid-edge rivet studs on this exact panel's
+			-- top/bottom border, and its diagonal "START HERE" ribbon
+			-- clipping the top-left corner -- both scale-positioned so
+			-- they hold up at this card's real (much narrower) width.
+			for _, edge in { "top", "bottom" } do
+				for _, x in { 0.3, 0.7 } do
+					local rivet = Factory.Icon(
+						card,
+						"RivetStud",
+						UDim2.fromOffset(10, 10),
+						UDim2.new(x, -5, if edge == "top" then 0 else 1, if edge == "top" then 3 else -13)
+					)
+					if rivet then
+						rivet.ZIndex = 3
+					end
+				end
+			end
+			local ribbon = Factory.New("TextLabel", {
+				Name = "StartHereRibbon",
+				AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.fromOffset(-8, 6),
+				Size = UDim2.fromOffset(100, 20),
+				Rotation = -12,
+				BackgroundColor3 = Colors.Gold,
+				BorderSizePixel = 0,
+				Text = "START HERE",
+				TextColor3 = Color3.fromRGB(58, 18, 6),
+				Font = Theme.Fonts.Black,
+				TextSize = 11,
+				ZIndex = 4,
+				Parent = card,
+			})
+			Factory.Corner(ribbon, 4)
+		end
 		Factory.ImagePill(card, method.kicker, method.color, 104).Position = UDim2.fromOffset(16, 14)
 		Factory.Label(card, method.title, UDim2.new(1, -150, 0, 31), {
 			Position = UDim2.fromOffset(16, 46),
@@ -3876,6 +3921,19 @@ function App:_RenderCreate()
 		expand.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", false)
 		end)
+		-- The concept art flanks this exact link with a small flourish on
+		-- each side.
+		for _, side in { "left", "right" } do
+			local flourish = Factory.Icon(
+				methodRow,
+				"FlourishDivider",
+				UDim2.fromOffset(20, 14),
+				if side == "left" then UDim2.new(0.5, -128, 0, 175) else UDim2.new(0.5, 108, 0, 175)
+			)
+			if flourish then
+				flourish.ZIndex = 2
+			end
+		end
 	end
 
 	local isUpload = self.selectedMethod == "IMAGE_UPLOAD"
@@ -3996,11 +4054,21 @@ function App:_RenderCreate()
 		-- first-timer's first visit (isAvatar's "styling notes" field is a
 		-- different kind of prompt, so it's excluded here regardless).
 		if not isAvatar and not showAllMethods then
-			Factory.Label(promptCard, "NEED AN IDEA? TRY ONE:", UDim2.new(1, -32, 0, 16), {
+			Factory.Label(promptCard, "NEED AN IDEA? TRY ONE:", UDim2.fromOffset(158, 16), {
 				Position = UDim2.fromOffset(16, cursorY),
 				Font = Theme.Fonts.Bold,
 				TextSize = 10,
 				Color = Colors.TextMuted,
+			})
+			-- The concept art trails this label with a thin divider line
+			-- out to the panel's edge.
+			Factory.New("Frame", {
+				Position = UDim2.new(0, 182, 0, cursorY + 8),
+				Size = UDim2.new(1, -198, 0, 1),
+				BackgroundColor3 = Colors.Gold,
+				BackgroundTransparency = 0.7,
+				BorderSizePixel = 0,
+				Parent = promptCard,
 			})
 			cursorY += 20
 			local sparkRow = Factory.New("ScrollingFrame", {
@@ -4074,6 +4142,35 @@ function App:_RenderCreate()
 				end)
 			end
 			cursorY += 42
+
+			-- The concept art's ember-mascot writing tip -- net-new content,
+			-- not a restyle of anything that existed here before. Guides a
+			-- first-timer staring at a blank prompt box on how to phrase a
+			-- good one, right where the idea chips leave off.
+			local tipRow = Factory.New("Frame", {
+				Position = UDim2.fromOffset(16, cursorY),
+				Size = UDim2.new(1, -32, 0, 44),
+				BackgroundColor3 = Color3.fromRGB(36, 22, 69),
+				BackgroundTransparency = 0.1,
+				BorderSizePixel = 0,
+				Parent = promptCard,
+			})
+			Factory.Corner(tipRow, 14)
+			Factory.Stroke(tipRow, Colors.Gold, 0.5)
+			local ember = Factory.Icon(tipRow, "EmberMascot", UDim2.fromOffset(30, 30), UDim2.fromOffset(8, 7))
+			Factory.Label(
+				tipRow,
+				`A colour + a material + a shape works best — "gold crown made of lava".`,
+				UDim2.new(1, if ember then -56 else -24, 0, 44),
+				{
+					Position = UDim2.fromOffset(if ember then 46 else 12, 0),
+					Color = Colors.TextMuted,
+					TextSize = 12,
+					Wrapped = true,
+					AlignY = Enum.TextYAlignment.Center,
+				}
+			)
+			cursorY += 52
 		end
 
 		local function choiceRow(
