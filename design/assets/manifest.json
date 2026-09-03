@@ -186,6 +186,12 @@
     "usage": "prompt panel tip sprite"
   },
   {
+    "name": "TopbarCurve",
+    "file": "topbar_curve.png",
+    "kind": "stretch",
+    "usage": "Topbar bottom-edge curved accent, ScaleType.Stretch across the topbar's full width"
+  },
+  {
     "name": "PriceCartouche",
     "file": "price_cartouche.png",
     "kind": "fit",

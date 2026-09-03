@@ -776,13 +776,22 @@ function App:_BuildChrome()
 		BorderSizePixel = 0,
 		Parent = shell,
 	})
-	Factory.New("Frame", {
-		Size = UDim2.new(1, 0, 0, 2),
-		Position = UDim2.new(0, 0, 1, -2),
-		BackgroundColor3 = Colors.Gold,
-		BorderSizePixel = 0,
-		Parent = topbar,
-	})
+	-- The concept art's topbar has a curved gold bottom edge rather than a
+	-- flat line -- a single continuous curve can't be 9-sliced, so this
+	-- stretches across the topbar's real (dynamic) width instead once the
+	-- asset exists; the flat line stays as the fallback until then.
+	local topbarCurve = Factory.Icon(topbar, "TopbarCurve", UDim2.new(1, 0, 0, 20), UDim2.new(0, 0, 1, -20))
+	if topbarCurve then
+		topbarCurve.ScaleType = Enum.ScaleType.Stretch
+	else
+		Factory.New("Frame", {
+			Size = UDim2.new(1, 0, 0, 2),
+			Position = UDim2.new(0, 0, 1, -2),
+			BackgroundColor3 = Colors.Gold,
+			BorderSizePixel = 0,
+			Parent = topbar,
+		})
+	end
 	-- Factory.Icon returns nil until design/upload_ui_assets.py (or
 	-- apply_asset_ids.py) has actually put a real id in UIAssets.Logo, so
 	-- the original flat-color mark stays as the fallback rather than
