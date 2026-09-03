@@ -301,6 +301,25 @@ def ember_mascot():
 # Price cartouche -- shield/banner frame only (no baked-in price text, since
 # that's real data a Roblox TextLabel should overlay).
 # --------------------------------------------------------------------------
+def topbar_curve():
+    # A thin, wide strip carrying just the topbar's curved gold accent
+    # lines from the concept art -- not the whole topbar silhouette itself.
+    # The real topbar is a flat-bottomed 78px Frame that other layout
+    # (Content, AmbientBackground, the sidebar) is positioned directly
+    # against; actually bulging its silhouette to match the mockup would
+    # mean re-deriving all of that math. This replaces the topbar's
+    # existing flat 2px gold-line Frame with a curved one instead, stretched
+    # (ScaleType.Stretch, not sliced -- a single continuous curve can't be
+    # 9-sliced) across the topbar's real width at the call site.
+    w, h = 1200, 30
+    body = f'''
+  <path d="M0 4 C300 22, 900 22, 1200 4" fill="none" stroke="url(#goldBar)" stroke-width="3"/>
+  <path d="M0 9 C300 27, 900 27, 1200 9" fill="none" stroke="#FFD98A" stroke-width="1" opacity="0.35"/>'''
+    render(body, w, h, "topbar_curve")
+    return {"name": "TopbarCurve", "file": "topbar_curve.png", "kind": "stretch",
+            "usage": "Topbar bottom-edge curved accent, ScaleType.Stretch across the topbar's full width"}
+
+
 def price_cartouche():
     w, h = 220, 140
     cx, cy = 110, 70
@@ -388,6 +407,7 @@ def main():
 
     manifest.append(crystal_hero())
     manifest.append(ember_mascot())
+    manifest.append(topbar_curve())
     manifest.append(price_cartouche())
     manifest.append(corner_ornament())
     manifest.append(flourish_divider())

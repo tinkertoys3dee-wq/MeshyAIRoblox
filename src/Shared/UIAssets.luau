@@ -35,6 +35,7 @@ local UIAssets = {
 	ItemWand = 129694645857124,
 	CrystalHero = 134340322938842,
 	EmberMascot = 90572499602200,
+	TopbarCurve = 0,
 	PriceCartouche = 125437083012935,
 	CornerOrnament = 94559088816529,
 	FlourishDivider = 128677611312250,
@@ -48,7 +49,7 @@ local UIAssets = {
 	GemRuby = 111830384173635,
 }
 
--- 37/37 assets have a real id right now.
-UIAssets.Ready = true
+-- 37/38 assets have a real id right now.
+UIAssets.Ready = false
 
 return UIAssets
