@@ -926,7 +926,8 @@ function RunwayHub.Show(app: any)
 		end
 
 		-- Weekly standings ---------------------------------------------------
-		local standings = Factory.ImageCard(rightColumn, UDim2.new(1, 0, 0, 246), nil, "WeeklyStandings")
+		-- Five rows, as the art lists them -- 246 only had room for three.
+		local standings = Factory.ImageCard(rightColumn, UDim2.new(1, 0, 0, 336), nil, "WeeklyStandings")
 		standings.LayoutOrder = 2
 		Factory.SectionBanner(standings, "Weekly Spotlight")
 		Factory.Label(standings, "Points from rounds, votes cast/received, and placements", UDim2.new(1, -32, 0, 16), {
@@ -978,30 +979,68 @@ function RunwayHub.Show(app: any)
 					TextSize = 12,
 				})
 			else
-				for index = 1, math.min(3, #rows) do
+				for index = 1, math.min(5, #rows) do
 					local entry = rows[index]
 					local y = 72 + (index - 1) * 46
-					local color = if index == 1 then Colors.Gold elseif index == 2 then Colors.Cyan else Colors.Rose
-					Factory.Label(standings, string.format("#%d", index), UDim2.fromOffset(42, 38), {
-						Position = UDim2.fromOffset(16, y),
-						Font = Theme.Fonts.Black,
-						Color = color,
-						AlignX = Enum.TextXAlignment.Center,
+					local isSelf = entry.userId == localPlayer.UserId
+					local color = if index == 1
+						then Colors.Gold
+						elseif index == 2 then Colors.Cyan
+						elseif index == 3 then Colors.Rose
+						else Colors.TextMuted
+					-- The art seats each placement in a filled circle, and
+					-- lights the viewer's own row so they can find themselves
+					-- in the list without reading every name.
+					if isSelf then
+						local highlight = Factory.New("Frame", {
+							Position = UDim2.fromOffset(10, y - 3),
+							Size = UDim2.new(1, -20, 0, 44),
+							BackgroundColor3 = Colors.Violet,
+							BackgroundTransparency = 0.7,
+							BorderSizePixel = 0,
+							Parent = standings,
+						})
+						Factory.Corner(highlight, 10)
+						Factory.Stroke(highlight, Colors.Gold, 0.5)
+					end
+					local seat = Factory.New("Frame", {
+						Position = UDim2.fromOffset(18, y + 5),
+						Size = UDim2.fromOffset(28, 28),
+						BackgroundColor3 = color,
+						BorderSizePixel = 0,
+						ZIndex = 2,
+						Parent = standings,
 					})
-					Factory.Label(standings, entry.name, UDim2.new(1, -170, 0, 38), {
-						Position = UDim2.fromOffset(62, y),
+					Factory.Corner(seat, 14)
+					Factory.Label(seat, tostring(index), UDim2.fromScale(1, 1), {
+						AlignX = Enum.TextXAlignment.Center,
+						AlignY = Enum.TextYAlignment.Center,
+						Font = Theme.Fonts.Black,
+						TextSize = 13,
+						Color = Colors.Ink,
+						ZIndex = 3,
+					})
+					Factory.Label(standings, if isSelf then "You" else entry.name, UDim2.new(1, -170, 0, 38), {
+						Position = UDim2.fromOffset(56, y),
 						Font = Theme.Fonts.Bold,
 						TextSize = 12,
 						Truncate = Enum.TextTruncate.AtEnd,
+						ZIndex = 2,
 					})
-					Factory.Label(standings, string.format("%d pts", entry.score or 0), UDim2.fromOffset(90, 38), {
-						AnchorPoint = Vector2.new(1, 0),
-						Position = UDim2.new(1, -16, 0, y),
-						AlignX = Enum.TextXAlignment.Right,
-						Color = color,
-						Font = Theme.Fonts.Bold,
-						TextSize = 11,
-					})
+					Factory.Label(
+						standings,
+						string.format("%s pts", formatNumber(entry.score or 0)),
+						UDim2.fromOffset(90, 38),
+						{
+							AnchorPoint = Vector2.new(1, 0),
+							Position = UDim2.new(1, -16, 0, y),
+							AlignX = Enum.TextXAlignment.Right,
+							Color = color,
+							Font = Theme.Fonts.Bold,
+							TextSize = 11,
+							ZIndex = 2,
+						}
+					)
 				end
 			end
 			local own = leaderboard.self
@@ -1016,7 +1055,7 @@ function RunwayHub.Show(app: any)
 					else "FINISH A ROUND TO JOIN THE SPOTLIGHT",
 				UDim2.new(1, -32, 0, 18),
 				{
-					Position = UDim2.fromOffset(16, 211),
+					Position = UDim2.fromOffset(16, 301),
 					Color = if own then Colors.Cyan else Colors.TextMuted,
 					Font = Theme.Fonts.Bold,
 					TextSize = 9,
