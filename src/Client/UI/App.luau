@@ -165,6 +165,15 @@ local ERROR_MESSAGES = {
 	RUNWAY_LOOK_LOCKED = "Your runway look is frozen during voting and results.",
 }
 
+-- The nav rail is a fixed slice of the app's width, so the longest page
+-- names ("Avatar Graphics", "My Studio") truncated to "Avata...", "My...".
+-- These are the labels the rail shows; the page ids themselves (the keys)
+-- stay exactly as every other part of the app refers to them. The concept
+-- art's own sidebar reads "Avatar Art" for the same reason.
+local NAV_LABELS: { [string]: string } = {
+	["Avatar Graphics"] = "Avatar Art",
+}
+
 local CATALOG_TYPES = {
 	Hat = Enum.AvatarAssetType.Hat,
 	HairAccessory = Enum.AvatarAssetType.HairAccessory,
@@ -897,7 +906,8 @@ function App:_BuildChrome()
 		-- One id per nav row: NavCreate, NavStudio, NavDiscover, NavAvatarLab,
 		-- NavAvatarArt, NavSettings -- see design/export_ui_assets.py.
 		local iconKeys = { "NavCreate", "NavStudio", "NavDiscover", "NavAvatarLab", "NavAvatarArt", "NavSettings" }
-		local button = Factory.ImageButton(navStack, symbols[index] .. "   " .. page, UDim2.new(1, 0, 0, 48), nil, nil)
+		local label = NAV_LABELS[page] or page
+		local button = Factory.ImageButton(navStack, symbols[index] .. "   " .. label, UDim2.new(1, 0, 0, 48), nil, nil)
 		button.Name = page
 		button.LayoutOrder = index
 		button.TextXAlignment = Enum.TextXAlignment.Left
@@ -909,7 +919,7 @@ function App:_BuildChrome()
 		local icon = Factory.Icon(button, iconKeys[index], UDim2.fromOffset(22, 22), UDim2.fromOffset(10, 13))
 		if icon then
 			icon.ZIndex = 2
-			button.Text = "      " .. page
+			button.Text = "      " .. label
 			-- _ApplyResponsiveLayout rewrites this text on every resize --
 			-- it has to know the decal icon is already carrying the glyph,
 			-- or it puts the unicode symbol back in front of the label and
@@ -1688,10 +1698,11 @@ function App:_ApplyResponsiveLayout()
 		-- prefixing the unicode symbol as well double-draws it (and the
 		-- extra width is what wrapped these rows onto a second line).
 		local hasIcon = self.navHasIcon[page] == true
+		local label = NAV_LABELS[page] or page
 		button.Text = if compact
 			then (if hasIcon then "" else symbol)
-			elseif hasIcon then "      " .. page
-			else symbol .. "   " .. page
+			elseif hasIcon then "      " .. label
+			else symbol .. "   " .. label
 		button.TextXAlignment = if compact then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
 	end
 	self:_UpdateSoundButton()
@@ -3907,9 +3918,11 @@ function App:_RenderCreate()
 			local ribbon = Factory.New("TextLabel", {
 				Name = "StartHereRibbon",
 				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.fromOffset(-8, 6),
-				Size = UDim2.fromOffset(100, 20),
-				Rotation = -12,
+				-- Was centred on y=6, so half of it hung above the card's
+				-- own top edge and collided with whatever card sat above.
+				Position = UDim2.fromOffset(2, 18),
+				Size = UDim2.fromOffset(96, 20),
+				Rotation = -8,
 				BackgroundColor3 = Colors.Gold,
 				BorderSizePixel = 0,
 				Text = "START HERE",
@@ -3946,14 +3959,20 @@ function App:_RenderCreate()
 			-- only on this one card (the single full-width Direct Forge
 			-- panel a first-timer sees) -- everywhere else keeps the plain
 			-- price label as-is.
-			local cartouche = Factory.Icon(card, "PriceCartouche", UDim2.fromOffset(130, 56), UDim2.new(1, -139, 0, 34))
+			-- -139 put this hard against the card's right edge, under the
+			-- corner filigree, with the crystal below landing on top of it.
+			local cartouche = Factory.Icon(card, "PriceCartouche", UDim2.fromOffset(124, 54), UDim2.new(1, -146, 0, 32))
 			if cartouche then
 				cartouche.ZIndex = 1
 			end
 		end
 		Factory.Label(card, priceText, UDim2.fromOffset(106, 35), {
 			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -15, 0, 48),
+			-- Centred inside the cartouche on the card that has one (it
+			-- ends at -22), against the card's own edge everywhere else.
+			Position = if method.id == "TEXT_TO_3D" and not showAllMethods
+				then UDim2.new(1, -32, 0, 42)
+				else UDim2.new(1, -15, 0, 48),
 			AlignX = Enum.TextXAlignment.Right,
 			Font = Theme.Fonts.Black,
 			TextSize = 18,
@@ -3966,7 +3985,9 @@ function App:_RenderCreate()
 			-- price text above and below it rather than resized into their
 			-- space, since none of that layout can be visually re-verified
 			-- from here.
-			local crystal = Factory.Icon(card, "CrystalHero", UDim2.fromOffset(58, 62), UDim2.new(1, -70, 0, 8))
+			-- Sits to the LEFT of the price cartouche above (which now ends
+			-- at -146), not on top of it -- at -70 the two fully overlapped.
+			local crystal = Factory.Icon(card, "CrystalHero", UDim2.fromOffset(50, 58), UDim2.new(1, -206, 0, 12))
 			if crystal then
 				crystal.ZIndex = 2
 			end
@@ -4522,7 +4543,12 @@ function App:_RenderCreate()
 		end
 
 		local safetyY = cursorY
-		local buttonY = if self.compact or not showAllMethods then safetyY + 39 else safetyY
+		-- This note used to sit *beside* the action buttons in Advanced
+		-- Mode, on the assumption the card ran nearly the page's width.
+		-- In the left column it doesn't: the note got a ~228px ribbon to
+		-- wrap into and ran straight through the buttons. It always sits
+		-- full width above them now, like every other layout here.
+		local buttonY = safetyY + 39
 		local simpleRetryAvailable = (self.state.profile.retryCredits.DirectGeneration or 0) > 0
 		promptCard.Size = UDim2.new(1, 0, 0, buttonY + 58)
 		Factory.Label(
@@ -4546,7 +4572,7 @@ function App:_RenderCreate()
 				then "Roblox asset moderation + ownership verification · no duplicate OpenAI image check"
 				elseif isAvatar then "Your avatar is fetched automatically · Roblox TextService + provider moderation"
 				else "Roblox TextService + provider moderation · 3,600 triangle target · 2K texture",
-			if self.compact or not showAllMethods then UDim2.new(1, -32, 0, 34) else UDim2.new(1, -462, 0, 42),
+			UDim2.new(1, -32, 0, 34),
 			{
 				Position = UDim2.fromOffset(16, safetyY),
 				Color = Colors.TextMuted,
