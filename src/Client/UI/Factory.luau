@@ -17,6 +17,10 @@ local SLICE_CENTER = {
 	ButtonDefault = Rect.new(30, 30, 90, 90),
 	ButtonDanger = Rect.new(30, 30, 90, 90),
 	PillFrame = Rect.new(22, 22, 58, 58),
+	-- 3-slice, not 9: the centre band spans the banner's full height, so
+	-- only its flat middle stretches and its two angled end caps are left
+	-- untouched. Keep in sync with export_ui_assets.py's BANNER_* values.
+	SectionBanner = Rect.new(48, 0, 192, 120),
 }
 
 -- A 9-slice corner draws at its source size (78px for PanelFrame) unless
@@ -26,6 +30,10 @@ local SLICE_CENTER = {
 -- corner without touching the card's own size or its content offsets.
 local SLICE_SCALE = {
 	PanelFrame = 0.6,
+	-- The banner art is drawn 120px tall for crisp diagonals; it renders at
+	-- ~30px, so its end caps have to come down by the same factor or a
+	-- 48px-wide cap would eat a third of a short banner.
+	SectionBanner = 0.25,
 }
 
 function Factory.New(className: string, properties: { [string]: any }?, children: { Instance }?): any
@@ -442,6 +450,85 @@ function Factory.ImagePill(parent: Instance, text: string, color: Color3?, width
 	return pill
 end
 
+-- The concept art titles every panel with a small notched banner tab
+-- straddling the card's own top edge -- "CREATE MODE", "COLLECTION * 6",
+-- "YOUR LOOK" -- rather than a pill or label tucked inside the top-left
+-- corner. It straddles that edge in the concept art's own proportion (12px
+-- of a 30px tab above the card, 18px below), so callers need to leave the
+-- card's first ~22px clear and ~12px of daylight above it.
+--
+-- Falls back to a plain rounded tab when SectionBanner's id is still 0,
+-- like every other image-backed helper here.
+function Factory.SectionBanner(card: GuiObject, text: string, width: number?): TextLabel
+	local caption = string.upper(text)
+	local banner = Factory.New("TextLabel", {
+		Name = "SectionBanner",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0, 3),
+		Size = UDim2.fromOffset(width or math.clamp(#caption * 9 + 60, 120, 340), 30),
+		BackgroundColor3 = Color3.fromRGB(46, 27, 84),
+		BorderSizePixel = 0,
+		Text = caption,
+		TextColor3 = Colors.Gold,
+		Font = Theme.Fonts.Black,
+		TextSize = 12,
+		-- Above the card's own PanelFrame decal (ZIndex 0) and its Gloss, so
+		-- the tab reads as sitting on top of the frame the way it does in
+		-- the concept art.
+		ZIndex = 6,
+		Parent = card,
+	}) :: TextLabel
+	if not attachDecal(banner, "SectionBanner") then
+		Factory.Corner(banner, 8)
+		Factory.Stroke(banner, Colors.Gold, 0.25, 1.4)
+	end
+	return banner
+end
+
+-- The concept art's gold ON/OFF switch: a capsule with a gold knob that
+-- sits on the side the state is on, and the state's word on the other.
+-- Every one of Settings' real boolean options is drawn this way there
+-- instead of as another full-width button.
+function Factory.Switch(parent: Instance, on: boolean, position: UDim2?, width: number?): TextButton
+	local size = width or 92
+	local knob = 24
+	local switch = Factory.New("TextButton", {
+		Name = "Switch",
+		Size = UDim2.fromOffset(size, 32),
+		Position = position or UDim2.new(),
+		BackgroundColor3 = if on then Colors.Mint else Color3.fromRGB(42, 27, 76),
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		-- The visible caption is a child label below, so the knob can never
+		-- be hidden underneath a TextButton's own native text.
+		Text = "",
+		Parent = parent,
+	})
+	Factory.Corner(switch, 99)
+	Factory.Stroke(switch, Colors.Gold, 0.25, 1.4)
+	Factory.Label(switch, if on then "ON" else "OFF", UDim2.new(1, -(knob + 12), 1, 0), {
+		Position = if on then UDim2.fromOffset(6, 0) else UDim2.fromOffset(knob + 6, 0),
+		AlignX = Enum.TextXAlignment.Center,
+		Font = Theme.Fonts.Black,
+		TextSize = 11,
+		Color = if on then Colors.Ink else Colors.TextMuted,
+	})
+	local dot = Factory.New("Frame", {
+		Name = "Knob",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = if on then UDim2.new(1, -(knob + 4), 0.5, 0) else UDim2.new(0, 4, 0.5, 0),
+		Size = UDim2.fromOffset(knob, knob),
+		BackgroundColor3 = Colors.Gold,
+		BorderSizePixel = 0,
+		ZIndex = 2,
+		Parent = switch,
+	})
+	Factory.Corner(dot, knob / 2)
+	Factory.Gradient(dot, { Color3.fromRGB(255, 243, 196), Colors.Gold }, 90)
+	Factory.Stroke(dot, Color3.fromRGB(255, 243, 196), 0.35, 1)
+	return switch
+end
+
 -- Swaps a Factory.ImageCard/ImageButton/ImagePill's live decal to a
 -- different asset key -- e.g. toggling a nav button between "ButtonDefault"
 -- and "ButtonPrimary" for an inactive/active state, the decal equivalent of
@@ -488,6 +575,27 @@ function Factory.Icon(parent: Instance, assetKey: string, size: UDim2, position:
 		ScaleType = Enum.ScaleType.Fit,
 		Parent = parent,
 	}) :: ImageLabel
+end
+
+-- The concept art flanks each page's centred "Switch to ... Mode" link with
+-- one small gold flourish on either side of it. Positions both against the
+-- parent's horizontal centre, so they stay paired with a link that is itself
+-- centred however wide the page gets. No-op (like Factory.Icon) while
+-- FlourishDivider's id is still 0.
+function Factory.FlourishFlank(parent: Instance, centreY: number, halfGap: number, width: number?, height: number?)
+	local w = width or 20
+	local h = height or 14
+	for _, side in { -1, 1 } do
+		local flourish = Factory.Icon(
+			parent,
+			"FlourishDivider",
+			UDim2.fromOffset(w, h),
+			UDim2.new(0.5, if side < 0 then -halfGap - w else halfGap, 0, centreY - h // 2)
+		)
+		if flourish then
+			flourish.ZIndex = 2
+		end
+	end
 end
 
 -- A circular 0-100% progress ring (the Creator Rank crest), built from

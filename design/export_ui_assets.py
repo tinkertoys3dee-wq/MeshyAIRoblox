@@ -169,6 +169,33 @@ def pill_frame():
 
 
 # --------------------------------------------------------------------------
+# Section banner (Factory.SectionBanner): the notched gold tab the concept
+# art straddles across a panel's top edge to title it ("CREATE MODE",
+# "COLLECTION * 6", "YOUR LOOK", ...). Its ends are angled, which no
+# combination of UICorner/UIStroke can draw, so it has to be an image; only
+# the flat middle stretches, hence a 3-slice (the slice centre spans the
+# full height, leaving no top/bottom band) rather than a 9-slice.
+# --------------------------------------------------------------------------
+BANNER_W, BANNER_H = 240, 120
+BANNER_SLICE = 48  # angled end cap; drawn at BANNER_SLICE * SliceScale px
+
+
+def section_banner():
+    w, h = BANNER_W, BANNER_H
+    n = BANNER_SLICE
+    inset = 4
+    body = f'''
+  <path d="M{n} {inset} h{w - 2 * n} l{n - inset} {h / 2 - inset} l{-(n - inset)} {h / 2 - inset}
+           h{-(w - 2 * n)} l{-(n - inset)} {-(h / 2 - inset)} z"
+        fill="#2E1B54" stroke="url(#goldBar)" stroke-width="5"/>
+  <path d="M{n + 6} {inset + 10} h{w - 2 * n - 12}" stroke="#FFD98A" stroke-width="2" opacity="0.35"/>'''
+    render(body, w, h, "section_banner")
+    return {"name": "SectionBanner", "file": "section_banner.png", "kind": "slice",
+            "sliceCenter": [BANNER_SLICE, 0, BANNER_W - BANNER_SLICE, BANNER_H],
+            "usage": "Factory.SectionBanner background -- notched panel title tab"}
+
+
+# --------------------------------------------------------------------------
 # Nav icon medallions -- one square, Fit-scaled image each, no fallback
 # needed at the call site since App.luau keeps its existing unicode-symbol
 # label as a sibling that Factory.Icon's caller can choose to hide only once
@@ -415,6 +442,7 @@ def main():
         button_default(),
         button_danger(),
         pill_frame(),
+        section_banner(),
         logo_medallion(),
     ]
     for key, (gem, glyph) in NAV_ICONS.items():

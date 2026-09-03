@@ -4047,17 +4047,7 @@ function App:_RenderCreate()
 		end)
 		-- The concept art flanks this exact link with a small flourish on
 		-- each side.
-		for _, side in { "left", "right" } do
-			local flourish = Factory.Icon(
-				methodRow,
-				"FlourishDivider",
-				UDim2.fromOffset(20, 14),
-				if side == "left" then UDim2.new(0.5, -128, 0, 175) else UDim2.new(0.5, 108, 0, 175)
-			)
-			if flourish then
-				flourish.ZIndex = 2
-			end
-		end
+		Factory.FlourishFlank(methodRow, 182, 108)
 	end
 
 	local isUpload = self.selectedMethod == "IMAGE_UPLOAD"
@@ -4971,7 +4961,7 @@ function App:_RenderCreate()
 		end
 	end
 	local showUpsell = hasQueuedRow and availablePasses <= 0
-	local activityHeight = (if rowCount == 0 then 140 else 45 + rowCount * 50 + 14) + (if showUpsell then 46 else 0)
+	local activityHeight = (if rowCount == 0 then 144 else 49 + rowCount * 50 + 14) + (if showUpsell then 46 else 0)
 	local activity = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, activityHeight), nil, "Activity")
 	activity.LayoutOrder = 2
 	-- Concept art labels this panel "IN THE FORGE" and shows a global feed
@@ -4980,13 +4970,8 @@ function App:_RenderCreate()
 	-- exists). This keeps the real, honest data (the player's own queue)
 	-- under the concept art's label, rather than fabricating other players'
 	-- activity.
-	Factory.Label(activity, "IN THE FORGE", UDim2.new(1, -32, 0, 24), {
-		Position = UDim2.fromOffset(16, 13),
-		Font = Theme.Fonts.Bold,
-		TextSize = 12,
-		Color = Colors.Violet,
-	})
-	local y = 45
+	Factory.SectionBanner(activity, "In the Forge")
+	local y = 49
 	local shown = 0
 	for _, generationId in self.state.profile.generationOrder do
 		if shown >= 3 then
@@ -5436,25 +5421,17 @@ function App:_RenderCreate()
 			end
 		end
 		local allDone = doneCount >= #quests
-		local cardHeight = #quests * 46 + (if allDone then 122 else 46)
+		local cardHeight = #quests * 46 + (if allDone then 126 else 50)
 		local questCard = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyQuests")
 		questCard.LayoutOrder = 1
-		Factory.Label(questCard, "DAILY QUESTS", UDim2.new(1, -100, 0, 20), {
-			Position = UDim2.fromOffset(16, 13),
-			Font = Theme.Fonts.Bold,
-			TextSize = 12,
-			Color = Colors.Mint,
-		})
-		Factory.Label(questCard, string.format("%d / %d", doneCount, #quests), UDim2.fromOffset(70, 20), {
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -16, 0, 13),
-			AlignX = Enum.TextXAlignment.Right,
-			Font = Theme.Fonts.Black,
-			Color = if allDone then Colors.Gold else Colors.TextMuted,
-			TextSize = 12,
-		})
+		-- Titled by the concept art's notched banner tab across the card's
+		-- top edge, with the progress count folded into the caption the same
+		-- way the art's own "COLLECTION * 6" tab does -- there is no room
+		-- beside a centred tab for the separate right-aligned counter this
+		-- used to carry.
+		Factory.SectionBanner(questCard, string.format("Daily Quests · %d/%d", doneCount, #quests))
 
-		local qy = 40
+		local qy = 44
 		for _, quest in quests do
 			local done = questsDone[quest.key] == true
 			local row = Factory.New("Frame", {

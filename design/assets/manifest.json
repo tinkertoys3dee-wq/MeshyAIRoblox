@@ -60,6 +60,18 @@
     "usage": "Factory.Pill background"
   },
   {
+    "name": "SectionBanner",
+    "file": "section_banner.png",
+    "kind": "slice",
+    "sliceCenter": [
+      48,
+      0,
+      192,
+      120
+    ],
+    "usage": "Factory.SectionBanner background -- notched panel title tab"
+  },
+  {
     "name": "Logo",
     "file": "logo.png",
     "kind": "fit",
