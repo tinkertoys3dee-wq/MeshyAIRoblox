@@ -9891,6 +9891,11 @@ function App:_RenderSettings()
 		return math.clamp(scaleMinimum + steps * scaleStep, scaleMinimum, scaleMaximum)
 	end
 	showScale(currentScale)
+	-- _UpdateSetting re-renders this page whether its save succeeded or not,
+	-- so re-assert the live scale from the profile on the way in: a rejected
+	-- save would otherwise leave the interface at whatever value the drag
+	-- reached while the stored setting says something else.
+	applyScale(currentScale)
 	local scaleDragging = false
 	local scaleDragTouch = nil :: InputObject?
 	scaleTrack.InputBegan:Connect(function(input: InputObject)
@@ -10084,7 +10089,11 @@ function App:_RenderSettings()
 	-- thing on the page that says how a locked one is earned.
 	local achievementColumns = if self.compact then 2 else 4
 	local achievementRows = math.ceil(#Achievements.List / achievementColumns)
-	local achievementTileHeight = 122
+	-- Tall enough for the longest description in Achievements.List to wrap
+	-- inside a four-across tile rather than being clipped -- "Try on your
+	-- first item -- a Roblox catalog piece or a community creation." is
+	-- five lines at this width.
+	local achievementTileHeight = 138
 	local achievements = Factory.ImageCard(
 		rightStack,
 		UDim2.new(1, 0, 0, 46 + achievementRows * (achievementTileHeight + 8)),
@@ -10149,7 +10158,7 @@ function App:_RenderSettings()
 		Factory.Label(
 			tile,
 			string.format("%s · +%d", definition.description, definition.tokens),
-			UDim2.new(1, -6, 0, 40),
+			UDim2.new(1, -6, 0, 56),
 			{
 				Position = UDim2.fromOffset(3, 78),
 				AlignX = Enum.TextXAlignment.Center,
