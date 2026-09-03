@@ -14,7 +14,7 @@ local UIAssets = {
 	ButtonDefault = 90405506330703,
 	ButtonDanger = 123626735906929,
 	PillFrame = 136452851331660,
-	SectionBanner = 0,
+	SectionBanner = 122988611033097,
 	Logo = 89731587361349,
 	NavCreate = 134435082452963,
 	NavStudio = 91684276138668,
@@ -51,7 +51,7 @@ local UIAssets = {
 	GemRuby = 111830384173635,
 }
 
--- 39/40 assets have a real id right now.
-UIAssets.Ready = false
+-- 40/40 assets have a real id right now.
+UIAssets.Ready = true
 
 return UIAssets
