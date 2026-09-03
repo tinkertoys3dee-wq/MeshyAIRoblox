@@ -3959,10 +3959,14 @@ function App:_RenderCreate()
 		-- a first-timer sees) -- everywhere else keeps the plain price
 		-- label as-is.
 		local cartouche = if method.id == "TEXT_TO_3D" and not showAllMethods
-			then Factory.Icon(card, "PriceCartouche", UDim2.fromOffset(124, 58), UDim2.new(1, -148, 0, 30))
+			then Factory.Icon(card, "PriceCartouche", UDim2.fromOffset(124, 58), UDim2.new(1, -24, 0.5, 0))
 			else nil
 		if cartouche then
 			cartouche.ZIndex = 1
+			-- Anchored to the card's right edge and its vertical middle,
+			-- so the crystal below can hang off a known edge rather than
+			-- both of them being placed from the top by eye.
+			cartouche.AnchorPoint = Vector2.new(1, 0.5)
 		end
 		-- Parented to the cartouche and centred when there is one, rather
 		-- than positioned against the card's edge and hoping the two line
@@ -3986,18 +3990,18 @@ function App:_RenderCreate()
 			}
 		)
 		if method.id == "TEXT_TO_3D" and not showAllMethods then
-			-- The concept art's signature touch on this exact card -- a
-			-- small corner accent, kept clear of the kicker pill/title/body/
-			-- price text above and below it rather than resized into their
-			-- space, since none of that layout can be visually re-verified
-			-- from here.
-			-- Sits to the LEFT of the price cartouche above (which starts at
-			-- -148), not on top of it -- at -70 the two fully overlapped --
-			-- and on the same vertical band, so the pair reads as one
-			-- group instead of a sliver floating above the price.
-			local crystal = Factory.Icon(card, "CrystalHero", UDim2.fromOffset(54, 58), UDim2.new(1, -212, 0, 30))
+			-- The concept art's signature touch on this exact card, paired
+			-- with the price cartouche rather than placed on its own: it
+			-- read as floating loose in the middle of the card while it
+			-- was positioned from the top-left by eye.
+			local crystal = Factory.Icon(card, "CrystalHero", UDim2.fromOffset(58, 66), UDim2.new(1, -160, 0.5, 0))
 			if crystal then
 				crystal.ZIndex = 2
+				-- Right edge 12px off the cartouche's left edge (which sits
+				-- at -148), sharing its vertical centre. Positioning both
+				-- from the same corner is what stops the crystal drifting
+				-- into the middle of the card as its width changes.
+				crystal.AnchorPoint = Vector2.new(1, 0.5)
 			end
 		end
 		local choose = Factory.New("TextButton", {
