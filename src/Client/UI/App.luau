@@ -3940,13 +3940,19 @@ function App:_RenderCreate()
 		-- overlapping.
 		local kickerX = if method.id == "TEXT_TO_3D" and not showAllMethods then 100 else 16
 		Factory.ImagePill(card, method.kicker, method.color, 104).Position = UDim2.fromOffset(kickerX, 14)
-		Factory.Label(card, method.title, UDim2.new(1, -150, 0, 31), {
+		-- The Direct Forge card gives its right side over to the crystal
+		-- and the price cartouche (see below): the copy stops short of
+		-- that band instead of running underneath the art, which is what
+		-- left the crystal sitting in the middle of a sentence.
+		local heroCard = method.id == "TEXT_TO_3D" and not showAllMethods
+		local copyInset = if heroCard then -264 else -32
+		Factory.Label(card, method.title, UDim2.new(1, if heroCard then copyInset else -150, 0, 31), {
 			Position = UDim2.fromOffset(16, 46),
 			Font = Theme.Fonts.Black,
 			TextSize = if self.compact then 20 else 18,
 			Truncate = Enum.TextTruncate.AtEnd,
 		})
-		Factory.Label(card, method.body, UDim2.new(1, -32, 0, 52), {
+		Factory.Label(card, method.body, UDim2.new(1, copyInset, 0, 52), {
 			Position = UDim2.fromOffset(16, 80),
 			Color = Colors.TextMuted,
 			TextSize = 12,
@@ -3958,7 +3964,7 @@ function App:_RenderCreate()
 		-- only on this one card (the single full-width Direct Forge panel
 		-- a first-timer sees) -- everywhere else keeps the plain price
 		-- label as-is.
-		local cartouche = if method.id == "TEXT_TO_3D" and not showAllMethods
+		local cartouche = if heroCard
 			then Factory.Icon(card, "PriceCartouche", UDim2.fromOffset(124, 58), UDim2.new(1, -24, 0.5, 0))
 			else nil
 		if cartouche then
@@ -3989,19 +3995,17 @@ function App:_RenderCreate()
 				ZIndex = 2,
 			}
 		)
-		if method.id == "TEXT_TO_3D" and not showAllMethods then
-			-- The concept art's signature touch on this exact card, paired
-			-- with the price cartouche rather than placed on its own: it
-			-- read as floating loose in the middle of the card while it
-			-- was positioned from the top-left by eye.
-			local crystal = Factory.Icon(card, "CrystalHero", UDim2.fromOffset(58, 66), UDim2.new(1, -160, 0.5, 0))
+		if heroCard then
+			-- The concept art's signature touch on this exact card. The
+			-- copy above stops at -264 and the cartouche starts at -148,
+			-- so this is centred in the 116px band between them -- both
+			-- axes, from the card's own right edge. Every earlier attempt
+			-- placed it at a hand-picked offset and it drifted into
+			-- whatever happened to be beside it at that card width.
+			local crystal = Factory.Icon(card, "CrystalHero", UDim2.fromOffset(62, 70), UDim2.new(1, -206, 0.5, 0))
 			if crystal then
 				crystal.ZIndex = 2
-				-- Right edge 12px off the cartouche's left edge (which sits
-				-- at -148), sharing its vertical centre. Positioning both
-				-- from the same corner is what stops the crystal drifting
-				-- into the middle of the card as its width changes.
-				crystal.AnchorPoint = Vector2.new(1, 0.5)
+				crystal.AnchorPoint = Vector2.new(0.5, 0.5)
 			end
 		end
 		local choose = Factory.New("TextButton", {
