@@ -42,6 +42,22 @@ local EMBER_COUNT = 10
 -- chip's position in its row.
 local CHIP_GEMS = { "GemCyan", "GemRose", "GemGold", "GemMint", "GemAmethyst", "GemRuby" }
 
+-- Where a chip row already has one accent colour of its own (Avatar
+-- Graphics' step rows), the art studs every chip in that row with a gem of
+-- the matching colour instead of walking the palette.
+local function gemForAccent(color: Color3): string
+	if color == Colors.Mint then
+		return "GemMint"
+	elseif color == Colors.Violet then
+		return "GemAmethyst"
+	elseif color == Colors.Gold then
+		return "GemGold"
+	elseif color == Colors.Rose then
+		return "GemRose"
+	end
+	return "GemCyan"
+end
+
 local App = {}
 App.__index = App
 
@@ -8410,6 +8426,16 @@ function App:_RenderGraphicsDiscoverBody()
 		false
 	)
 	search.Text = self.graphicsMarketplaceQuery
+	-- Same glowing well with an inset magnifier the concept art gives every
+	-- other search bar in the app.
+	self:_GlowField(search)
+	Factory.Label(search, "🔍", UDim2.fromOffset(24, 24), {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		AlignX = Enum.TextXAlignment.Center,
+		TextSize = 16,
+		Color = Colors.Cyan,
+	})
 	local refresh = Factory.ImageButton(
 		tools,
 		"Search",
@@ -8559,6 +8585,9 @@ function App:_RenderGraphicsDiscoverBody()
 			Parent = card,
 		})
 		Factory.Corner(image, 11)
+		-- The same thin gold rim the concept art frames every gallery
+		-- preview in.
+		Factory.Stroke(image, Colors.Gold, 0.45)
 		if showAllMethods and graphic.isListed then
 			Factory.ImagePill(card, string.format("R$ %d", graphic.listingPriceRobux), Colors.Mint, 68).Position =
 				UDim2.fromOffset(156, 18)
@@ -8650,18 +8679,36 @@ function App:_RenderGraphicsDiscoverBody()
 		local likeFavoriteY = if showAllMethods then 266 else 222
 		local like = Factory.ImageButton(
 			card,
-			string.format("%s %s", if graphic.viewerLiked then "♥" else "♡", formatNumber(graphic.likes)),
+			formatNumber(graphic.likes),
 			UDim2.new(0.5, -15, 0, 30),
 			UDim2.fromOffset(10, likeFavoriteY),
 			nil
 		)
 		local favorite = Factory.ImageButton(
 			card,
-			string.format("%s %s", if graphic.viewerFavorited then "★" else "☆", formatNumber(graphic.favorites)),
+			formatNumber(graphic.favorites),
 			UDim2.new(0.5, -15, 0, 30),
 			UDim2.new(0.5, 5, 0, likeFavoriteY),
 			nil
 		)
+		-- Red heart, gold star, per the concept art -- each its own label,
+		-- since a TextButton has only one TextColor3 for its whole string.
+		for _, glyph in
+			{
+				{ button = like, text = if graphic.viewerLiked then "♥" else "♡", color = Colors.Rose },
+				{ button = favorite, text = if graphic.viewerFavorited then "★" else "☆", color = Colors.Gold },
+			}
+		do
+			Factory.Label(glyph.button, glyph.text, UDim2.fromOffset(20, 30), {
+				Position = UDim2.fromOffset(10, 0),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = 14,
+				Color = glyph.color,
+				ZIndex = 6,
+			})
+			glyph.button.Text = "   " .. glyph.button.Text
+		end
 		self:_BindButton(like)
 		self:_BindButton(favorite)
 		like.Activated:Connect(function()
@@ -8703,7 +8750,8 @@ function App:_RenderAvatarGraphics()
 		"Avatar Graphics",
 		if showAllMethods
 			then "Turn your current Roblox avatar -- or just a prompt -- into a standalone piece of art -- no accessory, no 3D model, just a picture worth keeping."
-			else "Turn a prompt or your avatar into a picture you can keep."
+			else "Turn a prompt or your avatar into a picture you can keep.",
+		true
 	)
 
 	local tabs = Factory.New("Frame", {
@@ -8751,13 +8799,39 @@ function App:_RenderAvatarGraphics()
 	})
 	self:_TrackScroll(page, "AvatarGraphics")
 	Factory.ScalePadding(page, 0.012, 0.012)
+	-- The concept art runs the composer beside a narrower rail carrying
+	-- IN PROGRESS and YOUR GRAPHICS, not one long stack of all three. Same
+	-- split Create uses, including collapsing back to a single stack in
+	-- compact layouts, where a ~37%-wide rail would be unreadable.
+	local columns = if self.compact
+		then nil
+		else Factory.New("Frame", {
+			Size = UDim2.new(1, -8, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Parent = page,
+		})
+	if columns then
+		Factory.List(columns, Enum.FillDirection.Horizontal, 20)
+	end
 	local stack = Factory.New("Frame", {
-		Size = UDim2.new(1, -8, 0, 0),
+		Size = if self.compact then UDim2.new(1, -8, 0, 0) else UDim2.new(0.63, -10, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
-		Parent = page,
+		Parent = if self.compact then page else columns,
 	})
 	Factory.List(stack, Enum.FillDirection.Vertical, 14)
+	local rightStack = if self.compact
+		then stack
+		else Factory.New("Frame", {
+			Size = UDim2.new(0.37, -10, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Parent = columns,
+		})
+	if not self.compact then
+		Factory.List(rightStack, Enum.FillDirection.Vertical, 14)
+	end
 
 	local isTextMode = self.graphicMode == "TEXT"
 	local composer = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 460), nil, "GraphicComposer")
@@ -8827,12 +8901,19 @@ function App:_RenderAvatarGraphics()
 			local chip = Factory.ImageButton(
 				row,
 				option.Label,
-				UDim2.fromOffset(98, 34),
+				UDim2.fromOffset(106, 34),
 				nil,
 				if selected then "primary" else nil
 			)
 			if selected then
 				chip.BackgroundColor3 = color
+			end
+			-- Every step chip in the concept art carries a gem in its own
+			-- step's accent colour.
+			local stud = Factory.Icon(chip, gemForAccent(color), UDim2.fromOffset(12, 12), UDim2.fromOffset(10, 11))
+			if stud then
+				stud.ZIndex = 2
+				chip.Text = "  " .. option.Label
 			end
 			self:_BindButton(chip)
 			chip.Activated:Connect(function()
@@ -8987,6 +9068,7 @@ function App:_RenderAvatarGraphics()
 		true
 	)
 	prompt.Text = if isTextMode then self.textImagePrompt else self.avatarGraphicPrompt
+	self:_GlowField(prompt, true)
 	local count = Factory.Label(
 		composer,
 		string.format("%d / %d", #prompt.Text, Config.Generation.PromptMaxLength),
@@ -9010,10 +9092,15 @@ function App:_RenderAvatarGraphics()
 	end)
 	cursorY += 72
 
-	if not showAllMethods then
+	-- The concept art closes the composer with one row: the Advanced Mode
+	-- link on the left and the molten Create button on the right. Compact
+	-- keeps the link on its own full-width row above, where the two would
+	-- not fit side by side.
+	local simpleSwitchInline = not showAllMethods and not self.compact
+	if not showAllMethods and self.compact then
 		local switchAdvanced = Factory.ImageButton(
 			composer,
-			"Switch to Advanced Mode for style, quality & pricing →",
+			"Advanced Mode: style & quality ✦",
 			UDim2.new(1, -32, 0, 26),
 			UDim2.fromOffset(16, cursorY),
 			nil
@@ -9026,14 +9113,28 @@ function App:_RenderAvatarGraphics()
 	end
 
 	local safetyY = cursorY
-	local buttonY = if self.compact then safetyY + 39 else safetyY
+	local buttonY = if self.compact or simpleSwitchInline then safetyY + 39 else safetyY
 	composer.Size = UDim2.new(1, 0, 0, buttonY + 58)
+	if simpleSwitchInline then
+		local switchAdvanced = Factory.ImageButton(
+			composer,
+			"Advanced Mode: style & quality ✦",
+			UDim2.fromOffset(300, 42),
+			UDim2.fromOffset(16, buttonY),
+			nil
+		)
+		switchAdvanced.TextSize = 12
+		self:_BindButton(switchAdvanced)
+		switchAdvanced.Activated:Connect(function()
+			self:_UpdateSetting("simpleMode", false)
+		end)
+	end
 	Factory.Label(
 		composer,
 		if isTextMode
 			then "Roblox TextService + provider moderation · never becomes a 3D model or accessory"
 			else "Your avatar is fetched automatically · Roblox TextService + provider moderation · never becomes a 3D model or accessory",
-		if self.compact then UDim2.new(1, -32, 0, 34) else UDim2.new(1, -300, 0, 42),
+		if self.compact or simpleSwitchInline then UDim2.new(1, -32, 0, 34) else UDim2.new(1, -300, 0, 42),
 		{
 			Position = UDim2.fromOffset(16, safetyY),
 			Color = Colors.TextMuted,
@@ -9132,16 +9233,11 @@ function App:_RenderAvatarGraphics()
 		end
 	end
 	if inFlightCount > 0 then
-		local activityHeight = 45 + inFlightCount * 50 + 14
-		local activity = Factory.ImageCard(stack, UDim2.new(1, 0, 0, activityHeight), nil, "GraphicActivity")
+		local activityHeight = 49 + inFlightCount * 50 + 14
+		local activity = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, activityHeight), nil, "GraphicActivity")
 		activity.LayoutOrder = 2
-		Factory.Label(activity, "IN PROGRESS", UDim2.new(1, -32, 0, 24), {
-			Position = UDim2.fromOffset(16, 13),
-			Font = Theme.Fonts.Bold,
-			TextSize = 12,
-			Color = Colors.Cyan,
-		})
-		local y = 45
+		Factory.SectionBanner(activity, "In Progress")
+		local y = 49
 		local shown = 0
 		for _, generationId in self.state.profile.generationOrder do
 			if shown >= 3 then
@@ -9225,39 +9321,47 @@ function App:_RenderAvatarGraphics()
 		end
 	end
 
-	local galleryHeader = Factory.Label(stack, "YOUR GRAPHICS", UDim2.new(1, 0, 0, 24), {
-		Font = Theme.Fonts.Bold,
-		TextSize = 13,
-		Color = Colors.TextMuted,
-	})
-	galleryHeader.LayoutOrder = 3
-
+	-- The gallery becomes its own banner-tabbed panel in the rail, the way
+	-- the concept art draws it, rather than a bare caption over a loose
+	-- grid. Two columns there whatever the window: the rail is ~37% of the
+	-- content width, so the page-wide gridColumns count would slice each
+	-- card down to a sliver. Compact keeps the single stack and its own
+	-- column count.
 	local graphicCount = #(self.state.profile.graphicOrder or {})
+	local gridColumns = if self.compact then self.gridColumns else 2
+	local cardHeight = if showAllMethods then 460 else 310
+	local galleryRows = math.max(1, math.ceil(graphicCount / gridColumns))
+	local galleryCard = Factory.ImageCard(
+		rightStack,
+		UDim2.new(1, 0, 0, if graphicCount == 0 then 122 else 34 + galleryRows * (cardHeight + 12) + 4),
+		nil,
+		"GraphicsGallery"
+	)
+	galleryCard.LayoutOrder = 3
+	Factory.SectionBanner(galleryCard, "Your Graphics")
+
 	if graphicCount == 0 then
-		local empty = Factory.Label(
-			stack,
-			"No graphics yet. Create one above to see it here.",
-			UDim2.new(1, 0, 0, 100),
-			{ AlignX = Enum.TextXAlignment.Center, Color = Colors.TextMuted, Wrapped = true, TextSize = 13 }
-		)
-		empty.LayoutOrder = 4
+		Factory.Label(galleryCard, "No graphics yet. Create one above to see it here.", UDim2.new(1, -32, 0, 60), {
+			Position = UDim2.fromOffset(16, 40),
+			AlignX = Enum.TextXAlignment.Center,
+			Color = Colors.TextMuted,
+			Wrapped = true,
+			TextSize = 13,
+		})
 		return
 	end
 
-	local gridColumns = self.gridColumns
 	local gallery = Factory.New("Frame", {
-		Size = UDim2.new(1, 0, 0, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
+		Position = UDim2.fromOffset(12, 34),
+		Size = UDim2.new(1, -24, 0, galleryRows * (cardHeight + 12)),
 		BackgroundTransparency = 1,
-		LayoutOrder = 4,
-		Parent = stack,
+		Parent = galleryCard,
 	})
 	-- Simple Mode skips the title/description editor and the sharing/sales
 	-- block per card (same "financial and metadata editing are Advanced"
 	-- rule as My Studio/Discover/Avatar Lab) straight to the download link
 	-- and Delete, so its shorter shared card height drops the same ~160px
-	-- those two blocks would have cost.
-	local cardHeight = if showAllMethods then 460 else 310
+	-- those two blocks would have cost -- cardHeight above.
 	Factory.New("UIGridLayout", {
 		-- +80 for the title/description editor inserted below the kind
 		-- label; every card in the grid shares one CellSize, so this height
