@@ -35,6 +35,13 @@ local REMOTE_WAIT_SECONDS = 15
 local EMBER_COLORS = { Colors.Gold, Colors.Rose, Colors.Cyan }
 local EMBER_COUNT = 10
 
+-- The concept art studs each saved-look / category chip with a gem, walking
+-- down the palette rather than repeating one colour. Used wherever a page
+-- draws a row of chips whose contents are player data (saved outfits,
+-- catalog categories, avatar views), so the colour depends only on the
+-- chip's position in its row.
+local CHIP_GEMS = { "GemCyan", "GemRose", "GemGold", "GemMint", "GemAmethyst", "GemRuby" }
+
 local App = {}
 App.__index = App
 
@@ -5555,7 +5562,8 @@ function App:_RenderStudio()
 		"My Studio",
 		if showAllMethods
 			then "Fit, equip, share, list, or publish every original and personal copy you own."
-			else "Tap an item below, then equip it or publish it as a real Roblox wearable."
+			else "Tap an item below, then equip it or publish it as a real Roblox wearable.",
+		true
 	)
 	if #profile.itemOrder == 0 then
 		local empty = Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, 260), UDim2.new(0.025, 0, 0, 112))
@@ -5593,23 +5601,50 @@ function App:_RenderStudio()
 	-- Outfits: a snapshot of every currently-equipped item, saved together
 	-- under one name and re-equipped as a set later -- distinct from a fit
 	-- preset below (one item's transform, reusable on a different item).
-	local outfitsHeight = 100
+	-- The concept art runs this whole bar as ONE row -- the OUTFITS caption
+	-- and its "Save your look" subtitle, the name box, the save button, then
+	-- the saved-look chips -- instead of stacking caption / box+button /
+	-- chips down three lines. Only in wide layouts: at compact widths four
+	-- things side by side would leave the name box a few characters wide, so
+	-- there it keeps the original stack.
+	local outfitsHeight = if self.compact then 100 else 86
 	local outfits =
 		Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, outfitsHeight), UDim2.new(0.025, 0, 0, 100), "Outfits")
 	Factory.Label(outfits, "OUTFITS", UDim2.new(0.4, 0, 0, 24), {
-		Position = UDim2.fromOffset(14, 10),
+		Position = UDim2.fromOffset(if self.compact then 14 else 16, if self.compact then 10 else 20),
 		Font = Theme.Fonts.Bold,
 		TextSize = 12,
 		Color = Colors.Mint,
 	})
-	local outfitNameBox =
-		self:_TextBox(outfits, "Name this outfit", UDim2.new(1, -208, 0, 30), UDim2.fromOffset(14, 36), false)
+	if not self.compact then
+		Factory.Label(outfits, "Save your look", UDim2.fromOffset(124, 18), {
+			Position = UDim2.fromOffset(16, 42),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+		})
+	end
+	-- Wide: caption block (16..146), name box, save button, chips -- each
+	-- start derived from the one before it so the row can't overlap itself
+	-- at any width. Compact: the original two stacked rows.
+	local outfitNameBox = self:_TextBox(
+		outfits,
+		"Name this look…",
+		if self.compact then UDim2.new(1, -208, 0, 30) else UDim2.new(0.3, 0, 0, 36),
+		if self.compact then UDim2.fromOffset(14, 36) else UDim2.fromOffset(146, 25),
+		false
+	)
 	local saveOutfitButton =
 		-- 110px used to leave almost no room around "Save current look" at
 		-- Bold 14px -- the label nearly touched the pill's own edges. Widened
 		-- to fit the text with real breathing room and a clean 10px gap from
 		-- the name box.
-		Factory.ImageButton(outfits, "Save current look", UDim2.fromOffset(170, 30), UDim2.new(1, -184, 0, 36), "mint")
+		Factory.ImageButton(
+			outfits,
+			if self.compact then "Save current look" else "Save look",
+			if self.compact then UDim2.fromOffset(170, 30) else UDim2.fromOffset(140, 36),
+			if self.compact then UDim2.new(1, -184, 0, 36) else UDim2.new(0.3, 156, 0, 25),
+			"mint"
+		)
 	self:_BindButton(saveOutfitButton)
 	saveOutfitButton.Activated:Connect(function()
 		saveOutfitButton.Active = false
@@ -5629,8 +5664,8 @@ function App:_RenderStudio()
 		end)
 	end)
 	local outfitList = Factory.New("ScrollingFrame", {
-		Position = UDim2.fromOffset(14, 70),
-		Size = UDim2.new(1, -28, 0, 24),
+		Position = if self.compact then UDim2.fromOffset(14, 70) else UDim2.new(0.3, 306, 0, 25),
+		Size = if self.compact then UDim2.new(1, -28, 0, 24) else UDim2.new(0.7, -322, 0, 36),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 3,
@@ -5642,11 +5677,12 @@ function App:_RenderStudio()
 	})
 	Factory.List(outfitList, Enum.FillDirection.Horizontal, 8)
 	local outfitOrder = profile.outfitOrder or {}
+	local chipHeight = if self.compact then 24 else 36
 	if #outfitOrder == 0 then
 		Factory.Label(
 			outfitList,
 			"No saved outfits yet -- equip a look, then save it above.",
-			UDim2.fromOffset(340, 24),
+			UDim2.fromOffset(340, chipHeight),
 			{
 				AlignY = Enum.TextYAlignment.Center,
 				Color = Colors.TextMuted,
@@ -5654,18 +5690,35 @@ function App:_RenderStudio()
 			}
 		)
 	else
-		for _, outfitId in outfitOrder do
+		for index, outfitId in outfitOrder do
 			local record = profile.outfits[outfitId]
 			if record then
 				local nameWidth = math.clamp(#record.name * 7 + 40, 90, 150)
 				local chip = Factory.New("Frame", {
-					Size = UDim2.fromOffset(nameWidth + 34, 24),
+					Size = UDim2.fromOffset(nameWidth + 34, chipHeight),
 					BackgroundTransparency = 1,
 					Parent = outfitList,
 				})
-				local apply =
-					Factory.ImageButton(chip, record.name, UDim2.fromOffset(nameWidth, 24), UDim2.fromOffset(0, 0), nil)
+				local apply = Factory.ImageButton(
+					chip,
+					record.name,
+					UDim2.fromOffset(nameWidth, chipHeight),
+					UDim2.fromOffset(0, 0),
+					nil
+				)
 				apply.TextTruncate = Enum.TextTruncate.AtEnd
+				-- Every saved-look chip in the concept art carries a small
+				-- gem stud, cycling through the palette down the row. Same
+				-- pattern as Create's idea chips: the stud only appears once
+				-- its asset id is real, and the label steps aside for it
+				-- rather than being drawn over.
+				local studGem = CHIP_GEMS[(index - 1) % #CHIP_GEMS + 1]
+				local stud =
+					Factory.Icon(apply, studGem, UDim2.fromOffset(14, 14), UDim2.fromOffset(9, (chipHeight - 14) // 2))
+				if stud then
+					stud.ZIndex = 2
+					apply.Text = "  " .. record.name
+				end
 				self:_BindButton(apply)
 				apply.Activated:Connect(function()
 					apply.Active = false
@@ -5685,7 +5738,7 @@ function App:_RenderStudio()
 				local remove = Factory.ImageButton(
 					chip,
 					"×",
-					UDim2.fromOffset(26, 24),
+					UDim2.fromOffset(26, chipHeight),
 					UDim2.fromOffset(nameWidth + 8, 0),
 					"danger"
 				)
@@ -5721,12 +5774,7 @@ function App:_RenderStudio()
 			UDim2.new(0.02, 0, 0, topOffset),
 			"Collection"
 		)
-	Factory.Label(collection, string.format("COLLECTION · %d", #profile.itemOrder), UDim2.new(1, -28, 0, 30), {
-		Position = UDim2.fromOffset(14, 12),
-		Font = Theme.Fonts.Bold,
-		TextSize = 12,
-		Color = Colors.Cyan,
-	})
+	Factory.SectionBanner(collection, string.format("Collection · %d", #profile.itemOrder))
 	local itemScroll = Factory.New("ScrollingFrame", {
 		Position = UDim2.fromOffset(12, 48),
 		Size = UDim2.new(1, -24, 1, -60),
@@ -5760,10 +5808,14 @@ function App:_RenderStudio()
 				Parent = itemStack,
 			})
 			Factory.Corner(row, 11)
+			-- Gold, not violet, for the selected row: the concept art marks
+			-- the open item with the same gold the panel frames use, which
+			-- is what ties it to the inspector panel beside it.
 			Factory.Stroke(
 				row,
-				if itemId == self.selectedItemId then Colors.Violet else Colors.Line,
-				if itemId == self.selectedItemId then 0.2 else 0.62
+				if itemId == self.selectedItemId then Colors.Gold else Colors.Line,
+				if itemId == self.selectedItemId then 0.15 else 0.62,
+				if itemId == self.selectedItemId then 2 else 1
 			)
 			local image = Factory.New("ImageLabel", {
 				Size = UDim2.fromOffset(64, 64),
@@ -5898,12 +5950,24 @@ function App:_RenderStudio()
 	Factory.Stroke(viewport, Colors.Violet, 0.45)
 	local controller = ViewportController.new(viewport, selected.id)
 	self.activeViewport = controller
-	local orbitHint = Factory.ImagePill(viewport, "DRAG ORBIT · RIGHT/SHIFT DRAG PAN", Colors.Cyan, 234)
+	-- The concept art's Simple Mode viewport carries the one hint a player
+	-- actually needs to discover the camera ("DRAG TO ORBIT") rather than
+	-- the full mouse-button reference; Advanced Mode keeps both pills, since
+	-- pan and zoom matter once there are fit sliders to line a model up
+	-- against.
+	local orbitHint = Factory.ImagePill(
+		viewport,
+		if showAllMethods then "DRAG ORBIT · RIGHT/SHIFT DRAG PAN" else "DRAG TO ORBIT",
+		Colors.Cyan,
+		if showAllMethods then 234 else 118
+	)
 	orbitHint.Position = UDim2.fromOffset(12, 12)
 	orbitHint.ZIndex = 5
-	local zoomHint = Factory.ImagePill(viewport, "WHEEL ZOOM", Colors.Violet, 92)
-	zoomHint.Position = UDim2.fromOffset(12, 43)
-	zoomHint.ZIndex = 5
+	if showAllMethods then
+		local zoomHint = Factory.ImagePill(viewport, "WHEEL ZOOM", Colors.Violet, 92)
+		zoomHint.Position = UDim2.fromOffset(12, 43)
+		zoomHint.ZIndex = 5
+	end
 	local resetCamera = Factory.ImageButton(viewport, "↺", UDim2.fromOffset(38, 34), UDim2.new(1, -50, 0, 10), nil)
 	resetCamera.Name = "ResetCamera"
 	resetCamera.TextSize = 18
@@ -5963,14 +6027,21 @@ function App:_RenderStudio()
 			1,
 			-8,
 			0,
-			if not showAllMethods then 278 elseif selected.license == "PERSONAL_COPY" then 1240 else 1424
+			if not showAllMethods then 246 elseif selected.license == "PERSONAL_COPY" then 1240 else 1424
 		),
 		BackgroundTransparency = 1,
 		Parent = inspectScroll,
 	})
+	-- Simple Mode gets the concept art's version of this: a status badge, a
+	-- one-word verdict, and a single plain-language line -- not the stud-by-
+	-- stud measurement against Roblox's publishing bounds, which is only
+	-- actionable next to Advanced Mode's fit sliders. Both are driven by the
+	-- exact same refreshReadiness() below; only what it puts on screen
+	-- differs.
+	local simpleReadiness = not showAllMethods
 	local readiness = Factory.New("Frame", {
 		Position = UDim2.fromOffset(16, 8),
-		Size = UDim2.new(1, -32, 0, 104),
+		Size = UDim2.new(1, -32, 0, if simpleReadiness then 72 else 104),
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.08,
 		BorderSizePixel = 0,
@@ -5978,32 +6049,85 @@ function App:_RenderStudio()
 	})
 	Factory.Corner(readiness, 13)
 	local readinessStroke = Factory.Stroke(readiness, Colors.Gold, 0.35)
-	Factory.Label(readiness, "WEARABLE READINESS · RTHRO NORMAL", UDim2.new(1, -28, 0, 20), {
-		Position = UDim2.fromOffset(14, 10),
-		Font = Theme.Fonts.Bold,
-		TextSize = 12,
-		Color = Colors.Cyan,
-	})
+	local readinessBadge = if simpleReadiness
+		then Factory.New("Frame", {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 14, 0.5, 0),
+			Size = UDim2.fromOffset(30, 30),
+			BackgroundColor3 = Colors.Gold,
+			BorderSizePixel = 0,
+			Parent = readiness,
+		})
+		else nil
+	local readinessBadgeGlyph = nil :: TextLabel?
+	if readinessBadge then
+		Factory.Corner(readinessBadge, 15)
+		readinessBadgeGlyph = Factory.Label(readinessBadge, "…", UDim2.fromScale(1, 1), {
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			Font = Theme.Fonts.Black,
+			TextSize = 15,
+			Color = Colors.Ink,
+		})
+	end
+	local textX = if simpleReadiness then 56 else 14
+	local verdict = Factory.Label(
+		readiness,
+		if simpleReadiness then "CHECKING FIT…" else "WEARABLE READINESS · RTHRO NORMAL",
+		UDim2.new(1, -(textX + 14), 0, 20),
+		{
+			Position = UDim2.fromOffset(textX, if simpleReadiness then 14 else 10),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = if simpleReadiness then Colors.Gold else Colors.Cyan,
+		}
+	)
 	local sizeStatus = Factory.Label(readiness, "Measuring the model…", UDim2.new(1, -28, 0, 24), {
 		Position = UDim2.fromOffset(14, 32),
 		Font = Theme.Fonts.Bold,
 		TextSize = 10,
 		Wrapped = true,
 	})
+	sizeStatus.Visible = not simpleReadiness
 	local textureStatusLabel = Factory.Label(
 		readiness,
 		"Checking whether Roblox has released the generated texture…",
-		UDim2.new(1, -28, 0, 34),
+		UDim2.new(1, -(textX + 14), 0, 34),
 		{
-			Position = UDim2.fromOffset(14, 57),
+			Position = UDim2.fromOffset(textX, if simpleReadiness then 34 else 57),
 			Color = Colors.Gold,
-			TextSize = 10,
+			TextSize = if simpleReadiness then 11 else 10,
 			Wrapped = true,
 			AlignY = Enum.TextYAlignment.Top,
 		}
 	)
 
-	local function refreshReadiness()
+	-- readinessStroke.Color is already the tri-state signal every branch of
+	-- measureReadiness() below settles on (rose = over the bounds, mint =
+	-- publishable, gold = still checking), so Simple Mode's badge and
+	-- verdict read it back rather than re-deriving the same three cases.
+	local function applyVerdict()
+		if not simpleReadiness then
+			return
+		end
+		local color = readinessStroke.Color
+		local glyph, text = "…", "CHECKING FIT…"
+		if color == Colors.Rose then
+			glyph, text = "!", "TOO LARGE TO PUBLISH"
+		elseif color == Colors.Mint then
+			glyph, text = "✓", "READY TO WEAR"
+		end
+		verdict.Text = text
+		verdict.TextColor3 = color
+		if readinessBadge then
+			readinessBadge.BackgroundColor3 = color
+		end
+		if readinessBadgeGlyph then
+			readinessBadgeGlyph.Text = glyph
+		end
+	end
+
+	local function measureReadiness()
 		local maximum = AccessoryBounds.GetMaximum(fit.accessoryType)
 		if not baseMeshSize or not maximum then
 			sizeStatus.Text = "Measuring the model against Roblox's publishing bounds…"
@@ -6052,6 +6176,11 @@ function App:_RenderStudio()
 			textureStatusLabel.Text = "Checking whether Roblox has released the generated texture…"
 			textureStatusLabel.TextColor3 = Colors.Gold
 		end
+	end
+
+	local function refreshReadiness()
+		measureReadiness()
+		applyVerdict()
 	end
 	refreshReadiness()
 
@@ -6774,21 +6903,26 @@ function App:_RenderStudio()
 		-- PublishItem directly (skipping the Advanced branch's saveCurrentFit()
 		-- pre-step above) since there is no fit-editing UI here for the fit
 		-- draft to ever drift from what the server already has saved.
-		local actionsY = 128
+		-- Sits directly under the 72-tall Simple Mode readiness strip above
+		-- (8 + 72 + a 16px gap), not the 104-tall Advanced one.
+		local actionsY = 96
 		local isEquipped = table.find(profile.equippedItemIds or {}, selected.id) ~= nil
+		-- The concept art gives the molten treatment to Equip, not Publish:
+		-- wearing the thing you just made is the moment worth reaching for,
+		-- and publishing is the deliberate, less frequent second step.
 		local equip = Factory.ImageButton(
 			body,
 			if isEquipped then "Unequip" else "Equip in game",
 			UDim2.new(0.5, -22, 0, 46),
 			UDim2.fromOffset(16, actionsY),
-			if isEquipped then "danger" else "mint"
+			if isEquipped then "danger" else "primary"
 		)
 		local publish = Factory.ImageButton(
 			body,
 			if selected.publishedAssetId then "Published ✓" else "Publish wearable",
 			UDim2.new(0.5, -22, 0, 46),
 			UDim2.new(0.5, 6, 0, actionsY),
-			"primary"
+			nil
 		)
 		self:_BindButton(equip)
 		self:_BindButton(publish)
@@ -6862,17 +6996,27 @@ function App:_RenderStudio()
 				Color = Colors.TextMuted,
 				TextSize = 10,
 				Wrapped = true,
+				AlignX = Enum.TextXAlignment.Center,
 			}
 		)
 
+		-- Centred and flanked by a flourish either side, the way the concept
+		-- art draws every one of these mode-switch links. Fixed-width so the
+		-- flourishes can be paired to its actual edges; at compact widths a
+		-- 420px link would overflow the panel, so there it stays full-width
+		-- and unflanked.
 		local switchY = noteY + 44
 		local switchAdvanced = Factory.ImageButton(
 			body,
-			"Switch to Advanced Mode for fit, pricing & sharing →",
-			UDim2.new(1, -32, 0, 30),
-			UDim2.fromOffset(16, switchY),
+			"Switch to Advanced Mode for fit, pricing & sharing ✦",
+			if self.compact then UDim2.new(1, -32, 0, 30) else UDim2.fromOffset(420, 30),
+			if self.compact then UDim2.fromOffset(16, switchY) else UDim2.new(0.5, -210, 0, switchY),
 			nil
 		)
+		switchAdvanced.TextSize = 12
+		if not self.compact then
+			Factory.FlourishFlank(body, switchY + 15, 228)
+		end
 		self:_BindButton(switchAdvanced)
 		switchAdvanced.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", false)
