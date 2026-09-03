@@ -437,6 +437,7 @@ function App.new()
 		visualTutorialShown = false,
 		generationOfferEvents = {} :: { [string]: boolean },
 		navButtons = {} :: { [string]: TextButton },
+		navHasIcon = {} :: { [string]: boolean },
 		activeViewport = nil :: any,
 		ambientMotionEnabled = false,
 		ambientBlobs = {} :: { { instance: Frame, restPosition: UDim2 } },
@@ -909,6 +910,22 @@ function App:_BuildChrome()
 		if icon then
 			icon.ZIndex = 2
 			button.Text = "      " .. page
+			-- _ApplyResponsiveLayout rewrites this text on every resize --
+			-- it has to know the decal icon is already carrying the glyph,
+			-- or it puts the unicode symbol back in front of the label and
+			-- the row wraps to two lines against the nav rail's width.
+			self.navHasIcon[page] = true
+		end
+		-- Whatever the rail's width ends up being, a nav row is one line:
+		-- wrapping "Create" to "Crea/te" over its own icon is never the
+		-- better answer. attachDecal's mirrored label is the one that
+		-- actually renders, so both it and the button itself get this.
+		button.TextWrapped = false
+		button.TextTruncate = Enum.TextTruncate.AtEnd
+		local mirrored = button:FindFirstChild("Label")
+		if mirrored and mirrored:IsA("TextLabel") then
+			mirrored.TextWrapped = false
+			mirrored.TextTruncate = Enum.TextTruncate.AtEnd
 		end
 		self.sounds:Bind(button)
 		button.Activated:Connect(function()
@@ -950,30 +967,22 @@ function App:_BuildChrome()
 		BackgroundTransparency = 1,
 		Parent = navExtras,
 	})
+	-- The ring is a band of segments just outside the badge's own edge
+	-- (84px vs the badge's 64px), sitting on a plain dark circular Frame.
+	-- Segments past the current progress stay in ringTrackColor, so the
+	-- unfilled part of the ring reads as a track rather than a gap.
 	local ringTrackColor = Color3.fromRGB(58, 37, 96)
-	-- The ring sits as a band just outside the badge's own edge (84px vs
-	-- the badge's 64px), a plain circular Frame in ringTrackColor doubling
-	-- as both the always-visible "unfilled" track and the Factory.
-	-- RadialRing mask color it needs to blend into.
 	local ringWrap = Factory.New("Frame", {
 		Name = "RingWrap",
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 0),
 		Size = UDim2.fromOffset(84, 84),
-		BackgroundColor3 = ringTrackColor,
+		BackgroundColor3 = Color3.fromRGB(22, 14, 48),
 		BorderSizePixel = 0,
-		-- Safety net for Factory.RadialRing's rotating masks: Roblox's
-		-- ClipsDescendants is unreliable against a ROTATED descendant (a
-		-- known engine limitation, not specific to this code), which let
-		-- the oversized mask rectangles render past their own viewports.
-		-- ringWrap itself never rotates, so clipping here isn't subject to
-		-- that bug -- it caps any escaped mask to this circle's bounds
-		-- (via Corner below) even if the inner clip still doesn't hold.
-		ClipsDescendants = true,
 		Parent = rankCard,
 	})
 	Factory.Corner(ringWrap, 42)
-	self.creatorRingUpdate = Factory.RadialRing(ringWrap, "RankRingFill", UDim2.fromScale(1, 1), nil, ringTrackColor)
+	self.creatorRingUpdate = Factory.RadialRing(ringWrap, 84, 8, Colors.Gold, ringTrackColor, 60)
 	local badge = Factory.New("Frame", {
 		Name = "Badge",
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -1675,7 +1684,14 @@ function App:_ApplyResponsiveLayout()
 			elseif page == "Avatar Lab" then "◇"
 			elseif page == "Avatar Graphics" then "❑"
 			else "⚙"
-		button.Text = if compact then symbol else symbol .. "   " .. page
+		-- Once the decal icon is in place it *is* the glyph for this row --
+		-- prefixing the unicode symbol as well double-draws it (and the
+		-- extra width is what wrapped these rows onto a second line).
+		local hasIcon = self.navHasIcon[page] == true
+		button.Text = if compact
+			then (if hasIcon then "" else symbol)
+			elseif hasIcon then "      " .. page
+			else symbol .. "   " .. page
 		button.TextXAlignment = if compact then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
 	end
 	self:_UpdateSoundButton()
@@ -4792,7 +4808,9 @@ function App:_RenderCreate()
 				Position = if self.compact then UDim2.fromOffset(18, 182) else UDim2.fromOffset(210, 48),
 				AlignX = if self.compact then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left,
 				Font = Theme.Fonts.Black,
-				TextSize = 21,
+				-- 21 ran past this card's right edge once the left column
+				-- narrowed -- the trailing "?" was the first thing lost.
+				TextSize = if self.compact then 21 else 18,
 			}
 		)
 		Factory.Label(
@@ -5153,7 +5171,9 @@ function App:_RenderCreate()
 	local brief = self.state.dailyBrief
 	if brief then
 		local hasMilestoneBanner = brief.milestoneReward ~= nil
-		local cardHeight = 222 + (if hasMilestoneBanner then 36 else 0)
+		-- 222 before the two tail lines below started wrapping to two
+		-- lines each at this card's real width in the right rail.
+		local cardHeight = 250 + (if hasMilestoneBanner then 36 else 0)
 		local daily = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyBrief")
 		-- Extra content beyond the concept art (which has no streak-calendar
 		-- panel) -- kept, but after every panel the mockup does show.
@@ -5326,23 +5346,30 @@ function App:_RenderCreate()
 				if brief.nextRewardIn == 1 then "" else "s",
 				brief.nextMilestoneDay
 			),
-			UDim2.new(1, -30, 0, 18),
+			-- Both of these tails wrap now: in the right rail this card is
+			-- far narrower than the near-full-width one they were written
+			-- against, so on one line they ran off the card's edge.
+			UDim2.new(1, -30, 0, 32),
 			{
 				Position = UDim2.fromOffset(15, briefY),
 				Color = Colors.TextMuted,
 				TextSize = 11,
+				Wrapped = true,
+				AlignY = Enum.TextYAlignment.Top,
 			}
 		)
-		briefY += 24
+		briefY += 36
 
 		Factory.Label(
 			daily,
 			"Use the theme as inspiration—or forge anything you can imagine.",
-			UDim2.new(1, -30, 0, 20),
+			UDim2.new(1, -30, 0, 34),
 			{
 				Position = UDim2.fromOffset(15, briefY),
 				Color = Colors.TextMuted,
 				TextSize = 12,
+				Wrapped = true,
+				AlignY = Enum.TextYAlignment.Top,
 			}
 		)
 	end
