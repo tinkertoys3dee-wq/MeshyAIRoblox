@@ -941,26 +941,40 @@ function App:_BuildChrome()
 	self.navExtras = navExtras
 
 	-- Creator rank crest, matching the concept art's sidebar level badge +
-	-- XP bar. Roblox has no native way to draw an arbitrary progress arc
-	-- (the concept art's ring), so this uses a level badge plus a straight
-	-- bar instead -- same information, an achievable shape. Filled in by
-	-- _RenderStatus (self.creatorLevelLabel/creatorXPLabel/creatorXPFill),
-	-- the same place that already refreshes the topbar's level pill on
-	-- every CreatorProgress push.
+	-- ring. Filled in by _RenderStatus (self.creatorLevelLabel/
+	-- creatorXPLabel/creatorRingUpdate), the same place that already
+	-- refreshes the topbar's level pill on every CreatorProgress push.
 	local rankCard = Factory.New("Frame", {
 		Name = "CreatorRank",
 		Size = UDim2.new(1, 0, 0, 128),
 		BackgroundTransparency = 1,
 		Parent = navExtras,
 	})
-	local badge = Factory.New("Frame", {
-		Name = "Badge",
+	local ringTrackColor = Color3.fromRGB(58, 37, 96)
+	-- The ring sits as a band just outside the badge's own edge (84px vs
+	-- the badge's 64px), a plain circular Frame in ringTrackColor doubling
+	-- as both the always-visible "unfilled" track and the Factory.
+	-- RadialRing mask color it needs to blend into.
+	local ringWrap = Factory.New("Frame", {
+		Name = "RingWrap",
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 0),
+		Size = UDim2.fromOffset(84, 84),
+		BackgroundColor3 = ringTrackColor,
+		BorderSizePixel = 0,
+		Parent = rankCard,
+	})
+	Factory.Corner(ringWrap, 42)
+	self.creatorRingUpdate = Factory.RadialRing(ringWrap, "RankRingFill", UDim2.fromScale(1, 1), nil, ringTrackColor)
+	local badge = Factory.New("Frame", {
+		Name = "Badge",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromOffset(64, 64),
 		BackgroundColor3 = Color3.fromRGB(22, 14, 48),
 		BorderSizePixel = 0,
-		Parent = rankCard,
+		ZIndex = 3,
+		Parent = ringWrap,
 	})
 	Factory.Corner(badge, 32)
 	Factory.Stroke(badge, Colors.Gold, 0.1, 2.4)
@@ -972,36 +986,18 @@ function App:_BuildChrome()
 		AlignY = Enum.TextYAlignment.Center,
 	})
 	Factory.Label(rankCard, "CREATOR RANK", UDim2.new(1, 0, 0, 14), {
-		Position = UDim2.fromOffset(0, 72),
+		Position = UDim2.fromOffset(0, 92),
 		Font = Theme.Fonts.Bold,
 		TextSize = 10,
 		Color = Colors.TextMuted,
 		AlignX = Enum.TextXAlignment.Center,
 	})
 	self.creatorXPLabel = Factory.Label(rankCard, "0 / 0 XP", UDim2.new(1, 0, 0, 14), {
-		Position = UDim2.fromOffset(0, 88),
+		Position = UDim2.fromOffset(0, 108),
 		TextSize = 10,
 		Color = Colors.TextMuted,
 		AlignX = Enum.TextXAlignment.Center,
 	})
-	local xpTrack = Factory.New("Frame", {
-		Name = "XPTrack",
-		Position = UDim2.fromOffset(10, 108),
-		Size = UDim2.new(1, -20, 0, 6),
-		BackgroundColor3 = Color3.fromRGB(20, 12, 44),
-		BorderSizePixel = 0,
-		Parent = rankCard,
-	})
-	Factory.Corner(xpTrack, 3)
-	local xpFill = Factory.New("Frame", {
-		Name = "Fill",
-		Size = UDim2.fromScale(0, 1),
-		BackgroundColor3 = Colors.Gold,
-		BorderSizePixel = 0,
-		Parent = xpTrack,
-	})
-	Factory.Corner(xpFill, 3)
-	self.creatorXPFill = xpFill
 
 	-- Sidebar Simple/Advanced mode toggle, matching the concept art's
 	-- persistent switch -- every page still keeps its own inline "Switch to
@@ -3211,7 +3207,9 @@ function App:_RenderStatus()
 		self.creatorLevelLabel.Text = tostring(creator.level or 1)
 		self.creatorXPLabel.Text =
 			string.format("%s / %s XP", formatNumber(creator.xp or 0), formatNumber(creator.nextLevelXP or 0))
-		self.creatorXPFill.Size = UDim2.fromScale(math.clamp(creator.levelProgress or 0, 0, 1), 1)
+		if self.creatorRingUpdate then
+			self.creatorRingUpdate(creator.levelProgress or 0)
+		end
 	end
 	if daily then
 		local pill =

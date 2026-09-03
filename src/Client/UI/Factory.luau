@@ -479,4 +479,82 @@ function Factory.Icon(parent: Instance, assetKey: string, size: UDim2, position:
 	}) :: ImageLabel
 end
 
+-- A circular 0-100% progress ring (e.g. the Creator Rank crest) from a
+-- single full-circle image -- Roblox has no native way to draw a partial
+-- arc, so this reveals a slice of the image via two rotating clip-masked
+-- frames instead of needing one image per possible progress value.
+--
+-- Geometry (verified against 0%, 50%, 100%): a fixed right-half viewport
+-- (ClipsDescendants) holds an oversized square mask pinned at its own
+-- left-edge midpoint, which sits exactly on the ring's center; rotating
+-- that mask clockwise sweeps its covered range from [12 o'clock, 6
+-- o'clock] down to empty as it turns 0->180 degrees, so intersecting it
+-- against the viewport's fixed half yields a *shrinking* covered wedge
+-- from 12 o'clock down to the current angle -- i.e. a growing reveal from
+-- 12 o'clock clockwise. A mirrored left-half viewport/mask (pinned at its
+-- right edge) does the same for the 6-to-12 o'clock half, active only past
+-- 50%. trackColor should match whatever the ring sits on (its own parent's
+-- background, or a dedicated track circle behind it), since the masks are
+-- opaque frames of that color covering the not-yet-filled arc.
+--
+-- Returns an updater to call with the current 0-1 progress fraction, or
+-- nil if the asset hasn't been uploaded yet (same fallback contract as
+-- every other Factory image helper).
+function Factory.RadialRing(
+	parent: Instance,
+	assetKey: string,
+	size: UDim2,
+	position: UDim2?,
+	trackColor: Color3
+): ((number) -> ())?
+	local assetId = (UIAssets :: any)[assetKey]
+	if type(assetId) ~= "number" or assetId == 0 then
+		return nil
+	end
+	local container = Factory.New("Frame", {
+		Name = "RadialRing",
+		Size = size,
+		Position = position or UDim2.new(),
+		BackgroundTransparency = 1,
+		Parent = parent,
+	})
+	Factory.New("ImageLabel", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Image = `rbxassetid://{assetId}`,
+		ZIndex = 1,
+		Parent = container,
+	})
+	local function buildMask(pivotX: number, viewportX: number): Frame
+		local viewport = Factory.New("Frame", {
+			Size = UDim2.fromScale(0.5, 1),
+			Position = UDim2.fromScale(viewportX, 0),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ClipsDescendants = true,
+			ZIndex = 2,
+			Parent = container,
+		}) :: Frame
+		return Factory.New("Frame", {
+			AnchorPoint = Vector2.new(pivotX, 0.5),
+			Position = UDim2.new(pivotX, 0, 0.5, 0),
+			-- Oversized (2x the viewport in each axis) so its far corners
+			-- clear the ring's radius at every rotation, no gaps at the
+			-- edge of the swept wedge.
+			Size = UDim2.fromScale(2, 2),
+			BackgroundColor3 = trackColor,
+			BorderSizePixel = 0,
+			Parent = viewport,
+		}) :: Frame
+	end
+	local maskRight = buildMask(0, 0.5)
+	local maskLeft = buildMask(1, 0)
+	return function(progress: number)
+		local degrees = math.clamp(progress, 0, 1) * 360
+		maskRight.Rotation = math.clamp(degrees, 0, 180)
+		maskLeft.Rotation = math.clamp(degrees - 180, 0, 180)
+	end
+end
+
 return Factory
