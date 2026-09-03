@@ -7826,7 +7826,8 @@ function App:_RenderAvatarLab()
 		"Avatar Lab",
 		if showAllMethods
 			then "Mix Roblox Marketplace accessories with your Forge creations and stay longer in the look."
-			else "Try on free Roblox items. Tap a category below, then Try on."
+			else "Try on free Roblox items. Tap a category below, then Try on.",
+		true
 	)
 	-- The creator-name/price-range row is the single biggest thing in this
 	-- card, and most searches never touch it — collapsed by default, it only
@@ -7844,10 +7845,11 @@ function App:_RenderAvatarLab()
 			then (if self.compact then 276 else 200)
 			else (if self.compact then 194 else 151)
 	else
-		-- accessoryChipsY (106 compact / 63 desktop, computed below) + 40 for
-		-- the switch-to-Advanced row's own Y offset + its 28px height + 16px
-		-- bottom padding.
-		controlsHeight = if self.compact then 190 else 147
+		-- accessoryChipsY (106 compact / 63 desktop, computed below) + the
+		-- 32px chip row + 16px bottom padding. Simple Mode's switch-to-
+		-- Advanced control is the last chip in that same row now (the
+		-- concept art puts it there), not a separate bar below it.
+		controlsHeight = if self.compact then 154 else 111
 	end
 	local runwayState = self.runwayState or self.state.runwayState
 	local runwayJoined = runwayState and runwayState.joined == true
@@ -7906,6 +7908,16 @@ function App:_RenderAvatarLab()
 		false
 	)
 	search.Text = self.catalogQuery
+	-- Same glowing well the concept art gives Create's prompt and
+	-- Discover's search, with the magnifier inside its right edge.
+	self:_GlowField(search)
+	Factory.Label(search, "🔍", UDim2.fromOffset(24, 24), {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		AlignX = Enum.TextXAlignment.Center,
+		TextSize = 16,
+		Color = Colors.Cyan,
+	})
 	local searchButton = Factory.ImageButton(
 		controls,
 		"Search",
@@ -7974,19 +7986,43 @@ function App:_RenderAvatarLab()
 		Parent = controls,
 	})
 	Factory.List(chips, Enum.FillDirection.Horizontal, 7)
+	local chipIndex = 0
 	for typeName, label in ACCESSORY_LABELS do
+		chipIndex += 1
 		local chip = Factory.ImageButton(
 			chips,
 			label,
-			UDim2.fromOffset(86, 30),
+			UDim2.fromOffset(94, 30),
 			nil,
 			if self.catalogType == typeName then "primary" else nil
 		)
+		-- The concept art studs every category chip with a gem, walking down
+		-- the palette across the row.
+		local stud = Factory.Icon(
+			chip,
+			CHIP_GEMS[(chipIndex - 1) % #CHIP_GEMS + 1],
+			UDim2.fromOffset(12, 12),
+			UDim2.fromOffset(9, 9)
+		)
+		if stud then
+			stud.ZIndex = 2
+			chip.Text = "  " .. label
+		end
 		self:_BindButton(chip)
 		chip.Activated:Connect(function()
 			self.catalogType = typeName
 			self:_ApplyCatalogFilters()
 			self:_RenderActivePage()
+		end)
+	end
+	if not showAllMethods then
+		-- The concept art keeps this at the end of the category row rather
+		-- than as its own full-width bar below -- the mirror image of
+		-- Advanced Mode's "<- Simple Mode" chip in the same spot.
+		local switchAdvanced = Factory.ImageButton(chips, "Advanced Mode ✦", UDim2.fromOffset(140, 30), nil, nil)
+		self:_BindButton(switchAdvanced)
+		switchAdvanced.Activated:Connect(function()
+			self:_UpdateSetting("simpleMode", false)
 		end)
 	end
 	if showAllMethods then
@@ -8055,18 +8091,6 @@ function App:_RenderAvatarLab()
 				self:_RenderActivePage()
 			end)
 		end
-	else
-		local switchAdvanced = Factory.ImageButton(
-			controls,
-			"Switch to Advanced Mode for filters, sorting & buying →",
-			UDim2.new(1, -28, 0, 28),
-			UDim2.fromOffset(14, sortY),
-			nil
-		)
-		self:_BindButton(switchAdvanced)
-		switchAdvanced.Activated:Connect(function()
-			self:_UpdateSetting("simpleMode", false)
-		end)
 	end
 
 	self.catalogSearchBox = search
@@ -8220,8 +8244,12 @@ function App:_RenderAvatarLab()
 				Parent = card,
 			})
 			Factory.Corner(image, 11)
+			-- Same thin gold rim the concept art frames every gallery
+			-- preview in, on Discover and here alike.
+			Factory.Stroke(image, Colors.Gold, 0.45)
 			Factory.Label(card, tostring(item.Name or "Catalog item"), UDim2.new(1, -20, 0, 28), {
 				Position = UDim2.fromOffset(10, 196),
+				AlignX = if showAllMethods then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center,
 				Font = Theme.Fonts.Bold,
 				TextSize = 13,
 				Truncate = Enum.TextTruncate.AtEnd,
@@ -8243,9 +8271,12 @@ function App:_RenderAvatarLab()
 			-- The old -12/-8 split left "Buy" only ~4px from the card's own
 			-- right edge; widened both the outer and inter-button gaps to a
 			-- real ~10px (matching the CellSize bump above).
+			-- "Try on" in Simple Mode, matching the concept art's full-width
+			-- button; Advanced Mode keeps the shorter "Try" that has to
+			-- share the row with Buy.
 			local try = Factory.ImageButton(
 				card,
-				if self.triedOnAssetIds[assetId] then "Unequip" else "Try",
+				if self.triedOnAssetIds[assetId] then "Unequip" elseif showAllMethods then "Try" else "Try on",
 				if showAllMethods then UDim2.new(0.45, -14, 0, 38) else UDim2.new(1, -20, 0, 38),
 				UDim2.fromOffset(10, 248),
 				if self.triedOnAssetIds[assetId] then "danger" else "primary"
@@ -8295,7 +8326,7 @@ function App:_RenderAvatarLab()
 						self:_RenderActivePage()
 					elseif try.Parent then
 						try.Active = true
-						try.Text = if removing then "Unequip" else "Try"
+						try.Text = if removing then "Unequip" elseif showAllMethods then "Try" else "Try on"
 					end
 				end)
 			end)
