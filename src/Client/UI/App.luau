@@ -907,6 +907,99 @@ function App:_BuildChrome()
 		end)
 		self.navButtons[page] = button
 	end
+
+	-- Creator rank crest, matching the concept art's sidebar level badge +
+	-- XP bar. Roblox has no native way to draw an arbitrary progress arc
+	-- (the concept art's ring), so this uses a level badge plus a straight
+	-- bar instead -- same information, an achievable shape. Filled in by
+	-- _RenderStatus (self.creatorLevelLabel/creatorXPLabel/creatorXPFill),
+	-- the same place that already refreshes the topbar's level pill on
+	-- every CreatorProgress push.
+	local rankCard = Factory.New("Frame", {
+		Name = "CreatorRank",
+		Position = UDim2.fromOffset(12, 366),
+		Size = UDim2.new(1, -24, 0, 128),
+		BackgroundTransparency = 1,
+		Parent = nav,
+	})
+	local badge = Factory.New("Frame", {
+		Name = "Badge",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 0),
+		Size = UDim2.fromOffset(64, 64),
+		BackgroundColor3 = Color3.fromRGB(22, 14, 48),
+		BorderSizePixel = 0,
+		Parent = rankCard,
+	})
+	Factory.Corner(badge, 32)
+	Factory.Stroke(badge, Colors.Gold, 0.1, 2.4)
+	self.creatorLevelLabel = Factory.Label(badge, "1", UDim2.fromScale(1, 1), {
+		Font = Theme.Fonts.Black,
+		TextSize = 24,
+		Color = Colors.Gold,
+		AlignX = Enum.TextXAlignment.Center,
+		AlignY = Enum.TextYAlignment.Center,
+	})
+	Factory.Label(rankCard, "CREATOR RANK", UDim2.new(1, 0, 0, 14), {
+		Position = UDim2.fromOffset(0, 72),
+		Font = Theme.Fonts.Bold,
+		TextSize = 10,
+		Color = Colors.TextMuted,
+		AlignX = Enum.TextXAlignment.Center,
+	})
+	self.creatorXPLabel = Factory.Label(rankCard, "0 / 0 XP", UDim2.new(1, 0, 0, 14), {
+		Position = UDim2.fromOffset(0, 88),
+		TextSize = 10,
+		Color = Colors.TextMuted,
+		AlignX = Enum.TextXAlignment.Center,
+	})
+	local xpTrack = Factory.New("Frame", {
+		Name = "XPTrack",
+		Position = UDim2.fromOffset(10, 108),
+		Size = UDim2.new(1, -20, 0, 6),
+		BackgroundColor3 = Color3.fromRGB(20, 12, 44),
+		BorderSizePixel = 0,
+		Parent = rankCard,
+	})
+	Factory.Corner(xpTrack, 3)
+	local xpFill = Factory.New("Frame", {
+		Name = "Fill",
+		Size = UDim2.fromScale(0, 1),
+		BackgroundColor3 = Colors.Gold,
+		BorderSizePixel = 0,
+		Parent = xpTrack,
+	})
+	Factory.Corner(xpFill, 3)
+	self.creatorXPFill = xpFill
+
+	-- Sidebar Simple/Advanced mode toggle, matching the concept art's
+	-- persistent switch -- every page still keeps its own inline "Switch to
+	-- Advanced Mode" link too (a second entry point to the same setting,
+	-- not a replacement); _RefreshModeToggle (called from _UpdateSetting,
+	-- so it stays in sync regardless of which entry point was used) keeps
+	-- this one's highlight matching the real state.
+	local modeCard = Factory.ImageCard(nav, UDim2.new(1, -24, 0, 104), UDim2.fromOffset(12, 502), "ModeToggle")
+	Factory.Label(modeCard, "MODE", UDim2.new(1, -20, 0, 14), {
+		Position = UDim2.fromOffset(0, 10),
+		Font = Theme.Fonts.Bold,
+		TextSize = 10,
+		Color = Colors.TextMuted,
+		AlignX = Enum.TextXAlignment.Center,
+	})
+	local simpleModeButton = Factory.ImageButton(modeCard, "Simple", UDim2.new(1, -20, 0, 32), UDim2.fromOffset(10, 28))
+	self:_BindButton(simpleModeButton)
+	simpleModeButton.Activated:Connect(function()
+		self:_UpdateSetting("simpleMode", true)
+	end)
+	local advancedModeButton =
+		Factory.ImageButton(modeCard, "Advanced", UDim2.new(1, -20, 0, 32), UDim2.fromOffset(10, 64))
+	self:_BindButton(advancedModeButton)
+	advancedModeButton.Activated:Connect(function()
+		self:_UpdateSetting("simpleMode", false)
+	end)
+	self.modeButtons = { simple = simpleModeButton, advanced = advancedModeButton }
+	self:_RefreshModeToggle()
+
 	local tip = Factory.ImageCard(nav, UDim2.new(1, -24, 0, 142), UDim2.new(0, 12, 1, -160), "GroupTip")
 	Factory.Label(tip, "GROUP BOOST", UDim2.new(1, -24, 0, 22), {
 		Position = UDim2.fromOffset(12, 12),
@@ -3078,6 +3171,15 @@ function App:_RenderStatus()
 		pill.LayoutOrder = 1
 		gemIcon(pill, "GemGold")
 	end
+	-- Sidebar creator-rank crest (see _BuildChrome) -- same data as the
+	-- topbar's level pill above, refreshed alongside it on every
+	-- CreatorProgress push.
+	if creator and self.creatorLevelLabel then
+		self.creatorLevelLabel.Text = tostring(creator.level or 1)
+		self.creatorXPLabel.Text =
+			string.format("%s / %s XP", formatNumber(creator.xp or 0), formatNumber(creator.nextLevelXP or 0))
+		self.creatorXPFill.Size = UDim2.fromScale(math.clamp(creator.levelProgress or 0, 0, 1), 1)
+	end
 	if daily then
 		local pill =
 			Factory.ImagePill(self.statusArea, string.format("🔥 %d DAY STREAK", daily.streak), Colors.Rose, 112)
@@ -3705,6 +3807,16 @@ function App:_RenderCreate()
 			AlignY = Enum.TextYAlignment.Top,
 		})
 		local priceText = method.priceText or string.format("R$ %d", method.price)
+		if method.id == "TEXT_TO_3D" and not showAllMethods then
+			-- The concept art's price cartouche frame, behind the price text
+			-- only on this one card (the single full-width Direct Forge
+			-- panel a first-timer sees) -- everywhere else keeps the plain
+			-- price label as-is.
+			local cartouche = Factory.Icon(card, "PriceCartouche", UDim2.fromOffset(130, 56), UDim2.new(1, -139, 0, 34))
+			if cartouche then
+				cartouche.ZIndex = 1
+			end
+		end
 		Factory.Label(card, priceText, UDim2.fromOffset(106, 35), {
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, -15, 0, 48),
@@ -3712,10 +3824,10 @@ function App:_RenderCreate()
 			Font = Theme.Fonts.Black,
 			TextSize = 18,
 			Color = method.color,
+			ZIndex = 2,
 		})
 		if method.id == "TEXT_TO_3D" and not showAllMethods then
-			-- The concept art's signature touch on this exact card (the
-			-- single full-width Direct Forge panel a first-timer sees) -- a
+			-- The concept art's signature touch on this exact card -- a
 			-- small corner accent, kept clear of the kicker pill/title/body/
 			-- price text above and below it rather than resized into their
 			-- space, since none of that layout can be visually re-verified
@@ -8842,6 +8954,19 @@ function App:_RenderAvatarGraphics()
 	end
 end
 
+-- Keeps the sidebar's own Simple/Advanced buttons (see _BuildChrome) in
+-- sync with the real setting, regardless of which entry point last changed
+-- it -- this one, a page's inline "Switch to Advanced Mode" link, or the
+-- Settings page toggle.
+function App:_RefreshModeToggle()
+	if not self.modeButtons or not self.state then
+		return
+	end
+	local simpleActive = self.state.profile.settings.simpleMode ~= false
+	Factory.SwapDecal(self.modeButtons.simple, if simpleActive then "ButtonPrimary" else "ButtonDefault")
+	Factory.SwapDecal(self.modeButtons.advanced, if simpleActive then "ButtonDefault" else "ButtonPrimary")
+end
+
 function App:_UpdateSetting(key: string, value: any)
 	task.spawn(function()
 		local success, data = self:_Invoke(Network.Actions.UpdateSettings, { [key] = value })
@@ -8850,6 +8975,7 @@ function App:_UpdateSetting(key: string, value: any)
 			if key == "reduceMotion" then
 				self:_SetAmbientMotion(data.settings.reduceMotion ~= true)
 			end
+			self:_RefreshModeToggle()
 		end
 		self:_RenderActivePage()
 	end)
