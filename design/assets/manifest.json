@@ -192,6 +192,12 @@
     "usage": "Topbar bottom-edge curved accent, ScaleType.Stretch across the topbar's full width"
   },
   {
+    "name": "RankRingFill",
+    "file": "rank_ring_fill.png",
+    "kind": "fit",
+    "usage": "Creator Rank radial progress ring -- revealed 0-100% via Factory.RadialRing's rotating clip-masks"
+  },
+  {
     "name": "PriceCartouche",
     "file": "price_cartouche.png",
     "kind": "fit",

@@ -320,6 +320,24 @@ def topbar_curve():
             "usage": "Topbar bottom-edge curved accent, ScaleType.Stretch across the topbar's full width"}
 
 
+def rank_ring_fill():
+    # The concept art's Creator Rank progress ring uses an SVG
+    # stroke-dasharray trick Roblox has no equivalent for -- there's no way
+    # to draw a partial-arc stroke natively. This exports just the ring
+    # itself (full circle, same gradient the concept art uses for the
+    # fill) as one image; App.luau reveals a 0-100% arc of it at runtime
+    # via two rotating clip-masked frames (Factory.RadialRing) rather than
+    # needing a separate image per possible progress value.
+    w = h = 220
+    cx = cy = 110
+    r = 88
+    body = f'''
+  <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="url(#fillGold)" stroke-width="20" stroke-linecap="round"/>'''
+    render(body, w, h, "rank_ring_fill")
+    return {"name": "RankRingFill", "file": "rank_ring_fill.png", "kind": "fit",
+            "usage": "Creator Rank radial progress ring -- revealed 0-100% via Factory.RadialRing's rotating clip-masks"}
+
+
 def price_cartouche():
     w, h = 220, 140
     cx, cy = 110, 70
@@ -408,6 +426,7 @@ def main():
     manifest.append(crystal_hero())
     manifest.append(ember_mascot())
     manifest.append(topbar_curve())
+    manifest.append(rank_ring_fill())
     manifest.append(price_cartouche())
     manifest.append(corner_ornament())
     manifest.append(flourish_divider())
