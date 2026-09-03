@@ -908,6 +908,29 @@ function App:_BuildChrome()
 		self.navButtons[page] = button
 	end
 
+	-- Sidebar extras below the 6 nav rows -- the concept art's creator-rank
+	-- crest and Simple/Advanced switch, plus the pre-existing group-boost
+	-- reminder -- share a scrolling stack instead of fixed pixel offsets.
+	-- The floating Shell window's own height is clamped between 450 and
+	-- 860px (see the UISizeConstraint above), and even at that max there
+	-- isn't reliably room below the nav rows for all three at once, so
+	-- this scrolls instead of silently overlapping or clipping.
+	local navExtras = Factory.New("ScrollingFrame", {
+		Name = "NavExtras",
+		Position = UDim2.fromOffset(0, 405),
+		Size = UDim2.new(1, 0, 1, -405),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 3,
+		ScrollBarImageColor3 = Colors.Gold,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		Parent = nav,
+	})
+	Factory.List(navExtras, Enum.FillDirection.Vertical, 10)
+	Factory.Padding(navExtras, 12, 6)
+	self.navExtras = navExtras
+
 	-- Creator rank crest, matching the concept art's sidebar level badge +
 	-- XP bar. Roblox has no native way to draw an arbitrary progress arc
 	-- (the concept art's ring), so this uses a level badge plus a straight
@@ -917,10 +940,9 @@ function App:_BuildChrome()
 	-- every CreatorProgress push.
 	local rankCard = Factory.New("Frame", {
 		Name = "CreatorRank",
-		Position = UDim2.fromOffset(12, 366),
-		Size = UDim2.new(1, -24, 0, 128),
+		Size = UDim2.new(1, 0, 0, 128),
 		BackgroundTransparency = 1,
-		Parent = nav,
+		Parent = navExtras,
 	})
 	local badge = Factory.New("Frame", {
 		Name = "Badge",
@@ -978,7 +1000,7 @@ function App:_BuildChrome()
 	-- not a replacement); _RefreshModeToggle (called from _UpdateSetting,
 	-- so it stays in sync regardless of which entry point was used) keeps
 	-- this one's highlight matching the real state.
-	local modeCard = Factory.ImageCard(nav, UDim2.new(1, -24, 0, 104), UDim2.fromOffset(12, 502), "ModeToggle")
+	local modeCard = Factory.ImageCard(navExtras, UDim2.new(1, 0, 0, 104), nil, "ModeToggle")
 	Factory.Label(modeCard, "MODE", UDim2.new(1, -20, 0, 14), {
 		Position = UDim2.fromOffset(0, 10),
 		Font = Theme.Fonts.Bold,
@@ -1000,7 +1022,7 @@ function App:_BuildChrome()
 	self.modeButtons = { simple = simpleModeButton, advanced = advancedModeButton }
 	self:_RefreshModeToggle()
 
-	local tip = Factory.ImageCard(nav, UDim2.new(1, -24, 0, 142), UDim2.new(0, 12, 1, -160), "GroupTip")
+	local tip = Factory.ImageCard(navExtras, UDim2.new(1, 0, 0, 142), nil, "GroupTip")
 	Factory.Label(tip, "GROUP BOOST", UDim2.new(1, -24, 0, 22), {
 		Position = UDim2.fromOffset(12, 12),
 		Color = Colors.Mint,
@@ -1613,7 +1635,6 @@ end
 function App:_ApplyResponsiveLayout()
 	local camera = Workspace.CurrentCamera
 	local width = if camera then camera.ViewportSize.X else 1200
-	local height = if camera then camera.ViewportSize.Y else 800
 	local compact = width < 760
 	local gridColumns = if compact then 1 elseif width < 1050 then 2 elseif width < 1420 then 3 else 4
 	local layoutChanged = self.compact ~= nil
@@ -1645,9 +1666,12 @@ function App:_ApplyResponsiveLayout()
 		button.TextXAlignment = if compact then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
 	end
 	self:_UpdateSoundButton()
-	local tip = self.nav:FindFirstChild("GroupTip")
-	if tip then
-		tip.Visible = not compact and height >= 620
+	-- The nav rail's own narrow width in compact mode (icon-only rows,
+	-- see the symbol swap above) can't fit these text-heavy cards, so the
+	-- whole scrolling stack (see _BuildChrome's navExtras) hides there;
+	-- everywhere else it scrolls instead of a height-based on/off switch.
+	if self.navExtras then
+		self.navExtras.Visible = not compact
 	end
 	self.statusArea.Visible = width >= 1120
 	-- Belt-and-suspenders alongside the AbsoluteSize/AbsolutePosition signals
@@ -4030,6 +4054,20 @@ function App:_RenderCreate()
 			promptStroke.Color = Colors.Cyan
 			promptStroke.Transparency = 0.3
 			promptStroke.Thickness = 1.6
+		end
+		-- The concept art studs this well's top two corners with a small
+		-- diamond accent.
+		for _, corner in { "left", "right" } do
+			local stud = Factory.Icon(
+				prompt,
+				"SparkleStar",
+				UDim2.fromOffset(10, 10),
+				if corner == "left" then UDim2.fromOffset(6, 6) else UDim2.new(1, -16, 0, 6)
+			)
+			if stud then
+				stud.ZIndex = 6
+				stud.ImageColor3 = Colors.Cyan
+			end
 		end
 		local count = Factory.Label(
 			promptCard,
