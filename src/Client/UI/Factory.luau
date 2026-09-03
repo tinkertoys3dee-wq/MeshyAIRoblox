@@ -19,6 +19,15 @@ local SLICE_CENTER = {
 	PillFrame = Rect.new(22, 22, 58, 58),
 }
 
+-- A 9-slice corner draws at its source size (78px for PanelFrame) unless
+-- scaled, so the card frame's gold filigree reached ~40px into the card
+-- and swallowed the left edge of every section title sitting at x=16.
+-- Shrinking just the border regions tucks that scrollwork back into the
+-- corner without touching the card's own size or its content offsets.
+local SLICE_SCALE = {
+	PanelFrame = 0.6,
+}
+
 function Factory.New(className: string, properties: { [string]: any }?, children: { Instance }?): any
 	local instance = Instance.new(className)
 	if properties then
@@ -403,6 +412,7 @@ local function attachDecal(target: GuiObject, assetKey: string): boolean
 		Image = `rbxassetid://{assetId}`,
 		ScaleType = Enum.ScaleType.Slice,
 		SliceCenter = SLICE_CENTER[assetKey],
+		SliceScale = SLICE_SCALE[assetKey] or 1,
 		ZIndex = 0,
 		Parent = target,
 	})
@@ -450,6 +460,7 @@ function Factory.SwapDecal(target: Instance, assetKey: string): boolean
 		return false
 	end
 	decal.Image = `rbxassetid://{assetId}`
+	decal.SliceScale = SLICE_SCALE[assetKey] or 1
 	local sliceCenter = SLICE_CENTER[assetKey]
 	if sliceCenter then
 		decal.SliceCenter = sliceCenter
