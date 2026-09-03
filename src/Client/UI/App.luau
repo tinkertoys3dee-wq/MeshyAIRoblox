@@ -3945,7 +3945,7 @@ function App:_RenderCreate()
 		-- that band instead of running underneath the art, which is what
 		-- left the crystal sitting in the middle of a sentence.
 		local heroCard = method.id == "TEXT_TO_3D" and not showAllMethods
-		local copyInset = if heroCard then -264 else -32
+		local copyInset = if heroCard then -176 else -32
 		Factory.Label(card, method.title, UDim2.new(1, if heroCard then copyInset else -150, 0, 31), {
 			Position = UDim2.fromOffset(16, 46),
 			Font = Theme.Fonts.Black,
@@ -3965,14 +3965,13 @@ function App:_RenderCreate()
 		-- a first-timer sees) -- everywhere else keeps the plain price
 		-- label as-is.
 		local cartouche = if heroCard
-			then Factory.Icon(card, "PriceCartouche", UDim2.fromOffset(124, 58), UDim2.new(1, -24, 0.5, 0))
+			then Factory.Icon(card, "PriceCartouche", UDim2.fromOffset(124, 58), UDim2.new(1, -24, 1, -18))
 			else nil
 		if cartouche then
 			cartouche.ZIndex = 1
-			-- Anchored to the card's right edge and its vertical middle,
-			-- so the crystal below can hang off a known edge rather than
-			-- both of them being placed from the top by eye.
-			cartouche.AnchorPoint = Vector2.new(1, 0.5)
+			-- Sits in the card's bottom-right corner, leaving the space
+			-- above it for the crystal to stack on.
+			cartouche.AnchorPoint = Vector2.new(1, 1)
 		end
 		-- Parented to the cartouche and centred when there is one, rather
 		-- than positioned against the card's edge and hoping the two line
@@ -3996,16 +3995,15 @@ function App:_RenderCreate()
 			}
 		)
 		if heroCard then
-			-- The concept art's signature touch on this exact card. The
-			-- copy above stops at -264 and the cartouche starts at -148,
-			-- so this is centred in the 116px band between them -- both
-			-- axes, from the card's own right edge. Every earlier attempt
-			-- placed it at a hand-picked offset and it drifted into
-			-- whatever happened to be beside it at that card width.
-			local crystal = Factory.Icon(card, "CrystalHero", UDim2.fromOffset(62, 70), UDim2.new(1, -206, 0.5, 0))
+			-- Stacked directly above the price cartouche and centred on it:
+			-- the cartouche is 124 wide ending 24 from the card's right
+			-- edge, so its centre is at -86, and its top edge is 76 above
+			-- the card's bottom. Both come off the same corner, so the two
+			-- stay stacked whatever the card's width.
+			local crystal = Factory.Icon(card, "CrystalHero", UDim2.fromOffset(46, 52), UDim2.new(1, -86, 1, -80))
 			if crystal then
 				crystal.ZIndex = 2
-				crystal.AnchorPoint = Vector2.new(0.5, 0.5)
+				crystal.AnchorPoint = Vector2.new(0.5, 1)
 			end
 		end
 		local choose = Factory.New("TextButton", {
