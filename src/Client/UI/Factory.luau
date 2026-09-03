@@ -366,6 +366,33 @@ local function attachDecal(target: GuiObject, assetKey: string): boolean
 		textHolder:GetPropertyChangedSignal("TextColor3"):Connect(function()
 			label.TextColor3 = textHolder.TextColor3
 		end)
+
+		-- UIPadding only insets its own object's native text (and any
+		-- UIListLayout/UIGridLayout children) -- never an unrelated sibling
+		-- child like `label`, which otherwise stays flush edge-to-edge and
+		-- can crowd into an icon a caller placed at a fixed offset (the nav
+		-- rows). Mirror any UIPadding onto the label too, whether it was
+		-- added before this ran or (as with the nav rows) after.
+		local function applyPadding(padding: UIPadding)
+			local left, right = padding.PaddingLeft, padding.PaddingRight
+			local top, bottom = padding.PaddingTop, padding.PaddingBottom
+			label.Position = UDim2.new(left.Scale, left.Offset, top.Scale, top.Offset)
+			label.Size = UDim2.new(
+				1 - left.Scale - right.Scale,
+				-(left.Offset + right.Offset),
+				1 - top.Scale - bottom.Scale,
+				-(top.Offset + bottom.Offset)
+			)
+		end
+		local existingPadding = target:FindFirstChildOfClass("UIPadding")
+		if existingPadding then
+			applyPadding(existingPadding)
+		end
+		target.ChildAdded:Connect(function(child: Instance)
+			if child:IsA("UIPadding") then
+				applyPadding(child)
+			end
+		end)
 	end
 
 	local decal = Factory.New("ImageLabel", {
