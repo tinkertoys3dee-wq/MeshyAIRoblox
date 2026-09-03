@@ -16,10 +16,10 @@
     "file": "button_primary.png",
     "kind": "slice",
     "sliceCenter": [
-      30,
-      30,
-      90,
-      90
+      42,
+      0,
+      198,
+      120
     ],
     "usage": "Factory.Button kind='primary'/'mint' background"
   },
@@ -28,22 +28,22 @@
     "file": "button_default.png",
     "kind": "slice",
     "sliceCenter": [
-      30,
-      30,
-      90,
-      90
+      42,
+      0,
+      198,
+      120
     ],
-    "usage": "Factory.Button default/danger background"
+    "usage": "Factory.Button default background"
   },
   {
     "name": "ButtonDanger",
     "file": "button_danger.png",
     "kind": "slice",
     "sliceCenter": [
-      30,
-      30,
-      90,
-      90
+      42,
+      0,
+      198,
+      120
     ],
     "usage": "Factory.Button kind='danger' background"
   },
@@ -52,10 +52,10 @@
     "file": "pill_frame.png",
     "kind": "slice",
     "sliceCenter": [
-      22,
-      22,
-      58,
-      58
+      34,
+      0,
+      166,
+      100
     ],
     "usage": "Factory.Pill background"
   },

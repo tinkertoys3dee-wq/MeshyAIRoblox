@@ -8,31 +8,35 @@ local UIAssets = require(ReplicatedStorage:WaitForChild("UIAssets"))
 
 local Factory = {}
 
--- design/manifest.json's sliceCenter for each 9-sliced decal, mirrored here
--- since Luau can't read that JSON file at runtime. Keep in sync if
--- design/export_ui_assets.py's PANEL_SLICE/BTN_SLICE/PILL_SLICE ever change.
+-- design/manifest.json's sliceCenter for each sliced decal, mirrored here
+-- since Luau can't read that JSON file at runtime.
 local SLICE_CENTER = {
 	PanelFrame = Rect.new(78, 78, 162, 162),
-	ButtonPrimary = Rect.new(30, 30, 90, 90),
-	ButtonDefault = Rect.new(30, 30, 90, 90),
-	ButtonDanger = Rect.new(30, 30, 90, 90),
-	PillFrame = Rect.new(22, 22, 58, 58),
-	-- 3-slice, not 9: the centre band spans the banner's full height, so
-	-- only its flat middle stretches and its two angled end caps are left
-	-- untouched. Keep in sync with export_ui_assets.py's BANNER_* values.
+	-- Buttons, pills and the banner are all the concept art's notched
+	-- hexagon, so all four are 3-sliced rather than 9-sliced: the centre
+	-- band spans the source's full height, leaving only the flat middle to
+	-- stretch and the two angled end caps untouched. Keep in sync with
+	-- export_ui_assets.py's BTN_*/PILL_*/BANNER_* values.
+	ButtonPrimary = Rect.new(42, 0, 198, 120),
+	ButtonDefault = Rect.new(42, 0, 198, 120),
+	ButtonDanger = Rect.new(42, 0, 198, 120),
+	PillFrame = Rect.new(34, 0, 166, 100),
 	SectionBanner = Rect.new(48, 0, 192, 120),
 }
 
--- A 9-slice corner draws at its source size (78px for PanelFrame) unless
--- scaled, so the card frame's gold filigree reached ~40px into the card
--- and swallowed the left edge of every section title sitting at x=16.
--- Shrinking just the border regions tucks that scrollwork back into the
--- corner without touching the card's own size or its content offsets.
+-- A slice border draws at its source size unless scaled down. For the panel
+-- that mattered because its 78px gold filigree reached ~40px into the card
+-- and swallowed the left edge of every section title sitting at x=16. For
+-- the hexagons it matters because each is drawn well above the size it
+-- renders at, to keep its diagonals crisp: without this a 42px cap would
+-- eat a third of a short button, instead of landing on the art's own
+-- proportion of about 0.7 of the shape's half-height.
 local SLICE_SCALE = {
 	PanelFrame = 0.6,
-	-- The banner art is drawn 120px tall for crisp diagonals; it renders at
-	-- ~30px, so its end caps have to come down by the same factor or a
-	-- 48px-wide cap would eat a third of a short banner.
+	ButtonPrimary = 0.35,
+	ButtonDefault = 0.35,
+	ButtonDanger = 0.35,
+	PillFrame = 0.28,
 	SectionBanner = 0.25,
 }
 
@@ -410,6 +414,20 @@ local function attachDecal(target: GuiObject, assetKey: string): boolean
 				applyPadding(child)
 			end
 		end)
+	end
+
+	-- Factory.Button/Pill draw their own rounded Gloss and Shade overlays,
+	-- which fit a capsule and hang out past the corners of the hexagon the
+	-- art actually uses. The hexagon art carries its own top highlight, so
+	-- retire the code-drawn pair whenever a decal takes over. Cards keep
+	-- theirs: a panel really is a rounded rectangle.
+	if target:IsA("TextButton") or target:IsA("TextLabel") then
+		for _, overlay in { "Gloss", "Shade" } do
+			local child = target:FindFirstChild(overlay)
+			if child and child:IsA("GuiObject") then
+				child.Visible = false
+			end
+		end
 	end
 
 	local decal = Factory.New("ImageLabel", {

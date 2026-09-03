@@ -106,66 +106,74 @@ def panel_frame():
 
 
 # --------------------------------------------------------------------------
-# Buttons (Factory.Button): plain gold-rimmed capsule, two fills. Factory.
-# Button keeps its own Gloss/Shade code overlays on top -- same deal as Card.
+# Buttons (Factory.Button) and pills (Factory.Pill).
+#
+# The concept art draws EVERY button, chip and status pill as the same
+# notched hexagon -- angled ends, flat top and bottom -- not as a rounded
+# capsule. Same shape family as the section banner below, so they slice the
+# same way: a 3-slice whose centre spans the full height, leaving only the
+# flat middle to stretch and the two angled end caps untouched. Factory.
+# Button/Pill keep their own Gloss/Shade code overlays on top -- same deal
+# as Card.
+#
+# Drawn a little over 2x the height they render at so the diagonals stay
+# crisp; each one's SliceScale in Factory.luau brings the caps back down to
+# the art's own proportion (a cap about 0.7 of the shape's half-height).
 # --------------------------------------------------------------------------
-BTN_SIZE = 120
-BTN_SLICE = 30
+BTN_W, BTN_H = 240, 120
+BTN_CAP = 42
+PILL_W, PILL_H = 200, 100
+PILL_CAP = 34
+
+
+def _hexagon(w: int, h: int, cap: int, inset: float) -> str:
+    """The art's notched-hexagon outline, inset from the edge to leave room
+    for its own stroke."""
+    run = w - 2 * cap
+    rise = h / 2 - inset
+    return (f'M{cap} {inset} h{run} l{cap - inset} {rise} l{-(cap - inset)} {rise} '
+            f'h{-run} l{-(cap - inset)} {-rise} z')
+
+
+def _hex_asset(name, file, w, h, cap, fill, stroke, stroke_width, gloss, usage):
+    # The gloss is a second, smaller hexagon clipped to the top half -- the
+    # same top-highlight the rounded art carried, following the new outline
+    # instead of a rectangle that would poke out past the angled ends.
+    body = (
+        f'\n  <path d="{_hexagon(w, h, cap, 5)}" fill="{fill}"'
+        f' stroke="{stroke}" stroke-width="{stroke_width}"/>'
+        f'\n  <clipPath id="{name}TopHalf"><rect x="0" y="0" width="{w}" height="{h * 0.42}"/></clipPath>'
+        f'\n  <path d="{_hexagon(w, h, cap, 13)}" fill="#FFFFFF" opacity="{gloss}"'
+        f' clip-path="url(#{name}TopHalf)"/>'
+    )
+    render(body, w, h, file)
+    return {"name": name, "file": f"{file}.png", "kind": "slice",
+            "sliceCenter": [cap, 0, w - cap, h],
+            "usage": usage}
 
 
 def button_primary():
-    s = BTN_SIZE
-    body = f'''
-  <rect x="4" y="4" width="{s-8}" height="{s-8}" rx="28" fill="url(#molten)"/>
-  <rect x="4" y="4" width="{s-8}" height="{s-8}" rx="28" fill="none" stroke="url(#goldBar)" stroke-width="4"/>
-  <rect x="12" y="10" width="{s-24}" height="{(s-8)*0.4}" rx="16" fill="#FFFFFF" opacity="0.22"/>'''
-    render(body, s, s, "button_primary")
-    return {"name": "ButtonPrimary", "file": "button_primary.png", "kind": "slice",
-            "sliceCenter": [BTN_SLICE, BTN_SLICE, BTN_SIZE - BTN_SLICE, BTN_SIZE - BTN_SLICE],
-            "usage": "Factory.Button kind='primary'/'mint' background"}
+    return _hex_asset("ButtonPrimary", "button_primary", BTN_W, BTN_H, BTN_CAP,
+                      "url(#molten)", "url(#goldBar)", 5, 0.22,
+                      "Factory.Button kind='primary'/'mint' background")
 
 
 def button_default():
-    s = BTN_SIZE
-    body = f'''
-  <rect x="4" y="4" width="{s-8}" height="{s-8}" rx="28" fill="#241645"/>
-  <rect x="4" y="4" width="{s-8}" height="{s-8}" rx="28" fill="none" stroke="url(#goldSoft)" stroke-width="3.2"/>
-  <rect x="12" y="10" width="{s-24}" height="{(s-8)*0.4}" rx="16" fill="#FFFFFF" opacity="0.06"/>'''
-    render(body, s, s, "button_default")
-    return {"name": "ButtonDefault", "file": "button_default.png", "kind": "slice",
-            "sliceCenter": [BTN_SLICE, BTN_SLICE, BTN_SIZE - BTN_SLICE, BTN_SIZE - BTN_SLICE],
-            "usage": "Factory.Button default/danger background"}
+    return _hex_asset("ButtonDefault", "button_default", BTN_W, BTN_H, BTN_CAP,
+                      "#241645", "url(#goldSoft)", 4.4, 0.07,
+                      "Factory.Button default background")
 
 
 def button_danger():
-    s = BTN_SIZE
-    body = f'''
-  <rect x="4" y="4" width="{s-8}" height="{s-8}" rx="28" fill="url(#gemRuby)"/>
-  <rect x="4" y="4" width="{s-8}" height="{s-8}" rx="28" fill="none" stroke="url(#goldBar)" stroke-width="4"/>
-  <rect x="12" y="10" width="{s-24}" height="{(s-8)*0.4}" rx="16" fill="#FFFFFF" opacity="0.18"/>'''
-    render(body, s, s, "button_danger")
-    return {"name": "ButtonDanger", "file": "button_danger.png", "kind": "slice",
-            "sliceCenter": [BTN_SLICE, BTN_SLICE, BTN_SIZE - BTN_SLICE, BTN_SIZE - BTN_SLICE],
-            "usage": "Factory.Button kind='danger' background"}
-
-
-# --------------------------------------------------------------------------
-# Pill (Factory.Pill): capsule frame, no fixed width since it's 9-sliced.
-# --------------------------------------------------------------------------
-PILL_SIZE = 80
-PILL_SLICE = 22
+    return _hex_asset("ButtonDanger", "button_danger", BTN_W, BTN_H, BTN_CAP,
+                      "url(#gemRuby)", "url(#goldBar)", 5, 0.18,
+                      "Factory.Button kind='danger' background")
 
 
 def pill_frame():
-    s = PILL_SIZE
-    body = f'''
-  <rect x="3" y="3" width="{s-6}" height="{s-6}" rx="{(s-6)/2}" fill="#241645"/>
-  <rect x="3" y="3" width="{s-6}" height="{s-6}" rx="{(s-6)/2}" fill="none" stroke="url(#goldBar)" stroke-width="3"/>
-  <rect x="9" y="7" width="{s-18}" height="{(s-6)*0.42}" rx="{(s-6)*0.21}" fill="#FFFFFF" opacity="0.14"/>'''
-    render(body, s, s, "pill_frame")
-    return {"name": "PillFrame", "file": "pill_frame.png", "kind": "slice",
-            "sliceCenter": [PILL_SLICE, PILL_SLICE, PILL_SIZE - PILL_SLICE, PILL_SIZE - PILL_SLICE],
-            "usage": "Factory.Pill background"}
+    return _hex_asset("PillFrame", "pill_frame", PILL_W, PILL_H, PILL_CAP,
+                      "url(#panelGlass)", "url(#goldBar)", 4, 0.14,
+                      "Factory.Pill background")
 
 
 # --------------------------------------------------------------------------

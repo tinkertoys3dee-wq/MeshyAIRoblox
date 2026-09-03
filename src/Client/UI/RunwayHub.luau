@@ -228,7 +228,11 @@ function RunwayHub.Show(app: any)
 		Truncate = Enum.TextTruncate.AtEnd,
 		ZIndex = 233,
 	})
-	local themeLabel = Factory.Label(header, state.theme or "Style challenge", UDim2.new(1, -260, 0, 22), {
+	-- The art frames the theme rather than just naming it.
+	local function themeLine(current: { [string]: any }): string
+		return string.format("Tonight's theme · %s", current.theme or "Style challenge")
+	end
+	local themeLabel = Factory.Label(header, themeLine(state), UDim2.new(1, -260, 0, 22), {
 		Position = UDim2.fromOffset(80, 39),
 		Font = Theme.Fonts.Medium,
 		TextSize = 13,
@@ -1043,7 +1047,7 @@ function RunwayHub.Show(app: any)
 		if not entryFor(state, selectedUserId) and selectedUserId ~= localPlayer.UserId then
 			selectedUserId = localPlayer.UserId
 		end
-		themeLabel.Text = state.theme or "Style challenge"
+		themeLabel.Text = themeLine(state)
 		render()
 	end
 

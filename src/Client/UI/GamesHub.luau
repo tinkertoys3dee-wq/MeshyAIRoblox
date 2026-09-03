@@ -1297,6 +1297,29 @@ function GamesHub.Show(app: any)
 					}
 				)
 			end
+		else
+			-- Same two rows the game tiles above draw, against the rank the
+			-- per-game fetches report in.
+			Factory.Label(button, "YOUR BEST RANK", UDim2.fromOffset(140, 14), {
+				Position = UDim2.fromOffset(16, tileHeight - (if roomy then 58 else 40)),
+				Font = Theme.Fonts.Bold,
+				TextSize = 9,
+				Color = Colors.TextMuted,
+				ZIndex = 216,
+			})
+			bestRankLabel = Factory.Label(
+				button,
+				if bestRank then string.format("#%d", bestRank) else "—",
+				UDim2.fromOffset(140, 28),
+				{
+					Position = UDim2.fromOffset(16, tileHeight - (if roomy then 44 else 28)),
+					Font = Theme.Fonts.Black,
+					TextSize = if roomy then 24 else 18,
+					Color = color,
+					Truncate = Enum.TextTruncate.AtEnd,
+					ZIndex = 216,
+				}
+			)
 		end
 
 		app.sounds:Bind(button)

@@ -219,6 +219,22 @@ local ACCESSORY_LABELS = {
 	WaistAccessory = "Waist",
 }
 
+-- Avatar Lab's category chips read off the table above, which is a
+-- dictionary: iterating it directly gives Luau's hash order, so the row came
+-- out shuffled differently on every render -- and, once each chip took a gem
+-- from CHIP_GEMS by position, those colours changed under the player's cursor
+-- too. This is the concept art's own order, and it is fixed.
+local ACCESSORY_ORDER = {
+	"Hat",
+	"HairAccessory",
+	"FaceAccessory",
+	"BackAccessory",
+	"FrontAccessory",
+	"NeckAccessory",
+	"ShoulderAccessory",
+	"WaistAccessory",
+}
+
 local CATALOG_SORT_TYPES = {
 	Relevance = Enum.CatalogSortType.Relevance,
 	Bestselling = Enum.CatalogSortType.Bestselling,
@@ -2202,6 +2218,14 @@ end
 function App:_BindButton(button: GuiButton)
 	self.sounds:Bind(button)
 	button.Selectable = true
+	-- A decal-backed button's own background is fully transparent (see
+	-- Factory's attachDecal) and its art is the concept art's hexagon, so
+	-- fading that background back in on hover would light up a rounded
+	-- rectangle poking out past the artwork's angled ends. Those buttons
+	-- keep the hover sound and the selection outline instead.
+	if button:FindFirstChild("Decal") then
+		return
+	end
 	local original = button.BackgroundTransparency
 	button.MouseEnter:Connect(function()
 		self:_Animate(button, TweenInfo.new(0.14), { BackgroundTransparency = math.min(0.18, original + 0.06) })
@@ -3532,10 +3556,10 @@ function App:_RenderCreate()
 	self:_PageHeader(
 		if showAllMethods
 			then "Create something impossible"
-			else if self.compact then "Make an item" else "Make your own Roblox item",
+			else if self.compact then "Describe it." else "Describe it. Wear it.",
 		if showAllMethods
 			then "Three paths, precise art direction, one Roblox-ready accessory. Every input is moderated."
-			else "Pick an idea or type one. Roblox shows the price and asks before you buy.",
+			else "Type what you want below and Forge builds a real, wearable Roblox accessory from it. Every input is moderated.",
 		true
 	)
 	local howToPlay = Factory.ImageButton(
@@ -3877,11 +3901,11 @@ function App:_RenderCreate()
 	local allMethods = {
 		{
 			id = "TEXT_TO_3D",
-			title = if showAllMethods then "Direct Forge" else "Your custom item",
+			title = "Direct Forge",
 			kicker = if showAllMethods then "FASTEST VALUE" else "AI CREATION",
 			body = if showAllMethods
 				then "Text → Smart Topology 3D. Lower cost and ideal for bold, simple silhouettes."
-				else "Forge turns your words into one 3D item you can fit and wear in this game.",
+				else "Describe anything you can imagine and Forge builds a real, wearable Roblox accessory — the fastest way to create.",
 			price = self.state.prices.DirectGeneration,
 			color = Colors.Cyan,
 		},
@@ -3989,26 +4013,27 @@ function App:_RenderCreate()
 			})
 			Factory.Corner(ribbon, 4)
 		end
-		-- The START HERE ribbon above claims the top-left corner (out to
-		-- roughly x=92 once its rotation is accounted for) on this one
-		-- card -- shift the kicker pill clear of it there instead of
-		-- overlapping.
-		local kickerX = if method.id == "TEXT_TO_3D" and not showAllMethods then 100 else 16
-		Factory.ImagePill(card, method.kicker, method.color, 104).Position = UDim2.fromOffset(kickerX, 14)
 		-- The Direct Forge card gives its right side over to the crystal
 		-- and the price cartouche (see below): the copy stops short of
 		-- that band instead of running underneath the art, which is what
 		-- left the crystal sitting in the middle of a sentence.
 		local heroCard = method.id == "TEXT_TO_3D" and not showAllMethods
+		-- The concept art gives this one card no kicker pill: the START
+		-- HERE ribbon already labels it, and a second tag beside the ribbon
+		-- is one badge too many on the first thing a new player reads.
+		-- Every other method card keeps its kicker.
+		if not heroCard then
+			Factory.ImagePill(card, method.kicker, method.color, 104).Position = UDim2.fromOffset(16, 14)
+		end
 		local copyInset = if heroCard then -176 else -32
 		Factory.Label(card, method.title, UDim2.new(1, if heroCard then copyInset else -150, 0, 31), {
-			Position = UDim2.fromOffset(16, 46),
+			Position = UDim2.fromOffset(16, if heroCard then 52 else 46),
 			Font = Theme.Fonts.Black,
-			TextSize = if self.compact then 20 else 18,
+			TextSize = if heroCard then 26 elseif self.compact then 20 else 18,
 			Truncate = Enum.TextTruncate.AtEnd,
 		})
 		Factory.Label(card, method.body, UDim2.new(1, copyInset, 0, 52), {
-			Position = UDim2.fromOffset(16, 80),
+			Position = UDim2.fromOffset(16, if heroCard then 90 else 80),
 			Color = Colors.TextMuted,
 			TextSize = 12,
 			Wrapped = true,
@@ -4037,7 +4062,7 @@ function App:_RenderCreate()
 		Factory.Label(
 			cartouche or card,
 			priceText,
-			if cartouche then UDim2.fromScale(1, 1) else UDim2.fromOffset(106, 35),
+			if cartouche then UDim2.new(1, 0, 1, -14) else UDim2.fromOffset(106, 35),
 			{
 				AnchorPoint = if cartouche then Vector2.new(0, 0) else Vector2.new(1, 0),
 				Position = if cartouche then UDim2.fromScale(0, 0) else UDim2.new(1, -15, 0, 48),
@@ -4049,6 +4074,19 @@ function App:_RenderCreate()
 				ZIndex = 2,
 			}
 		)
+		if cartouche then
+			-- The art spells out what the price buys on a second line inside
+			-- the cartouche, under the figure itself.
+			Factory.Label(cartouche, "ONE ACCESSORY", UDim2.new(1, 0, 0, 14), {
+				AnchorPoint = Vector2.new(0, 1),
+				Position = UDim2.new(0, 0, 1, -12),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Bold,
+				TextSize = 9,
+				Color = Colors.Gold,
+				ZIndex = 2,
+			})
+		end
 		if heroCard then
 			-- Stacked directly above the price cartouche and centred on it:
 			-- the cartouche is 124 wide ending 24 from the card's right
@@ -4092,7 +4130,7 @@ function App:_RenderCreate()
 	else
 		local expand = Factory.ImageButton(
 			methodRow,
-			"Switch to Advanced Mode →",
+			"Switch to Advanced Mode ✦",
 			UDim2.new(1, 0, 0, 34),
 			UDim2.fromOffset(0, 168)
 		)
@@ -4214,7 +4252,7 @@ function App:_RenderCreate()
 		-- first-timer's first visit (isAvatar's "styling notes" field is a
 		-- different kind of prompt, so it's excluded here regardless).
 		if not isAvatar and not showAllMethods then
-			Factory.Label(promptCard, "NEED AN IDEA? TRY ONE:", UDim2.fromOffset(158, 16), {
+			Factory.Label(promptCard, "NEED AN IDEA?  TAP ONE", UDim2.fromOffset(158, 16), {
 				Position = UDim2.fromOffset(16, cursorY),
 				Font = Theme.Fonts.Bold,
 				TextSize = 10,
@@ -4321,7 +4359,7 @@ function App:_RenderCreate()
 			Factory.Label(
 				tipRow,
 				`A colour + a material + a shape works best — "gold crown made of lava".`,
-				UDim2.new(1, if ember then -56 else -24, 0, 44),
+				UDim2.new(1, if ember then -190 else -158, 0, 44),
 				{
 					Position = UDim2.fromOffset(if ember then 46 else 12, 0),
 					Color = Colors.TextMuted,
@@ -4330,6 +4368,16 @@ function App:_RenderCreate()
 					AlignY = Enum.TextYAlignment.Center,
 				}
 			)
+			-- The art closes this row by naming what Simple Mode is quietly
+			-- deciding for you -- the style preset and fit region you never
+			-- get asked about here -- rather than leaving those silent.
+			Factory.Label(tipRow, "Default style & fit", UDim2.fromOffset(120, 44), {
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -12, 0, 0),
+				AlignX = Enum.TextXAlignment.Right,
+				Color = Colors.TextMuted,
+				TextSize = 11,
+			})
 			cursorY += 52
 		end
 
@@ -4671,7 +4719,7 @@ function App:_RenderCreate()
 			elseif
 				self.state.policy.commerceAllowed ~= true and not isUpload
 			then "Purchases unavailable on this account"
-			elseif not showAllMethods then string.format("Make My Accessory · %s", priceText)
+			elseif not showAllMethods then string.format("Make It!  ·  %s", priceText)
 			elseif self.selectedMethod == "TEXT_TO_3D" then string.format("Forge 3D · %s", priceText)
 			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · %s", priceText)
 			elseif self.selectedMethod == "AVATAR_TO_3D" then string.format(
@@ -7014,7 +7062,7 @@ function App:_RenderStudio()
 		local noteY = actionsY + 60
 		Factory.Label(
 			body,
-			"Equip wears it right now. Publish sends it to Roblox to become a real wearable -- this can open Roblox's own purchase prompt.",
+			"Equip wears it now · Publish sends it to Roblox as a real wearable — which can open Roblox's own purchase prompt.",
 			UDim2.new(1, -32, 0, 34),
 			{
 				Position = UDim2.fromOffset(16, noteY),
@@ -7287,7 +7335,7 @@ function App:_RenderDiscover()
 		"Discover",
 		if showAllMethods
 			then "Try on every public design for free. Like, favorite, and support creators through verified Plus transfers."
-			else "Try on things other players made. Tap Try on, then Like the ones you love.",
+			else "Try on things other players made. Tap Try on, then like the ones you love.",
 		true
 	)
 	if not self.state.policy.contentSharingAllowed then
@@ -8003,9 +8051,8 @@ function App:_RenderAvatarLab()
 		Parent = controls,
 	})
 	Factory.List(chips, Enum.FillDirection.Horizontal, 7)
-	local chipIndex = 0
-	for typeName, label in ACCESSORY_LABELS do
-		chipIndex += 1
+	for chipIndex, typeName in ACCESSORY_ORDER do
+		local label = ACCESSORY_LABELS[typeName]
 		local chip = Factory.ImageButton(
 			chips,
 			label,
@@ -8924,7 +8971,7 @@ function App:_RenderAvatarGraphics()
 	end
 
 	if not isTextMode then
-		Factory.Label(composer, "1  CHOOSE YOUR AVATAR VIEW", UDim2.new(1, -32, 0, 22), {
+		Factory.Label(composer, "1 · CHOOSE YOUR AVATAR VIEW", UDim2.new(1, -32, 0, 22), {
 			Position = UDim2.fromOffset(16, cursorY),
 			Font = Theme.Fonts.Bold,
 			TextSize = 12,
@@ -8957,16 +9004,31 @@ function App:_RenderAvatarGraphics()
 		Factory.Corner(avatarPreview, 12)
 		Factory.Label(
 			composer,
-			"Fetched automatically from your current Roblox avatar -- nothing to upload",
-			UDim2.new(1, -32 - 76, 0, 64),
+			"Fetched automatically from your current Roblox avatar — nothing to upload.",
+			UDim2.new(1, -32 - 76, 0, if showAllMethods then 64 else 42),
 			{
 				Position = UDim2.fromOffset(16 + 64 + 12, cursorY),
 				Color = Colors.TextMuted,
 				TextSize = 11,
 				Wrapped = true,
-				AlignY = Enum.TextYAlignment.Center,
+				AlignY = if showAllMethods then Enum.TextYAlignment.Center else Enum.TextYAlignment.Top,
 			}
 		)
+		if not showAllMethods then
+			-- The art names what Simple Mode is deciding for you here, rather
+			-- than leaving the two controls it hides unexplained.
+			Factory.Label(
+				composer,
+				"Style and quality use their defaults in Simple Mode.",
+				UDim2.new(1, -32 - 76, 0, 18),
+				{
+					Position = UDim2.fromOffset(16 + 64 + 12, cursorY + 44),
+					Color = Colors.TextMuted,
+					TextSize = 10,
+					Truncate = Enum.TextTruncate.AtEnd,
+				}
+			)
+		end
 		cursorY += 74
 	end
 
@@ -8987,7 +9049,7 @@ function App:_RenderAvatarGraphics()
 		end)
 		cursorY += 32
 
-		local styleStepLabel = if isTextMode then "1  CHOOSE A VISUAL STYLE" else "2  CHOOSE A VISUAL STYLE"
+		local styleStepLabel = if isTextMode then "1 · CHOOSE A VISUAL STYLE" else "2 · CHOOSE A VISUAL STYLE"
 		Factory.Label(composer, styleStepLabel, UDim2.new(1, -32, 0, 22), {
 			Position = UDim2.fromOffset(16, cursorY),
 			Font = Theme.Fonts.Bold,
@@ -9001,7 +9063,7 @@ function App:_RenderAvatarGraphics()
 		end)
 		cursorY += 46
 
-		local qualityStepLabel = if isTextMode then "2  CHOOSE IMAGE QUALITY" else "3  CHOOSE IMAGE QUALITY"
+		local qualityStepLabel = if isTextMode then "2 · CHOOSE IMAGE QUALITY" else "3 · CHOOSE IMAGE QUALITY"
 		Factory.Label(composer, qualityStepLabel, UDim2.new(1, -32, 0, 22), {
 			Position = UDim2.fromOffset(16, cursorY),
 			Font = Theme.Fonts.Bold,
@@ -9045,12 +9107,12 @@ function App:_RenderAvatarGraphics()
 	local promptStepLabel
 	if isTextMode then
 		promptStepLabel = if showAllMethods
-			then "3  DESCRIBE YOUR IMAGE (REQUIRED)"
-			else "1  DESCRIBE YOUR IMAGE (REQUIRED)"
+			then "3 · DESCRIBE YOUR IMAGE  (REQUIRED)"
+			else "1 · DESCRIBE YOUR IMAGE  (REQUIRED)"
 	else
 		promptStepLabel = if showAllMethods
-			then "4  DESCRIBE A SCENE OR THEME (OPTIONAL)"
-			else "2  DESCRIBE A SCENE OR THEME (OPTIONAL)"
+			then "4 · DESCRIBE A SCENE OR THEME  (OPTIONAL)"
+			else "2 · DESCRIBE A SCENE OR THEME  (OPTIONAL)"
 	end
 	Factory.Label(composer, promptStepLabel, UDim2.new(1, -32, 0, 22), {
 		Position = UDim2.fromOffset(16, cursorY),
@@ -9157,8 +9219,9 @@ function App:_RenderAvatarGraphics()
 	local priceText = if payWithTokens
 		then string.format("%d ad tokens", tokenPrice(price, graphicProductKey))
 		else string.format("R$ %d", price)
-	local actionText =
-		string.format(if isTextMode then "Create image · %s" else "Create avatar graphic · %s", priceText)
+	local actionText = if showAllMethods
+		then string.format(if isTextMode then "Create image · %s" else "Create avatar graphic · %s", priceText)
+		else string.format("Create · %s", priceText)
 	local generate = Factory.ImageButton(
 		composer,
 		actionText,
@@ -9653,7 +9716,7 @@ end
 function App:_RenderSettings()
 	self:_PageHeader(
 		"Settings",
-		"Simple/Advanced Create mode, accessibility, audio, what's equipped right now, and your achievements.",
+		"Create mode, accessibility, audio, what is equipped right now, and your achievements.",
 		true
 	)
 	local page = Factory.New("ScrollingFrame", {
