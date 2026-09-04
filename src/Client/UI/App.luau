@@ -862,15 +862,21 @@ function App:_BuildChrome()
 			AlignX = Enum.TextXAlignment.Center,
 		})
 	end
-	Factory.Label(topbar, Config.Brand.Name, UDim2.fromOffset(170, 29), {
-		Position = UDim2.fromOffset(76, 14),
-		Font = Theme.Fonts.Black,
-		TextSize = 19,
+	-- The art letters the wordmark about a third of the topbar's height, over
+	-- a small letterspaced strapline -- so the mark leads and the line under
+	-- it recedes, rather than the two sitting at nearly the same weight.
+	Factory.Label(topbar, Config.Brand.Name, UDim2.fromOffset(200, 30), {
+		Position = UDim2.fromOffset(76, 12),
+		Font = Theme.Fonts.Display,
+		TextSize = 23,
+		Truncate = Enum.TextTruncate.AtEnd,
 	})
-	Factory.Label(topbar, Config.Brand.Tagline, UDim2.fromOffset(250, 22), {
-		Position = UDim2.fromOffset(76, 41),
+	Factory.Label(topbar, Config.Brand.Tagline, UDim2.fromOffset(250, 20), {
+		Position = UDim2.fromOffset(77, 43),
 		Color = Colors.TextMuted,
-		TextSize = 12,
+		Font = Theme.Fonts.Bold,
+		TextSize = 11,
+		Truncate = Enum.TextTruncate.AtEnd,
 	})
 	local statusArea = Factory.New("Frame", {
 		Name = "StatusArea",
@@ -1044,16 +1050,25 @@ function App:_BuildChrome()
 	})
 	Factory.Corner(badge, 32)
 	Factory.Stroke(badge, Colors.Gold, 0.1, 2.4)
-	self.creatorLevelLabel = Factory.Label(badge, "1", UDim2.fromScale(1, 1), {
+	self.creatorLevelLabel = Factory.Label(badge, "1", UDim2.new(1, 0, 0, 30), {
+		Position = UDim2.fromOffset(0, 12),
 		Font = Theme.Fonts.Black,
 		TextSize = 24,
 		Color = Colors.Gold,
 		AlignX = Enum.TextXAlignment.Center,
-		AlignY = Enum.TextYAlignment.Center,
+	})
+	-- The art seats the word under the figure inside the crest, in the sans
+	-- it keeps for a caption beside a value.
+	Factory.Label(badge, "LEVEL", UDim2.new(1, 0, 0, 12), {
+		Position = UDim2.fromOffset(0, 40),
+		Font = Theme.Fonts.Bold,
+		TextSize = 8,
+		Color = Colors.TextMuted,
+		AlignX = Enum.TextXAlignment.Center,
 	})
 	Factory.Label(rankCard, "CREATOR RANK", UDim2.new(1, 0, 0, 14), {
 		Position = UDim2.fromOffset(0, 92),
-		Font = Theme.Fonts.Bold,
+		Font = Theme.Fonts.Display,
 		TextSize = 10,
 		Color = Colors.TextMuted,
 		AlignX = Enum.TextXAlignment.Center,
@@ -1074,7 +1089,7 @@ function App:_BuildChrome()
 	local modeCard = Factory.ImageCard(navExtras, UDim2.new(1, 0, 0, 104), nil, "ModeToggle")
 	Factory.Label(modeCard, "MODE", UDim2.new(1, -20, 0, 14), {
 		Position = UDim2.fromOffset(0, 10),
-		Font = Theme.Fonts.Bold,
+		Font = Theme.Fonts.Display,
 		TextSize = 10,
 		Color = Colors.TextMuted,
 		AlignX = Enum.TextXAlignment.Center,

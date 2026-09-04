@@ -3,9 +3,12 @@
 -- Public, non-secret configuration. API keys and the Roblox-to-backend share
 -- secret belong in Railway variables / Creator Hub secrets, never here.
 return table.freeze({
+	-- The topbar wordmark and its strapline, and the only place either
+	-- string is used. Both are what the concept art letters across every one
+	-- of its eight screens.
 	Brand = {
-		Name = "FORGE UGC",
-		Tagline = "Imagine it. Fit it. Wear it.",
+		Name = "FORGE",
+		Tagline = "MAKE ANYTHING · WEAR IT",
 	},
 
 	-- Bump this only when the first-session explanation changes materially.
