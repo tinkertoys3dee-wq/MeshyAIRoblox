@@ -42,6 +42,10 @@ local EMBER_COUNT = 10
 -- chip's position in its row.
 local CHIP_GEMS = { "GemCyan", "GemRose", "GemGold", "GemMint", "GemAmethyst", "GemRuby" }
 
+-- The art gives each earned achievement crest a gem star in a different
+-- colour, walking across the grid rather than repeating one.
+local ACHIEVEMENT_GEMS = { Colors.Gold, Colors.Cyan, Colors.Mint, Colors.Violet, Colors.Rose }
+
 -- Where a chip row already has one accent colour of its own (Avatar
 -- Graphics' step rows), the art studs every chip in that row with a gem of
 -- the matching colour instead of walking the palette.
@@ -10289,29 +10293,49 @@ function App:_RenderSettings()
 			AnchorPoint = Vector2.new(0.5, 0),
 			Position = UDim2.new(0.5, 0, 0, 2),
 			Size = UDim2.fromOffset(54, 54),
-			BackgroundColor3 = if unlocked then Colors.Ink else Colors.Panel,
-			BackgroundTransparency = if unlocked then 0 else 0.35,
+			BackgroundColor3 = if unlocked then Colors.Ink else Color3.fromRGB(27, 17, 56),
+			BackgroundTransparency = if unlocked then 0 else 0.2,
 			BorderSizePixel = 0,
 			Parent = tile,
 		})
 		Factory.Corner(medallion, 27)
-		Factory.Stroke(medallion, if unlocked then Colors.Gold else Colors.Line, if unlocked then 0.1 else 0.55, 2)
 		if unlocked then
+			-- An earned crest: solid gold rim, a hairline echoing it just
+			-- inside, and the gem star in its own colour -- the art walks
+			-- that colour across the row rather than repeating one.
+			Factory.Stroke(medallion, Colors.Gold, 0.1, 2)
 			Factory.Gradient(medallion, { Color3.fromRGB(58, 40, 96), Colors.Ink }, 90)
+			local hairline = Factory.New("Frame", {
+				Name = "InnerRing",
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromScale(0.78, 0.78),
+				BackgroundTransparency = 1,
+				Parent = medallion,
+			})
+			Factory.Corner(hairline, 22)
+			Factory.Stroke(hairline, Color3.fromRGB(255, 217, 138), 0.55, 1)
+		else
+			-- Locked: the art rims these in a dashed muted violet rather than
+			-- a solid line, which is what separates them at a glance.
+			Factory.DashedRing(medallion, 18, 5, Color3.fromRGB(142, 118, 184), 0.15, 2.4)
 		end
 		Factory.Label(medallion, if unlocked then "✦" else "🔒", UDim2.fromScale(1, 1), {
 			AlignX = Enum.TextXAlignment.Center,
 			AlignY = Enum.TextYAlignment.Center,
 			Font = Theme.Fonts.Black,
 			TextSize = if unlocked then 24 else 18,
-			Color = if unlocked then Colors.Gold else Colors.TextMuted,
+			Color = if unlocked
+				then ACHIEVEMENT_GEMS[(index - 1) % #ACHIEVEMENT_GEMS + 1]
+				else Color3.fromRGB(142, 118, 184),
+			ZIndex = 2,
 		})
 		Factory.Label(tile, definition.name, UDim2.new(1, 0, 0, 18), {
 			Position = UDim2.fromOffset(0, 60),
 			AlignX = Enum.TextXAlignment.Center,
 			Font = Theme.Fonts.Bold,
 			TextSize = 12,
-			Color = if unlocked then Colors.Text else Colors.TextMuted,
+			Color = if unlocked then Color3.fromRGB(255, 233, 188) else Color3.fromRGB(142, 127, 180),
 			Truncate = Enum.TextTruncate.AtEnd,
 		})
 		Factory.Label(

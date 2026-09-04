@@ -322,6 +322,37 @@ function Factory.Pill(parent: Instance, text: string, color: Color3?, width: num
 	return pill
 end
 
+-- Roblox has no dashed UIStroke, and the art dashes a ring in two places --
+-- the backdrop's arcane circles and a locked achievement's rim. Draws the
+-- dashes around the inside edge of whatever it is parented to, in scale, so
+-- the caller does not have to know the ring's pixel size.
+function Factory.DashedRing(
+	parent: Instance,
+	dashes: number,
+	dashLength: number,
+	color: Color3,
+	transparency: number,
+	thickness: number
+)
+	for index = 1, dashes do
+		local degrees = (index - 1) / dashes * 360
+		local radians = math.rad(degrees)
+		Factory.New("Frame", {
+			Name = string.format("Dash%d", index),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			-- Half of 1.0 in scale is the parent's own edge.
+			Position = UDim2.fromScale(0.5 + math.cos(radians) / 2, 0.5 + math.sin(radians) / 2),
+			Size = UDim2.fromOffset(dashLength, thickness),
+			-- Tangent, so each dash lies along the ring.
+			Rotation = degrees + 90,
+			BackgroundColor3 = color,
+			BackgroundTransparency = transparency,
+			BorderSizePixel = 0,
+			Parent = parent,
+		})
+	end
+end
+
 -- The backdrop every one of the eight mockups is drawn over: a set of
 -- concentric arcane rings with tick marks at the compass points, sitting
 -- far behind the content at low opacity. It is the single thing that makes
