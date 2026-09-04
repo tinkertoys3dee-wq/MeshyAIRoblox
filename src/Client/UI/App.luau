@@ -920,26 +920,19 @@ function App:_BuildChrome()
 		self:_SetStudioOpen(false)
 	end)
 
-	local nav = Factory.New("Frame", {
-		Name = "Navigation",
-		Position = UDim2.fromOffset(0, 78),
-		Size = UDim2.new(0.145, 0, 1, -78),
-		BackgroundColor3 = Colors.Ink,
-		BackgroundTransparency = 0.2,
-		BorderSizePixel = 0,
-		Parent = shell,
-	})
+	-- The art frames the sidebar as a full panel -- inset from the shell's
+	-- edge, rounded, gold-rimmed, corner ornaments and all -- not as a flat
+	-- rail divided from the content by a hairline. Using ImageCard means it
+	-- picks up exactly the same frame every content panel has, including the
+	-- decal once PanelFrame is live. Its own border replaces the divider.
+	-- The inset (10 left, 4 short of the content column) is kept in step by
+	-- _ApplyResponsiveLayout, which rewrites this rect on every resize.
+	local nav = Factory.ImageCard(shell, UDim2.new(0.145, -14, 1, -96), UDim2.fromOffset(10, 86), "Navigation")
 	self.nav = nav
-	Factory.New("Frame", {
-		Size = UDim2.new(0, 1, 1, 0),
-		Position = UDim2.new(1, -1, 0, 0),
-		BackgroundColor3 = Colors.Line,
-		BackgroundTransparency = 0.5,
-		BorderSizePixel = 0,
-		Parent = nav,
-	})
 	local navStack = Factory.New("Frame", {
-		Position = UDim2.fromOffset(12, 18),
+		-- 26, not 18: the panel's own corner ornaments reach into the top of
+		-- the frame, and the first nav row has to start below them.
+		Position = UDim2.fromOffset(12, 26),
 		Size = UDim2.new(1, -24, 0, 330),
 		BackgroundTransparency = 1,
 		Parent = nav,
@@ -953,7 +946,9 @@ function App:_BuildChrome()
 	local navIndicator = Factory.New("Frame", {
 		Name = "ActiveIndicator",
 		Size = UDim2.fromOffset(4, 48),
-		Position = UDim2.fromOffset(0, 18),
+		-- Just inside the panel's gold rim now that the rail has one, rather
+		-- than flush at x=0 where it would sit on top of that border.
+		Position = UDim2.fromOffset(3, 26),
 		BackgroundColor3 = Colors.Cyan,
 		BorderSizePixel = 0,
 		ZIndex = 3,
@@ -980,6 +975,9 @@ function App:_BuildChrome()
 		local icon = Factory.Icon(button, iconKeys[index], UDim2.fromOffset(20, 20), UDim2.new(0, 11, 0.5, -10))
 		if icon then
 			icon.ZIndex = 2
+			-- One stable name, so _ApplyResponsiveLayout can find it without
+			-- knowing which of the six asset keys this row happens to use.
+			icon.Name = "NavIcon"
 			-- The art seats every nav icon in its own dark medallion, ringed
 			-- in gold -- brighter and a touch heavier on the active row.
 			-- Built only alongside a real icon, since an empty ring around
@@ -1032,8 +1030,10 @@ function App:_BuildChrome()
 	-- this scrolls instead of silently overlapping or clipping.
 	local navExtras = Factory.New("ScrollingFrame", {
 		Name = "NavExtras",
-		Position = UDim2.fromOffset(0, 405),
-		Size = UDim2.new(1, 0, 1, -405),
+		-- Inset inside the panel's rim, and starting below navStack's own
+		-- 26 + 387 -- both of which _ApplyResponsiveLayout keeps in step.
+		Position = UDim2.fromOffset(10, 413),
+		Size = UDim2.new(1, -20, 1, -425),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 3,
@@ -1786,7 +1786,10 @@ function App:_ApplyResponsiveLayout()
 	self.compact = compact
 	self.gridColumns = gridColumns
 	local navScale = if compact then 0.16 else 0.145
-	self.nav.Size = UDim2.new(navScale, 0, 1, -78)
+	-- Matches _BuildChrome's inset panel: 10 in from the shell's left edge,
+	-- stopping 4 short of where the content column starts.
+	self.nav.Position = UDim2.fromOffset(10, 86)
+	self.nav.Size = UDim2.new(navScale, -14, 1, -96)
 	self.content.Position = UDim2.new(navScale, 0, 0, 78)
 	self.content.Size = UDim2.new(1 - navScale, 0, 1, -78)
 	-- AmbientBackground has to track Content's rect exactly: it's a sibling
@@ -1796,7 +1799,7 @@ function App:_ApplyResponsiveLayout()
 		self.backgroundLayer.Position = self.content.Position
 		self.backgroundLayer.Size = self.content.Size
 	end
-	self.navStack.Position = UDim2.fromOffset(if compact then 8 else 12, 18)
+	self.navStack.Position = UDim2.fromOffset(if compact then 8 else 12, 26)
 	self.navStack.Size = UDim2.new(1, if compact then -16 else -24, 0, 387)
 	for page, button in self.navButtons do
 		local symbol = if page == "Create"
@@ -1816,6 +1819,19 @@ function App:_ApplyResponsiveLayout()
 			elseif hasIcon then "      " .. label
 			else symbol .. "   " .. label
 		button.TextXAlignment = if compact then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
+		-- Compact rows are icon-only (the label above goes empty), so the
+		-- medallion and its icon move to the middle of the rail rather than
+		-- sitting against the left edge where a label used to follow them.
+		local medallion = self.navMedallions[page]
+		if medallion then
+			medallion.AnchorPoint = if compact then Vector2.new(0.5, 0.5) else Vector2.new(0, 0.5)
+			medallion.Position = if compact then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 6, 0.5, 0)
+		end
+		local navIcon = button:FindFirstChild("NavIcon")
+		if navIcon and navIcon:IsA("ImageLabel") then
+			navIcon.AnchorPoint = if compact then Vector2.new(0.5, 0.5) else Vector2.zero
+			navIcon.Position = if compact then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 11, 0.5, -10)
+		end
 	end
 	self:_UpdateSoundButton()
 	-- The nav rail's own narrow width in compact mode (icon-only rows,
@@ -3456,7 +3472,7 @@ function App:_HighlightNavigation()
 			-- buttons, 9px gaps) rather than read off AbsolutePosition,
 			-- which isn't guaranteed to already reflect a UIListLayout pass
 			-- on the very frame a button was created.
-			local targetY = 18 + (button.LayoutOrder - 1) * 57
+			local targetY = 26 + (button.LayoutOrder - 1) * 57
 			self:_Animate(
 				self.navIndicator,
 				TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
