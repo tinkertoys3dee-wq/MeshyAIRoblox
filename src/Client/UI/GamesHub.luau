@@ -392,9 +392,20 @@ function GamesHub.Show(app: any)
 			ZIndex = 213,
 		}
 	)
-	-- The single centred flourish the art hangs between a hub's header and
-	-- its content. Shown only over the tile picker, like the banner above
-	-- it -- a game or the standings list gets that row back.
+	-- The art rules a gold hairline the full width under the header and
+	-- hangs the flourish on it, rather than floating the ornament alone.
+	-- Both show only over the tile picker, like the banner above them -- a
+	-- game or the standings list gets that row back.
+	local headerRule = Factory.New("Frame", {
+		Name = "HeaderRule",
+		Position = UDim2.fromOffset(16, 113),
+		Size = UDim2.new(1, -32, 0, 1),
+		BackgroundColor3 = Colors.Gold,
+		BackgroundTransparency = 0.7,
+		BorderSizePixel = 0,
+		ZIndex = 212,
+		Parent = modal,
+	})
 	local headerFlourish =
 		Factory.Icon(modal, "FlourishDivider", UDim2.fromOffset(110, 16), UDim2.new(0.5, -55, 0, 106))
 	if headerFlourish then
@@ -551,6 +562,7 @@ function GamesHub.Show(app: any)
 			-- Only relevant while picking what to play; hiding it elsewhere
 			-- gives gameView/leaderboardView the extra row they're sized for.
 			rewardBanner.Visible = true
+			headerRule.Visible = true
 			if headerFlourish then
 				headerFlourish.Visible = true
 			end
@@ -566,6 +578,7 @@ function GamesHub.Show(app: any)
 			leaderboardView.Visible = false
 			gameView.Visible = true
 			rewardBanner.Visible = false
+			headerRule.Visible = false
 			if headerFlourish then
 				headerFlourish.Visible = false
 			end
@@ -1004,6 +1017,7 @@ function GamesHub.Show(app: any)
 			gameView.Visible = false
 			leaderboardView.Visible = true
 			rewardBanner.Visible = false
+			headerRule.Visible = false
 			if headerFlourish then
 				headerFlourish.Visible = false
 			end
@@ -1095,8 +1109,22 @@ function GamesHub.Show(app: any)
 			Parent = hubView,
 		})
 		Factory.Corner(button, 20)
-		Factory.Stroke(button, color, 0.3, 2)
+		-- Gold on the outside, the game's own colour on a hairline just
+		-- inside it -- that is the art's order, and the first pass had it the
+		-- other way round. Every tile shares the gold rim the rest of the
+		-- app's panels have; the colour is what tells them apart.
+		Factory.Stroke(button, Colors.Gold, 0.25, 2.2)
 		Factory.Gradient(button, { lighten(Colors.PanelRaised, 0.06), darken(Colors.Ink, 0.02) }, 130)
+		local innerRule = Factory.New("Frame", {
+			Name = "InnerRule",
+			Position = UDim2.fromOffset(7, 7),
+			Size = UDim2.new(1, -14, 1, -14),
+			BackgroundTransparency = 1,
+			ZIndex = 214,
+			Parent = button,
+		})
+		Factory.Corner(innerRule, 15)
+		Factory.Stroke(innerRule, color, 0.65, 1.2)
 		local gloss = Factory.New("Frame", {
 			Name = "Gloss",
 			Size = UDim2.new(1, -2, 0, math.min(44, tileHeight * 0.35)),
@@ -1165,23 +1193,33 @@ function GamesHub.Show(app: any)
 				:Play()
 		end)
 
+		-- The art's medallion is the game's own colour washed at 20% behind
+		-- its ring, with a white hairline inside -- not a dark disc with a
+		-- coloured edge. The wash is what makes each tile read as its game's
+		-- colour from across the grid.
 		local iconBadge = Factory.New("Frame", {
 			Name = "IconBadge",
 			Size = UDim2.fromOffset(badgeSize, badgeSize),
 			Position = UDim2.fromOffset(if roomy then 14 else 10, if roomy then 14 else 8),
-			BackgroundColor3 = Colors.Ink,
-			BackgroundTransparency = 0.3,
+			BackgroundColor3 = color,
+			BackgroundTransparency = 0.8,
 			BorderSizePixel = 0,
 			ZIndex = 215,
 			Parent = button,
 		})
-		-- Circular and ringed in the game's colour, as the art draws it.
 		Factory.Corner(iconBadge, badgeSize / 2)
-		Factory.Stroke(iconBadge, color, 0.1, 2)
-		Factory.Gradient(iconBadge, {
-			Color3.fromRGB(46, 30, 82),
-			Color3.fromRGB(24, 15, 48),
-		}, 120)
+		Factory.Stroke(iconBadge, color, 0.05, 2.4)
+		local badgeInner = Factory.New("Frame", {
+			Name = "BadgeInner",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromScale(0.74, 0.74),
+			BackgroundTransparency = 1,
+			ZIndex = 215,
+			Parent = iconBadge,
+		})
+		Factory.Corner(badgeInner, badgeSize / 2)
+		Factory.Stroke(badgeInner, Color3.new(1, 1, 1), 0.75, 1)
 		Factory.Label(iconBadge, icon, UDim2.fromScale(1, 1), {
 			TextSize = badgeIconSize,
 			AlignX = Enum.TextXAlignment.Center,
@@ -1214,28 +1252,24 @@ function GamesHub.Show(app: any)
 
 		-- The Leaderboard tile has no score of its own, so it takes the
 		-- art's other bottom row: OPEN in place of GO, and no best figure.
-		local play = Factory.New("TextButton", {
-			Name = "PlayPill",
-			Size = UDim2.fromOffset(if roomy then 82 else 70, if roomy then 36 else 32),
-			AnchorPoint = Vector2.new(1, 1),
-			Position = UDim2.new(1, -14, 1, if roomy then -14 else -12),
-			BackgroundColor3 = Colors.Gold,
-			BorderSizePixel = 0,
-			AutoButtonColor = false,
-			Text = if statsGameKey then "▶ GO" else "OPEN",
-			TextColor3 = Color3.fromRGB(58, 18, 6),
-			Font = Theme.Fonts.Black,
-			TextSize = if roomy then 13 else 12,
-			ZIndex = 216,
-			-- Purely an affordance: the whole tile is the real button, and a
-			-- second live TextButton on top of it would swallow the tap.
-			Active = false,
-			Selectable = false,
-			Parent = button,
-		})
-		Factory.Corner(play, if roomy then 10 else 9)
-		Factory.Gradient(play, { Color3.fromRGB(255, 196, 92), Colors.Gold }, 90)
-		Factory.Stroke(play, Colors.Gold, 0.2, 1.5)
+		-- Built through the shared button so it is the same molten hexagon
+		-- every other action in the app is, rather than a rounded pill drawn
+		-- here -- including once ButtonPrimary's decal is live. Purely an
+		-- affordance though: the whole tile is the real button, and a second
+		-- live TextButton on top of it would swallow the tap.
+		local play = Factory.ImageButton(
+			button,
+			if statsGameKey then "▶ GO" else "OPEN",
+			UDim2.fromOffset(if roomy then 82 else 70, if roomy then 36 else 32),
+			UDim2.new(1, if roomy then -96 else -84, 1, if roomy then -50 else -44),
+			"primary"
+		)
+		play.Name = "PlayPill"
+		play.TextColor3 = Color3.fromRGB(58, 18, 6)
+		play.TextSize = if roomy then 13 else 12
+		play.ZIndex = 216
+		play.Active = false
+		play.Selectable = false
 
 		-- A real personal-best figure, not a fabricated stat -- fetched
 		-- lazily after the tile is already visible so it never blocks the

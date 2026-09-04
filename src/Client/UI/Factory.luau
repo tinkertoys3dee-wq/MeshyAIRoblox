@@ -240,7 +240,14 @@ function Factory.Button(parent: Instance, text: string, size: UDim2, position: U
 	local background = Colors.PanelSoft
 	local foreground = Colors.Text
 	if kind == "primary" then
-		background = Colors.Violet
+		-- The art's primary action is molten -- a hot orange bar with dark
+		-- lettering -- not a violet one. That is what ButtonPrimary's decal
+		-- paints, so the code-drawn fallback has to agree with it or every
+		-- primary button changes colour the moment that id goes live. Dark
+		-- foreground for the same reason the nav's active row needs one:
+		-- near-white on orange loses most of its contrast.
+		background = Color3.fromRGB(244, 104, 42)
+		foreground = Color3.fromRGB(58, 18, 6)
 	elseif kind == "mint" then
 		background = Colors.Mint
 		foreground = Colors.Ink
@@ -270,9 +277,19 @@ function Factory.Button(parent: Instance, text: string, size: UDim2, position: U
 		Parent = parent,
 	})
 	Factory.Corner(button, Theme.SmallCorner)
-	Factory.Stroke(button, if kind == "primary" then Colors.Cyan else Colors.Line, 0.55)
+	Factory.Stroke(
+		button,
+		if kind == "primary" then Colors.Gold else Colors.Line,
+		if kind == "primary" then 0.2 else 0.55
+	)
 	if kind == "primary" then
-		Factory.Gradient(button, { Colors.Violet, Color3.fromRGB(91, 94, 255), Colors.Cyan }, 12)
+		-- The art's own molten stops, top to bottom.
+		Factory.Gradient(button, {
+			Color3.fromRGB(255, 222, 138),
+			Color3.fromRGB(255, 165, 60),
+			Color3.fromRGB(244, 104, 42),
+			Color3.fromRGB(193, 58, 30),
+		}, 90)
 	end
 	-- A soft top highlight and bottom shade -- alpha-blended white/black
 	-- overlays rather than a second UIGradient, so a button whose caller
