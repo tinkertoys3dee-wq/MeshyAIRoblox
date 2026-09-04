@@ -31,7 +31,7 @@ Game.Name = "Prism Merge"
 Game.Key = "PrismMerge"
 
 local PRISM_COLORS: { [number]: Color3 } = {
-	[2] = Color3.fromRGB(90, 111, 170),
+	[2] = Color3.fromRGB(104, 96, 178),
 	[4] = Color3.fromRGB(76, 148, 199),
 	[8] = Color3.fromRGB(52, 202, 220),
 	[16] = Color3.fromRGB(70, 229, 170),
@@ -175,7 +175,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	})
 	Factory.Corner(boardFrame, 17)
 	Factory.Stroke(boardFrame, Colors.Violet, 0.4, 2)
-	Factory.Gradient(boardFrame, { Color3.fromRGB(50, 48, 93), Color3.fromRGB(24, 29, 57) }, 125)
+	Factory.Gradient(boardFrame, { Color3.fromRGB(51, 32, 94), Color3.fromRGB(26, 16, 53) }, 125)
 
 	local function cellPosition(index: number): UDim2
 		local zeroIndex = index - 1

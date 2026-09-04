@@ -562,8 +562,8 @@ function GameShell.new(
 	Factory.Corner(standingsPanel, 14)
 	Factory.Stroke(standingsPanel, Colors.Gold, 0.4)
 	Factory.Gradient(standingsPanel, {
-		Color3.fromRGB(64, 72, 104),
-		Color3.fromRGB(46, 52, 80),
+		Color3.fromRGB(51, 32, 94),
+		Color3.fromRGB(26, 16, 53),
 	}, 115)
 	Factory.Label(standingsPanel, "🏆  THIS WEEK · TOP 10", UDim2.new(1, -20, 0, 22), {
 		Position = UDim2.fromOffset(10, 8),

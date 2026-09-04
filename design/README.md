@@ -4,15 +4,16 @@ Turns the gold-filigree concept art into real Roblox decals, wired into the
 live app with a safe fallback so nothing breaks before (or unless) you
 upload anything.
 
-## Two families of asset, 37 pieces total
+## Two families of asset, 40 pieces total
 
-**Shared chrome** (12 pieces): `Factory.Card`, `Factory.Button`, and
-`Factory.Pill` (in `src/Client/UI/Factory.luau`) are each defined once and
-reused across every one of the app's 8 screens. Retexturing those three
-shared primitives, plus the topbar logo and the 6 sidebar nav icons, reskins
-chrome everywhere at once — no per-page rewiring needed. Interactive pieces
-(the actual TextButton/TextBox/ScrollingFrame instances) stay real Roblox
-controls; these images only ever sit *behind* them.
+**Shared chrome** (15 pieces): `Factory.Card`, `Factory.Button`,
+`Factory.Pill` and `Factory.SectionBanner` (in
+`src/Client/UI/Factory.luau`) are each defined once and reused across every
+one of the app's 8 screens. Retexturing those four shared primitives, plus
+the topbar logo and curve, the Creator Rank ring fill, and the 6 sidebar
+nav icons, reskins chrome everywhere at once — no per-page rewiring needed.
+Interactive pieces (the actual TextButton/TextBox/ScrollingFrame instances)
+stay real Roblox controls; these images only ever sit *behind* them.
 
 **Individual illustrated items** (25 pieces): every hand-drawn glyph, hero
 illustration and decorative ornament from the concept SVGs, exported
@@ -21,13 +22,17 @@ katana, hat, butterfly, halo, horns, visor, backpack, avatar, picture,
 wand), the Direct Forge hero crystal, the ember mascot tip sprite, the
 price cartouche frame, the standalone corner ornament / flourish divider /
 rivet stud / sparkle star, and the 6 gem studs. These are decorative art,
-not shared chrome that Factory.luau reuses, so only the 5 that match real
-Create-page content — the idea-chip prompts (Dragon Wings, Crystal Crown,
-Neon Katana, Steampunk Hat, Fairy Wings) — are wired into App.luau so far.
-The rest export and upload the same way, ready to drop into any page's
-layout via `Factory.Icon` once there's a real spot for them; per-item card
-art elsewhere in the app renders actual generated content and can't use a
-fixed illustration.
+not shared chrome that Factory.luau reuses, so each one is placed by hand
+where a page's mockup actually shows it: the 5 item glyphs that match the
+Create-page idea chips (Dragon Wings, Crystal Crown, Neon Katana, Steampunk
+Hat, Fairy Wings), the crystal and price cartouche on Direct Forge, the
+ember mascot on its writing tip, the flourish beside every page title and
+either side of every mode-switch link, the rivets on the molten CTA, the
+sparkles on the prompt well, and a gem stud on each chip in a chip row.
+Anything still unplaced exports and uploads the same way, ready to drop in
+via `Factory.Icon` once there's a real spot for it; per-item card art
+elsewhere in the app renders actual generated content and can't use a fixed
+illustration.
 
 See `assets/manifest.json` for the full list of names, files, and intended
 use of every asset.
@@ -120,13 +125,13 @@ existed, and each asset can go live independently as it clears moderation.
 
 ## Extending the reskin further
 
-Right now the shared topbar logo + sidebar nav (in `App:_BuildChrome`) and
-the 5 Create-page idea chips (in `App:_RenderCreate`) call the image-backed
-variants. To reskin a specific page's own cards or buttons too, swap that
-call site from `Factory.Card(...)` / `Factory.Button(...)` to
-`Factory.ImageCard(...)` / `Factory.ImageButton(...)` — same arguments, same
-return type, zero behavior change until its asset id is set.
-`Factory.ImagePill` works the same way for `Factory.Pill`.
+Every one of the 8 screens already calls the image-backed variants for its
+own cards, buttons and pills. Anywhere new, swap the call site from
+`Factory.Card(...)` / `Factory.Button(...)` to `Factory.ImageCard(...)` /
+`Factory.ImageButton(...)` — same arguments, same return type, zero
+behavior change until its asset id is set. `Factory.ImagePill` works the
+same way for `Factory.Pill`, and `Factory.SectionBanner(card, "Title")`
+titles a panel with the notched tab the art straddles across its top edge.
 
 To drop in one of the individual illustrated items (say, `CrystalHero` on
 the Create page, or a `GemGold` stud next to a price), call

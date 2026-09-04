@@ -8,24 +8,36 @@ local UIAssets = require(ReplicatedStorage:WaitForChild("UIAssets"))
 
 local Factory = {}
 
--- design/manifest.json's sliceCenter for each 9-sliced decal, mirrored here
--- since Luau can't read that JSON file at runtime. Keep in sync if
--- design/export_ui_assets.py's PANEL_SLICE/BTN_SLICE/PILL_SLICE ever change.
+-- design/manifest.json's sliceCenter for each sliced decal, mirrored here
+-- since Luau can't read that JSON file at runtime.
 local SLICE_CENTER = {
 	PanelFrame = Rect.new(78, 78, 162, 162),
-	ButtonPrimary = Rect.new(30, 30, 90, 90),
-	ButtonDefault = Rect.new(30, 30, 90, 90),
-	ButtonDanger = Rect.new(30, 30, 90, 90),
-	PillFrame = Rect.new(22, 22, 58, 58),
+	-- Buttons, pills and the banner are all the concept art's notched
+	-- hexagon, so all four are 3-sliced rather than 9-sliced: the centre
+	-- band spans the source's full height, leaving only the flat middle to
+	-- stretch and the two angled end caps untouched. Keep in sync with
+	-- export_ui_assets.py's BTN_*/PILL_*/BANNER_* values.
+	ButtonPrimary = Rect.new(42, 0, 198, 120),
+	ButtonDefault = Rect.new(42, 0, 198, 120),
+	ButtonDanger = Rect.new(42, 0, 198, 120),
+	PillFrame = Rect.new(34, 0, 166, 100),
+	SectionBanner = Rect.new(48, 0, 192, 120),
 }
 
--- A 9-slice corner draws at its source size (78px for PanelFrame) unless
--- scaled, so the card frame's gold filigree reached ~40px into the card
--- and swallowed the left edge of every section title sitting at x=16.
--- Shrinking just the border regions tucks that scrollwork back into the
--- corner without touching the card's own size or its content offsets.
+-- A slice border draws at its source size unless scaled down. For the panel
+-- that mattered because its 78px gold filigree reached ~40px into the card
+-- and swallowed the left edge of every section title sitting at x=16. For
+-- the hexagons it matters because each is drawn well above the size it
+-- renders at, to keep its diagonals crisp: without this a 42px cap would
+-- eat a third of a short button, instead of landing on the art's own
+-- proportion of about 0.7 of the shape's half-height.
 local SLICE_SCALE = {
 	PanelFrame = 0.6,
+	ButtonPrimary = 0.35,
+	ButtonDefault = 0.35,
+	ButtonDanger = 0.35,
+	PillFrame = 0.28,
+	SectionBanner = 0.25,
 }
 
 function Factory.New(className: string, properties: { [string]: any }?, children: { Instance }?): any
@@ -45,6 +57,17 @@ function Factory.New(className: string, properties: { [string]: any }?, children
 		for _, child in children do
 			child.Parent = instance
 		end
+	end
+	-- Every caller asks for a font by Enum (Theme.Fonts.*), but the display
+	-- serif only exists at one weight there and the art sets it bold. Upgrade
+	-- it to the weighted FontFace centrally, so no call site has to know --
+	-- FontFace overrides Font, so this is the only place the two can differ.
+	if
+		Theme.DisplayFace
+		and (instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox"))
+		and (instance :: any).Font == Theme.Fonts.Display
+	then
+		(instance :: any).FontFace = Theme.DisplayFace
 	end
 	-- Vertical scrollbars draw inside their ScrollingFrame by default, which
 	-- lets cards and text sit underneath the thumb. Reserve that strip for
@@ -156,19 +179,35 @@ function Factory.Card(parent: Instance, size: UDim2, position: UDim2?, name: str
 	Factory.Stroke(card)
 	-- The gradient's own colors render the card's visible surface (a
 	-- UIGradient paints over BackgroundColor3), so the mid-tone target lives
-	-- here, not just in Colors.PanelRaised.
+	-- here, not just in Colors.PanelRaised. These are the art's panelGlass
+	-- stops, so a card with no decal yet reads as the same purple glass as
+	-- one carrying the PanelFrame image.
 	Factory.Gradient(card, {
-		Color3.fromRGB(64, 72, 104),
-		Color3.fromRGB(46, 52, 80),
+		Color3.fromRGB(51, 32, 94),
+		Color3.fromRGB(26, 16, 53),
 	}, 115)
+	-- The art's panelSheen: white falling from 0.13 to nothing down the top
+	-- of a panel, not a flat band that stops on a visible line. Sized in
+	-- scale because the art scales it with the panel too (roughly a third of
+	-- the tall sidebar, a fifth of a short content card), and carried by the
+	-- gradient rather than BackgroundTransparency so the falloff is real.
 	local gloss = Factory.New("Frame", {
 		Name = "Gloss",
-		Size = UDim2.new(1, -2, 0, 46),
+		Size = UDim2.new(1, -2, 0.26, 0),
 		Position = UDim2.fromOffset(1, 1),
 		BackgroundColor3 = Color3.new(1, 1, 1),
-		BackgroundTransparency = 0.94,
 		BorderSizePixel = 0,
 		Parent = card,
+	})
+	Factory.New("UISizeConstraint", { MaxSize = Vector2.new(math.huge, 120), Parent = gloss })
+	Factory.New("UIGradient", {
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.87),
+			NumberSequenceKeypoint.new(0.6, 0.98),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+		Rotation = 90,
+		Parent = gloss,
 	})
 	Factory.Corner(gloss, Theme.Corner - 1)
 	-- A soft ground shadow cast just below the card -- a child (not a
@@ -201,7 +240,14 @@ function Factory.Button(parent: Instance, text: string, size: UDim2, position: U
 	local background = Colors.PanelSoft
 	local foreground = Colors.Text
 	if kind == "primary" then
-		background = Colors.Violet
+		-- The art's primary action is molten -- a hot orange bar with dark
+		-- lettering -- not a violet one. That is what ButtonPrimary's decal
+		-- paints, so the code-drawn fallback has to agree with it or every
+		-- primary button changes colour the moment that id goes live. Dark
+		-- foreground for the same reason the nav's active row needs one:
+		-- near-white on orange loses most of its contrast.
+		background = Color3.fromRGB(244, 104, 42)
+		foreground = Color3.fromRGB(58, 18, 6)
 	elseif kind == "mint" then
 		background = Colors.Mint
 		foreground = Colors.Ink
@@ -217,15 +263,33 @@ function Factory.Button(parent: Instance, text: string, size: UDim2, position: U
 		AutoButtonColor = false,
 		Text = text,
 		TextColor3 = foreground,
-		Font = Theme.Fonts.Bold,
+		-- The art sets every button label in its display serif, next to the
+		-- sans it keeps for descriptions and for the pill metadata below.
+		Font = Theme.Fonts.Display,
 		TextSize = 14,
 		TextWrapped = true,
+		-- A label that outgrows its button -- a long item name, a localised
+		-- price, a serif that sets wider than the sans this was sized for --
+		-- otherwise wraps to a second line and has its bottom half sliced off
+		-- by the button's own height. Truncation applies to the last visible
+		-- line, so it degrades to an ellipsis instead.
+		TextTruncate = Enum.TextTruncate.AtEnd,
 		Parent = parent,
 	})
 	Factory.Corner(button, Theme.SmallCorner)
-	Factory.Stroke(button, if kind == "primary" then Colors.Cyan else Colors.Line, 0.55)
+	Factory.Stroke(
+		button,
+		if kind == "primary" then Colors.Gold else Colors.Line,
+		if kind == "primary" then 0.2 else 0.55
+	)
 	if kind == "primary" then
-		Factory.Gradient(button, { Colors.Violet, Color3.fromRGB(91, 94, 255), Colors.Cyan }, 12)
+		-- The art's own molten stops, top to bottom.
+		Factory.Gradient(button, {
+			Color3.fromRGB(255, 222, 138),
+			Color3.fromRGB(255, 165, 60),
+			Color3.fromRGB(244, 104, 42),
+			Color3.fromRGB(193, 58, 30),
+		}, 90)
 	end
 	-- A soft top highlight and bottom shade -- alpha-blended white/black
 	-- overlays rather than a second UIGradient, so a button whose caller
@@ -269,6 +333,9 @@ function Factory.Pill(parent: Instance, text: string, color: Color3?, width: num
 		TextColor3 = Colors.Text,
 		Font = Theme.Fonts.Bold,
 		TextSize = 10,
+		-- Pills neither wrap nor scale, so an over-long caption used to run
+		-- straight out through both ends of the capsule.
+		TextTruncate = Enum.TextTruncate.AtEnd,
 		Parent = parent,
 	})
 	Factory.Corner(pill, 99)
@@ -286,6 +353,138 @@ function Factory.Pill(parent: Instance, text: string, color: Color3?, width: num
 	})
 	Factory.Corner(gloss, 99)
 	return pill
+end
+
+-- Roblox has no dashed UIStroke, and the art dashes a ring in two places --
+-- the backdrop's arcane circles and a locked achievement's rim. Draws the
+-- dashes around the inside edge of whatever it is parented to, in scale, so
+-- the caller does not have to know the ring's pixel size.
+function Factory.DashedRing(
+	parent: Instance,
+	dashes: number,
+	dashLength: number,
+	color: Color3,
+	transparency: number,
+	thickness: number
+)
+	for index = 1, dashes do
+		local degrees = (index - 1) / dashes * 360
+		local radians = math.rad(degrees)
+		Factory.New("Frame", {
+			Name = string.format("Dash%d", index),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			-- Half of 1.0 in scale is the parent's own edge.
+			Position = UDim2.fromScale(0.5 + math.cos(radians) / 2, 0.5 + math.sin(radians) / 2),
+			Size = UDim2.fromOffset(dashLength, thickness),
+			-- Tangent, so each dash lies along the ring.
+			Rotation = degrees + 90,
+			BackgroundColor3 = color,
+			BackgroundTransparency = transparency,
+			BorderSizePixel = 0,
+			Parent = parent,
+		})
+	end
+end
+
+-- The backdrop every one of the eight mockups is drawn over: a set of
+-- concentric arcane rings with tick marks at the compass points, sitting
+-- far behind the content at low opacity. It is the single thing that makes
+-- the app read as a forge circle rather than a dark dashboard.
+--
+-- Sized off the container's HEIGHT through a square aspect constraint, so
+-- it stays a circle rather than stretching into an ellipse as the window
+-- gets wider, and every ring and tick is placed in scale rather than
+-- pixels -- their real radius is not known until the layout resolves.
+--
+-- Roblox cannot dash a UIStroke, so the two dashed rings in the art are
+-- built from small rotated segments the way Factory.RadialRing builds its
+-- arc. They never move or update; this runs once.
+local ARCANE_RINGS = {
+	-- radius as a fraction of the circle's own half-size, then how it draws
+	{ radius = 1.0, dashes = 0, thickness = 1.4, transparency = 0.85 },
+	{ radius = 0.95, dashes = 54, thickness = 1.6, transparency = 0.86 },
+	{ radius = 0.82, dashes = 26, thickness = 2.2, transparency = 0.84 },
+	{ radius = 0.66, dashes = 0, thickness = 1, transparency = 0.88 },
+}
+
+function Factory.ArcaneCircle(parent: Instance, heightScale: number?): Frame
+	local circle = Factory.New("Frame", {
+		Name = "ArcaneCircle",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		-- The art centres it left of middle and slightly low, so the rings
+		-- read behind the content rather than haloing it.
+		Position = UDim2.fromScale(0.38, 0.52),
+		Size = UDim2.new(0, 0, heightScale or 0.9, 0),
+		BackgroundTransparency = 1,
+		ZIndex = 0,
+		Parent = parent,
+	})
+	Factory.New("UIAspectRatioConstraint", {
+		AspectRatio = 1,
+		DominantAxis = Enum.DominantAxis.Height,
+		Parent = circle,
+	})
+
+	for index, ring in ARCANE_RINGS do
+		if ring.dashes == 0 then
+			local outline = Factory.New("Frame", {
+				Name = string.format("Ring%d", index),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromScale(ring.radius, ring.radius),
+				BackgroundTransparency = 1,
+				ZIndex = 0,
+				Parent = circle,
+			})
+			Factory.New("UICorner", { CornerRadius = UDim.new(0.5, 0), Parent = outline })
+			Factory.Stroke(outline, Colors.Cyan, ring.transparency, ring.thickness)
+		else
+			for dash = 1, ring.dashes do
+				local degrees = (dash - 1) / ring.dashes * 360
+				local radians = math.rad(degrees)
+				-- Scale, not pixels: half the ring's fractional radius is how
+				-- far from the centre a 0..1 scale position has to move.
+				Factory.New("Frame", {
+					Name = string.format("Ring%dDash%d", index, dash),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(
+						0.5 + math.cos(radians) * ring.radius / 2,
+						0.5 + math.sin(radians) * ring.radius / 2
+					),
+					Size = UDim2.fromOffset(if ring.dashes > 40 then 3 else 12, ring.thickness),
+					-- Tangent to the circle, so the dashes lie along it
+					-- rather than pointing out from the centre.
+					Rotation = degrees + 90,
+					BackgroundColor3 = Colors.Cyan,
+					BackgroundTransparency = ring.transparency,
+					BorderSizePixel = 0,
+					ZIndex = 0,
+					Parent = circle,
+				})
+			end
+		end
+	end
+
+	-- Gold ticks at the four compass points and the four diagonals, just
+	-- outside the widest ring.
+	for index = 0, 7 do
+		local degrees = index * 45
+		local radians = math.rad(degrees)
+		Factory.New("Frame", {
+			Name = string.format("Tick%d", index),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5 + math.cos(radians) * 0.52, 0.5 + math.sin(radians) * 0.52),
+			Size = UDim2.fromOffset(14, 1.6),
+			-- Radial here, not tangent: these point out of the circle.
+			Rotation = degrees,
+			BackgroundColor3 = Colors.Gold,
+			BackgroundTransparency = 0.78,
+			BorderSizePixel = 0,
+			ZIndex = 0,
+			Parent = circle,
+		})
+	end
+	return circle
 end
 
 -- A soft, oversized, mostly-transparent circle used purely as a background
@@ -360,9 +559,14 @@ local function attachDecal(target: GuiObject, assetKey: string): boolean
 			BackgroundTransparency = 1,
 			Text = textHolder.Text,
 			TextColor3 = textHolder.TextColor3,
-			Font = textHolder.Font,
+			-- FontFace, not Font: the display serif is set as a weighted
+			-- face, and Font reads back as Unknown once it is, so mirroring
+			-- the enum would silently drop every button label to the
+			-- default face.
+			FontFace = textHolder.FontFace,
 			TextSize = textHolder.TextSize,
 			TextWrapped = textHolder.TextWrapped,
+			TextTruncate = textHolder.TextTruncate,
 			TextXAlignment = textHolder.TextXAlignment,
 			TextYAlignment = textHolder.TextYAlignment,
 			ZIndex = 5,
@@ -404,6 +608,20 @@ local function attachDecal(target: GuiObject, assetKey: string): boolean
 		end)
 	end
 
+	-- Factory.Button/Pill draw their own rounded Gloss and Shade overlays,
+	-- which fit a capsule and hang out past the corners of the hexagon the
+	-- art actually uses. The hexagon art carries its own top highlight, so
+	-- retire the code-drawn pair whenever a decal takes over. Cards keep
+	-- theirs: a panel really is a rounded rectangle.
+	if target:IsA("TextButton") or target:IsA("TextLabel") then
+		for _, overlay in { "Gloss", "Shade" } do
+			local child = target:FindFirstChild(overlay)
+			if child and child:IsA("GuiObject") then
+				child.Visible = false
+			end
+		end
+	end
+
 	local decal = Factory.New("ImageLabel", {
 		Name = "Decal",
 		Size = UDim2.fromScale(1, 1),
@@ -440,6 +658,117 @@ function Factory.ImagePill(parent: Instance, text: string, color: Color3?, width
 	local pill = Factory.Pill(parent, text, color, width)
 	attachDecal(pill, "PillFrame")
 	return pill
+end
+
+-- The concept art titles every panel with a small notched banner tab
+-- straddling the card's own top edge -- "CREATE MODE", "COLLECTION * 6",
+-- "YOUR LOOK" -- rather than a pill or label tucked inside the top-left
+-- corner. It straddles that edge in the concept art's own proportion (12px
+-- of a 30px tab above the card, 18px below), so callers need to leave the
+-- card's first ~22px clear and ~12px of daylight above it.
+--
+-- Falls back to a plain rounded tab when SectionBanner's id is still 0,
+-- like every other image-backed helper here.
+function Factory.SectionBanner(card: GuiObject, text: string, width: number?): TextLabel
+	local caption = string.upper(text)
+	local banner = Factory.New("TextLabel", {
+		Name = "SectionBanner",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0, 3),
+		Size = UDim2.fromOffset(width or math.clamp(#caption * 9 + 60, 120, 340), 30),
+		BackgroundColor3 = Color3.fromRGB(46, 27, 84),
+		BorderSizePixel = 0,
+		Text = caption,
+		TextColor3 = Colors.Gold,
+		Font = Theme.Fonts.Black,
+		TextSize = 12,
+		-- The width above clamps at 340, so a caption longer than that has
+		-- nowhere left to grow into.
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		-- Above the card's own PanelFrame decal (ZIndex 0) and its Gloss, so
+		-- the tab reads as sitting on top of the frame the way it does in
+		-- the concept art.
+		ZIndex = 6,
+		Parent = card,
+	}) :: TextLabel
+	if not attachDecal(banner, "SectionBanner") then
+		Factory.Corner(banner, 8)
+		Factory.Stroke(banner, Colors.Gold, 0.25, 1.4)
+	end
+	return banner
+end
+
+-- A SectionBanner deliberately overhangs 12px above the card it titles. That
+-- is fine mid-stack, where the gap between cards absorbs it, but the FIRST
+-- card in a stack has nothing above it except the scrolling region's own
+-- edge -- and every one of those clips, so the tab's top edge gets sliced
+-- off. Give the stack the headroom rather than the card: the overhang is a
+-- property of the layout, and the card should not have to know whether it
+-- happens to be first.
+function Factory.BannerHeadroom(stack: Instance): UIPadding
+	return Factory.New("UIPadding", {
+		PaddingTop = UDim.new(0, 14),
+		Parent = stack,
+	})
+end
+
+-- The concept art's gold ON/OFF switch: a capsule with a gold knob that
+-- sits on the side the state is on, and the state's word on the other.
+-- Every one of Settings' real boolean options is drawn this way there
+-- instead of as another full-width button.
+local SWITCH_KNOB = 24
+
+-- Moves a Factory.Switch to a state without rebuilding it, for a caller
+-- that flips one optimistically and may have to roll it back (the sound
+-- toggle, which reverts if the server rejects the change).
+function Factory.SetSwitch(switch: GuiObject, on: boolean)
+	switch.BackgroundColor3 = if on then Colors.Mint else Color3.fromRGB(42, 27, 76)
+	local label = switch:FindFirstChild("Label")
+	if label and label:IsA("TextLabel") then
+		label.Text = if on then "ON" else "OFF"
+		label.TextColor3 = if on then Colors.Ink else Colors.TextMuted
+		label.Position = if on then UDim2.fromOffset(6, 0) else UDim2.fromOffset(SWITCH_KNOB + 6, 0)
+	end
+	local knob = switch:FindFirstChild("Knob")
+	if knob and knob:IsA("Frame") then
+		knob.Position = if on then UDim2.new(1, -(SWITCH_KNOB + 4), 0.5, 0) else UDim2.new(0, 4, 0.5, 0)
+	end
+end
+
+function Factory.Switch(parent: Instance, on: boolean, position: UDim2?, width: number?): TextButton
+	local switch = Factory.New("TextButton", {
+		Name = "Switch",
+		Size = UDim2.fromOffset(width or 92, 32),
+		Position = position or UDim2.new(),
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		-- The visible caption is a child label below, so the knob can never
+		-- be hidden underneath a TextButton's own native text.
+		Text = "",
+		Parent = parent,
+	})
+	Factory.Corner(switch, 99)
+	Factory.Stroke(switch, Colors.Gold, 0.25, 1.4)
+	Factory.Label(switch, "", UDim2.new(1, -(SWITCH_KNOB + 12), 1, 0), {
+		AlignX = Enum.TextXAlignment.Center,
+		-- ON/OFF is metadata beside a control, which the art keeps in sans.
+		Font = Theme.Fonts.Bold,
+		TextSize = 11,
+	})
+	local dot = Factory.New("Frame", {
+		Name = "Knob",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Size = UDim2.fromOffset(SWITCH_KNOB, SWITCH_KNOB),
+		BackgroundColor3 = Colors.Gold,
+		BorderSizePixel = 0,
+		ZIndex = 2,
+		Parent = switch,
+	})
+	Factory.Corner(dot, SWITCH_KNOB / 2)
+	Factory.Gradient(dot, { Color3.fromRGB(255, 243, 196), Colors.Gold }, 90)
+	Factory.Stroke(dot, Color3.fromRGB(255, 243, 196), 0.35, 1)
+	Factory.SetSwitch(switch, on)
+	return switch
 end
 
 -- Swaps a Factory.ImageCard/ImageButton/ImagePill's live decal to a
@@ -488,6 +817,27 @@ function Factory.Icon(parent: Instance, assetKey: string, size: UDim2, position:
 		ScaleType = Enum.ScaleType.Fit,
 		Parent = parent,
 	}) :: ImageLabel
+end
+
+-- The concept art flanks each page's centred "Switch to ... Mode" link with
+-- one small gold flourish on either side of it. Positions both against the
+-- parent's horizontal centre, so they stay paired with a link that is itself
+-- centred however wide the page gets. No-op (like Factory.Icon) while
+-- FlourishDivider's id is still 0.
+function Factory.FlourishFlank(parent: Instance, centreY: number, halfGap: number, width: number?, height: number?)
+	local w = width or 20
+	local h = height or 14
+	for _, side in { -1, 1 } do
+		local flourish = Factory.Icon(
+			parent,
+			"FlourishDivider",
+			UDim2.fromOffset(w, h),
+			UDim2.new(0.5, if side < 0 then -halfGap - w else halfGap, 0, centreY - h // 2)
+		)
+		if flourish then
+			flourish.ZIndex = 2
+		end
+	end
 end
 
 -- A circular 0-100% progress ring (the Creator Rank crest), built from

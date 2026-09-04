@@ -35,6 +35,33 @@ local REMOTE_WAIT_SECONDS = 15
 local EMBER_COLORS = { Colors.Gold, Colors.Rose, Colors.Cyan }
 local EMBER_COUNT = 10
 
+-- The concept art studs each saved-look / category chip with a gem, walking
+-- down the palette rather than repeating one colour. Used wherever a page
+-- draws a row of chips whose contents are player data (saved outfits,
+-- catalog categories, avatar views), so the colour depends only on the
+-- chip's position in its row.
+local CHIP_GEMS = { "GemCyan", "GemRose", "GemGold", "GemMint", "GemAmethyst", "GemRuby" }
+
+-- The art gives each earned achievement crest a gem star in a different
+-- colour, walking across the grid rather than repeating one.
+local ACHIEVEMENT_GEMS = { Colors.Gold, Colors.Cyan, Colors.Mint, Colors.Violet, Colors.Rose }
+
+-- Where a chip row already has one accent colour of its own (Avatar
+-- Graphics' step rows), the art studs every chip in that row with a gem of
+-- the matching colour instead of walking the palette.
+local function gemForAccent(color: Color3): string
+	if color == Colors.Mint then
+		return "GemMint"
+	elseif color == Colors.Violet then
+		return "GemAmethyst"
+	elseif color == Colors.Gold then
+		return "GemGold"
+	elseif color == Colors.Rose then
+		return "GemRose"
+	end
+	return "GemCyan"
+end
+
 local App = {}
 App.__index = App
 
@@ -194,6 +221,22 @@ local ACCESSORY_LABELS = {
 	FrontAccessory = "Front",
 	BackAccessory = "Back",
 	WaistAccessory = "Waist",
+}
+
+-- Avatar Lab's category chips read off the table above, which is a
+-- dictionary: iterating it directly gives Luau's hash order, so the row came
+-- out shuffled differently on every render -- and, once each chip took a gem
+-- from CHIP_GEMS by position, those colours changed under the player's cursor
+-- too. This is the concept art's own order, and it is fixed.
+local ACCESSORY_ORDER = {
+	"Hat",
+	"HairAccessory",
+	"FaceAccessory",
+	"BackAccessory",
+	"FrontAccessory",
+	"NeckAccessory",
+	"ShoulderAccessory",
+	"WaistAccessory",
 }
 
 local CATALOG_SORT_TYPES = {
@@ -447,6 +490,7 @@ function App.new()
 		generationOfferEvents = {} :: { [string]: boolean },
 		navButtons = {} :: { [string]: TextButton },
 		navHasIcon = {} :: { [string]: boolean },
+		navMedallions = {} :: { [string]: Frame },
 		activeViewport = nil :: any,
 		ambientMotionEnabled = false,
 		ambientBlobs = {} :: { { instance: Frame, restPosition: UDim2 } },
@@ -580,7 +624,18 @@ function App:_BuildChrome()
 		Parent = backdrop,
 	})
 	Factory.Corner(shell, 22)
-	Factory.Stroke(shell, Color3.fromRGB(101, 113, 170), 0.35, 1.2)
+	-- The art's own "sky": indigo at the top-left running down through
+	-- violet into a warm plum at the bottom-right, which is what stops the
+	-- studio reading as one flat slab behind its panels and is where the
+	-- forge's warmth comes from. Rotated to run diagonally, as the art's
+	-- gradient does.
+	Factory.Gradient(shell, {
+		Color3.fromRGB(22, 14, 51),
+		Color3.fromRGB(42, 19, 85),
+		Color3.fromRGB(75, 27, 96),
+		Color3.fromRGB(126, 42, 74),
+	}, 70)
+	Factory.Stroke(shell, Colors.Line, 0.35, 1.2)
 	Factory.New("UISizeConstraint", {
 		MaxSize = Vector2.new(1440, 860),
 		MinSize = Vector2.new(330, 450),
@@ -823,15 +878,21 @@ function App:_BuildChrome()
 			AlignX = Enum.TextXAlignment.Center,
 		})
 	end
-	Factory.Label(topbar, Config.Brand.Name, UDim2.fromOffset(170, 29), {
-		Position = UDim2.fromOffset(76, 14),
-		Font = Theme.Fonts.Black,
-		TextSize = 19,
+	-- The art letters the wordmark about a third of the topbar's height, over
+	-- a small letterspaced strapline -- so the mark leads and the line under
+	-- it recedes, rather than the two sitting at nearly the same weight.
+	Factory.Label(topbar, Config.Brand.Name, UDim2.fromOffset(200, 30), {
+		Position = UDim2.fromOffset(76, 12),
+		Font = Theme.Fonts.Display,
+		TextSize = 23,
+		Truncate = Enum.TextTruncate.AtEnd,
 	})
-	Factory.Label(topbar, Config.Brand.Tagline, UDim2.fromOffset(250, 22), {
-		Position = UDim2.fromOffset(76, 41),
+	Factory.Label(topbar, Config.Brand.Tagline, UDim2.fromOffset(250, 20), {
+		Position = UDim2.fromOffset(77, 43),
 		Color = Colors.TextMuted,
-		TextSize = 12,
+		Font = Theme.Fonts.Bold,
+		TextSize = 11,
+		Truncate = Enum.TextTruncate.AtEnd,
 	})
 	local statusArea = Factory.New("Frame", {
 		Name = "StatusArea",
@@ -859,26 +920,19 @@ function App:_BuildChrome()
 		self:_SetStudioOpen(false)
 	end)
 
-	local nav = Factory.New("Frame", {
-		Name = "Navigation",
-		Position = UDim2.fromOffset(0, 78),
-		Size = UDim2.new(0.145, 0, 1, -78),
-		BackgroundColor3 = Colors.Ink,
-		BackgroundTransparency = 0.2,
-		BorderSizePixel = 0,
-		Parent = shell,
-	})
+	-- The art frames the sidebar as a full panel -- inset from the shell's
+	-- edge, rounded, gold-rimmed, corner ornaments and all -- not as a flat
+	-- rail divided from the content by a hairline. Using ImageCard means it
+	-- picks up exactly the same frame every content panel has, including the
+	-- decal once PanelFrame is live. Its own border replaces the divider.
+	-- The inset (10 left, 4 short of the content column) is kept in step by
+	-- _ApplyResponsiveLayout, which rewrites this rect on every resize.
+	local nav = Factory.ImageCard(shell, UDim2.new(0.145, -14, 1, -96), UDim2.fromOffset(10, 86), "Navigation")
 	self.nav = nav
-	Factory.New("Frame", {
-		Size = UDim2.new(0, 1, 1, 0),
-		Position = UDim2.new(1, -1, 0, 0),
-		BackgroundColor3 = Colors.Line,
-		BackgroundTransparency = 0.5,
-		BorderSizePixel = 0,
-		Parent = nav,
-	})
 	local navStack = Factory.New("Frame", {
-		Position = UDim2.fromOffset(12, 18),
+		-- 26, not 18: the panel's own corner ornaments reach into the top of
+		-- the frame, and the first nav row has to start below them.
+		Position = UDim2.fromOffset(12, 26),
 		Size = UDim2.new(1, -24, 0, 330),
 		BackgroundTransparency = 1,
 		Parent = nav,
@@ -892,7 +946,9 @@ function App:_BuildChrome()
 	local navIndicator = Factory.New("Frame", {
 		Name = "ActiveIndicator",
 		Size = UDim2.fromOffset(4, 48),
-		Position = UDim2.fromOffset(0, 18),
+		-- Just inside the panel's gold rim now that the rail has one, rather
+		-- than flush at x=0 where it would sit on top of that border.
+		Position = UDim2.fromOffset(3, 26),
 		BackgroundColor3 = Colors.Cyan,
 		BorderSizePixel = 0,
 		ZIndex = 3,
@@ -916,9 +972,30 @@ function App:_BuildChrome()
 		-- Only swap the unicode symbol for the decal icon once it's actually
 		-- uploaded (Factory.Icon returns nil until then) -- otherwise the
 		-- symbol stays exactly as it always has.
-		local icon = Factory.Icon(button, iconKeys[index], UDim2.fromOffset(22, 22), UDim2.fromOffset(10, 13))
+		local icon = Factory.Icon(button, iconKeys[index], UDim2.fromOffset(20, 20), UDim2.new(0, 11, 0.5, -10))
 		if icon then
 			icon.ZIndex = 2
+			-- One stable name, so _ApplyResponsiveLayout can find it without
+			-- knowing which of the six asset keys this row happens to use.
+			icon.Name = "NavIcon"
+			-- The art seats every nav icon in its own dark medallion, ringed
+			-- in gold -- brighter and a touch heavier on the active row.
+			-- Built only alongside a real icon, since an empty ring around
+			-- the unicode fallback glyph would read as a mistake rather than
+			-- a frame. ZIndex, not creation order, keeps it behind.
+			local medallion = Factory.New("Frame", {
+				Name = "IconMedallion",
+				AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.new(0, 6, 0.5, 0),
+				Size = UDim2.fromOffset(30, 30),
+				BackgroundColor3 = Color3.fromRGB(30, 18, 56),
+				BorderSizePixel = 0,
+				ZIndex = 1,
+				Parent = button,
+			})
+			Factory.Corner(medallion, 15)
+			Factory.Stroke(medallion, Colors.Gold, 0.45, 1.6)
+			self.navMedallions[page] = medallion
 			button.Text = "      " .. label
 			-- _ApplyResponsiveLayout rewrites this text on every resize --
 			-- it has to know the decal icon is already carrying the glyph,
@@ -953,8 +1030,10 @@ function App:_BuildChrome()
 	-- this scrolls instead of silently overlapping or clipping.
 	local navExtras = Factory.New("ScrollingFrame", {
 		Name = "NavExtras",
-		Position = UDim2.fromOffset(0, 405),
-		Size = UDim2.new(1, 0, 1, -405),
+		-- Inset inside the panel's rim, and starting below navStack's own
+		-- 26 + 387 -- both of which _ApplyResponsiveLayout keeps in step.
+		Position = UDim2.fromOffset(10, 413),
+		Size = UDim2.new(1, -20, 1, -425),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 3,
@@ -1005,16 +1084,25 @@ function App:_BuildChrome()
 	})
 	Factory.Corner(badge, 32)
 	Factory.Stroke(badge, Colors.Gold, 0.1, 2.4)
-	self.creatorLevelLabel = Factory.Label(badge, "1", UDim2.fromScale(1, 1), {
+	self.creatorLevelLabel = Factory.Label(badge, "1", UDim2.new(1, 0, 0, 30), {
+		Position = UDim2.fromOffset(0, 12),
 		Font = Theme.Fonts.Black,
 		TextSize = 24,
 		Color = Colors.Gold,
 		AlignX = Enum.TextXAlignment.Center,
-		AlignY = Enum.TextYAlignment.Center,
+	})
+	-- The art seats the word under the figure inside the crest, in the sans
+	-- it keeps for a caption beside a value.
+	Factory.Label(badge, "LEVEL", UDim2.new(1, 0, 0, 12), {
+		Position = UDim2.fromOffset(0, 40),
+		Font = Theme.Fonts.Bold,
+		TextSize = 8,
+		Color = Colors.TextMuted,
+		AlignX = Enum.TextXAlignment.Center,
 	})
 	Factory.Label(rankCard, "CREATOR RANK", UDim2.new(1, 0, 0, 14), {
 		Position = UDim2.fromOffset(0, 92),
-		Font = Theme.Fonts.Bold,
+		Font = Theme.Fonts.Display,
 		TextSize = 10,
 		Color = Colors.TextMuted,
 		AlignX = Enum.TextXAlignment.Center,
@@ -1035,7 +1123,7 @@ function App:_BuildChrome()
 	local modeCard = Factory.ImageCard(navExtras, UDim2.new(1, 0, 0, 104), nil, "ModeToggle")
 	Factory.Label(modeCard, "MODE", UDim2.new(1, -20, 0, 14), {
 		Position = UDim2.fromOffset(0, 10),
-		Font = Theme.Fonts.Bold,
+		Font = Theme.Fonts.Display,
 		TextSize = 10,
 		Color = Colors.TextMuted,
 		AlignX = Enum.TextXAlignment.Center,
@@ -1103,6 +1191,30 @@ function App:_BuildChrome()
 	self.backgroundLayer = backgroundLayer
 	self.ambientBlobs = {}
 	self.ambientEmbers = {}
+	-- The arcane circle the concept art draws every one of its eight screens
+	-- over. Built once with the rest of the chrome, never rebuilt on a page
+	-- swap, and never animated -- it is the backdrop, not an effect, so it
+	-- stays put under reduce-motion too.
+	Factory.ArcaneCircle(backgroundLayer)
+	-- The art scatters a few still twinkles across the same backdrop. These
+	-- are the one place SparkleStar is used at page scale rather than as a
+	-- stud on a control; Factory.Icon returns nil until its id is real, so
+	-- the backdrop simply goes without until then.
+	for _, spark in
+		{
+			{ position = UDim2.fromScale(0.6, 0.07), size = 22, transparency = 0.15 },
+			{ position = UDim2.fromScale(0.92, 0.13), size = 28, transparency = 0.3 },
+			{ position = UDim2.fromScale(0.02, 0.6), size = 18, transparency = 0.4 },
+			{ position = UDim2.fromScale(0.79, 0.52), size = 15, transparency = 0.5 },
+		}
+	do
+		local sparkle =
+			Factory.Icon(backgroundLayer, "SparkleStar", UDim2.fromOffset(spark.size, spark.size), spark.position)
+		if sparkle then
+			sparkle.ImageTransparency = spark.transparency
+			sparkle.ZIndex = 0
+		end
+	end
 	for _, spec in
 		{
 			{ diameter = 560, position = UDim2.new(1, -160, 0, -220), color = Colors.Cyan, transparency = 0.93 },
@@ -1221,7 +1333,7 @@ function App:_BuildAvatarPreviewPanel(backdrop: Frame)
 		Name = "PreviewViewport",
 		Position = UDim2.fromOffset(14, 40),
 		Size = UDim2.new(1, -28, 0.5, -44),
-		BackgroundColor3 = Color3.fromRGB(62, 72, 108),
+		BackgroundColor3 = Color3.fromRGB(58, 40, 104),
 		BorderSizePixel = 0,
 		Parent = panel,
 	})
@@ -1674,7 +1786,10 @@ function App:_ApplyResponsiveLayout()
 	self.compact = compact
 	self.gridColumns = gridColumns
 	local navScale = if compact then 0.16 else 0.145
-	self.nav.Size = UDim2.new(navScale, 0, 1, -78)
+	-- Matches _BuildChrome's inset panel: 10 in from the shell's left edge,
+	-- stopping 4 short of where the content column starts.
+	self.nav.Position = UDim2.fromOffset(10, 86)
+	self.nav.Size = UDim2.new(navScale, -14, 1, -96)
 	self.content.Position = UDim2.new(navScale, 0, 0, 78)
 	self.content.Size = UDim2.new(1 - navScale, 0, 1, -78)
 	-- AmbientBackground has to track Content's rect exactly: it's a sibling
@@ -1684,7 +1799,7 @@ function App:_ApplyResponsiveLayout()
 		self.backgroundLayer.Position = self.content.Position
 		self.backgroundLayer.Size = self.content.Size
 	end
-	self.navStack.Position = UDim2.fromOffset(if compact then 8 else 12, 18)
+	self.navStack.Position = UDim2.fromOffset(if compact then 8 else 12, 26)
 	self.navStack.Size = UDim2.new(1, if compact then -16 else -24, 0, 387)
 	for page, button in self.navButtons do
 		local symbol = if page == "Create"
@@ -1704,6 +1819,19 @@ function App:_ApplyResponsiveLayout()
 			elseif hasIcon then "      " .. label
 			else symbol .. "   " .. label
 		button.TextXAlignment = if compact then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
+		-- Compact rows are icon-only (the label above goes empty), so the
+		-- medallion and its icon move to the middle of the rail rather than
+		-- sitting against the left edge where a label used to follow them.
+		local medallion = self.navMedallions[page]
+		if medallion then
+			medallion.AnchorPoint = if compact then Vector2.new(0.5, 0.5) else Vector2.new(0, 0.5)
+			medallion.Position = if compact then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 6, 0.5, 0)
+		end
+		local navIcon = button:FindFirstChild("NavIcon")
+		if navIcon and navIcon:IsA("ImageLabel") then
+			navIcon.AnchorPoint = if compact then Vector2.new(0.5, 0.5) else Vector2.zero
+			navIcon.Position = if compact then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 11, 0.5, -10)
+		end
 	end
 	self:_UpdateSoundButton()
 	-- The nav rail's own narrow width in compact mode (icon-only rows,
@@ -1732,18 +1860,18 @@ function App:_UpdateSoundButton()
 		return
 	end
 	local enabled = not self.state or self.state.profile.settings.soundsEnabled ~= false
-	self.soundButton.Text = if enabled then "♪   UI sound on" else "×   UI sound off"
-	self.soundButton.BackgroundColor3 = if enabled then Colors.PanelSoft else Color3.fromRGB(47, 31, 48)
+	Factory.SetSwitch(self.soundButton, enabled)
 end
 
 -- Builds the sound toggle used on the Settings page. Extracted from the old
 -- persistent nav-rail button so it can be recreated each time that page
--- renders, like every other page-scoped control.
-function App:_BuildSoundButton(parent: Instance, size: UDim2, position: UDim2): TextButton
-	local button = Factory.ImageButton(parent, "", size, position, nil)
+-- renders, like every other page-scoped control. Drawn as the concept
+-- art's gold switch -- it flips optimistically and rolls back if the server
+-- rejects the change, so it is moved between states in place rather than
+-- rebuilt.
+function App:_BuildSoundButton(parent: Instance, position: UDim2): TextButton
+	local button = Factory.Switch(parent, true, position)
 	button.Name = "SoundToggle"
-	button.TextXAlignment = Enum.TextXAlignment.Left
-	Factory.Padding(button, 15, 0)
 	self:_BindButton(button)
 	self.soundButton = button
 	self:_UpdateSoundButton()
@@ -2179,6 +2307,14 @@ end
 function App:_BindButton(button: GuiButton)
 	self.sounds:Bind(button)
 	button.Selectable = true
+	-- A decal-backed button's own background is fully transparent (see
+	-- Factory's attachDecal) and its art is the concept art's hexagon, so
+	-- fading that background back in on hover would light up a rounded
+	-- rectangle poking out past the artwork's angled ends. Those buttons
+	-- keep the hover sound and the selection outline instead.
+	if button:FindFirstChild("Decal") then
+		return
+	end
 	local original = button.BackgroundTransparency
 	button.MouseEnter:Connect(function()
 		self:_Animate(button, TweenInfo.new(0.14), { BackgroundTransparency = math.min(0.18, original + 0.06) })
@@ -3248,7 +3384,7 @@ function App:_RenderStatus()
 	end
 	if daily then
 		local pill =
-			Factory.ImagePill(self.statusArea, string.format("🔥 %d DAY STREAK", daily.streak), Colors.Rose, 112)
+			Factory.ImagePill(self.statusArea, string.format("🔥 %d DAY STREAK", daily.streak), Colors.Rose, 126)
 		pill.LayoutOrder = 2
 		gemIcon(pill, "GemRuby")
 	end
@@ -3308,11 +3444,22 @@ function App:_HighlightNavigation()
 		-- one instead, a no-op fallback to the tween above while either id is
 		-- still 0.
 		Factory.SwapDecal(button, if active then "ButtonPrimary" else "ButtonDefault")
+		-- Dark on the molten fill, light on the dark one -- the art's active
+		-- row is the one place in the nav where near-white text would sit on
+		-- orange and lose most of its contrast.
 		self:_Animate(
 			button,
 			TweenInfo.new(0.16, Enum.EasingStyle.Quad),
-			{ TextColor3 = if active then Colors.Text else Colors.TextMuted }
+			{ TextColor3 = if active then Color3.fromRGB(58, 18, 6) else Colors.TextMuted }
 		)
+		local medallion = self.navMedallions[page]
+		local medallionStroke = medallion and medallion:FindFirstChildOfClass("UIStroke")
+		if medallionStroke then
+			self:_Animate(medallionStroke, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {
+				Transparency = if active then 0.1 else 0.45,
+				Thickness = if active then 2.2 else 1.6,
+			})
+		end
 		local stroke = button:FindFirstChildOfClass("UIStroke")
 		if stroke then
 			self:_Animate(stroke, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {
@@ -3325,7 +3472,7 @@ function App:_HighlightNavigation()
 			-- buttons, 9px gaps) rather than read off AbsolutePosition,
 			-- which isn't guaranteed to already reflect a UIListLayout pass
 			-- on the very frame a button was created.
-			local targetY = 18 + (button.LayoutOrder - 1) * 57
+			local targetY = 26 + (button.LayoutOrder - 1) * 57
 			self:_Animate(
 				self.navIndicator,
 				TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
@@ -3412,12 +3559,13 @@ function App:_PageHeader(title: string, subtitle: string, accent: boolean?)
 		TextSize = 28,
 	})
 	if accent then
-		-- The concept art's small flourish ornament next to the page
-		-- title -- only Create opts in for now (accent is optional and
-		-- defaults to off) since it's the only page checked pixel-for-
-		-- pixel against its mockup so far. Anchored to the header's own
-		-- right edge rather than after the title text, since a
-		-- TextLabel's rendered width isn't available synchronously here.
+		-- The concept art's small flourish ornament next to the page title.
+		-- All six studio pages opt in now, each having been checked against
+		-- its own mockup; the parameter stays optional so a page added later
+		-- starts without it rather than inheriting an ornament nobody has
+		-- placed. Anchored to the header's own right edge rather than after
+		-- the title text, since a TextLabel's rendered width isn't available
+		-- synchronously here.
 		Factory.Icon(self.content, "FlourishDivider", UDim2.fromOffset(26, 15), UDim2.new(0.95, -26, 0, 32))
 	end
 	Factory.Label(self.content, subtitle, UDim2.new(0.95, 0, 0, 32), {
@@ -3455,6 +3603,37 @@ function App:_TextBox(parent: Instance, placeholder: string, size: UDim2, positi
 	return box
 end
 
+-- The concept art gives exactly one field per page the "glowing inscription
+-- well" treatment -- Create's idea prompt, Discover's and Avatar Lab's
+-- search bars -- rather than every textbox _TextBox builds across the app,
+-- so this overrides that one instance's stroke instead of the default.
+-- `studCorners` adds the small diamond accents the art puts on the taller
+-- multi-line wells; a single-line search bar has no room for them, and the
+-- art doesn't draw them there either.
+function App:_GlowField(box: TextBox, studCorners: boolean?)
+	local stroke = box:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = Colors.Cyan
+		stroke.Transparency = 0.3
+		stroke.Thickness = 1.6
+	end
+	if not studCorners then
+		return
+	end
+	for _, corner in { "left", "right" } do
+		local stud = Factory.Icon(
+			box,
+			"SparkleStar",
+			UDim2.fromOffset(10, 10),
+			if corner == "left" then UDim2.fromOffset(6, 6) else UDim2.new(1, -16, 0, 6)
+		)
+		if stud then
+			stud.ZIndex = 6
+			stud.ImageColor3 = Colors.Cyan
+		end
+	end
+end
+
 function App:_RenderCreate()
 	-- Simple Mode is a real, persisted setting (profile.settings.
 	-- simpleMode, defaulting true for every account -- see ProfileService's
@@ -3477,10 +3656,10 @@ function App:_RenderCreate()
 	self:_PageHeader(
 		if showAllMethods
 			then "Create something impossible"
-			else if self.compact then "Make an item" else "Make your own Roblox item",
+			else if self.compact then "Describe it." else "Describe it. Wear it.",
 		if showAllMethods
 			then "Three paths, precise art direction, one Roblox-ready accessory. Every input is moderated."
-			else "Pick an idea or type one. Roblox shows the price and asks before you buy.",
+			else "Type what you want below and Forge builds a real, wearable Roblox accessory from it. Every input is moderated.",
 		true
 	)
 	local howToPlay = Factory.ImageButton(
@@ -3685,10 +3864,16 @@ function App:_RenderCreate()
 		TextSize = 11,
 		Color = Colors.Gold,
 	})
-	Factory.Label(tokensCard, formatNumber(totalTokens), UDim2.new(0.42, -16, 0, 36), {
+	-- 0.42 was set when this card was wide; it is always narrow now (the
+	-- compact stack, or the ~37% rail), where 0.42 of it holds about five
+	-- glyphs of 28px serif -- a seven-figure balance ran straight out of the
+	-- box. The "Get more" button starts at -132, so this can safely have
+	-- everything up to it.
+	Factory.Label(tokensCard, formatNumber(totalTokens), UDim2.new(1, -148, 0, 36), {
 		Position = UDim2.fromOffset(16, 30),
 		Font = Theme.Fonts.Black,
 		TextSize = 28,
+		Truncate = Enum.TextTruncate.AtEnd,
 	})
 	-- Full card width now (was 0.42, left over from when "PAY WITH" sat
 	-- beside this description in a wide card) -- the card is always
@@ -3822,11 +4007,11 @@ function App:_RenderCreate()
 	local allMethods = {
 		{
 			id = "TEXT_TO_3D",
-			title = if showAllMethods then "Direct Forge" else "Your custom item",
+			title = "Direct Forge",
 			kicker = if showAllMethods then "FASTEST VALUE" else "AI CREATION",
 			body = if showAllMethods
 				then "Text → Smart Topology 3D. Lower cost and ideal for bold, simple silhouettes."
-				else "Forge turns your words into one 3D item you can fit and wear in this game.",
+				else "Describe anything you can imagine and Forge builds a real, wearable Roblox accessory — the fastest way to create.",
 			price = self.state.prices.DirectGeneration,
 			color = Colors.Cyan,
 		},
@@ -3934,26 +4119,27 @@ function App:_RenderCreate()
 			})
 			Factory.Corner(ribbon, 4)
 		end
-		-- The START HERE ribbon above claims the top-left corner (out to
-		-- roughly x=92 once its rotation is accounted for) on this one
-		-- card -- shift the kicker pill clear of it there instead of
-		-- overlapping.
-		local kickerX = if method.id == "TEXT_TO_3D" and not showAllMethods then 100 else 16
-		Factory.ImagePill(card, method.kicker, method.color, 104).Position = UDim2.fromOffset(kickerX, 14)
 		-- The Direct Forge card gives its right side over to the crystal
 		-- and the price cartouche (see below): the copy stops short of
 		-- that band instead of running underneath the art, which is what
 		-- left the crystal sitting in the middle of a sentence.
 		local heroCard = method.id == "TEXT_TO_3D" and not showAllMethods
+		-- The concept art gives this one card no kicker pill: the START
+		-- HERE ribbon already labels it, and a second tag beside the ribbon
+		-- is one badge too many on the first thing a new player reads.
+		-- Every other method card keeps its kicker.
+		if not heroCard then
+			Factory.ImagePill(card, method.kicker, method.color, 104).Position = UDim2.fromOffset(16, 14)
+		end
 		local copyInset = if heroCard then -176 else -32
 		Factory.Label(card, method.title, UDim2.new(1, if heroCard then copyInset else -150, 0, 31), {
-			Position = UDim2.fromOffset(16, 46),
+			Position = UDim2.fromOffset(16, if heroCard then 52 else 46),
 			Font = Theme.Fonts.Black,
-			TextSize = if self.compact then 20 else 18,
+			TextSize = if heroCard then 26 elseif self.compact then 20 else 18,
 			Truncate = Enum.TextTruncate.AtEnd,
 		})
 		Factory.Label(card, method.body, UDim2.new(1, copyInset, 0, 52), {
-			Position = UDim2.fromOffset(16, 80),
+			Position = UDim2.fromOffset(16, if heroCard then 90 else 80),
 			Color = Colors.TextMuted,
 			TextSize = 12,
 			Wrapped = true,
@@ -3982,7 +4168,7 @@ function App:_RenderCreate()
 		Factory.Label(
 			cartouche or card,
 			priceText,
-			if cartouche then UDim2.fromScale(1, 1) else UDim2.fromOffset(106, 35),
+			if cartouche then UDim2.new(1, 0, 1, -14) else UDim2.fromOffset(106, 35),
 			{
 				AnchorPoint = if cartouche then Vector2.new(0, 0) else Vector2.new(1, 0),
 				Position = if cartouche then UDim2.fromScale(0, 0) else UDim2.new(1, -15, 0, 48),
@@ -3991,9 +4177,25 @@ function App:_RenderCreate()
 				Font = Theme.Fonts.Black,
 				TextSize = 18,
 				Color = method.color,
+				-- The cartouche is a fixed 124px frame and a token-priced
+				-- label is much longer than "R$ 159".
+				Truncate = Enum.TextTruncate.AtEnd,
 				ZIndex = 2,
 			}
 		)
+		if cartouche then
+			-- The art spells out what the price buys on a second line inside
+			-- the cartouche, under the figure itself.
+			Factory.Label(cartouche, "ONE ACCESSORY", UDim2.new(1, 0, 0, 14), {
+				AnchorPoint = Vector2.new(0, 1),
+				Position = UDim2.new(0, 0, 1, -12),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Bold,
+				TextSize = 9,
+				Color = Colors.Gold,
+				ZIndex = 2,
+			})
+		end
 		if heroCard then
 			-- Stacked directly above the price cartouche and centred on it:
 			-- the cartouche is 124 wide ending 24 from the card's right
@@ -4037,7 +4239,7 @@ function App:_RenderCreate()
 	else
 		local expand = Factory.ImageButton(
 			methodRow,
-			"Switch to Advanced Mode →",
+			"Switch to Advanced Mode ✦",
 			UDim2.new(1, 0, 0, 34),
 			UDim2.fromOffset(0, 168)
 		)
@@ -4047,17 +4249,7 @@ function App:_RenderCreate()
 		end)
 		-- The concept art flanks this exact link with a small flourish on
 		-- each side.
-		for _, side in { "left", "right" } do
-			local flourish = Factory.Icon(
-				methodRow,
-				"FlourishDivider",
-				UDim2.fromOffset(20, 14),
-				if side == "left" then UDim2.new(0.5, -128, 0, 175) else UDim2.new(0.5, 108, 0, 175)
-			)
-			if flourish then
-				flourish.ZIndex = 2
-			end
-		end
+		Factory.FlourishFlank(methodRow, 182, 108)
 	end
 
 	local isUpload = self.selectedMethod == "IMAGE_UPLOAD"
@@ -4145,30 +4337,7 @@ function App:_RenderCreate()
 			true
 		)
 		prompt.Text = self.draftPrompt
-		-- The concept art's one signature "glowing inscription well" is this
-		-- exact field -- the main idea prompt -- not every other textbox
-		-- _TextBox is used for elsewhere in the app, so this overrides just
-		-- this instance's stroke rather than _TextBox's own default.
-		local promptStroke = prompt:FindFirstChildOfClass("UIStroke")
-		if promptStroke then
-			promptStroke.Color = Colors.Cyan
-			promptStroke.Transparency = 0.3
-			promptStroke.Thickness = 1.6
-		end
-		-- The concept art studs this well's top two corners with a small
-		-- diamond accent.
-		for _, corner in { "left", "right" } do
-			local stud = Factory.Icon(
-				prompt,
-				"SparkleStar",
-				UDim2.fromOffset(10, 10),
-				if corner == "left" then UDim2.fromOffset(6, 6) else UDim2.new(1, -16, 0, 6)
-			)
-			if stud then
-				stud.ZIndex = 6
-				stud.ImageColor3 = Colors.Cyan
-			end
-		end
+		self:_GlowField(prompt, true)
 		local count = Factory.Label(
 			promptCard,
 			string.format("%d / %d", #self.draftPrompt, Config.Generation.PromptMaxLength),
@@ -4192,7 +4361,7 @@ function App:_RenderCreate()
 		-- first-timer's first visit (isAvatar's "styling notes" field is a
 		-- different kind of prompt, so it's excluded here regardless).
 		if not isAvatar and not showAllMethods then
-			Factory.Label(promptCard, "NEED AN IDEA? TRY ONE:", UDim2.fromOffset(158, 16), {
+			Factory.Label(promptCard, "NEED AN IDEA?  TAP ONE", UDim2.fromOffset(158, 16), {
 				Position = UDim2.fromOffset(16, cursorY),
 				Font = Theme.Fonts.Bold,
 				TextSize = 10,
@@ -4299,7 +4468,7 @@ function App:_RenderCreate()
 			Factory.Label(
 				tipRow,
 				`A colour + a material + a shape works best — "gold crown made of lava".`,
-				UDim2.new(1, if ember then -56 else -24, 0, 44),
+				UDim2.new(1, if ember then -190 else -158, 0, 44),
 				{
 					Position = UDim2.fromOffset(if ember then 46 else 12, 0),
 					Color = Colors.TextMuted,
@@ -4308,6 +4477,16 @@ function App:_RenderCreate()
 					AlignY = Enum.TextYAlignment.Center,
 				}
 			)
+			-- The art closes this row by naming what Simple Mode is quietly
+			-- deciding for you -- the style preset and fit region you never
+			-- get asked about here -- rather than leaving those silent.
+			Factory.Label(tipRow, "Default style & fit", UDim2.fromOffset(120, 44), {
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -12, 0, 0),
+				AlignX = Enum.TextXAlignment.Right,
+				Color = Colors.TextMuted,
+				TextSize = 11,
+			})
 			cursorY += 52
 		end
 
@@ -4418,6 +4597,7 @@ function App:_RenderCreate()
 				Parent = promptCard,
 			})
 			Factory.Corner(avatarPreview, 12)
+			Factory.Stroke(avatarPreview, Colors.Gold, 0.45)
 			Factory.Label(
 				promptCard,
 				"Fetched automatically from your current Roblox avatar -- nothing to upload",
@@ -4649,7 +4829,7 @@ function App:_RenderCreate()
 			elseif
 				self.state.policy.commerceAllowed ~= true and not isUpload
 			then "Purchases unavailable on this account"
-			elseif not showAllMethods then string.format("Make My Accessory · %s", priceText)
+			elseif not showAllMethods then string.format("Make It!  ·  %s", priceText)
 			elseif self.selectedMethod == "TEXT_TO_3D" then string.format("Forge 3D · %s", priceText)
 			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · %s", priceText)
 			elseif self.selectedMethod == "AVATAR_TO_3D" then string.format(
@@ -4971,7 +5151,7 @@ function App:_RenderCreate()
 		end
 	end
 	local showUpsell = hasQueuedRow and availablePasses <= 0
-	local activityHeight = (if rowCount == 0 then 140 else 45 + rowCount * 50 + 14) + (if showUpsell then 46 else 0)
+	local activityHeight = (if rowCount == 0 then 144 else 49 + rowCount * 50 + 14) + (if showUpsell then 46 else 0)
 	local activity = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, activityHeight), nil, "Activity")
 	activity.LayoutOrder = 2
 	-- Concept art labels this panel "IN THE FORGE" and shows a global feed
@@ -4980,13 +5160,8 @@ function App:_RenderCreate()
 	-- exists). This keeps the real, honest data (the player's own queue)
 	-- under the concept art's label, rather than fabricating other players'
 	-- activity.
-	Factory.Label(activity, "IN THE FORGE", UDim2.new(1, -32, 0, 24), {
-		Position = UDim2.fromOffset(16, 13),
-		Font = Theme.Fonts.Bold,
-		TextSize = 12,
-		Color = Colors.Violet,
-	})
-	local y = 45
+	Factory.SectionBanner(activity, "In the Forge")
+	local y = 49
 	local shown = 0
 	for _, generationId in self.state.profile.generationOrder do
 		if shown >= 3 then
@@ -5436,71 +5611,74 @@ function App:_RenderCreate()
 			end
 		end
 		local allDone = doneCount >= #quests
-		local cardHeight = #quests * 46 + (if allDone then 122 else 46)
+		-- 62 per quest, not 46: the art gives each one a progress bar and a
+		-- counted line under its label, rather than a single row.
+		local cardHeight = #quests * 62 + (if allDone then 126 else 50)
 		local questCard = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyQuests")
 		questCard.LayoutOrder = 1
-		Factory.Label(questCard, "DAILY QUESTS", UDim2.new(1, -100, 0, 20), {
-			Position = UDim2.fromOffset(16, 13),
-			Font = Theme.Fonts.Bold,
-			TextSize = 12,
-			Color = Colors.Mint,
-		})
-		Factory.Label(questCard, string.format("%d / %d", doneCount, #quests), UDim2.fromOffset(70, 20), {
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -16, 0, 13),
-			AlignX = Enum.TextXAlignment.Right,
-			Font = Theme.Fonts.Black,
-			Color = if allDone then Colors.Gold else Colors.TextMuted,
-			TextSize = 12,
-		})
+		-- Titled by the concept art's notched banner tab across the card's
+		-- top edge, with the progress count folded into the caption the same
+		-- way the art's own "COLLECTION * 6" tab does -- there is no room
+		-- beside a centred tab for the separate right-aligned counter this
+		-- used to carry.
+		Factory.SectionBanner(questCard, string.format("Daily Quests · %d/%d", doneCount, #quests))
 
-		local qy = 40
+		local qy = 44
 		for _, quest in quests do
 			local done = questsDone[quest.key] == true
+			-- The art lays a quest out as its own small block rather than a
+			-- chip: the label with its reward opposite, a progress bar under
+			-- them, and the count beneath that. No enclosing tile and no
+			-- icon badge -- the bar is what carries the state.
 			local row = Factory.New("Frame", {
 				Position = UDim2.fromOffset(16, qy),
-				Size = UDim2.new(1, -32, 0, 38),
-				BackgroundColor3 = if done then Colors.Mint else Colors.Ink,
-				BackgroundTransparency = if done then 0.85 else 0.25,
-				BorderSizePixel = 0,
+				Size = UDim2.new(1, -32, 0, 54),
+				BackgroundTransparency = 1,
 				Parent = questCard,
 			})
-			Factory.Corner(row, 10)
-			if done then
-				Factory.Stroke(row, Colors.Mint, 0.5, 1)
-			end
-
-			local badge = Factory.New("Frame", {
-				Size = UDim2.fromOffset(28, 28),
-				Position = UDim2.fromOffset(5, 5),
-				BackgroundColor3 = if done then Colors.Mint else Colors.PanelSoft,
-				BorderSizePixel = 0,
-				Parent = row,
-			})
-			Factory.Corner(badge, 14)
-			Factory.Label(badge, if done then "✓" else quest.icon, UDim2.fromScale(1, 1), {
-				TextSize = if done then 14 else 13,
-				Color = if done then Colors.Ink else Colors.Text,
-				Font = Theme.Fonts.Black,
-				AlignX = Enum.TextXAlignment.Center,
-				AlignY = Enum.TextYAlignment.Center,
-			})
-
-			Factory.Label(row, quest.label, UDim2.new(1, -110, 1, 0), {
-				Position = UDim2.fromOffset(42, 0),
-				Font = if done then Theme.Fonts.Medium else Theme.Fonts.Regular,
+			Factory.Label(row, quest.label, UDim2.new(1, -56, 0, 20), {
+				Font = if done then Theme.Fonts.Bold else Theme.Fonts.Medium,
 				Color = if done then Colors.Text else Colors.TextMuted,
 				TextSize = 12,
 				Truncate = Enum.TextTruncate.AtEnd,
 			})
-			Factory.Label(row, string.format("+%d", quest.tokens), UDim2.fromOffset(50, 38), {
+			-- The art replaces the reward figure with the word once it has
+			-- been paid out, rather than showing what you already collected.
+			Factory.Label(row, if done then "DONE" else string.format("+%d", quest.tokens), UDim2.fromOffset(50, 20), {
 				AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, -10, 0, 0),
+				Position = UDim2.new(1, 0, 0, 0),
 				AlignX = Enum.TextXAlignment.Right,
-				AlignY = Enum.TextYAlignment.Center,
 				Font = Theme.Fonts.Bold,
-				Color = if done then Colors.Mint else Colors.TextMuted,
+				Color = if done then Colors.Mint else Colors.Gold,
 				TextSize = 12,
+			})
+			local track = Factory.New("Frame", {
+				Position = UDim2.fromOffset(0, 24),
+				Size = UDim2.new(1, 0, 0, 10),
+				BackgroundColor3 = Colors.Ink,
+				BackgroundTransparency = 0.25,
+				BorderSizePixel = 0,
+				Parent = row,
+			})
+			Factory.Corner(track, 5)
+			Factory.Stroke(track, Colors.Gold, 0.72, 1)
+			if done then
+				local fill = Factory.New("Frame", {
+					Size = UDim2.fromScale(1, 1),
+					BackgroundColor3 = Colors.Gold,
+					BorderSizePixel = 0,
+					Parent = track,
+				})
+				Factory.Corner(fill, 5)
+				Factory.Gradient(fill, { Colors.Gold, Colors.Rose }, 0)
+			end
+			-- Every quest Config defines is a single action, so the count is
+			-- honestly 0 or 1 of 1 -- the art's own first and third quests
+			-- read the same way.
+			Factory.Label(row, string.format("%d of 1", if done then 1 else 0), UDim2.new(1, 0, 0, 16), {
+				Position = UDim2.fromOffset(0, 37),
+				Color = Colors.TextMuted,
+				TextSize = 10,
 			})
 
 			if
@@ -5513,7 +5691,7 @@ function App:_RenderCreate()
 					:Play()
 			end
 
-			qy += 46
+			qy += 62
 		end
 
 		if allDone then
@@ -5578,7 +5756,8 @@ function App:_RenderStudio()
 		"My Studio",
 		if showAllMethods
 			then "Fit, equip, share, list, or publish every original and personal copy you own."
-			else "Tap an item below, then equip it or publish it as a real Roblox wearable."
+			else "Tap an item below, then equip it or publish it as a real Roblox wearable.",
+		true
 	)
 	if #profile.itemOrder == 0 then
 		local empty = Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, 260), UDim2.new(0.025, 0, 0, 112))
@@ -5616,23 +5795,50 @@ function App:_RenderStudio()
 	-- Outfits: a snapshot of every currently-equipped item, saved together
 	-- under one name and re-equipped as a set later -- distinct from a fit
 	-- preset below (one item's transform, reusable on a different item).
-	local outfitsHeight = 100
+	-- The concept art runs this whole bar as ONE row -- the OUTFITS caption
+	-- and its "Save your look" subtitle, the name box, the save button, then
+	-- the saved-look chips -- instead of stacking caption / box+button /
+	-- chips down three lines. Only in wide layouts: at compact widths four
+	-- things side by side would leave the name box a few characters wide, so
+	-- there it keeps the original stack.
+	local outfitsHeight = if self.compact then 100 else 86
 	local outfits =
 		Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, outfitsHeight), UDim2.new(0.025, 0, 0, 100), "Outfits")
 	Factory.Label(outfits, "OUTFITS", UDim2.new(0.4, 0, 0, 24), {
-		Position = UDim2.fromOffset(14, 10),
+		Position = UDim2.fromOffset(if self.compact then 14 else 16, if self.compact then 10 else 20),
 		Font = Theme.Fonts.Bold,
 		TextSize = 12,
 		Color = Colors.Mint,
 	})
-	local outfitNameBox =
-		self:_TextBox(outfits, "Name this outfit", UDim2.new(1, -208, 0, 30), UDim2.fromOffset(14, 36), false)
+	if not self.compact then
+		Factory.Label(outfits, "Save your look", UDim2.fromOffset(124, 18), {
+			Position = UDim2.fromOffset(16, 42),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+		})
+	end
+	-- Wide: caption block (16..146), name box, save button, chips -- each
+	-- start derived from the one before it so the row can't overlap itself
+	-- at any width. Compact: the original two stacked rows.
+	local outfitNameBox = self:_TextBox(
+		outfits,
+		"Name this look…",
+		if self.compact then UDim2.new(1, -208, 0, 30) else UDim2.new(0.3, 0, 0, 36),
+		if self.compact then UDim2.fromOffset(14, 36) else UDim2.fromOffset(146, 25),
+		false
+	)
 	local saveOutfitButton =
 		-- 110px used to leave almost no room around "Save current look" at
 		-- Bold 14px -- the label nearly touched the pill's own edges. Widened
 		-- to fit the text with real breathing room and a clean 10px gap from
 		-- the name box.
-		Factory.ImageButton(outfits, "Save current look", UDim2.fromOffset(170, 30), UDim2.new(1, -184, 0, 36), "mint")
+		Factory.ImageButton(
+			outfits,
+			if self.compact then "Save current look" else "Save look",
+			if self.compact then UDim2.fromOffset(170, 30) else UDim2.fromOffset(140, 36),
+			if self.compact then UDim2.new(1, -184, 0, 36) else UDim2.new(0.3, 156, 0, 25),
+			"mint"
+		)
 	self:_BindButton(saveOutfitButton)
 	saveOutfitButton.Activated:Connect(function()
 		saveOutfitButton.Active = false
@@ -5652,8 +5858,8 @@ function App:_RenderStudio()
 		end)
 	end)
 	local outfitList = Factory.New("ScrollingFrame", {
-		Position = UDim2.fromOffset(14, 70),
-		Size = UDim2.new(1, -28, 0, 24),
+		Position = if self.compact then UDim2.fromOffset(14, 70) else UDim2.new(0.3, 306, 0, 25),
+		Size = if self.compact then UDim2.new(1, -28, 0, 24) else UDim2.new(0.7, -322, 0, 36),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 3,
@@ -5665,11 +5871,12 @@ function App:_RenderStudio()
 	})
 	Factory.List(outfitList, Enum.FillDirection.Horizontal, 8)
 	local outfitOrder = profile.outfitOrder or {}
+	local chipHeight = if self.compact then 24 else 36
 	if #outfitOrder == 0 then
 		Factory.Label(
 			outfitList,
 			"No saved outfits yet -- equip a look, then save it above.",
-			UDim2.fromOffset(340, 24),
+			UDim2.fromOffset(340, chipHeight),
 			{
 				AlignY = Enum.TextYAlignment.Center,
 				Color = Colors.TextMuted,
@@ -5677,18 +5884,35 @@ function App:_RenderStudio()
 			}
 		)
 	else
-		for _, outfitId in outfitOrder do
+		for index, outfitId in outfitOrder do
 			local record = profile.outfits[outfitId]
 			if record then
 				local nameWidth = math.clamp(#record.name * 7 + 40, 90, 150)
 				local chip = Factory.New("Frame", {
-					Size = UDim2.fromOffset(nameWidth + 34, 24),
+					Size = UDim2.fromOffset(nameWidth + 34, chipHeight),
 					BackgroundTransparency = 1,
 					Parent = outfitList,
 				})
-				local apply =
-					Factory.ImageButton(chip, record.name, UDim2.fromOffset(nameWidth, 24), UDim2.fromOffset(0, 0), nil)
+				local apply = Factory.ImageButton(
+					chip,
+					record.name,
+					UDim2.fromOffset(nameWidth, chipHeight),
+					UDim2.fromOffset(0, 0),
+					nil
+				)
 				apply.TextTruncate = Enum.TextTruncate.AtEnd
+				-- Every saved-look chip in the concept art carries a small
+				-- gem stud, cycling through the palette down the row. Same
+				-- pattern as Create's idea chips: the stud only appears once
+				-- its asset id is real, and the label steps aside for it
+				-- rather than being drawn over.
+				local studGem = CHIP_GEMS[(index - 1) % #CHIP_GEMS + 1]
+				local stud =
+					Factory.Icon(apply, studGem, UDim2.fromOffset(14, 14), UDim2.fromOffset(9, (chipHeight - 14) // 2))
+				if stud then
+					stud.ZIndex = 2
+					apply.Text = "  " .. record.name
+				end
 				self:_BindButton(apply)
 				apply.Activated:Connect(function()
 					apply.Active = false
@@ -5708,7 +5932,7 @@ function App:_RenderStudio()
 				local remove = Factory.ImageButton(
 					chip,
 					"×",
-					UDim2.fromOffset(26, 24),
+					UDim2.fromOffset(26, chipHeight),
 					UDim2.fromOffset(nameWidth + 8, 0),
 					"danger"
 				)
@@ -5744,12 +5968,7 @@ function App:_RenderStudio()
 			UDim2.new(0.02, 0, 0, topOffset),
 			"Collection"
 		)
-	Factory.Label(collection, string.format("COLLECTION · %d", #profile.itemOrder), UDim2.new(1, -28, 0, 30), {
-		Position = UDim2.fromOffset(14, 12),
-		Font = Theme.Fonts.Bold,
-		TextSize = 12,
-		Color = Colors.Cyan,
-	})
+	Factory.SectionBanner(collection, string.format("Collection · %d", #profile.itemOrder))
 	local itemScroll = Factory.New("ScrollingFrame", {
 		Position = UDim2.fromOffset(12, 48),
 		Size = UDim2.new(1, -24, 1, -60),
@@ -5775,7 +5994,7 @@ function App:_RenderStudio()
 		if item then
 			local row = Factory.New("TextButton", {
 				Size = UDim2.new(1, 0, 0, 82),
-				BackgroundColor3 = if itemId == self.selectedItemId then Color3.fromRGB(66, 58, 112) else Colors.Ink,
+				BackgroundColor3 = if itemId == self.selectedItemId then Color3.fromRGB(74, 50, 128) else Colors.Ink,
 				BorderSizePixel = 0,
 				AutoButtonColor = false,
 				Text = "",
@@ -5783,10 +6002,14 @@ function App:_RenderStudio()
 				Parent = itemStack,
 			})
 			Factory.Corner(row, 11)
+			-- Gold, not violet, for the selected row: the concept art marks
+			-- the open item with the same gold the panel frames use, which
+			-- is what ties it to the inspector panel beside it.
 			Factory.Stroke(
 				row,
-				if itemId == self.selectedItemId then Colors.Violet else Colors.Line,
-				if itemId == self.selectedItemId then 0.2 else 0.62
+				if itemId == self.selectedItemId then Colors.Gold else Colors.Line,
+				if itemId == self.selectedItemId then 0.15 else 0.62,
+				if itemId == self.selectedItemId then 2 else 1
 			)
 			local image = Factory.New("ImageLabel", {
 				Size = UDim2.fromOffset(64, 64),
@@ -5798,6 +6021,7 @@ function App:_RenderStudio()
 				Parent = row,
 			})
 			Factory.Corner(image, 9)
+			Factory.Stroke(image, Colors.Gold, 0.5)
 			local imageHint = Factory.Label(image, "…", UDim2.fromScale(1, 1), {
 				AlignX = Enum.TextXAlignment.Center,
 				AlignY = Enum.TextYAlignment.Center,
@@ -5821,7 +6045,7 @@ function App:_RenderStudio()
 					Parent = row,
 				})
 				Factory.Corner(badge, 99)
-				Factory.Stroke(badge, Color3.fromRGB(14, 19, 38), 0, 2)
+				Factory.Stroke(badge, Color3.fromRGB(18, 11, 38), 0, 2)
 			end
 			Factory.Label(row, item.name, UDim2.new(1, -168, 0, 27), {
 				Position = UDim2.fromOffset(86, 12),
@@ -5913,7 +6137,7 @@ function App:_RenderStudio()
 	local viewport = Factory.New("ViewportFrame", {
 		Position = UDim2.fromOffset(16, 84),
 		Size = UDim2.new(1, -32, 0, 210),
-		BackgroundColor3 = Color3.fromRGB(62, 72, 108),
+		BackgroundColor3 = Color3.fromRGB(58, 40, 104),
 		BorderSizePixel = 0,
 		Parent = header,
 	})
@@ -5921,12 +6145,24 @@ function App:_RenderStudio()
 	Factory.Stroke(viewport, Colors.Violet, 0.45)
 	local controller = ViewportController.new(viewport, selected.id)
 	self.activeViewport = controller
-	local orbitHint = Factory.ImagePill(viewport, "DRAG ORBIT · RIGHT/SHIFT DRAG PAN", Colors.Cyan, 234)
+	-- The concept art's Simple Mode viewport carries the one hint a player
+	-- actually needs to discover the camera ("DRAG TO ORBIT") rather than
+	-- the full mouse-button reference; Advanced Mode keeps both pills, since
+	-- pan and zoom matter once there are fit sliders to line a model up
+	-- against.
+	local orbitHint = Factory.ImagePill(
+		viewport,
+		if showAllMethods then "DRAG ORBIT · RIGHT/SHIFT DRAG PAN" else "DRAG TO ORBIT",
+		Colors.Cyan,
+		if showAllMethods then 234 else 118
+	)
 	orbitHint.Position = UDim2.fromOffset(12, 12)
 	orbitHint.ZIndex = 5
-	local zoomHint = Factory.ImagePill(viewport, "WHEEL ZOOM", Colors.Violet, 92)
-	zoomHint.Position = UDim2.fromOffset(12, 43)
-	zoomHint.ZIndex = 5
+	if showAllMethods then
+		local zoomHint = Factory.ImagePill(viewport, "WHEEL ZOOM", Colors.Violet, 92)
+		zoomHint.Position = UDim2.fromOffset(12, 43)
+		zoomHint.ZIndex = 5
+	end
 	local resetCamera = Factory.ImageButton(viewport, "↺", UDim2.fromOffset(38, 34), UDim2.new(1, -50, 0, 10), nil)
 	resetCamera.Name = "ResetCamera"
 	resetCamera.TextSize = 18
@@ -5948,7 +6184,7 @@ function App:_RenderStudio()
 	previewStatus.BackgroundTransparency = 0.08
 	Factory.Corner(previewStatus, 8)
 	local retryPreview =
-		Factory.ImageButton(viewport, "Retry preview", UDim2.fromOffset(104, 38), UDim2.new(1, -116, 1, -50), "primary")
+		Factory.ImageButton(viewport, "Retry preview", UDim2.fromOffset(132, 38), UDim2.new(1, -144, 1, -50), "primary")
 	retryPreview.ZIndex = 6
 	retryPreview.Visible = false
 	self:_BindButton(retryPreview)
@@ -5986,14 +6222,21 @@ function App:_RenderStudio()
 			1,
 			-8,
 			0,
-			if not showAllMethods then 278 elseif selected.license == "PERSONAL_COPY" then 1240 else 1424
+			if not showAllMethods then 246 elseif selected.license == "PERSONAL_COPY" then 1240 else 1424
 		),
 		BackgroundTransparency = 1,
 		Parent = inspectScroll,
 	})
+	-- Simple Mode gets the concept art's version of this: a status badge, a
+	-- one-word verdict, and a single plain-language line -- not the stud-by-
+	-- stud measurement against Roblox's publishing bounds, which is only
+	-- actionable next to Advanced Mode's fit sliders. Both are driven by the
+	-- exact same refreshReadiness() below; only what it puts on screen
+	-- differs.
+	local simpleReadiness = not showAllMethods
 	local readiness = Factory.New("Frame", {
 		Position = UDim2.fromOffset(16, 8),
-		Size = UDim2.new(1, -32, 0, 104),
+		Size = UDim2.new(1, -32, 0, if simpleReadiness then 72 else 104),
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.08,
 		BorderSizePixel = 0,
@@ -6001,32 +6244,85 @@ function App:_RenderStudio()
 	})
 	Factory.Corner(readiness, 13)
 	local readinessStroke = Factory.Stroke(readiness, Colors.Gold, 0.35)
-	Factory.Label(readiness, "WEARABLE READINESS · RTHRO NORMAL", UDim2.new(1, -28, 0, 20), {
-		Position = UDim2.fromOffset(14, 10),
-		Font = Theme.Fonts.Bold,
-		TextSize = 12,
-		Color = Colors.Cyan,
-	})
+	local readinessBadge = if simpleReadiness
+		then Factory.New("Frame", {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 14, 0.5, 0),
+			Size = UDim2.fromOffset(30, 30),
+			BackgroundColor3 = Colors.Gold,
+			BorderSizePixel = 0,
+			Parent = readiness,
+		})
+		else nil
+	local readinessBadgeGlyph = nil :: TextLabel?
+	if readinessBadge then
+		Factory.Corner(readinessBadge, 15)
+		readinessBadgeGlyph = Factory.Label(readinessBadge, "…", UDim2.fromScale(1, 1), {
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Center,
+			Font = Theme.Fonts.Black,
+			TextSize = 15,
+			Color = Colors.Ink,
+		})
+	end
+	local textX = if simpleReadiness then 56 else 14
+	local verdict = Factory.Label(
+		readiness,
+		if simpleReadiness then "CHECKING FIT…" else "WEARABLE READINESS · RTHRO NORMAL",
+		UDim2.new(1, -(textX + 14), 0, 20),
+		{
+			Position = UDim2.fromOffset(textX, if simpleReadiness then 14 else 10),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = if simpleReadiness then Colors.Gold else Colors.Cyan,
+		}
+	)
 	local sizeStatus = Factory.Label(readiness, "Measuring the model…", UDim2.new(1, -28, 0, 24), {
 		Position = UDim2.fromOffset(14, 32),
 		Font = Theme.Fonts.Bold,
 		TextSize = 10,
 		Wrapped = true,
 	})
+	sizeStatus.Visible = not simpleReadiness
 	local textureStatusLabel = Factory.Label(
 		readiness,
 		"Checking whether Roblox has released the generated texture…",
-		UDim2.new(1, -28, 0, 34),
+		UDim2.new(1, -(textX + 14), 0, 34),
 		{
-			Position = UDim2.fromOffset(14, 57),
+			Position = UDim2.fromOffset(textX, if simpleReadiness then 34 else 57),
 			Color = Colors.Gold,
-			TextSize = 10,
+			TextSize = if simpleReadiness then 11 else 10,
 			Wrapped = true,
 			AlignY = Enum.TextYAlignment.Top,
 		}
 	)
 
-	local function refreshReadiness()
+	-- readinessStroke.Color is already the tri-state signal every branch of
+	-- measureReadiness() below settles on (rose = over the bounds, mint =
+	-- publishable, gold = still checking), so Simple Mode's badge and
+	-- verdict read it back rather than re-deriving the same three cases.
+	local function applyVerdict()
+		if not simpleReadiness then
+			return
+		end
+		local color = readinessStroke.Color
+		local glyph, text = "…", "CHECKING FIT…"
+		if color == Colors.Rose then
+			glyph, text = "!", "TOO LARGE TO PUBLISH"
+		elseif color == Colors.Mint then
+			glyph, text = "✓", "READY TO WEAR"
+		end
+		verdict.Text = text
+		verdict.TextColor3 = color
+		if readinessBadge then
+			readinessBadge.BackgroundColor3 = color
+		end
+		if readinessBadgeGlyph then
+			readinessBadgeGlyph.Text = glyph
+		end
+	end
+
+	local function measureReadiness()
 		local maximum = AccessoryBounds.GetMaximum(fit.accessoryType)
 		if not baseMeshSize or not maximum then
 			sizeStatus.Text = "Measuring the model against Roblox's publishing bounds…"
@@ -6075,6 +6371,11 @@ function App:_RenderStudio()
 			textureStatusLabel.Text = "Checking whether Roblox has released the generated texture…"
 			textureStatusLabel.TextColor3 = Colors.Gold
 		end
+	end
+
+	local function refreshReadiness()
+		measureReadiness()
+		applyVerdict()
 	end
 	refreshReadiness()
 
@@ -6375,7 +6676,7 @@ function App:_RenderStudio()
 		local presetNameBox =
 			self:_TextBox(presets, "Name this fit", UDim2.new(1, -122, 0, 32), UDim2.fromOffset(14, 52), false)
 		local savePresetButton =
-			Factory.ImageButton(presets, "Save preset", UDim2.fromOffset(96, 32), UDim2.new(1, -110, 0, 52), "mint")
+			Factory.ImageButton(presets, "Save preset", UDim2.fromOffset(112, 32), UDim2.new(1, -126, 0, 52), "mint")
 		self:_BindButton(savePresetButton)
 		savePresetButton.Activated:Connect(function()
 			savePresetButton.Active = false
@@ -6655,8 +6956,8 @@ function App:_RenderStudio()
 			local saveDetails = Factory.ImageButton(
 				details,
 				"Save details",
-				UDim2.fromOffset(120, 32),
-				UDim2.new(1, -134, 0, 152),
+				UDim2.fromOffset(124, 32),
+				UDim2.new(1, -138, 0, 152),
 				"primary"
 			)
 			self:_BindButton(saveDetails)
@@ -6797,21 +7098,26 @@ function App:_RenderStudio()
 		-- PublishItem directly (skipping the Advanced branch's saveCurrentFit()
 		-- pre-step above) since there is no fit-editing UI here for the fit
 		-- draft to ever drift from what the server already has saved.
-		local actionsY = 128
+		-- Sits directly under the 72-tall Simple Mode readiness strip above
+		-- (8 + 72 + a 16px gap), not the 104-tall Advanced one.
+		local actionsY = 96
 		local isEquipped = table.find(profile.equippedItemIds or {}, selected.id) ~= nil
+		-- The concept art gives the molten treatment to Equip, not Publish:
+		-- wearing the thing you just made is the moment worth reaching for,
+		-- and publishing is the deliberate, less frequent second step.
 		local equip = Factory.ImageButton(
 			body,
 			if isEquipped then "Unequip" else "Equip in game",
 			UDim2.new(0.5, -22, 0, 46),
 			UDim2.fromOffset(16, actionsY),
-			if isEquipped then "danger" else "mint"
+			if isEquipped then "danger" else "primary"
 		)
 		local publish = Factory.ImageButton(
 			body,
 			if selected.publishedAssetId then "Published ✓" else "Publish wearable",
 			UDim2.new(0.5, -22, 0, 46),
 			UDim2.new(0.5, 6, 0, actionsY),
-			"primary"
+			nil
 		)
 		self:_BindButton(equip)
 		self:_BindButton(publish)
@@ -6878,24 +7184,34 @@ function App:_RenderStudio()
 		local noteY = actionsY + 60
 		Factory.Label(
 			body,
-			"Equip wears it right now. Publish sends it to Roblox to become a real wearable -- this can open Roblox's own purchase prompt.",
+			"Equip wears it now · Publish sends it to Roblox as a real wearable — which can open Roblox's own purchase prompt.",
 			UDim2.new(1, -32, 0, 34),
 			{
 				Position = UDim2.fromOffset(16, noteY),
 				Color = Colors.TextMuted,
 				TextSize = 10,
 				Wrapped = true,
+				AlignX = Enum.TextXAlignment.Center,
 			}
 		)
 
+		-- Centred and flanked by a flourish either side, the way the concept
+		-- art draws every one of these mode-switch links. Fixed-width so the
+		-- flourishes can be paired to its actual edges; at compact widths a
+		-- 420px link would overflow the panel, so there it stays full-width
+		-- and unflanked.
 		local switchY = noteY + 44
 		local switchAdvanced = Factory.ImageButton(
 			body,
-			"Switch to Advanced Mode for fit, pricing & sharing →",
-			UDim2.new(1, -32, 0, 30),
-			UDim2.fromOffset(16, switchY),
+			"Switch to Advanced Mode for fit, pricing & sharing ✦",
+			if self.compact then UDim2.new(1, -32, 0, 30) else UDim2.fromOffset(420, 30),
+			if self.compact then UDim2.fromOffset(16, switchY) else UDim2.new(0.5, -210, 0, switchY),
 			nil
 		)
+		switchAdvanced.TextSize = 12
+		if not self.compact then
+			Factory.FlourishFlank(body, switchY + 15, 228)
+		end
 		self:_BindButton(switchAdvanced)
 		switchAdvanced.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", false)
@@ -6997,8 +7313,9 @@ function App:_RenderDiscoverFirstLook(topY: number): number
 		Parent = card,
 	})
 	Factory.Corner(visual, 14)
+	Factory.Stroke(visual, Colors.Gold, 0.45)
 	if visual.Image == "" then
-		Factory.Gradient(visual, { Color3.fromRGB(28, 35, 72), Color3.fromRGB(64, 39, 108) }, 135)
+		Factory.Gradient(visual, { Color3.fromRGB(36, 22, 78), Color3.fromRGB(72, 40, 118) }, 135)
 		Factory.Label(visual, if self.marketplaceItems == nil then "…" else "◇", UDim2.fromScale(1, 1), {
 			AlignX = Enum.TextXAlignment.Center,
 			AlignY = Enum.TextYAlignment.Center,
@@ -7056,21 +7373,30 @@ function App:_RenderDiscoverFirstLook(topY: number): number
 		badgeText = "FIRST LOOK"
 	end
 
+	-- The concept art leads with the step badge and reads downward from it
+	-- into the heading and the line of copy -- the step you are on is the
+	-- first thing to land, not a footnote under the description.
+	local badge = Factory.ImagePill(card, badgeText, if done.TRY_STYLE then Colors.Mint else Colors.Cyan, 124)
+	badge.Position = UDim2.fromOffset(textX, 14)
+	local badgeStud = Factory.Icon(badge, if done.TRY_STYLE then "GemMint" else "GemCyan", UDim2.fromOffset(12, 12))
+	if badgeStud then
+		badgeStud.Position = UDim2.fromOffset(10, 8)
+		badgeStud.ZIndex = 2
+		badge.Text = "   " .. badge.Text
+	end
 	Factory.Label(card, heading, headingWidth, {
-		Position = UDim2.fromOffset(textX, 15),
+		Position = UDim2.fromOffset(textX, 44),
 		Font = Theme.Fonts.Black,
 		TextSize = if self.compact then 17 else 20,
 		Truncate = Enum.TextTruncate.AtEnd,
 	})
 	Factory.Label(card, description, if self.compact then UDim2.new(1, -112, 0, 48) else UDim2.new(1, -390, 0, 48), {
-		Position = UDim2.fromOffset(textX, 46),
+		Position = UDim2.fromOffset(textX, 76),
 		Color = Colors.TextMuted,
 		TextSize = if self.compact then 10 else 12,
 		Wrapped = true,
 		AlignY = Enum.TextYAlignment.Top,
 	})
-	local badge = Factory.ImagePill(card, badgeText, if done.TRY_STYLE then Colors.Mint else Colors.Cyan, 112)
-	badge.Position = UDim2.fromOffset(textX, if self.compact then 101 else 103)
 
 	local action = Factory.ImageButton(
 		card,
@@ -7132,7 +7458,8 @@ function App:_RenderDiscover()
 		"Discover",
 		if showAllMethods
 			then "Try on every public design for free. Like, favorite, and support creators through verified Plus transfers."
-			else "Try on things other players made. Tap Try on, then Like the ones you love."
+			else "Try on things other players made. Tap Try on, then like the ones you love.",
+		true
 	)
 	if not self.state.policy.contentSharingAllowed then
 		local blocked = Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, 230), UDim2.new(0.025, 0, 0, 112))
@@ -7179,6 +7506,16 @@ function App:_RenderDiscover()
 		false
 	)
 	search.Text = self.marketplaceQuery
+	-- The concept art draws this bar as the page's glowing well, with a
+	-- magnifier sitting inside its right edge rather than on the button.
+	self:_GlowField(search)
+	Factory.Label(search, "🔍", UDim2.fromOffset(24, 24), {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		AlignX = Enum.TextXAlignment.Center,
+		TextSize = 16,
+		Color = Colors.Cyan,
+	})
 	local refresh = Factory.ImageButton(
 		tools,
 		"Search",
@@ -7276,12 +7613,12 @@ function App:_RenderDiscover()
 			end)
 		end
 		local leaderboardChip =
-			Factory.ImageButton(filters, "🏆 Top Creators", UDim2.fromOffset(130, 30), nil, "mint")
+			Factory.ImageButton(filters, "🏆 Top Creators", UDim2.fromOffset(146, 30), nil, "mint")
 		self:_BindButton(leaderboardChip)
 		leaderboardChip.Activated:Connect(function()
 			self:_ShowLeaderboard()
 		end)
-		local simpleChip = Factory.ImageButton(filters, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
+		local simpleChip = Factory.ImageButton(filters, "← Simple Mode", UDim2.fromOffset(132, 30), nil, nil)
 		self:_BindButton(simpleChip)
 		simpleChip.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", true)
@@ -7289,19 +7626,27 @@ function App:_RenderDiscover()
 
 		gridY = filtersY + 58
 	else
+		-- Centred and flanked by a flourish either side, exactly as the
+		-- concept art draws every one of these mode-switch links. Fixed
+		-- width in wide layouts so the flourishes pair to its real edges;
+		-- compact keeps the full-width bar, where 440px would overflow.
 		local switchY = toolsY + toolsHeight + 10
 		local switchAdvanced = Factory.ImageButton(
 			self.content,
-			"Switch to Advanced Mode for filters, sorting & buying →",
-			UDim2.new(0.95, 0, 0, 28),
-			UDim2.new(0.025, 0, 0, switchY),
+			"Switch to Advanced Mode for filters, sorting & buying ✦",
+			if self.compact then UDim2.new(0.95, 0, 0, 30) else UDim2.fromOffset(440, 30),
+			if self.compact then UDim2.new(0.025, 0, 0, switchY) else UDim2.new(0.5, -220, 0, switchY),
 			nil
 		)
+		switchAdvanced.TextSize = 12
+		if not self.compact then
+			Factory.FlourishFlank(self.content, switchY + 15, 238)
+		end
 		self:_BindButton(switchAdvanced)
 		switchAdvanced.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", false)
 		end)
-		gridY = switchY + 28 + 16
+		gridY = switchY + 30 + 16
 	end
 
 	if self.marketplaceItems == nil then
@@ -7348,6 +7693,9 @@ function App:_RenderDiscover()
 			Parent = card,
 		})
 		Factory.Corner(image, 11)
+		-- The concept art frames each gallery preview in its own thin gold
+		-- rim rather than letting the render sit flush on the card.
+		Factory.Stroke(image, Colors.Gold, 0.45)
 		local imageHint = Factory.Label(image, "Preview processing on Roblox…", UDim2.new(1, -16, 0, 34), {
 			AnchorPoint = Vector2.new(0, 1),
 			Position = UDim2.new(0, 8, 1, -8),
@@ -7365,8 +7713,14 @@ function App:_RenderDiscover()
 			Factory.ImagePill(card, string.format("R$ %d", item.listingPriceRobux), Colors.Mint, 68).Position =
 				UDim2.fromOffset(156, 18)
 		end
+		-- The concept art centres a gallery card's title over its byline and
+		-- drops the style/detail metadata from it: in Simple Mode "AUTO /
+		-- BALANCED" is art-direction jargon for settings that page can't
+		-- even change. Advanced Mode keeps the full line, where those two
+		-- values are things the player picked.
 		Factory.Label(card, item.title or item.name, UDim2.new(1, -20, 0, 27), {
 			Position = UDim2.fromOffset(10, 194),
+			AlignX = if showAllMethods then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center,
 			Font = Theme.Fonts.Bold,
 			TextSize = 14,
 			Truncate = Enum.TextTruncate.AtEnd,
@@ -7378,10 +7732,13 @@ function App:_RenderDiscover()
 		)
 		Factory.Label(
 			card,
-			string.format("by @%s · %s", tostring(item.ownerName), itemMeta),
+			if showAllMethods
+				then string.format("by @%s · %s", tostring(item.ownerName), itemMeta)
+				else string.format("by @%s", tostring(item.ownerName)),
 			UDim2.new(1, -20, 0, 22),
 			{
 				Position = UDim2.fromOffset(10, 221),
+				AlignX = if showAllMethods then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center,
 				Color = Colors.TextMuted,
 				TextSize = 11,
 				Truncate = Enum.TextTruncate.AtEnd,
@@ -7476,20 +7833,39 @@ function App:_RenderDiscover()
 				end)
 			end)
 		end
+		-- Coloured glyphs, per the concept art's red heart and gold star --
+		-- a TextButton has one TextColor3, so each glyph is its own label
+		-- sitting beside a count-only button rather than one two-tone string.
 		local like = Factory.ImageButton(
 			card,
-			string.format("%s %s", if item.viewerLiked then "♥" else "♡", formatNumber(item.likes)),
+			formatNumber(item.likes),
 			UDim2.new(0.5, -15, 0, 30),
 			UDim2.fromOffset(10, 298),
 			nil
 		)
 		local favorite = Factory.ImageButton(
 			card,
-			string.format("%s %s", if item.viewerFavorited then "★" else "☆", formatNumber(item.favorites)),
+			formatNumber(item.favorites),
 			UDim2.new(0.5, -15, 0, 30),
 			UDim2.new(0.5, 5, 0, 298),
 			nil
 		)
+		for _, glyph in
+			{
+				{ button = like, text = if item.viewerLiked then "♥" else "♡", color = Colors.Rose },
+				{ button = favorite, text = if item.viewerFavorited then "★" else "☆", color = Colors.Gold },
+			}
+		do
+			Factory.Label(glyph.button, glyph.text, UDim2.fromOffset(20, 30), {
+				Position = UDim2.fromOffset(10, 0),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = 14,
+				Color = glyph.color,
+				ZIndex = 6,
+			})
+			glyph.button.Text = "   " .. glyph.button.Text
+		end
 		self:_BindButton(like)
 		self:_BindButton(favorite)
 		like.Activated:Connect(function()
@@ -7638,7 +8014,8 @@ function App:_RenderAvatarLab()
 		"Avatar Lab",
 		if showAllMethods
 			then "Mix Roblox Marketplace accessories with your Forge creations and stay longer in the look."
-			else "Try on free Roblox items. Tap a category below, then Try on."
+			else "Try on free Roblox items. Tap a category below, then Try on.",
+		true
 	)
 	-- The creator-name/price-range row is the single biggest thing in this
 	-- card, and most searches never touch it — collapsed by default, it only
@@ -7656,10 +8033,11 @@ function App:_RenderAvatarLab()
 			then (if self.compact then 276 else 200)
 			else (if self.compact then 194 else 151)
 	else
-		-- accessoryChipsY (106 compact / 63 desktop, computed below) + 40 for
-		-- the switch-to-Advanced row's own Y offset + its 28px height + 16px
-		-- bottom padding.
-		controlsHeight = if self.compact then 190 else 147
+		-- accessoryChipsY (106 compact / 63 desktop, computed below) + the
+		-- 32px chip row + 16px bottom padding. Simple Mode's switch-to-
+		-- Advanced control is the last chip in that same row now (the
+		-- concept art puts it there), not a separate bar below it.
+		controlsHeight = if self.compact then 154 else 111
 	end
 	local runwayState = self.runwayState or self.state.runwayState
 	local runwayJoined = runwayState and runwayState.joined == true
@@ -7677,8 +8055,8 @@ function App:_RenderAvatarLab()
 		local returnButton = Factory.ImageButton(
 			runwayBanner,
 			if runwayState.ready then "View round" else "Return & lock in",
-			UDim2.fromOffset(126, 34),
-			UDim2.new(1, -140, 0, 10),
+			UDim2.fromOffset(158, 34),
+			UDim2.new(1, -172, 0, 10),
 			"primary"
 		)
 		self:_BindButton(returnButton)
@@ -7718,6 +8096,16 @@ function App:_RenderAvatarLab()
 		false
 	)
 	search.Text = self.catalogQuery
+	-- Same glowing well the concept art gives Create's prompt and
+	-- Discover's search, with the magnifier inside its right edge.
+	self:_GlowField(search)
+	Factory.Label(search, "🔍", UDim2.fromOffset(24, 24), {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		AlignX = Enum.TextXAlignment.Center,
+		TextSize = 16,
+		Color = Colors.Cyan,
+	})
 	local searchButton = Factory.ImageButton(
 		controls,
 		"Search",
@@ -7786,19 +8174,42 @@ function App:_RenderAvatarLab()
 		Parent = controls,
 	})
 	Factory.List(chips, Enum.FillDirection.Horizontal, 7)
-	for typeName, label in ACCESSORY_LABELS do
+	for chipIndex, typeName in ACCESSORY_ORDER do
+		local label = ACCESSORY_LABELS[typeName]
 		local chip = Factory.ImageButton(
 			chips,
 			label,
-			UDim2.fromOffset(86, 30),
+			UDim2.fromOffset(94, 30),
 			nil,
 			if self.catalogType == typeName then "primary" else nil
 		)
+		-- The concept art studs every category chip with a gem, walking down
+		-- the palette across the row.
+		local stud = Factory.Icon(
+			chip,
+			CHIP_GEMS[(chipIndex - 1) % #CHIP_GEMS + 1],
+			UDim2.fromOffset(12, 12),
+			UDim2.fromOffset(9, 9)
+		)
+		if stud then
+			stud.ZIndex = 2
+			chip.Text = "  " .. label
+		end
 		self:_BindButton(chip)
 		chip.Activated:Connect(function()
 			self.catalogType = typeName
 			self:_ApplyCatalogFilters()
 			self:_RenderActivePage()
+		end)
+	end
+	if not showAllMethods then
+		-- The concept art keeps this at the end of the category row rather
+		-- than as its own full-width bar below -- the mirror image of
+		-- Advanced Mode's "<- Simple Mode" chip in the same spot.
+		local switchAdvanced = Factory.ImageButton(chips, "Advanced Mode ✦", UDim2.fromOffset(150, 30), nil, nil)
+		self:_BindButton(switchAdvanced)
+		switchAdvanced.Activated:Connect(function()
+			self:_UpdateSetting("simpleMode", false)
 		end)
 	end
 	if showAllMethods then
@@ -7814,7 +8225,7 @@ function App:_RenderAvatarLab()
 			self.catalogFiltersExpanded = not filtersExpanded
 			self:_RenderActivePage()
 		end)
-		local simpleChip = Factory.ImageButton(chips, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
+		local simpleChip = Factory.ImageButton(chips, "← Simple Mode", UDim2.fromOffset(132, 30), nil, nil)
 		self:_BindButton(simpleChip)
 		simpleChip.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", true)
@@ -7867,18 +8278,6 @@ function App:_RenderAvatarLab()
 				self:_RenderActivePage()
 			end)
 		end
-	else
-		local switchAdvanced = Factory.ImageButton(
-			controls,
-			"Switch to Advanced Mode for filters, sorting & buying →",
-			UDim2.new(1, -28, 0, 28),
-			UDim2.fromOffset(14, sortY),
-			nil
-		)
-		self:_BindButton(switchAdvanced)
-		switchAdvanced.Activated:Connect(function()
-			self:_UpdateSetting("simpleMode", false)
-		end)
 	end
 
 	self.catalogSearchBox = search
@@ -8032,8 +8431,12 @@ function App:_RenderAvatarLab()
 				Parent = card,
 			})
 			Factory.Corner(image, 11)
+			-- Same thin gold rim the concept art frames every gallery
+			-- preview in, on Discover and here alike.
+			Factory.Stroke(image, Colors.Gold, 0.45)
 			Factory.Label(card, tostring(item.Name or "Catalog item"), UDim2.new(1, -20, 0, 28), {
 				Position = UDim2.fromOffset(10, 196),
+				AlignX = if showAllMethods then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center,
 				Font = Theme.Fonts.Bold,
 				TextSize = 13,
 				Truncate = Enum.TextTruncate.AtEnd,
@@ -8055,9 +8458,12 @@ function App:_RenderAvatarLab()
 			-- The old -12/-8 split left "Buy" only ~4px from the card's own
 			-- right edge; widened both the outer and inter-button gaps to a
 			-- real ~10px (matching the CellSize bump above).
+			-- "Try on" in Simple Mode, matching the concept art's full-width
+			-- button; Advanced Mode keeps the shorter "Try" that has to
+			-- share the row with Buy.
 			local try = Factory.ImageButton(
 				card,
-				if self.triedOnAssetIds[assetId] then "Unequip" else "Try",
+				if self.triedOnAssetIds[assetId] then "Unequip" elseif showAllMethods then "Try" else "Try on",
 				if showAllMethods then UDim2.new(0.45, -14, 0, 38) else UDim2.new(1, -20, 0, 38),
 				UDim2.fromOffset(10, 248),
 				if self.triedOnAssetIds[assetId] then "danger" else "primary"
@@ -8107,7 +8513,7 @@ function App:_RenderAvatarLab()
 						self:_RenderActivePage()
 					elseif try.Parent then
 						try.Active = true
-						try.Text = if removing then "Unequip" else "Try"
+						try.Text = if removing then "Unequip" elseif showAllMethods then "Try" else "Try on"
 					end
 				end)
 			end)
@@ -8191,6 +8597,16 @@ function App:_RenderGraphicsDiscoverBody()
 		false
 	)
 	search.Text = self.graphicsMarketplaceQuery
+	-- Same glowing well with an inset magnifier the concept art gives every
+	-- other search bar in the app.
+	self:_GlowField(search)
+	Factory.Label(search, "🔍", UDim2.fromOffset(24, 24), {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		AlignX = Enum.TextXAlignment.Center,
+		TextSize = 16,
+		Color = Colors.Cyan,
+	})
 	local refresh = Factory.ImageButton(
 		tools,
 		"Search",
@@ -8267,7 +8683,7 @@ function App:_RenderGraphicsDiscoverBody()
 				self:_RenderActivePage()
 			end)
 		end
-		local simpleChip = Factory.ImageButton(filters, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
+		local simpleChip = Factory.ImageButton(filters, "← Simple Mode", UDim2.fromOffset(132, 30), nil, nil)
 		self:_BindButton(simpleChip)
 		simpleChip.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", true)
@@ -8340,6 +8756,9 @@ function App:_RenderGraphicsDiscoverBody()
 			Parent = card,
 		})
 		Factory.Corner(image, 11)
+		-- The same thin gold rim the concept art frames every gallery
+		-- preview in.
+		Factory.Stroke(image, Colors.Gold, 0.45)
 		if showAllMethods and graphic.isListed then
 			Factory.ImagePill(card, string.format("R$ %d", graphic.listingPriceRobux), Colors.Mint, 68).Position =
 				UDim2.fromOffset(156, 18)
@@ -8431,18 +8850,36 @@ function App:_RenderGraphicsDiscoverBody()
 		local likeFavoriteY = if showAllMethods then 266 else 222
 		local like = Factory.ImageButton(
 			card,
-			string.format("%s %s", if graphic.viewerLiked then "♥" else "♡", formatNumber(graphic.likes)),
+			formatNumber(graphic.likes),
 			UDim2.new(0.5, -15, 0, 30),
 			UDim2.fromOffset(10, likeFavoriteY),
 			nil
 		)
 		local favorite = Factory.ImageButton(
 			card,
-			string.format("%s %s", if graphic.viewerFavorited then "★" else "☆", formatNumber(graphic.favorites)),
+			formatNumber(graphic.favorites),
 			UDim2.new(0.5, -15, 0, 30),
 			UDim2.new(0.5, 5, 0, likeFavoriteY),
 			nil
 		)
+		-- Red heart, gold star, per the concept art -- each its own label,
+		-- since a TextButton has only one TextColor3 for its whole string.
+		for _, glyph in
+			{
+				{ button = like, text = if graphic.viewerLiked then "♥" else "♡", color = Colors.Rose },
+				{ button = favorite, text = if graphic.viewerFavorited then "★" else "☆", color = Colors.Gold },
+			}
+		do
+			Factory.Label(glyph.button, glyph.text, UDim2.fromOffset(20, 30), {
+				Position = UDim2.fromOffset(10, 0),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = 14,
+				Color = glyph.color,
+				ZIndex = 6,
+			})
+			glyph.button.Text = "   " .. glyph.button.Text
+		end
 		self:_BindButton(like)
 		self:_BindButton(favorite)
 		like.Activated:Connect(function()
@@ -8484,7 +8921,8 @@ function App:_RenderAvatarGraphics()
 		"Avatar Graphics",
 		if showAllMethods
 			then "Turn your current Roblox avatar -- or just a prompt -- into a standalone piece of art -- no accessory, no 3D model, just a picture worth keeping."
-			else "Turn a prompt or your avatar into a picture you can keep."
+			else "Turn a prompt or your avatar into a picture you can keep.",
+		true
 	)
 
 	local tabs = Factory.New("Frame", {
@@ -8532,13 +8970,40 @@ function App:_RenderAvatarGraphics()
 	})
 	self:_TrackScroll(page, "AvatarGraphics")
 	Factory.ScalePadding(page, 0.012, 0.012)
+	-- The concept art runs the composer beside a narrower rail carrying
+	-- IN PROGRESS and YOUR GRAPHICS, not one long stack of all three. Same
+	-- split Create uses, including collapsing back to a single stack in
+	-- compact layouts, where a ~37%-wide rail would be unreadable.
+	local columns = if self.compact
+		then nil
+		else Factory.New("Frame", {
+			Size = UDim2.new(1, -8, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Parent = page,
+		})
+	if columns then
+		Factory.List(columns, Enum.FillDirection.Horizontal, 20)
+	end
 	local stack = Factory.New("Frame", {
-		Size = UDim2.new(1, -8, 0, 0),
+		Size = if self.compact then UDim2.new(1, -8, 0, 0) else UDim2.new(0.63, -10, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
-		Parent = page,
+		Parent = if self.compact then page else columns,
 	})
 	Factory.List(stack, Enum.FillDirection.Vertical, 14)
+	local rightStack = if self.compact
+		then stack
+		else Factory.New("Frame", {
+			Size = UDim2.new(0.37, -10, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Parent = columns,
+		})
+	if not self.compact then
+		Factory.List(rightStack, Enum.FillDirection.Vertical, 14)
+		Factory.BannerHeadroom(rightStack)
+	end
 
 	local isTextMode = self.graphicMode == "TEXT"
 	local composer = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 460), nil, "GraphicComposer")
@@ -8608,12 +9073,19 @@ function App:_RenderAvatarGraphics()
 			local chip = Factory.ImageButton(
 				row,
 				option.Label,
-				UDim2.fromOffset(98, 34),
+				UDim2.fromOffset(106, 34),
 				nil,
 				if selected then "primary" else nil
 			)
 			if selected then
 				chip.BackgroundColor3 = color
+			end
+			-- Every step chip in the concept art carries a gem in its own
+			-- step's accent colour.
+			local stud = Factory.Icon(chip, gemForAccent(color), UDim2.fromOffset(12, 12), UDim2.fromOffset(10, 11))
+			if stud then
+				stud.ZIndex = 2
+				chip.Text = "  " .. option.Label
 			end
 			self:_BindButton(chip)
 			chip.Activated:Connect(function()
@@ -8623,7 +9095,7 @@ function App:_RenderAvatarGraphics()
 	end
 
 	if not isTextMode then
-		Factory.Label(composer, "1  CHOOSE YOUR AVATAR VIEW", UDim2.new(1, -32, 0, 22), {
+		Factory.Label(composer, "1 · CHOOSE YOUR AVATAR VIEW", UDim2.new(1, -32, 0, 22), {
 			Position = UDim2.fromOffset(16, cursorY),
 			Font = Theme.Fonts.Bold,
 			TextSize = 12,
@@ -8654,18 +9126,34 @@ function App:_RenderAvatarGraphics()
 			Parent = composer,
 		})
 		Factory.Corner(avatarPreview, 12)
+		Factory.Stroke(avatarPreview, Colors.Gold, 0.45)
 		Factory.Label(
 			composer,
-			"Fetched automatically from your current Roblox avatar -- nothing to upload",
-			UDim2.new(1, -32 - 76, 0, 64),
+			"Fetched automatically from your current Roblox avatar — nothing to upload.",
+			UDim2.new(1, -32 - 76, 0, if showAllMethods then 64 else 42),
 			{
 				Position = UDim2.fromOffset(16 + 64 + 12, cursorY),
 				Color = Colors.TextMuted,
 				TextSize = 11,
 				Wrapped = true,
-				AlignY = Enum.TextYAlignment.Center,
+				AlignY = if showAllMethods then Enum.TextYAlignment.Center else Enum.TextYAlignment.Top,
 			}
 		)
+		if not showAllMethods then
+			-- The art names what Simple Mode is deciding for you here, rather
+			-- than leaving the two controls it hides unexplained.
+			Factory.Label(
+				composer,
+				"Style and quality use their defaults in Simple Mode.",
+				UDim2.new(1, -32 - 76, 0, 18),
+				{
+					Position = UDim2.fromOffset(16 + 64 + 12, cursorY + 44),
+					Color = Colors.TextMuted,
+					TextSize = 10,
+					Truncate = Enum.TextTruncate.AtEnd,
+				}
+			)
+		end
 		cursorY += 74
 	end
 
@@ -8676,7 +9164,7 @@ function App:_RenderAvatarGraphics()
 		local simpleLink = Factory.ImageButton(
 			composer,
 			"← Simple Mode",
-			UDim2.fromOffset(120, 24),
+			UDim2.fromOffset(132, 26),
 			UDim2.fromOffset(16, cursorY),
 			nil
 		)
@@ -8686,7 +9174,7 @@ function App:_RenderAvatarGraphics()
 		end)
 		cursorY += 32
 
-		local styleStepLabel = if isTextMode then "1  CHOOSE A VISUAL STYLE" else "2  CHOOSE A VISUAL STYLE"
+		local styleStepLabel = if isTextMode then "1 · CHOOSE A VISUAL STYLE" else "2 · CHOOSE A VISUAL STYLE"
 		Factory.Label(composer, styleStepLabel, UDim2.new(1, -32, 0, 22), {
 			Position = UDim2.fromOffset(16, cursorY),
 			Font = Theme.Fonts.Bold,
@@ -8700,7 +9188,7 @@ function App:_RenderAvatarGraphics()
 		end)
 		cursorY += 46
 
-		local qualityStepLabel = if isTextMode then "2  CHOOSE IMAGE QUALITY" else "3  CHOOSE IMAGE QUALITY"
+		local qualityStepLabel = if isTextMode then "2 · CHOOSE IMAGE QUALITY" else "3 · CHOOSE IMAGE QUALITY"
 		Factory.Label(composer, qualityStepLabel, UDim2.new(1, -32, 0, 22), {
 			Position = UDim2.fromOffset(16, cursorY),
 			Font = Theme.Fonts.Bold,
@@ -8744,12 +9232,12 @@ function App:_RenderAvatarGraphics()
 	local promptStepLabel
 	if isTextMode then
 		promptStepLabel = if showAllMethods
-			then "3  DESCRIBE YOUR IMAGE (REQUIRED)"
-			else "1  DESCRIBE YOUR IMAGE (REQUIRED)"
+			then "3 · DESCRIBE YOUR IMAGE  (REQUIRED)"
+			else "1 · DESCRIBE YOUR IMAGE  (REQUIRED)"
 	else
 		promptStepLabel = if showAllMethods
-			then "4  DESCRIBE A SCENE OR THEME (OPTIONAL)"
-			else "2  DESCRIBE A SCENE OR THEME (OPTIONAL)"
+			then "4 · DESCRIBE A SCENE OR THEME  (OPTIONAL)"
+			else "2 · DESCRIBE A SCENE OR THEME  (OPTIONAL)"
 	end
 	Factory.Label(composer, promptStepLabel, UDim2.new(1, -32, 0, 22), {
 		Position = UDim2.fromOffset(16, cursorY),
@@ -8768,6 +9256,7 @@ function App:_RenderAvatarGraphics()
 		true
 	)
 	prompt.Text = if isTextMode then self.textImagePrompt else self.avatarGraphicPrompt
+	self:_GlowField(prompt, true)
 	local count = Factory.Label(
 		composer,
 		string.format("%d / %d", #prompt.Text, Config.Generation.PromptMaxLength),
@@ -8791,10 +9280,15 @@ function App:_RenderAvatarGraphics()
 	end)
 	cursorY += 72
 
-	if not showAllMethods then
+	-- The concept art closes the composer with one row: the Advanced Mode
+	-- link on the left and the molten Create button on the right. Compact
+	-- keeps the link on its own full-width row above, where the two would
+	-- not fit side by side.
+	local simpleSwitchInline = not showAllMethods and not self.compact
+	if not showAllMethods and self.compact then
 		local switchAdvanced = Factory.ImageButton(
 			composer,
-			"Switch to Advanced Mode for style, quality & pricing →",
+			"Advanced Mode: style & quality ✦",
 			UDim2.new(1, -32, 0, 26),
 			UDim2.fromOffset(16, cursorY),
 			nil
@@ -8807,14 +9301,28 @@ function App:_RenderAvatarGraphics()
 	end
 
 	local safetyY = cursorY
-	local buttonY = if self.compact then safetyY + 39 else safetyY
+	local buttonY = if self.compact or simpleSwitchInline then safetyY + 39 else safetyY
 	composer.Size = UDim2.new(1, 0, 0, buttonY + 58)
+	if simpleSwitchInline then
+		local switchAdvanced = Factory.ImageButton(
+			composer,
+			"Advanced Mode: style & quality ✦",
+			UDim2.fromOffset(300, 42),
+			UDim2.fromOffset(16, buttonY),
+			nil
+		)
+		switchAdvanced.TextSize = 12
+		self:_BindButton(switchAdvanced)
+		switchAdvanced.Activated:Connect(function()
+			self:_UpdateSetting("simpleMode", false)
+		end)
+	end
 	Factory.Label(
 		composer,
 		if isTextMode
 			then "Roblox TextService + provider moderation · never becomes a 3D model or accessory"
 			else "Your avatar is fetched automatically · Roblox TextService + provider moderation · never becomes a 3D model or accessory",
-		if self.compact then UDim2.new(1, -32, 0, 34) else UDim2.new(1, -300, 0, 42),
+		if self.compact or simpleSwitchInline then UDim2.new(1, -32, 0, 34) else UDim2.new(1, -300, 0, 42),
 		{
 			Position = UDim2.fromOffset(16, safetyY),
 			Color = Colors.TextMuted,
@@ -8836,8 +9344,9 @@ function App:_RenderAvatarGraphics()
 	local priceText = if payWithTokens
 		then string.format("%d ad tokens", tokenPrice(price, graphicProductKey))
 		else string.format("R$ %d", price)
-	local actionText =
-		string.format(if isTextMode then "Create image · %s" else "Create avatar graphic · %s", priceText)
+	local actionText = if showAllMethods
+		then string.format(if isTextMode then "Create image · %s" else "Create avatar graphic · %s", priceText)
+		else string.format("Create · %s", priceText)
 	local generate = Factory.ImageButton(
 		composer,
 		actionText,
@@ -8913,16 +9422,11 @@ function App:_RenderAvatarGraphics()
 		end
 	end
 	if inFlightCount > 0 then
-		local activityHeight = 45 + inFlightCount * 50 + 14
-		local activity = Factory.ImageCard(stack, UDim2.new(1, 0, 0, activityHeight), nil, "GraphicActivity")
+		local activityHeight = 49 + inFlightCount * 50 + 14
+		local activity = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, activityHeight), nil, "GraphicActivity")
 		activity.LayoutOrder = 2
-		Factory.Label(activity, "IN PROGRESS", UDim2.new(1, -32, 0, 24), {
-			Position = UDim2.fromOffset(16, 13),
-			Font = Theme.Fonts.Bold,
-			TextSize = 12,
-			Color = Colors.Cyan,
-		})
-		local y = 45
+		Factory.SectionBanner(activity, "In Progress")
+		local y = 49
 		local shown = 0
 		for _, generationId in self.state.profile.generationOrder do
 			if shown >= 3 then
@@ -9006,39 +9510,47 @@ function App:_RenderAvatarGraphics()
 		end
 	end
 
-	local galleryHeader = Factory.Label(stack, "YOUR GRAPHICS", UDim2.new(1, 0, 0, 24), {
-		Font = Theme.Fonts.Bold,
-		TextSize = 13,
-		Color = Colors.TextMuted,
-	})
-	galleryHeader.LayoutOrder = 3
-
+	-- The gallery becomes its own banner-tabbed panel in the rail, the way
+	-- the concept art draws it, rather than a bare caption over a loose
+	-- grid. Two columns there whatever the window: the rail is ~37% of the
+	-- content width, so the page-wide gridColumns count would slice each
+	-- card down to a sliver. Compact keeps the single stack and its own
+	-- column count.
 	local graphicCount = #(self.state.profile.graphicOrder or {})
+	local gridColumns = if self.compact then self.gridColumns else 2
+	local cardHeight = if showAllMethods then 460 else 310
+	local galleryRows = math.max(1, math.ceil(graphicCount / gridColumns))
+	local galleryCard = Factory.ImageCard(
+		rightStack,
+		UDim2.new(1, 0, 0, if graphicCount == 0 then 122 else 34 + galleryRows * (cardHeight + 12) + 4),
+		nil,
+		"GraphicsGallery"
+	)
+	galleryCard.LayoutOrder = 3
+	Factory.SectionBanner(galleryCard, "Your Graphics")
+
 	if graphicCount == 0 then
-		local empty = Factory.Label(
-			stack,
-			"No graphics yet. Create one above to see it here.",
-			UDim2.new(1, 0, 0, 100),
-			{ AlignX = Enum.TextXAlignment.Center, Color = Colors.TextMuted, Wrapped = true, TextSize = 13 }
-		)
-		empty.LayoutOrder = 4
+		Factory.Label(galleryCard, "No graphics yet. Create one above to see it here.", UDim2.new(1, -32, 0, 60), {
+			Position = UDim2.fromOffset(16, 40),
+			AlignX = Enum.TextXAlignment.Center,
+			Color = Colors.TextMuted,
+			Wrapped = true,
+			TextSize = 13,
+		})
 		return
 	end
 
-	local gridColumns = self.gridColumns
 	local gallery = Factory.New("Frame", {
-		Size = UDim2.new(1, 0, 0, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
+		Position = UDim2.fromOffset(12, 34),
+		Size = UDim2.new(1, -24, 0, galleryRows * (cardHeight + 12)),
 		BackgroundTransparency = 1,
-		LayoutOrder = 4,
-		Parent = stack,
+		Parent = galleryCard,
 	})
 	-- Simple Mode skips the title/description editor and the sharing/sales
 	-- block per card (same "financial and metadata editing are Advanced"
 	-- rule as My Studio/Discover/Avatar Lab) straight to the download link
 	-- and Delete, so its shorter shared card height drops the same ~160px
-	-- those two blocks would have cost.
-	local cardHeight = if showAllMethods then 460 else 310
+	-- those two blocks would have cost -- cardHeight above.
 	Factory.New("UIGridLayout", {
 		-- +80 for the title/description editor inserted below the kind
 		-- label; every card in the grid shares one CellSize, so this height
@@ -9329,7 +9841,8 @@ end
 function App:_RenderSettings()
 	self:_PageHeader(
 		"Settings",
-		"Simple/Advanced Create mode, accessibility, audio, what's equipped right now, and your achievements."
+		"Create mode, accessibility, audio, what is equipped right now, and your achievements.",
+		true
 	)
 	local page = Factory.New("ScrollingFrame", {
 		Name = "SettingsScroll",
@@ -9345,17 +9858,47 @@ function App:_RenderSettings()
 	})
 	self:_TrackScroll(page, "Settings")
 	Factory.ScalePadding(page, 0.012, 0.012)
+	-- The concept art runs Settings as two even columns -- the three things
+	-- you change on the left, the two things you look at on the right --
+	-- rather than one tall stack. Compact collapses to that single stack,
+	-- where a half-width Equipped/Achievements panel would be unreadable.
+	-- The 22px row gap (not 14) leaves room for each panel's banner tab,
+	-- which overhangs 12px above the card it titles.
+	local columns = if self.compact
+		then nil
+		else Factory.New("Frame", {
+			Size = UDim2.new(1, -8, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Parent = page,
+		})
+	if columns then
+		Factory.List(columns, Enum.FillDirection.Horizontal, 20)
+	end
 	local stack = Factory.New("Frame", {
-		Size = UDim2.new(1, -8, 0, 0),
+		Size = if self.compact then UDim2.new(1, -8, 0, 0) else UDim2.new(0.5, -10, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
-		Parent = page,
+		Parent = if self.compact then page else columns,
 	})
-	Factory.List(stack, Enum.FillDirection.Vertical, 14)
+	Factory.List(stack, Enum.FillDirection.Vertical, 22)
+	Factory.BannerHeadroom(stack)
+	local rightStack = if self.compact
+		then stack
+		else Factory.New("Frame", {
+			Size = UDim2.new(0.5, -10, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Parent = columns,
+		})
+	if not self.compact then
+		Factory.List(rightStack, Enum.FillDirection.Vertical, 22)
+		Factory.BannerHeadroom(rightStack)
+	end
 
 	local settings = self.state.profile.settings
 
-	-- CREATE PAGE ---------------------------------------------------------
+	-- CREATE MODE ---------------------------------------------------------
 	-- The single most consequential setting for Forge's actual audience
 	-- (young creators): whether Create shows one method, a text box, and a
 	-- few example ideas, or the full four-method art-direction toolkit.
@@ -9365,140 +9908,230 @@ function App:_RenderSettings()
 	-- only stumbled into mid-creation.
 	local createMode = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 168), nil, "CreateMode")
 	createMode.LayoutOrder = 0
-	Factory.ImagePill(createMode, "CREATE PAGE", Colors.Mint, 140).Position = UDim2.fromOffset(16, 14)
-	Factory.Label(createMode, "Simple Mode", UDim2.new(1, -32, 0, 22), {
-		Position = UDim2.fromOffset(16, 52),
-		Font = Theme.Fonts.Bold,
-		TextSize = 13,
-	})
+	Factory.SectionBanner(createMode, "Create Mode")
 	local simpleModeOn = settings.simpleMode ~= false
-	local nextSimpleMode = not simpleModeOn
-	local simpleModeButton = Factory.ImageButton(
-		createMode,
-		if simpleModeOn then "Simple Mode · ON" else "Simple Mode · OFF",
-		UDim2.new(1, -32, 0, 40),
-		UDim2.fromOffset(16, 78),
-		if simpleModeOn then "mint" else nil
-	)
-	self:_BindButton(simpleModeButton)
-	simpleModeButton.Activated:Connect(function()
-		if nextSimpleMode then
-			-- Turning Simple Mode ON: Create's Priority Pass toggle is
-			-- about to disappear -- if it was left on, the next generation
-			-- would otherwise silently spend a pass with no visible way
-			-- left to turn it back off.
-			self.usePriority = false
-		end
-		self:_UpdateSetting("simpleMode", nextSimpleMode)
-	end)
+	Factory.Label(createMode, "Simple Mode", UDim2.new(1, -32, 0, 26), {
+		Position = UDim2.fromOffset(16, 32),
+		Font = Theme.Fonts.Black,
+		TextSize = 17,
+	})
 	Factory.Label(
 		createMode,
-		"Simple Mode keeps Create down to one way to make something, a text box, and a few example ideas to tap. Turn it off to unlock every generation method plus style and fit-region controls.",
-		UDim2.new(1, -32, 0, 34),
+		"One way to make something, a text box, and a few ideas to tap. Turn it off to unlock every method, style, fit, pricing and sharing.",
+		UDim2.new(1, -32, 0, 44),
 		{
-			Position = UDim2.fromOffset(16, 126),
+			Position = UDim2.fromOffset(16, 60),
 			Color = Colors.TextMuted,
 			TextSize = 11,
 			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
 		}
 	)
+	-- Two buttons, one lit -- the concept art states the current mode
+	-- rather than asking the player to read a single button's label and
+	-- work out whether it reports the state or the action.
+	local simpleButton = Factory.ImageButton(
+		createMode,
+		if simpleModeOn then "Simple Mode · ON" else "Simple Mode",
+		UDim2.new(0.5, -22, 0, 44),
+		UDim2.fromOffset(16, 110),
+		if simpleModeOn then "primary" else nil
+	)
+	local advancedButton = Factory.ImageButton(
+		createMode,
+		if simpleModeOn then "Advanced Mode" else "Advanced Mode · ON",
+		UDim2.new(0.5, -22, 0, 44),
+		UDim2.new(0.5, 6, 0, 110),
+		if simpleModeOn then nil else "primary"
+	)
+	self:_BindButton(simpleButton)
+	self:_BindButton(advancedButton)
+	simpleButton.Activated:Connect(function()
+		if simpleModeOn then
+			return
+		end
+		-- Turning Simple Mode ON: Create's Priority Pass toggle is about to
+		-- disappear -- if it was left on, the next generation would
+		-- otherwise silently spend a pass with no visible way left to turn
+		-- it back off.
+		self.usePriority = false
+		self:_UpdateSetting("simpleMode", true)
+	end)
+	advancedButton.Activated:Connect(function()
+		if not simpleModeOn then
+			return
+		end
+		self:_UpdateSetting("simpleMode", false)
+	end)
 
 	-- ACCESSIBILITY -----------------------------------------------------
-	local accessibility =
-		Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 396 else 320), nil, "Accessibility")
+	local keyboardNoteHeight = if self.compact then 60 else 44
+	local accessibility = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 232 + keyboardNoteHeight), nil, "Accessibility")
 	accessibility.LayoutOrder = 1
-	Factory.ImagePill(accessibility, "ACCESSIBILITY", Colors.Cyan, 140).Position = UDim2.fromOffset(16, 14)
+	Factory.SectionBanner(accessibility, "Accessibility")
+	-- One row per option: what it is, what it does, and the concept art's
+	-- gold switch showing (and setting) its state -- not a full-width
+	-- button whose own label has to double as the readout.
+	local function toggleRow(title: string, description: string, on: boolean, y: number, onFlip: (boolean) -> ())
+		Factory.Label(accessibility, title, UDim2.new(1, -140, 0, 22), {
+			Position = UDim2.fromOffset(16, y),
+			Font = Theme.Fonts.Bold,
+			TextSize = 13,
+		})
+		Factory.Label(accessibility, description, UDim2.new(1, -140, 0, 20), {
+			Position = UDim2.fromOffset(16, y + 22),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Truncate = Enum.TextTruncate.AtEnd,
+		})
+		local switch = Factory.Switch(accessibility, on, UDim2.new(1, -108, 0, y + 10))
+		self:_BindButton(switch)
+		switch.Activated:Connect(function()
+			onFlip(not on)
+		end)
+	end
+	toggleRow(
+		"Reduce motion",
+		"Turns off pulses, drifting embers and sweeps.",
+		settings.reduceMotion == true,
+		36,
+		function(enabled)
+			self:_UpdateSetting("reduceMotion", enabled)
+		end
+	)
+	toggleRow(
+		"High contrast",
+		"Darker panels, brighter text and borders.",
+		settings.highContrast == true,
+		96,
+		function(enabled)
+			self:_SetHighContrast(enabled)
+			self:_UpdateSetting("highContrast", enabled)
+		end
+	)
+
+	-- Interface size: a real slider, as the concept art draws it, over the
+	-- same 0.8-1.4 range the server accepts (see Main.server's
+	-- UpdateSettings validation). The scale is applied live while dragging
+	-- and only persisted on release -- _UpdateSetting re-renders the page,
+	-- which would destroy the slider mid-drag.
+	local scaleMinimum, scaleMaximum, scaleStep = 0.8, 1.4, 0.05
 	Factory.Label(accessibility, "Interface size", UDim2.new(1, -32, 0, 22), {
-		Position = UDim2.fromOffset(16, 52),
+		Position = UDim2.fromOffset(16, 156),
 		Font = Theme.Fonts.Bold,
 		TextSize = 13,
 	})
-	local scaleRow = Factory.New("Frame", {
-		Position = UDim2.fromOffset(16, 78),
-		Size = UDim2.new(1, -32, 0, 36),
-		BackgroundTransparency = 1,
+	local scaleTrack = Factory.New("TextButton", {
+		Position = UDim2.new(0.42, 0, 0, 162),
+		Size = UDim2.new(0.58, -16, 0, 16),
+		BackgroundColor3 = Colors.Ink,
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		Text = "",
 		Parent = accessibility,
 	})
-	Factory.List(scaleRow, Enum.FillDirection.Horizontal, 8)
-	local currentScale = tonumber(settings.uiScale) or 1
-	for _, option in
-		{
-			{ Label = "Small", Value = 0.9 },
-			{ Label = "Default", Value = 1 },
-			{ Label = "Large", Value = 1.15 },
-			{ Label = "Extra large", Value = 1.3 },
-		}
-	do
-		local isSelected = math.abs(currentScale - option.Value) < 0.01
-		local chip = Factory.ImageButton(
-			scaleRow,
-			option.Label,
-			UDim2.fromOffset(if self.compact then 84 else 108, 34),
-			nil,
-			if isSelected then "primary" else nil
-		)
-		self:_BindButton(chip)
-		chip.Activated:Connect(function()
-			self.uiScaleInstance.Scale = option.Value
-			if self.arcadeUiScale then
-				self.arcadeUiScale.Scale = option.Value
-			end
-			if self.runwayUiScale then
-				self.runwayUiScale.Scale = option.Value
-			end
-			self:_UpdateSetting("uiScale", option.Value)
-		end)
+	Factory.Corner(scaleTrack, 8)
+	Factory.Stroke(scaleTrack, Colors.Gold, 0.5)
+	local scaleFill = Factory.New("Frame", {
+		Size = UDim2.fromScale(0, 1),
+		BackgroundColor3 = Colors.Gold,
+		BorderSizePixel = 0,
+		Parent = scaleTrack,
+	})
+	Factory.Corner(scaleFill, 8)
+	local scaleKnob = Factory.New("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0, 0.5),
+		Size = UDim2.fromOffset(22, 22),
+		BackgroundColor3 = Colors.Gold,
+		BorderSizePixel = 0,
+		ZIndex = 2,
+		Parent = scaleTrack,
+	})
+	Factory.Corner(scaleKnob, 11)
+	Factory.Gradient(scaleKnob, { Color3.fromRGB(255, 243, 196), Colors.Gold }, 90)
+	Factory.Stroke(scaleKnob, Color3.fromRGB(255, 243, 196), 0.35)
+	local scaleValueLabel = Factory.Label(accessibility, "", UDim2.new(1, -32, 0, 18), {
+		Position = UDim2.fromOffset(16, 180),
+		Color = Colors.TextMuted,
+		TextSize = 11,
+	})
+	local currentScale = math.clamp(tonumber(settings.uiScale) or 1, scaleMinimum, scaleMaximum)
+	local function showScale(value: number)
+		local alpha = (value - scaleMinimum) / (scaleMaximum - scaleMinimum)
+		scaleFill.Size = UDim2.fromScale(alpha, 1)
+		scaleKnob.Position = UDim2.fromScale(alpha, 0.5)
+		scaleValueLabel.Text = string.format("%d%%", math.floor(value * 100 + 0.5))
 	end
-	Factory.Label(
-		accessibility,
-		"Scales every control and label together, including touch and click targets.",
-		UDim2.new(1, -32, 0, 20),
-		{ Position = UDim2.fromOffset(16, 120), Color = Colors.TextMuted, TextSize = 11 }
-	)
-
-	local highContrastButton = Factory.ImageButton(
-		accessibility,
-		if settings.highContrast then "High contrast · ON" else "High contrast · OFF",
-		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.new(0.5, -22, 0, 40),
-		UDim2.fromOffset(16, 156),
-		if settings.highContrast then "mint" else nil
-	)
-	self:_BindButton(highContrastButton)
-	highContrastButton.Activated:Connect(function()
-		local enabled = not settings.highContrast
-		self:_SetHighContrast(enabled)
-		self:_UpdateSetting("highContrast", enabled)
+	local function applyScale(value: number)
+		self.uiScaleInstance.Scale = value
+		if self.arcadeUiScale then
+			self.arcadeUiScale.Scale = value
+		end
+		if self.runwayUiScale then
+			self.runwayUiScale.Scale = value
+		end
+	end
+	local function scaleFromPointer(pointerX: number): number
+		if scaleTrack.AbsoluteSize.X <= 0 then
+			return currentScale
+		end
+		local alpha = math.clamp((pointerX - scaleTrack.AbsolutePosition.X) / scaleTrack.AbsoluteSize.X, 0, 1)
+		local steps = math.floor(((scaleMaximum - scaleMinimum) * alpha) / scaleStep + 0.5)
+		return math.clamp(scaleMinimum + steps * scaleStep, scaleMinimum, scaleMaximum)
+	end
+	showScale(currentScale)
+	-- _UpdateSetting re-renders this page whether its save succeeded or not,
+	-- so re-assert the live scale from the profile on the way in: a rejected
+	-- save would otherwise leave the interface at whatever value the drag
+	-- reached while the stored setting says something else.
+	applyScale(currentScale)
+	local scaleDragging = false
+	local scaleDragTouch = nil :: InputObject?
+	scaleTrack.InputBegan:Connect(function(input: InputObject)
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
+			scaleDragging = true
+			scaleDragTouch = if input.UserInputType == Enum.UserInputType.Touch then input else nil
+			currentScale = scaleFromPointer(input.Position.X)
+			showScale(currentScale)
+			applyScale(currentScale)
+		end
 	end)
-
-	local reduceMotionButton = Factory.ImageButton(
-		accessibility,
-		if settings.reduceMotion then "Reduce motion · ON" else "Reduce motion · OFF",
-		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.new(0.5, -22, 0, 40),
-		if self.compact then UDim2.fromOffset(16, 202) else UDim2.new(0.5, 6, 0, 156),
-		if settings.reduceMotion then "mint" else nil
+	table.insert(
+		self.pageConnections,
+		UserInputService.InputChanged:Connect(function(input: InputObject)
+			if
+				scaleDragging
+				and (input.UserInputType == Enum.UserInputType.MouseMovement or input == scaleDragTouch)
+			then
+				currentScale = scaleFromPointer(input.Position.X)
+				showScale(currentScale)
+				applyScale(currentScale)
+			end
+		end)
 	)
-	self:_BindButton(reduceMotionButton)
-	reduceMotionButton.Activated:Connect(function()
-		self:_UpdateSetting("reduceMotion", not settings.reduceMotion)
-	end)
-
+	table.insert(
+		self.pageConnections,
+		UserInputService.InputEnded:Connect(function(input: InputObject)
+			if not scaleDragging then
+				return
+			end
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input == scaleDragTouch then
+				scaleDragging = false
+				scaleDragTouch = nil
+				self:_UpdateSetting("uiScale", currentScale)
+			end
+		end)
+	)
 	Factory.Label(
 		accessibility,
-		"Brighter borders and text for low-vision contrast · fewer sliding/fading animations for motion sensitivity.",
-		UDim2.new(1, -32, 0, 34),
+		"Scales every control and label together, including touch and click targets. Keyboard & gamepad: press Tab, or a gamepad's Y button, any time to jump into the navigation rail and move through the studio with arrows or the D-pad.",
+		UDim2.new(1, -32, 0, keyboardNoteHeight),
 		{
-			Position = UDim2.fromOffset(16, if self.compact then 250 else 204),
-			Color = Colors.TextMuted,
-			TextSize = 11,
-			Wrapped = true,
-		}
-	)
-	Factory.Label(
-		accessibility,
-		"Keyboard & gamepad: press Tab, or a gamepad's Y button, any time to jump into the navigation rail and move through the studio with arrows or the D-pad.",
-		UDim2.new(1, -32, 0, if self.compact then 60 else 44),
-		{
-			Position = UDim2.fromOffset(16, if self.compact then 292 else 246),
+			Position = UDim2.fromOffset(16, 208),
 			Color = Colors.TextMuted,
 			TextSize = 11,
 			Wrapped = true,
@@ -9507,21 +10140,32 @@ function App:_RenderSettings()
 	)
 
 	-- AUDIO ---------------------------------------------------------------
-	local audio = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 108), nil, "Audio")
+	local audio = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 104), nil, "Audio")
 	audio.LayoutOrder = 2
-	Factory.ImagePill(audio, "AUDIO", Colors.Violet, 90).Position = UDim2.fromOffset(16, 14)
-	self:_BuildSoundButton(audio, UDim2.new(1, -32, 0, 42), UDim2.fromOffset(16, 52))
+	Factory.SectionBanner(audio, "Audio")
+	Factory.Label(audio, "Sound effects", UDim2.new(1, -140, 0, 22), {
+		Position = UDim2.fromOffset(16, 38),
+		Font = Theme.Fonts.Bold,
+		TextSize = 13,
+	})
+	Factory.Label(audio, "Taps, forge chimes and reward stings.", UDim2.new(1, -140, 0, 20), {
+		Position = UDim2.fromOffset(16, 60),
+		Color = Colors.TextMuted,
+		TextSize = 11,
+		Truncate = Enum.TextTruncate.AtEnd,
+	})
+	self:_BuildSoundButton(audio, UDim2.new(1, -108, 0, 48))
 
 	-- INVITE FRIENDS --------------------------------------------------------
-	local invite = Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 158 else 108), nil, "InviteFriends")
+	local invite = Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 150 else 104), nil, "InviteFriends")
 	invite.LayoutOrder = 3
-	Factory.ImagePill(invite, "GROW THE STUDIO", Colors.Rose, 150).Position = UDim2.fromOffset(16, 14)
+	Factory.SectionBanner(invite, "Grow the Studio")
 	Factory.Label(
 		invite,
 		"Send a Roblox invite to a friend for a small one-time Forge Token reward.",
-		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.new(1, -260, 0, 40),
+		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.new(1, -240, 0, 44),
 		{
-			Position = UDim2.fromOffset(16, 48),
+			Position = UDim2.fromOffset(16, 38),
 			Color = Colors.TextMuted,
 			TextSize = 12,
 			Wrapped = true,
@@ -9531,8 +10175,8 @@ function App:_RenderSettings()
 	local inviteButton = Factory.ImageButton(
 		invite,
 		"Invite a friend",
-		if self.compact then UDim2.new(1, -32, 0, 42) else UDim2.fromOffset(200, 42),
-		if self.compact then UDim2.fromOffset(16, 100) else UDim2.new(1, -216, 0, 33),
+		if self.compact then UDim2.new(1, -32, 0, 42) else UDim2.fromOffset(190, 42),
+		if self.compact then UDim2.fromOffset(16, 92) else UDim2.new(1, -206, 0, 40),
 		"mint"
 	)
 	self:_BindButton(inviteButton)
@@ -9544,19 +10188,18 @@ function App:_RenderSettings()
 	local profile = self.state.profile
 	local equippedIds = profile.equippedItemIds or {}
 	local loadout =
-		Factory.ImageCard(stack, UDim2.new(1, 0, 0, math.max(140, 70 + math.max(1, #equippedIds) * 66)), nil, "Loadout")
+		Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, 46 + math.max(1, #equippedIds) * 62), nil, "Loadout")
 	loadout.LayoutOrder = 4
-	Factory.ImagePill(loadout, string.format("EQUIPPED · %d", #equippedIds), Colors.Mint, 130).Position =
-		UDim2.fromOffset(16, 14)
+	Factory.SectionBanner(loadout, string.format("Equipped Now · %d", #equippedIds))
 	if #equippedIds == 0 then
 		Factory.Label(loadout, "Nothing equipped yet. Equip an item from My Studio.", UDim2.new(1, -32, 0, 40), {
-			Position = UDim2.fromOffset(16, 52),
+			Position = UDim2.fromOffset(16, 42),
 			Color = Colors.TextMuted,
 			TextSize = 12,
 			Wrapped = true,
 		})
 	else
-		local y = 54
+		local y = 38
 		for _, itemId in equippedIds do
 			local item = profile.items[itemId]
 			if item then
@@ -9569,6 +10212,7 @@ function App:_RenderSettings()
 					Parent = loadout,
 				})
 				Factory.Corner(row, 10)
+				Factory.Stroke(row, Colors.Gold, 0.55)
 				local image = Factory.New("ImageLabel", {
 					Size = UDim2.fromOffset(44, 44),
 					Position = UDim2.fromOffset(6, 6),
@@ -9579,19 +10223,23 @@ function App:_RenderSettings()
 					Parent = row,
 				})
 				Factory.Corner(image, 8)
-				Factory.Label(row, item.name, UDim2.new(1, -204, 0, 24), {
+				Factory.Stroke(image, Colors.Gold, 0.45)
+				Factory.Label(row, item.name, UDim2.new(1, -180, 0, 24), {
 					Position = UDim2.fromOffset(58, 8),
 					Font = Theme.Fonts.Bold,
 					TextSize = 13,
 					Truncate = Enum.TextTruncate.AtEnd,
 				})
-				Factory.Label(row, ACCESSORY_LABELS[item.fit.accessoryType] or "Accessory", UDim2.new(1, -204, 0, 20), {
+				Factory.Label(row, ACCESSORY_LABELS[item.fit.accessoryType] or "Accessory", UDim2.new(1, -180, 0, 20), {
 					Position = UDim2.fromOffset(58, 30),
 					Color = Colors.TextMuted,
 					TextSize = 11,
 				})
+				-- "Remove", per the concept art -- "Unequip" is Studio's word
+				-- for the same action, next to the fit controls that make it
+				-- mean something specific.
 				local unequip =
-					Factory.ImageButton(row, "Unequip", UDim2.fromOffset(120, 38), UDim2.new(1, -128, 0, 9), nil)
+					Factory.ImageButton(row, "Remove", UDim2.fromOffset(104, 38), UDim2.new(1, -112, 0, 9), nil)
 				self:_BindButton(unequip)
 				unequip.Activated:Connect(function()
 					unequip.Active = false
@@ -9610,7 +10258,7 @@ function App:_RenderSettings()
 						end
 						if unequip.Parent then
 							unequip.Active = true
-							unequip.Text = "Unequip"
+							unequip.Text = "Remove"
 						end
 					end)
 				end)
@@ -9625,25 +10273,27 @@ function App:_RenderSettings()
 	for _ in unlockedAchievements do
 		unlockedCount += 1
 	end
-	local achievementColumns = if self.compact then 1 else 2
+	-- Circular medallions in a wide grid, the way the concept art draws
+	-- them, rather than a two-column list of text rows. Each keeps its
+	-- description line, which the art has no room for and which is the only
+	-- thing on the page that says how a locked one is earned.
+	local achievementColumns = if self.compact then 2 else 4
 	local achievementRows = math.ceil(#Achievements.List / achievementColumns)
-	local achievementTileHeight = 74
+	-- Tall enough for the longest description in Achievements.List to wrap
+	-- inside a four-across tile rather than being clipped -- "Try on your
+	-- first item -- a Roblox catalog piece or a community creation." is
+	-- five lines at this width.
+	local achievementTileHeight = 138
 	local achievements = Factory.ImageCard(
-		stack,
-		UDim2.new(1, 0, 0, 58 + achievementRows * (achievementTileHeight + 8)),
+		rightStack,
+		UDim2.new(1, 0, 0, 46 + achievementRows * (achievementTileHeight + 8)),
 		nil,
 		"Achievements"
 	)
 	achievements.LayoutOrder = 5
-	Factory.ImagePill(
-		achievements,
-		string.format("ACHIEVEMENTS · %d/%d", unlockedCount, #Achievements.List),
-		Colors.Gold,
-		170
-	).Position =
-		UDim2.fromOffset(16, 14)
+	Factory.SectionBanner(achievements, string.format("Achievements · %d/%d", unlockedCount, #Achievements.List))
 	local achievementGrid = Factory.New("Frame", {
-		Position = UDim2.fromOffset(16, 50),
+		Position = UDim2.fromOffset(16, 38),
 		Size = UDim2.new(1, -32, 0, achievementRows * (achievementTileHeight + 8)),
 		BackgroundTransparency = 1,
 		Parent = achievements,
@@ -9662,42 +10312,72 @@ function App:_RenderSettings()
 	for index, definition in Achievements.List do
 		local unlocked = unlockedAchievements[definition.id] ~= nil
 		local tile = Factory.New("Frame", {
-			BackgroundColor3 = if unlocked then Colors.Ink else Colors.Panel,
-			BorderSizePixel = 0,
+			BackgroundTransparency = 1,
 			LayoutOrder = index,
 			Parent = achievementGrid,
 		})
-		Factory.Corner(tile, 11)
-		Factory.Stroke(tile, if unlocked then Colors.Gold else Colors.Line, if unlocked then 0.3 else 0.6)
-		Factory.Label(tile, if unlocked then "✓" else "○", UDim2.fromOffset(24, 24), {
-			Position = UDim2.fromOffset(10, 8),
-			Font = Theme.Fonts.Black,
-			TextSize = 15,
+		local medallion = Factory.New("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, 2),
+			Size = UDim2.fromOffset(54, 54),
+			BackgroundColor3 = if unlocked then Colors.Ink else Color3.fromRGB(27, 17, 56),
+			BackgroundTransparency = if unlocked then 0 else 0.2,
+			BorderSizePixel = 0,
+			Parent = tile,
+		})
+		Factory.Corner(medallion, 27)
+		if unlocked then
+			-- An earned crest: solid gold rim, a hairline echoing it just
+			-- inside, and the gem star in its own colour -- the art walks
+			-- that colour across the row rather than repeating one.
+			Factory.Stroke(medallion, Colors.Gold, 0.1, 2)
+			Factory.Gradient(medallion, { Color3.fromRGB(58, 40, 96), Colors.Ink }, 90)
+			local hairline = Factory.New("Frame", {
+				Name = "InnerRing",
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromScale(0.78, 0.78),
+				BackgroundTransparency = 1,
+				Parent = medallion,
+			})
+			Factory.Corner(hairline, 22)
+			Factory.Stroke(hairline, Color3.fromRGB(255, 217, 138), 0.55, 1)
+		else
+			-- Locked: the art rims these in a dashed muted violet rather than
+			-- a solid line, which is what separates them at a glance.
+			Factory.DashedRing(medallion, 18, 5, Color3.fromRGB(142, 118, 184), 0.15, 2.4)
+		end
+		Factory.Label(medallion, if unlocked then "✦" else "🔒", UDim2.fromScale(1, 1), {
 			AlignX = Enum.TextXAlignment.Center,
-			Color = if unlocked then Colors.Gold else Colors.TextMuted,
+			AlignY = Enum.TextYAlignment.Center,
+			Font = Theme.Fonts.Black,
+			TextSize = if unlocked then 24 else 18,
+			Color = if unlocked
+				then ACHIEVEMENT_GEMS[(index - 1) % #ACHIEVEMENT_GEMS + 1]
+				else Color3.fromRGB(142, 118, 184),
+			ZIndex = 2,
 		})
-		Factory.Label(tile, definition.name, UDim2.new(1, -80, 0, 20), {
-			Position = UDim2.fromOffset(36, 8),
-			Font = Theme.Fonts.Bold,
-			TextSize = 13,
-			Color = if unlocked then Colors.Text else Colors.TextMuted,
-			Truncate = Enum.TextTruncate.AtEnd,
-		})
-		Factory.Label(tile, string.format("+%d", definition.tokens), UDim2.fromOffset(44, 20), {
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -10, 0, 8),
-			AlignX = Enum.TextXAlignment.Right,
+		Factory.Label(tile, definition.name, UDim2.new(1, 0, 0, 18), {
+			Position = UDim2.fromOffset(0, 60),
+			AlignX = Enum.TextXAlignment.Center,
 			Font = Theme.Fonts.Bold,
 			TextSize = 12,
-			Color = if unlocked then Colors.Gold else Colors.TextMuted,
+			Color = if unlocked then Color3.fromRGB(255, 233, 188) else Color3.fromRGB(142, 127, 180),
+			Truncate = Enum.TextTruncate.AtEnd,
 		})
-		Factory.Label(tile, definition.description, UDim2.new(1, -48, 0, 38), {
-			Position = UDim2.fromOffset(36, 30),
-			Color = Colors.TextMuted,
-			TextSize = 11,
-			Wrapped = true,
-			AlignY = Enum.TextYAlignment.Top,
-		})
+		Factory.Label(
+			tile,
+			string.format("%s · +%d", definition.description, definition.tokens),
+			UDim2.new(1, -6, 0, 56),
+			{
+				Position = UDim2.fromOffset(3, 78),
+				AlignX = Enum.TextXAlignment.Center,
+				Color = if unlocked then Colors.Gold else Colors.TextMuted,
+				TextSize = 9,
+				Wrapped = true,
+				AlignY = Enum.TextYAlignment.Top,
+			}
+		)
 	end
 end
 

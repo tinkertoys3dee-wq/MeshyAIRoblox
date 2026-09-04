@@ -46,9 +46,28 @@ local PHASE_COPY = {
 	},
 }
 
+-- Each phase's full length, for the header ring's drain fraction. Same
+-- constants the server runs the round on, so the ring can only disagree
+-- with the clock beside it if these ever diverge from Config.
+local PHASE_SECONDS = {
+	INTERMISSION = Config.Runway.IntermissionSeconds,
+	STYLING = Config.Runway.StylingSeconds,
+	VOTING = Config.Runway.VotingSeconds,
+	RESULTS = Config.Runway.ResultsSeconds,
+}
+
 local function formatClock(seconds: number): string
 	local safe = math.max(0, math.floor(seconds))
 	return string.format("%d:%02d", math.floor(safe / 60), safe % 60)
+end
+
+-- The concept art puts each entrant's own avatar beside their name in the
+-- lineup. Resolved by the engine locally (see App.luau's avatarThumbnail
+-- for why an rbxthumb:// URI, not a fetched URL) -- avatar thumbnail types
+-- only accept one of a fixed discrete size set, of which 150 is the
+-- smallest that stays sharp at this row's 44px.
+local function avatarBust(userId: number): string
+	return string.format("rbxthumb://type=AvatarBust&id=%d&w=150&h=150", userId)
 end
 
 local function formatNumber(value: number): string
@@ -182,6 +201,8 @@ function RunwayHub.Show(app: any)
 		ZIndex = 232,
 		Parent = modal,
 	})
+	-- A round, gold-rimmed medallion, as the concept art draws every hub's
+	-- title mark -- not a rounded square.
 	local titleBadge = Factory.New("Frame", {
 		Size = UDim2.fromOffset(52, 52),
 		Position = UDim2.fromOffset(16, 16),
@@ -190,8 +211,9 @@ function RunwayHub.Show(app: any)
 		ZIndex = 233,
 		Parent = header,
 	})
-	Factory.Corner(titleBadge, 17)
+	Factory.Corner(titleBadge, 26)
 	Factory.Gradient(titleBadge, { Colors.Rose, Colors.Violet }, 135)
+	Factory.Stroke(titleBadge, Colors.Gold, 0.15, 2)
 	Factory.Label(titleBadge, "◆", UDim2.fromScale(1, 1), {
 		Font = Theme.Fonts.Black,
 		TextSize = 25,
@@ -206,7 +228,11 @@ function RunwayHub.Show(app: any)
 		Truncate = Enum.TextTruncate.AtEnd,
 		ZIndex = 233,
 	})
-	local themeLabel = Factory.Label(header, state.theme or "Style challenge", UDim2.new(1, -260, 0, 22), {
+	-- The art frames the theme rather than just naming it.
+	local function themeLine(current: { [string]: any }): string
+		return string.format("Tonight's theme · %s", current.theme or "Style challenge")
+	end
+	local themeLabel = Factory.Label(header, themeLine(state), UDim2.new(1, -260, 0, 22), {
 		Position = UDim2.fromOffset(80, 39),
 		Font = Theme.Fonts.Medium,
 		TextSize = 13,
@@ -216,24 +242,58 @@ function RunwayHub.Show(app: any)
 	})
 	local phaseLabel = Factory.Label(header, "", UDim2.fromOffset(98, 20), {
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -94, 0, 18),
+		Position = UDim2.new(1, -146, 0, 36),
 		Font = Theme.Fonts.Bold,
 		TextSize = 11,
 		AlignX = Enum.TextXAlignment.Right,
 		ZIndex = 233,
 	})
-	local timerLabel = Factory.Label(header, "", UDim2.fromOffset(120, 34), {
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -94, 0, 38),
-		Font = Theme.Fonts.Black,
-		TextSize = 25,
-		AlignX = Enum.TextXAlignment.Right,
+	-- The concept art wraps the clock in a gold ring that drains as the
+	-- phase runs down. Every phase length is a client-side constant
+	-- (Config.Runway), so the fraction remaining is derivable here without
+	-- the server sending one. The ring's own colour stays gold across all
+	-- four phases, as the art draws it; the clock inside takes the phase
+	-- colour.
+	local timerRing = Factory.New("Frame", {
+		Name = "TimerRing",
+		Size = UDim2.fromOffset(68, 68),
+		Position = UDim2.new(1, -136, 0, 12),
+		BackgroundTransparency = 1,
 		ZIndex = 233,
+		Parent = header,
+	})
+	local setTimerRing = Factory.RadialRing(timerRing, 68, 5, Colors.Gold, Color3.fromRGB(48, 33, 78))
+	local timerLabel = Factory.Label(timerRing, "", UDim2.new(1, -14, 0, 22), {
+		Position = UDim2.fromOffset(7, 18),
+		Font = Theme.Fonts.Black,
+		TextSize = 18,
+		AlignX = Enum.TextXAlignment.Center,
+		ZIndex = 234,
+	})
+	Factory.Label(timerRing, "LEFT", UDim2.new(1, -14, 0, 12), {
+		Position = UDim2.fromOffset(7, 38),
+		Font = Theme.Fonts.Bold,
+		TextSize = 9,
+		Color = Colors.TextMuted,
+		AlignX = Enum.TextXAlignment.Center,
+		ZIndex = 234,
 	})
 	local close = Factory.ImageButton(header, "×", UDim2.fromOffset(38, 38), UDim2.new(1, -52, 0, 17), nil)
 	close.TextSize = 21
 	close.ZIndex = 234
+	-- Round, with the art's gold rim: the decal behind it keeps its own
+	-- shape, so this is the fallback's outline and the hit area either way.
+	local closeCorner = close:FindFirstChildOfClass("UICorner")
+	if closeCorner then
+		closeCorner.CornerRadius = UDim.new(0.5, 0)
+	end
 	app:_BindButton(close)
+	-- The single centred flourish the art hangs under every hub header.
+	local headerFlourish =
+		Factory.Icon(header, "FlourishDivider", UDim2.fromOffset(120, 16), UDim2.new(0.5, -60, 1, -18))
+	if headerFlourish then
+		headerFlourish.ZIndex = 233
+	end
 
 	local body = Factory.New("ScrollingFrame", {
 		Name = "RunwayContent",
@@ -352,18 +412,72 @@ function RunwayHub.Show(app: any)
 		for _, child in stack:GetChildren() do
 			child:Destroy()
 		end
-		Factory.List(stack, Enum.FillDirection.Vertical, 12)
+		-- 22, not 12: every panel below is titled by a banner tab that
+		-- overhangs 12px above the card it sits on.
+		Factory.List(stack, Enum.FillDirection.Vertical, 22)
 
 		local camera = Workspace.CurrentCamera
-		local compact = (camera and camera.ViewportSize.X or 1200) < 760
+		local viewportWidth = camera and camera.ViewportSize.X or 1200
+		local compact = viewportWidth < 760
+		-- The concept art runs the lineup down a wide left column with the
+		-- selected look and the weekly spotlight stacked beside it. Two
+		-- columns need real width -- the modal caps at 940 -- so below 900
+		-- this stays the single stack it has always been.
+		local twoColumn = viewportWidth >= 900
+		local columns = if twoColumn
+			then Factory.New("Frame", {
+				Size = UDim2.new(1, 0, 0, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BackgroundTransparency = 1,
+				ZIndex = 232,
+				Parent = stack,
+			})
+			else nil
+		local leftColumn = stack
+		local rightColumn = stack
+		if columns then
+			Factory.List(columns, Enum.FillDirection.Horizontal, 14)
+			leftColumn = Factory.New("Frame", {
+				Size = UDim2.new(0.56, -7, 0, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BackgroundTransparency = 1,
+				ZIndex = 232,
+				Parent = columns,
+			})
+			Factory.List(leftColumn, Enum.FillDirection.Vertical, 22)
+			Factory.BannerHeadroom(leftColumn)
+			rightColumn = Factory.New("Frame", {
+				Size = UDim2.new(0.44, -7, 0, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BackgroundTransparency = 1,
+				ZIndex = 232,
+				Parent = columns,
+			})
+			Factory.List(rightColumn, Enum.FillDirection.Vertical, 22)
+			Factory.BannerHeadroom(rightColumn)
+		else
+			-- Single column: the banner-titled hero is the stack's own first
+			-- child, so the headroom belongs there instead.
+			Factory.BannerHeadroom(stack)
+		end
+
 		local phase = PHASE_COPY[state.phase] or PHASE_COPY.INTERMISSION
-		local heroHeight = if compact then 590 else 376
-		local hero = Factory.ImageCard(stack, UDim2.new(1, 0, 0, heroHeight), nil, "RoundHero")
+		-- The hero's stacked layout (viewport above its details, rather than
+		-- side by side) is what fits a narrow phone AND what fits the ~44%
+		-- right column above.
+		local heroNarrow = compact or twoColumn
+		-- 610 before the look summary above pushed the action row down 38px;
+		-- the wide layout has that much slack already and keeps its height.
+		local heroHeight = if heroNarrow then 648 else 396
+		local hero = Factory.ImageCard(rightColumn, UDim2.new(1, 0, 0, heroHeight), nil, "RoundHero")
 		hero.LayoutOrder = 1
+		local selectedIsSelf = selectedUserId == localPlayer.UserId
+		local selectedName = (entryFor(state, selectedUserId) or {}).name
+		Factory.SectionBanner(hero, if selectedIsSelf then "Your Look" else tostring(selectedName or "Their Look"))
 		local phasePill = Factory.ImagePill(hero, phase.label, phase.color, 116)
-		phasePill.Position = UDim2.fromOffset(16, 14)
+		phasePill.Position = UDim2.fromOffset(16, 34)
 		Factory.Label(hero, phase.instruction, UDim2.new(1, -160, 0, 38), {
-			Position = UDim2.fromOffset(144, 10),
+			Position = UDim2.fromOffset(144, 30),
 			Color = Colors.TextMuted,
 			TextSize = 12,
 			Wrapped = true,
@@ -372,9 +486,9 @@ function RunwayHub.Show(app: any)
 
 		local preview = Factory.New("ViewportFrame", {
 			Name = "SelectedLook",
-			Position = if compact then UDim2.fromOffset(16, 62) else UDim2.fromOffset(16, 60),
-			Size = if compact then UDim2.new(1, -32, 0, 260) else UDim2.new(0.5, -24, 1, -78),
-			BackgroundColor3 = Color3.fromRGB(61, 69, 103),
+			Position = if heroNarrow then UDim2.fromOffset(16, 82) else UDim2.fromOffset(16, 80),
+			Size = if heroNarrow then UDim2.new(1, -32, 0, 260) else UDim2.new(0.5, -24, 1, -98),
+			BackgroundColor3 = Color3.fromRGB(58, 40, 104),
 			BorderSizePixel = 0,
 			ZIndex = 2,
 			Parent = hero,
@@ -404,10 +518,10 @@ function RunwayHub.Show(app: any)
 			end
 		end)
 
-		local detailScale = if compact then 0 else 0.5
-		local detailOffset = if compact then 16 else 8
-		local detailY = if compact then 334 else 62
-		local detailWidth = if compact then UDim2.new(1, -32, 0, 0) else UDim2.new(0.5, -24, 0, 0)
+		local detailScale = if heroNarrow then 0 else 0.5
+		local detailOffset = if heroNarrow then 16 else 8
+		local detailY = if heroNarrow then 354 else 82
+		local detailWidth = if heroNarrow then UDim2.new(1, -32, 0, 0) else UDim2.new(0.5, -24, 0, 0)
 		local progress = state.creatorProgress or (app.state and app.state.creatorProgress) or {}
 		Factory.Label(
 			hero,
@@ -506,7 +620,50 @@ function RunwayHub.Show(app: any)
 			}
 		)
 
-		local actionY = statsY + 54
+		-- The art's YOUR LOOK panel names what you are about to lock in --
+		-- the item and what else is on with it -- and points at where to
+		-- change it. Read off the profile's own equipped list, so it needs
+		-- nothing from the runway state, and only shown for your own entry:
+		-- selecting somebody else's look means the panel is describing
+		-- theirs, and their loadout is not something this client knows.
+		local lookY = statsY + 40
+		if selectedIsSelf then
+			local profileNow = app.state and app.state.profile
+			local equipped = profileNow and profileNow.equippedItemIds or {}
+			local names = {}
+			for _, itemId in equipped do
+				local item = profileNow and profileNow.items[itemId]
+				if item then
+					table.insert(names, item.name)
+				end
+			end
+			Factory.Label(
+				hero,
+				if #names == 0 then "Nothing equipped yet" else names[1],
+				UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 20),
+				{
+					Position = UDim2.new(detailScale, detailOffset, 0, lookY),
+					Font = Theme.Fonts.Black,
+					TextSize = 15,
+					Truncate = Enum.TextTruncate.AtEnd,
+				}
+			)
+			Factory.Label(
+				hero,
+				if #names > 1
+					then string.format("+ %d more on your avatar", #names - 1)
+					else "Change it in My Studio before you lock.",
+				UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 18),
+				{
+					Position = UDim2.new(detailScale, detailOffset, 0, lookY + 20),
+					Color = Colors.TextMuted,
+					TextSize = 11,
+					Truncate = Enum.TextTruncate.AtEnd,
+				}
+			)
+		end
+
+		local actionY = statsY + 92
 		local primaryText = "Watch the runway"
 		local primaryAction: (() -> ())? = nil
 		if state.phase == "INTERMISSION" then
@@ -591,8 +748,8 @@ function RunwayHub.Show(app: any)
 			end
 		end
 		if activeJobs > 0 then
-			local activity = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 60), nil, "RunwayForgeActivity")
-			activity.LayoutOrder = 2
+			local activity = Factory.ImageCard(leftColumn, UDim2.new(1, 0, 0, 60), nil, "RunwayForgeActivity")
+			activity.LayoutOrder = 1
 			Factory.Label(
 				activity,
 				string.format(
@@ -623,8 +780,8 @@ function RunwayHub.Show(app: any)
 			local viewActivity = Factory.ImageButton(
 				activity,
 				"View activity",
-				UDim2.fromOffset(110, 32),
-				UDim2.new(1, -126, 0, 14),
+				UDim2.fromOffset(132, 32),
+				UDim2.new(1, -148, 0, 14),
 				nil
 			)
 			app:_BindButton(viewActivity)
@@ -639,8 +796,8 @@ function RunwayHub.Show(app: any)
 		local journey = state.journeyState or (app.state and app.state.journeyState) or { done = {} }
 		local journeyComplete = journey.completed == true
 		local journeyHeight = 84 + #Config.Retention.FirstLookJourney * 34
-		local journeyCard = Factory.ImageCard(stack, UDim2.new(1, 0, 0, journeyHeight), nil, "FirstLookJourney")
-		journeyCard.LayoutOrder = 3
+		local journeyCard = Factory.ImageCard(leftColumn, UDim2.new(1, 0, 0, journeyHeight), nil, "FirstLookJourney")
+		journeyCard.LayoutOrder = 2
 		Factory.Label(
 			journeyCard,
 			if journeyComplete then "FIRST LOOK COMPLETE" else "YOUR FIRST LOOK",
@@ -708,25 +865,15 @@ function RunwayHub.Show(app: any)
 
 		-- Participants and voting -------------------------------------------
 		local entries = state.entries or {}
-		local participantHeight = 76 + math.max(1, #entries) * 48
-		local participants = Factory.ImageCard(stack, UDim2.new(1, 0, 0, participantHeight), nil, "Participants")
-		participants.LayoutOrder = 4
-		Factory.Label(participants, "RUNWAY LINEUP", UDim2.new(1, -140, 0, 20), {
-			Position = UDim2.fromOffset(16, 13),
-			Font = Theme.Fonts.Bold,
-			TextSize = 12,
-			Color = Colors.Rose,
-		})
-		Factory.Label(participants, string.format("%d joined", #entries), UDim2.fromOffset(110, 20), {
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -16, 0, 13),
-			Color = Colors.TextMuted,
-			AlignX = Enum.TextXAlignment.Right,
-			TextSize = 11,
-		})
+		-- Taller rows than the old 40: the concept art shows each entrant's
+		-- own avatar beside their name, which needs the height to read.
+		local participantHeight = 48 + math.max(1, #entries) * 64
+		local participants = Factory.ImageCard(leftColumn, UDim2.new(1, 0, 0, participantHeight), nil, "Participants")
+		participants.LayoutOrder = 3
+		Factory.SectionBanner(participants, string.format("Runway Lineup · %d joined", #entries))
 		if #entries == 0 then
 			Factory.Label(participants, "Be the first player under the spotlight.", UDim2.new(1, -32, 0, 34), {
-				Position = UDim2.fromOffset(16, 44),
+				Position = UDim2.fromOffset(16, 48),
 				Color = Colors.TextMuted,
 				AlignX = Enum.TextXAlignment.Center,
 				TextSize = 12,
@@ -735,8 +882,8 @@ function RunwayHub.Show(app: any)
 			for index, entry in entries do
 				local row = Factory.New("TextButton", {
 					Name = "LookRow",
-					Position = UDim2.fromOffset(16, 40 + (index - 1) * 48),
-					Size = UDim2.new(1, -32, 0, 40),
+					Position = UDim2.fromOffset(16, 40 + (index - 1) * 64),
+					Size = UDim2.new(1, -32, 0, 56),
 					BackgroundColor3 = if selectedUserId == entry.userId then Colors.Violet else Colors.Ink,
 					BackgroundTransparency = if selectedUserId == entry.userId then 0.35 else 0.24,
 					BorderSizePixel = 0,
@@ -745,11 +892,24 @@ function RunwayHub.Show(app: any)
 					Parent = participants,
 				})
 				Factory.Corner(row, 10)
+				Factory.Stroke(row, if selectedUserId == entry.userId then Colors.Gold else Colors.Line, 0.5)
 				app:_BindButton(row)
-				Factory.Label(row, entry.name, UDim2.new(1, -180, 1, 0), {
-					Position = UDim2.fromOffset(12, 0),
+				local face = Factory.New("ImageLabel", {
+					Size = UDim2.fromOffset(44, 44),
+					Position = UDim2.fromOffset(6, 6),
+					BackgroundColor3 = Colors.Panel,
+					BorderSizePixel = 0,
+					Image = avatarBust(entry.userId),
+					ScaleType = Enum.ScaleType.Crop,
+					Parent = row,
+				})
+				Factory.Corner(face, 9)
+				Factory.Stroke(face, Colors.Gold, 0.45)
+				local voteWidth = if compact then 84 else 150
+				Factory.Label(row, entry.name, UDim2.new(1, -(voteWidth + 76), 0, 24), {
+					Position = UDim2.fromOffset(58, 7),
 					Font = Theme.Fonts.Bold,
-					TextSize = 12,
+					TextSize = 13,
 					Truncate = Enum.TextTruncate.AtEnd,
 				})
 				local statusText = if entry.ready then "LOOK LOCKED" else "STYLING"
@@ -759,13 +919,12 @@ function RunwayHub.Show(app: any)
 						then string.format("#%d · %dV", result.placement, entry.votes)
 						else string.format("%d VOTE%s", entry.votes, if entry.votes == 1 then "" else "S")
 				end
-				Factory.Label(row, statusText, UDim2.fromOffset(92, 40), {
-					AnchorPoint = Vector2.new(1, 0),
-					Position = UDim2.new(1, -76, 0, 0),
+				Factory.Label(row, statusText, UDim2.new(1, -(voteWidth + 76), 0, 18), {
+					Position = UDim2.fromOffset(58, 31),
 					Font = Theme.Fonts.Bold,
 					Color = if entry.ready then Colors.Mint else Colors.TextMuted,
-					AlignX = Enum.TextXAlignment.Right,
-					TextSize = 9,
+					TextSize = 10,
+					Truncate = Enum.TextTruncate.AtEnd,
 				})
 				local canVote = state.phase == "VOTING"
 					and state.votedFor == nil
@@ -784,11 +943,18 @@ function RunwayHub.Show(app: any)
 					elseif state.votedFor == entry.userId then "✓"
 					elseif state.votedFor ~= nil then "Voted"
 					else "Vote"
+				-- The concept art writes the entrant's vote count into the
+				-- button itself ("Vote * 24") rather than repeating it as a
+				-- separate figure.
 				local vote = Factory.ImageButton(
 					row,
-					voteLabel,
-					UDim2.fromOffset(58, 34),
-					UDim2.new(1, -66, 0, 3),
+					if voteLabel == "Vote"
+							and entry.votes
+							and not compact
+						then string.format("♥ Vote · %d", entry.votes)
+						else voteLabel,
+					UDim2.fromOffset(voteWidth, 40),
+					UDim2.new(1, -(voteWidth + 12), 0, 8),
 					if canLeave then "danger" elseif canVote then "mint" else nil
 				)
 				vote.Active = canVote or canLeave
@@ -811,16 +977,13 @@ function RunwayHub.Show(app: any)
 		end
 
 		-- Weekly standings ---------------------------------------------------
-		local standings = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 238), nil, "WeeklyStandings")
-		standings.LayoutOrder = 5
-		Factory.Label(standings, "WEEKLY SPOTLIGHT", UDim2.new(1, -170, 0, 20), {
-			Position = UDim2.fromOffset(16, 13),
-			Font = Theme.Fonts.Bold,
-			TextSize = 12,
-			Color = Colors.Gold,
-		})
-		Factory.Label(standings, "Points from rounds, votes cast/received, and placements", UDim2.new(1, -32, 0, 18), {
-			Position = UDim2.fromOffset(16, 35),
+		-- Five rows, as the art lists them -- 246 only had room for three.
+		local standings = Factory.ImageCard(rightColumn, UDim2.new(1, 0, 0, 336), nil, "WeeklyStandings")
+		standings.LayoutOrder = 2
+		Factory.SectionBanner(standings, "Weekly Spotlight")
+		Factory.Label(standings, "Points from rounds, votes cast/received, and placements", UDim2.new(1, -32, 0, 16), {
+			Position = UDim2.fromOffset(16, 36),
+			AlignX = Enum.TextXAlignment.Center,
 			Color = Colors.TextMuted,
 			TextSize = 10,
 		})
@@ -832,11 +995,18 @@ function RunwayHub.Show(app: any)
 				Config.Runway.WeeklyPlacementXP[2],
 				Config.Runway.WeeklyPlacementXP[3]
 			),
-			UDim2.new(1, -32, 0, 16),
-			{ Position = UDim2.fromOffset(16, 50), Color = Colors.Gold, TextSize = 9 }
+			UDim2.new(1, -32, 0, 14),
+			{
+				Position = UDim2.fromOffset(16, 53),
+				AlignX = Enum.TextXAlignment.Center,
+				Color = Colors.Gold,
+				TextSize = 9,
+			}
 		)
+		-- Below the banner tab now, not level with it: a centred tab leaves
+		-- no clear right-hand corner to sit in.
 		local refresh =
-			Factory.ImageButton(standings, "Refresh", UDim2.fromOffset(78, 34), UDim2.new(1, -94, 0, 9), nil)
+			Factory.ImageButton(standings, "Refresh", UDim2.fromOffset(78, 28), UDim2.new(1, -94, 0, 36), nil)
 		app:_BindButton(refresh)
 		refresh.Activated:Connect(function()
 			leaderboard = nil
@@ -860,30 +1030,68 @@ function RunwayHub.Show(app: any)
 					TextSize = 12,
 				})
 			else
-				for index = 1, math.min(3, #rows) do
+				for index = 1, math.min(5, #rows) do
 					local entry = rows[index]
 					local y = 72 + (index - 1) * 46
-					local color = if index == 1 then Colors.Gold elseif index == 2 then Colors.Cyan else Colors.Rose
-					Factory.Label(standings, string.format("#%d", index), UDim2.fromOffset(42, 38), {
-						Position = UDim2.fromOffset(16, y),
-						Font = Theme.Fonts.Black,
-						Color = color,
-						AlignX = Enum.TextXAlignment.Center,
+					local isSelf = entry.userId == localPlayer.UserId
+					local color = if index == 1
+						then Colors.Gold
+						elseif index == 2 then Colors.Cyan
+						elseif index == 3 then Colors.Rose
+						else Colors.TextMuted
+					-- The art seats each placement in a filled circle, and
+					-- lights the viewer's own row so they can find themselves
+					-- in the list without reading every name.
+					if isSelf then
+						local highlight = Factory.New("Frame", {
+							Position = UDim2.fromOffset(10, y - 3),
+							Size = UDim2.new(1, -20, 0, 44),
+							BackgroundColor3 = Colors.Violet,
+							BackgroundTransparency = 0.7,
+							BorderSizePixel = 0,
+							Parent = standings,
+						})
+						Factory.Corner(highlight, 10)
+						Factory.Stroke(highlight, Colors.Gold, 0.5)
+					end
+					local seat = Factory.New("Frame", {
+						Position = UDim2.fromOffset(18, y + 5),
+						Size = UDim2.fromOffset(28, 28),
+						BackgroundColor3 = color,
+						BorderSizePixel = 0,
+						ZIndex = 2,
+						Parent = standings,
 					})
-					Factory.Label(standings, entry.name, UDim2.new(1, -170, 0, 38), {
-						Position = UDim2.fromOffset(62, y),
+					Factory.Corner(seat, 14)
+					Factory.Label(seat, tostring(index), UDim2.fromScale(1, 1), {
+						AlignX = Enum.TextXAlignment.Center,
+						AlignY = Enum.TextYAlignment.Center,
+						Font = Theme.Fonts.Black,
+						TextSize = 13,
+						Color = Colors.Ink,
+						ZIndex = 3,
+					})
+					Factory.Label(standings, if isSelf then "You" else entry.name, UDim2.new(1, -170, 0, 38), {
+						Position = UDim2.fromOffset(56, y),
 						Font = Theme.Fonts.Bold,
 						TextSize = 12,
 						Truncate = Enum.TextTruncate.AtEnd,
+						ZIndex = 2,
 					})
-					Factory.Label(standings, string.format("%d pts", entry.score or 0), UDim2.fromOffset(90, 38), {
-						AnchorPoint = Vector2.new(1, 0),
-						Position = UDim2.new(1, -16, 0, y),
-						AlignX = Enum.TextXAlignment.Right,
-						Color = color,
-						Font = Theme.Fonts.Bold,
-						TextSize = 11,
-					})
+					Factory.Label(
+						standings,
+						string.format("%s pts", formatNumber(entry.score or 0)),
+						UDim2.fromOffset(90, 38),
+						{
+							AnchorPoint = Vector2.new(1, 0),
+							Position = UDim2.new(1, -16, 0, y),
+							AlignX = Enum.TextXAlignment.Right,
+							Color = color,
+							Font = Theme.Fonts.Bold,
+							TextSize = 11,
+							ZIndex = 2,
+						}
+					)
 				end
 			end
 			local own = leaderboard.self
@@ -898,7 +1106,7 @@ function RunwayHub.Show(app: any)
 					else "FINISH A ROUND TO JOIN THE SPOTLIGHT",
 				UDim2.new(1, -32, 0, 18),
 				{
-					Position = UDim2.fromOffset(16, 211),
+					Position = UDim2.fromOffset(16, 301),
 					Color = if own then Colors.Cyan else Colors.TextMuted,
 					Font = Theme.Fonts.Bold,
 					TextSize = 9,
@@ -929,7 +1137,7 @@ function RunwayHub.Show(app: any)
 		if not entryFor(state, selectedUserId) and selectedUserId ~= localPlayer.UserId then
 			selectedUserId = localPlayer.UserId
 		end
-		themeLabel.Text = state.theme or "Style challenge"
+		themeLabel.Text = themeLine(state)
 		render()
 	end
 
@@ -941,7 +1149,9 @@ function RunwayHub.Show(app: any)
 		phaseLabel.Text = phase.label
 		phaseLabel.TextColor3 = phase.color
 		timerLabel.TextColor3 = phase.color
-		timerLabel.Text = formatClock((state.endsAt or os.time()) - os.time())
+		local remaining = math.max(0, (state.endsAt or os.time()) - os.time())
+		timerLabel.Text = formatClock(remaining)
+		setTimerRing(remaining / math.max(1, PHASE_SECONDS[state.phase] or Config.Runway.StylingSeconds))
 	end
 
 	if not reduceMotion then
