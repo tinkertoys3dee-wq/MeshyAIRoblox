@@ -58,6 +58,17 @@ function Factory.New(className: string, properties: { [string]: any }?, children
 			child.Parent = instance
 		end
 	end
+	-- Every caller asks for a font by Enum (Theme.Fonts.*), but the display
+	-- serif only exists at one weight there and the art sets it bold. Upgrade
+	-- it to the weighted FontFace centrally, so no call site has to know --
+	-- FontFace overrides Font, so this is the only place the two can differ.
+	if
+		Theme.DisplayFace
+		and (instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox"))
+		and (instance :: any).Font == Theme.Fonts.Display
+	then
+		(instance :: any).FontFace = Theme.DisplayFace
+	end
 	-- Vertical scrollbars draw inside their ScrollingFrame by default, which
 	-- lets cards and text sit underneath the thumb. Reserve that strip for
 	-- every vertical/bidirectional scrolling region; horizontal chip rows are
@@ -229,9 +240,17 @@ function Factory.Button(parent: Instance, text: string, size: UDim2, position: U
 		AutoButtonColor = false,
 		Text = text,
 		TextColor3 = foreground,
-		Font = Theme.Fonts.Bold,
+		-- The art sets every button label in its display serif, next to the
+		-- sans it keeps for descriptions and for the pill metadata below.
+		Font = Theme.Fonts.Display,
 		TextSize = 14,
 		TextWrapped = true,
+		-- A label that outgrows its button -- a long item name, a localised
+		-- price, a serif that sets wider than the sans this was sized for --
+		-- otherwise wraps to a second line and has its bottom half sliced off
+		-- by the button's own height. Truncation applies to the last visible
+		-- line, so it degrades to an ellipsis instead.
+		TextTruncate = Enum.TextTruncate.AtEnd,
 		Parent = parent,
 	})
 	Factory.Corner(button, Theme.SmallCorner)
@@ -281,6 +300,9 @@ function Factory.Pill(parent: Instance, text: string, color: Color3?, width: num
 		TextColor3 = Colors.Text,
 		Font = Theme.Fonts.Bold,
 		TextSize = 10,
+		-- Pills neither wrap nor scale, so an over-long caption used to run
+		-- straight out through both ends of the capsule.
+		TextTruncate = Enum.TextTruncate.AtEnd,
 		Parent = parent,
 	})
 	Factory.Corner(pill, 99)
@@ -372,9 +394,14 @@ local function attachDecal(target: GuiObject, assetKey: string): boolean
 			BackgroundTransparency = 1,
 			Text = textHolder.Text,
 			TextColor3 = textHolder.TextColor3,
-			Font = textHolder.Font,
+			-- FontFace, not Font: the display serif is set as a weighted
+			-- face, and Font reads back as Unknown once it is, so mirroring
+			-- the enum would silently drop every button label to the
+			-- default face.
+			FontFace = textHolder.FontFace,
 			TextSize = textHolder.TextSize,
 			TextWrapped = textHolder.TextWrapped,
+			TextTruncate = textHolder.TextTruncate,
 			TextXAlignment = textHolder.TextXAlignment,
 			TextYAlignment = textHolder.TextYAlignment,
 			ZIndex = 5,
@@ -490,6 +517,9 @@ function Factory.SectionBanner(card: GuiObject, text: string, width: number?): T
 		TextColor3 = Colors.Gold,
 		Font = Theme.Fonts.Black,
 		TextSize = 12,
+		-- The width above clamps at 340, so a caption longer than that has
+		-- nowhere left to grow into.
+		TextTruncate = Enum.TextTruncate.AtEnd,
 		-- Above the card's own PanelFrame decal (ZIndex 0) and its Gloss, so
 		-- the tab reads as sitting on top of the frame the way it does in
 		-- the concept art.
@@ -501,6 +531,20 @@ function Factory.SectionBanner(card: GuiObject, text: string, width: number?): T
 		Factory.Stroke(banner, Colors.Gold, 0.25, 1.4)
 	end
 	return banner
+end
+
+-- A SectionBanner deliberately overhangs 12px above the card it titles. That
+-- is fine mid-stack, where the gap between cards absorbs it, but the FIRST
+-- card in a stack has nothing above it except the scrolling region's own
+-- edge -- and every one of those clips, so the tab's top edge gets sliced
+-- off. Give the stack the headroom rather than the card: the overhang is a
+-- property of the layout, and the card should not have to know whether it
+-- happens to be first.
+function Factory.BannerHeadroom(stack: Instance): UIPadding
+	return Factory.New("UIPadding", {
+		PaddingTop = UDim.new(0, 14),
+		Parent = stack,
+	})
 end
 
 -- The concept art's gold ON/OFF switch: a capsule with a gold knob that
@@ -542,7 +586,8 @@ function Factory.Switch(parent: Instance, on: boolean, position: UDim2?, width: 
 	Factory.Stroke(switch, Colors.Gold, 0.25, 1.4)
 	Factory.Label(switch, "", UDim2.new(1, -(SWITCH_KNOB + 12), 1, 0), {
 		AlignX = Enum.TextXAlignment.Center,
-		Font = Theme.Fonts.Black,
+		-- ON/OFF is metadata beside a control, which the art keeps in sans.
+		Font = Theme.Fonts.Bold,
 		TextSize = 11,
 	})
 	local dot = Factory.New("Frame", {

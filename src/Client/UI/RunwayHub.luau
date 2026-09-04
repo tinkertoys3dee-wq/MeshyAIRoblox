@@ -445,6 +445,7 @@ function RunwayHub.Show(app: any)
 				Parent = columns,
 			})
 			Factory.List(leftColumn, Enum.FillDirection.Vertical, 22)
+			Factory.BannerHeadroom(leftColumn)
 			rightColumn = Factory.New("Frame", {
 				Size = UDim2.new(0.44, -7, 0, 0),
 				AutomaticSize = Enum.AutomaticSize.Y,
@@ -453,6 +454,11 @@ function RunwayHub.Show(app: any)
 				Parent = columns,
 			})
 			Factory.List(rightColumn, Enum.FillDirection.Vertical, 22)
+			Factory.BannerHeadroom(rightColumn)
+		else
+			-- Single column: the banner-titled hero is the stack's own first
+			-- child, so the headroom belongs there instead.
+			Factory.BannerHeadroom(stack)
 		end
 
 		local phase = PHASE_COPY[state.phase] or PHASE_COPY.INTERMISSION
@@ -729,8 +735,8 @@ function RunwayHub.Show(app: any)
 			local viewActivity = Factory.ImageButton(
 				activity,
 				"View activity",
-				UDim2.fromOffset(110, 32),
-				UDim2.new(1, -126, 0, 14),
+				UDim2.fromOffset(132, 32),
+				UDim2.new(1, -148, 0, 14),
 				nil
 			)
 			app:_BindButton(viewActivity)

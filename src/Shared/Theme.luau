@@ -52,12 +52,40 @@ local Theme = {
 	Corner = 16,
 	SmallCorner = 10,
 	StrokeTransparency = 0.45,
+	-- The concept art runs two type registers, and only two. A classical
+	-- serif carries every NAMEPLATE -- page titles, panel captions, item and
+	-- setting names, button labels, big figures -- and a plain sans carries
+	-- everything EXPLANATORY: descriptions, helper prose, and the small caps
+	-- metadata beside a control ("LEVEL", "YOUR BEST", "ON"/"OFF").
+	--
+	-- The art is set in Cinzel, which Roblox does not ship. Merriweather is
+	-- the closest face Roblox does have that survives this app's real size
+	-- range: the captions run as small as 9px, where Garamond's and Bodoni's
+	-- thin strokes break up on screen.
 	Fonts = table.freeze({
 		Regular = Enum.Font.Gotham,
 		Medium = Enum.Font.GothamMedium,
 		Bold = Enum.Font.GothamBold,
-		Black = Enum.Font.GothamBlack,
+		Display = Enum.Font.Merriweather,
+		-- The older name for the same register. Every existing call site
+		-- reaching for "Black" is already a nameplate -- a page title, a card
+		-- name, a score -- exactly where the art sets its serif, so they all
+		-- keep working unchanged.
+		Black = Enum.Font.Merriweather,
 	}),
+	-- Enum.Font exposes Merriweather at one (regular) weight; the art sets
+	-- its serif at 700 throughout. A FontFace carries a weight and overrides
+	-- the Font property, so Factory applies this to anything asking for the
+	-- display face. Built through pcall because a family path Roblox has
+	-- since moved would otherwise throw at require time and take the whole
+	-- client's UI down with it -- without the face, text simply renders at
+	-- Merriweather's regular weight.
+	DisplayFace = (function(): Font?
+		local success, face = pcall(function()
+			return Font.new("rbxasset://fonts/families/Merriweather.json", Enum.FontWeight.Bold)
+		end)
+		return if success then face else nil
+	end)(),
 }
 
 function Theme.SetHighContrast(enabled: boolean)

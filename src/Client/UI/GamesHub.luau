@@ -864,11 +864,14 @@ function GamesHub.Show(app: any)
 				Truncate = Enum.TextTruncate.AtEnd,
 				ZIndex = 214,
 			})
-			Factory.Label(row, tostring(entry.score), UDim2.fromOffset(60, 30), {
+			-- Arcade scores are unbounded; 60px of 13px serif holds about
+			-- seven glyphs, and a long run in Prism Merge beats that.
+			Factory.Label(row, formatScore(entry.score), UDim2.fromOffset(76, 30), {
 				AnchorPoint = Vector2.new(1, 0),
 				Position = UDim2.new(1, -4, 0, 0),
 				AlignX = Enum.TextXAlignment.Right,
 				Font = Theme.Fonts.Black,
+				Truncate = Enum.TextTruncate.AtEnd,
 				Color = Colors.Gold,
 				TextSize = 14,
 				ZIndex = 214,

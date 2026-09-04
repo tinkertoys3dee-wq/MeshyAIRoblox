@@ -3295,7 +3295,7 @@ function App:_RenderStatus()
 	end
 	if daily then
 		local pill =
-			Factory.ImagePill(self.statusArea, string.format("🔥 %d DAY STREAK", daily.streak), Colors.Rose, 112)
+			Factory.ImagePill(self.statusArea, string.format("🔥 %d DAY STREAK", daily.streak), Colors.Rose, 126)
 		pill.LayoutOrder = 2
 		gemIcon(pill, "GemRuby")
 	end
@@ -3764,10 +3764,16 @@ function App:_RenderCreate()
 		TextSize = 11,
 		Color = Colors.Gold,
 	})
-	Factory.Label(tokensCard, formatNumber(totalTokens), UDim2.new(0.42, -16, 0, 36), {
+	-- 0.42 was set when this card was wide; it is always narrow now (the
+	-- compact stack, or the ~37% rail), where 0.42 of it holds about five
+	-- glyphs of 28px serif -- a seven-figure balance ran straight out of the
+	-- box. The "Get more" button starts at -132, so this can safely have
+	-- everything up to it.
+	Factory.Label(tokensCard, formatNumber(totalTokens), UDim2.new(1, -148, 0, 36), {
 		Position = UDim2.fromOffset(16, 30),
 		Font = Theme.Fonts.Black,
 		TextSize = 28,
+		Truncate = Enum.TextTruncate.AtEnd,
 	})
 	-- Full card width now (was 0.42, left over from when "PAY WITH" sat
 	-- beside this description in a wide card) -- the card is always
@@ -4071,6 +4077,9 @@ function App:_RenderCreate()
 				Font = Theme.Fonts.Black,
 				TextSize = 18,
 				Color = method.color,
+				-- The cartouche is a fixed 124px frame and a token-priced
+				-- label is much longer than "R$ 159".
+				Truncate = Enum.TextTruncate.AtEnd,
 				ZIndex = 2,
 			}
 		)
@@ -6062,7 +6071,7 @@ function App:_RenderStudio()
 	previewStatus.BackgroundTransparency = 0.08
 	Factory.Corner(previewStatus, 8)
 	local retryPreview =
-		Factory.ImageButton(viewport, "Retry preview", UDim2.fromOffset(104, 38), UDim2.new(1, -116, 1, -50), "primary")
+		Factory.ImageButton(viewport, "Retry preview", UDim2.fromOffset(132, 38), UDim2.new(1, -144, 1, -50), "primary")
 	retryPreview.ZIndex = 6
 	retryPreview.Visible = false
 	self:_BindButton(retryPreview)
@@ -6554,7 +6563,7 @@ function App:_RenderStudio()
 		local presetNameBox =
 			self:_TextBox(presets, "Name this fit", UDim2.new(1, -122, 0, 32), UDim2.fromOffset(14, 52), false)
 		local savePresetButton =
-			Factory.ImageButton(presets, "Save preset", UDim2.fromOffset(96, 32), UDim2.new(1, -110, 0, 52), "mint")
+			Factory.ImageButton(presets, "Save preset", UDim2.fromOffset(112, 32), UDim2.new(1, -126, 0, 52), "mint")
 		self:_BindButton(savePresetButton)
 		savePresetButton.Activated:Connect(function()
 			savePresetButton.Active = false
@@ -6834,8 +6843,8 @@ function App:_RenderStudio()
 			local saveDetails = Factory.ImageButton(
 				details,
 				"Save details",
-				UDim2.fromOffset(120, 32),
-				UDim2.new(1, -134, 0, 152),
+				UDim2.fromOffset(124, 32),
+				UDim2.new(1, -138, 0, 152),
 				"primary"
 			)
 			self:_BindButton(saveDetails)
@@ -7490,12 +7499,12 @@ function App:_RenderDiscover()
 			end)
 		end
 		local leaderboardChip =
-			Factory.ImageButton(filters, "🏆 Top Creators", UDim2.fromOffset(130, 30), nil, "mint")
+			Factory.ImageButton(filters, "🏆 Top Creators", UDim2.fromOffset(146, 30), nil, "mint")
 		self:_BindButton(leaderboardChip)
 		leaderboardChip.Activated:Connect(function()
 			self:_ShowLeaderboard()
 		end)
-		local simpleChip = Factory.ImageButton(filters, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
+		local simpleChip = Factory.ImageButton(filters, "← Simple Mode", UDim2.fromOffset(132, 30), nil, nil)
 		self:_BindButton(simpleChip)
 		simpleChip.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", true)
@@ -7932,8 +7941,8 @@ function App:_RenderAvatarLab()
 		local returnButton = Factory.ImageButton(
 			runwayBanner,
 			if runwayState.ready then "View round" else "Return & lock in",
-			UDim2.fromOffset(126, 34),
-			UDim2.new(1, -140, 0, 10),
+			UDim2.fromOffset(158, 34),
+			UDim2.new(1, -172, 0, 10),
 			"primary"
 		)
 		self:_BindButton(returnButton)
@@ -8083,7 +8092,7 @@ function App:_RenderAvatarLab()
 		-- The concept art keeps this at the end of the category row rather
 		-- than as its own full-width bar below -- the mirror image of
 		-- Advanced Mode's "<- Simple Mode" chip in the same spot.
-		local switchAdvanced = Factory.ImageButton(chips, "Advanced Mode ✦", UDim2.fromOffset(140, 30), nil, nil)
+		local switchAdvanced = Factory.ImageButton(chips, "Advanced Mode ✦", UDim2.fromOffset(150, 30), nil, nil)
 		self:_BindButton(switchAdvanced)
 		switchAdvanced.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", false)
@@ -8102,7 +8111,7 @@ function App:_RenderAvatarLab()
 			self.catalogFiltersExpanded = not filtersExpanded
 			self:_RenderActivePage()
 		end)
-		local simpleChip = Factory.ImageButton(chips, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
+		local simpleChip = Factory.ImageButton(chips, "← Simple Mode", UDim2.fromOffset(132, 30), nil, nil)
 		self:_BindButton(simpleChip)
 		simpleChip.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", true)
@@ -8560,7 +8569,7 @@ function App:_RenderGraphicsDiscoverBody()
 				self:_RenderActivePage()
 			end)
 		end
-		local simpleChip = Factory.ImageButton(filters, "← Simple Mode", UDim2.fromOffset(120, 30), nil, nil)
+		local simpleChip = Factory.ImageButton(filters, "← Simple Mode", UDim2.fromOffset(132, 30), nil, nil)
 		self:_BindButton(simpleChip)
 		simpleChip.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", true)
@@ -8879,6 +8888,7 @@ function App:_RenderAvatarGraphics()
 		})
 	if not self.compact then
 		Factory.List(rightStack, Enum.FillDirection.Vertical, 14)
+		Factory.BannerHeadroom(rightStack)
 	end
 
 	local isTextMode = self.graphicMode == "TEXT"
@@ -9039,7 +9049,7 @@ function App:_RenderAvatarGraphics()
 		local simpleLink = Factory.ImageButton(
 			composer,
 			"← Simple Mode",
-			UDim2.fromOffset(120, 24),
+			UDim2.fromOffset(132, 26),
 			UDim2.fromOffset(16, cursorY),
 			nil
 		)
@@ -9757,6 +9767,7 @@ function App:_RenderSettings()
 		Parent = if self.compact then page else columns,
 	})
 	Factory.List(stack, Enum.FillDirection.Vertical, 22)
+	Factory.BannerHeadroom(stack)
 	local rightStack = if self.compact
 		then stack
 		else Factory.New("Frame", {
@@ -9767,6 +9778,7 @@ function App:_RenderSettings()
 		})
 	if not self.compact then
 		Factory.List(rightStack, Enum.FillDirection.Vertical, 22)
+		Factory.BannerHeadroom(rightStack)
 	end
 
 	local settings = self.state.profile.settings
