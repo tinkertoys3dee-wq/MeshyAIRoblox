@@ -13,31 +13,39 @@ local Factory = {}
 local SLICE_CENTER = {
 	PanelFrame = Rect.new(78, 78, 162, 162),
 	-- Buttons, pills and the banner are all the concept art's notched
-	-- hexagon, so all four are 3-sliced rather than 9-sliced: the centre
+	-- hexagon, so all five are 3-sliced rather than 9-sliced: the centre
 	-- band spans the source's full height, leaving only the flat middle to
 	-- stretch and the two angled end caps untouched. Keep in sync with
 	-- export_ui_assets.py's BTN_*/PILL_*/BANNER_* values.
-	ButtonPrimary = Rect.new(42, 0, 198, 120),
-	ButtonDefault = Rect.new(42, 0, 198, 120),
-	ButtonDanger = Rect.new(42, 0, 198, 120),
-	PillFrame = Rect.new(34, 0, 166, 100),
-	SectionBanner = Rect.new(48, 0, 192, 120),
+	--
+	-- Each cap is narrow because it is authored at the width it renders at
+	-- (see SLICE_SCALE below for why it cannot be scaled down here instead).
+	-- The source stays tall, so squashing it into a short control is what
+	-- sets the angle: a 14px cap over 120px of source height lands at 14
+	-- over ~21 in a 42px-tall button, the art's own proportion.
+	ButtonPrimary = Rect.new(14, 0, 226, 120),
+	ButtonDefault = Rect.new(14, 0, 226, 120),
+	ButtonDanger = Rect.new(14, 0, 226, 120),
+	PillFrame = Rect.new(10, 0, 190, 100),
+	SectionBanner = Rect.new(12, 0, 228, 120),
 }
 
--- A slice border draws at its source size unless scaled down. For the panel
--- that mattered because its 78px gold filigree reached ~40px into the card
--- and swallowed the left edge of every section title sitting at x=16. For
--- the hexagons it matters because each is drawn well above the size it
--- renders at, to keep its diagonals crisp: without this a 42px cap would
--- eat a third of a short button, instead of landing on the art's own
--- proportion of about 0.7 of the shape's half-height.
+-- A slice border draws at its source size unless scaled down. PanelFrame
+-- needs that: its 78px gold filigree reached ~40px into the card and
+-- swallowed the left edge of every section title sitting at x=16, and 0.6
+-- tucks the scrollwork back into the corner.
+--
+-- The hexagons deliberately have NO entry here. They were authored oversized
+-- with a scale to bring their caps down, and in-engine that scale did not
+-- take -- every button rendered with its full 42px cap, which on a short
+-- control is more than half the width, drawn out into a long arrow rather
+-- than a notch. PanelFrame's own 0.6 does work, and the one thing that
+-- differs is that these are 3-slices with zero-height top and bottom bands;
+-- whatever the engine reason, the fix does not depend on knowing it. Their
+-- caps are authored at final size instead, so there is nothing left to
+-- scale. Anything added here must be a real 9-slice, like PanelFrame.
 local SLICE_SCALE = {
 	PanelFrame = 0.6,
-	ButtonPrimary = 0.35,
-	ButtonDefault = 0.35,
-	ButtonDanger = 0.35,
-	PillFrame = 0.28,
-	SectionBanner = 0.25,
 }
 
 function Factory.New(className: string, properties: { [string]: any }?, children: { Instance }?): any

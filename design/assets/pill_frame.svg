@@ -190,6 +190,6 @@
       <path d="M0 -16 C2 -5 5 -2 16 0 C5 2 2 5 0 16 C-2 5 -5 2 -16 0 C-5 -2 -2 -5 0 -16 Z" fill="#FFF6D8"/>
     </g>
   </defs>
-  <path d="M34 5 h132 l29 45.0 l-29 45.0 h-132 l-29 -45.0 z" fill="url(#panelGlass)" stroke="url(#goldBar)" stroke-width="4"/>
+  <path d="M10 5 h180 l5 45.0 l-5 45.0 h-180 l-5 -45.0 z" fill="url(#panelGlass)" stroke="url(#goldBar)" stroke-width="4"/>
   <clipPath id="PillFrameTopHalf"><rect x="0" y="0" width="200" height="42.0"/></clipPath>
-  <path d="M34 13 h132 l21 37.0 l-21 37.0 h-132 l-21 -37.0 z" fill="#FFFFFF" opacity="0.14" clip-path="url(#PillFrameTopHalf)"/></svg>
+  <path d="M10 13 h180 l-3 37.0 l3 37.0 h-180 l3 -37.0 z" fill="#FFFFFF" opacity="0.14" clip-path="url(#PillFrameTopHalf)"/></svg>

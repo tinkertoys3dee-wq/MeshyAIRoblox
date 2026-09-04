@@ -116,14 +116,21 @@ def panel_frame():
 # Button/Pill keep their own Gloss/Shade code overlays on top -- same deal
 # as Card.
 #
-# Drawn a little over 2x the height they render at so the diagonals stay
-# crisp; each one's SliceScale in Factory.luau brings the caps back down to
-# the art's own proportion (a cap about 0.7 of the shape's half-height).
+# The cap is authored at the width it actually RENDERS at, and the source is
+# left tall so the vertical squash is what sets the angle: a 14px cap over a
+# 120px source height lands at 14 over ~21 once the image is drawn into a
+# 42px-tall button, which is the art's own proportion (a cap about 0.7 of the
+# shape's half-height).
+#
+# It has to be authored that way because a slice border draws at its source
+# width and SliceScale does not bring it down here -- see Factory.luau's
+# SLICE_SCALE note. A 42px cap with a 0.35 scale was rendering as a 42px cap:
+# more than half of a short button, drawn out into a long arrow.
 # --------------------------------------------------------------------------
 BTN_W, BTN_H = 240, 120
-BTN_CAP = 42
+BTN_CAP = 14
 PILL_W, PILL_H = 200, 100
-PILL_CAP = 34
+PILL_CAP = 10
 
 
 def _hexagon(w: int, h: int, cap: int, inset: float) -> str:
@@ -185,7 +192,7 @@ def pill_frame():
 # full height, leaving no top/bottom band) rather than a 9-slice.
 # --------------------------------------------------------------------------
 BANNER_W, BANNER_H = 240, 120
-BANNER_SLICE = 48  # angled end cap; drawn at BANNER_SLICE * SliceScale px
+BANNER_SLICE = 12  # angled end cap, authored at the width it renders at
 
 
 def section_banner():

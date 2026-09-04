@@ -190,6 +190,6 @@
       <path d="M0 -16 C2 -5 5 -2 16 0 C5 2 2 5 0 16 C-2 5 -5 2 -16 0 C-5 -2 -2 -5 0 -16 Z" fill="#FFF6D8"/>
     </g>
   </defs>
-  <path d="M42 5 h156 l37 55.0 l-37 55.0 h-156 l-37 -55.0 z" fill="#241645" stroke="url(#goldSoft)" stroke-width="4.4"/>
+  <path d="M14 5 h212 l9 55.0 l-9 55.0 h-212 l-9 -55.0 z" fill="#241645" stroke="url(#goldSoft)" stroke-width="4.4"/>
   <clipPath id="ButtonDefaultTopHalf"><rect x="0" y="0" width="240" height="50.4"/></clipPath>
-  <path d="M42 13 h156 l29 47.0 l-29 47.0 h-156 l-29 -47.0 z" fill="#FFFFFF" opacity="0.07" clip-path="url(#ButtonDefaultTopHalf)"/></svg>
+  <path d="M14 13 h212 l1 47.0 l-1 47.0 h-212 l-1 -47.0 z" fill="#FFFFFF" opacity="0.07" clip-path="url(#ButtonDefaultTopHalf)"/></svg>
