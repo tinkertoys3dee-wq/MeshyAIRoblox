@@ -15,19 +15,33 @@ local SLICE_CENTER = {
 	-- Buttons, pills and the banner are all the concept art's notched
 	-- hexagon, so all five are 3-sliced rather than 9-sliced: the centre
 	-- band spans the source's full height, leaving only the flat middle to
-	-- stretch and the two angled end caps untouched. Keep in sync with
-	-- export_ui_assets.py's BTN_*/PILL_*/BANNER_* values.
+	-- stretch and the two angled end caps untouched.
 	--
-	-- Each cap is narrow because it is authored at the width it renders at
-	-- (see SLICE_SCALE below for why it cannot be scaled down here instead).
-	-- The source stays tall, so squashing it into a short control is what
-	-- sets the angle: a 14px cap over 120px of source height lands at 14
-	-- over ~21 in a 42px-tall button, the art's own proportion.
-	ButtonPrimary = Rect.new(14, 0, 226, 120),
-	ButtonDefault = Rect.new(14, 0, 226, 120),
-	ButtonDanger = Rect.new(14, 0, 226, 120),
-	PillFrame = Rect.new(10, 0, 190, 100),
-	SectionBanner = Rect.new(12, 0, 228, 120),
+	-- These are the art's own numbers, and the source PNGs are authored at
+	-- the art's own size (see export_ui_assets.py). That matters more than it
+	-- looks. A 3-slice never stretches a cap horizontally, but it always
+	-- squashes it vertically to the control's height, so a source authored
+	-- taller than it renders gives the cap region one scale across and a much
+	-- smaller one down: its stroke keeps full weight while the flat top and
+	-- bottom edges thin to a hairline, and the ends read as heavy gold
+	-- arrowheads bracketing a barely-drawn box. Authoring at render height is
+	-- what keeps the gold an even weight the whole way round.
+	ButtonPrimary = Rect.new(18, 0, 222, 42),
+	ButtonDefault = Rect.new(18, 0, 222, 42),
+	ButtonDanger = Rect.new(18, 0, 222, 42),
+	PillFrame = Rect.new(16, 0, 184, 38),
+	SectionBanner = Rect.new(16, 0, 224, 40),
+}
+
+-- Source height of each 3-sliced hexagon, used to keep its caps isotropic at
+-- whatever height the control actually ends up (see bindSliceScale). Cards
+-- are a real 9-slice and don't need it.
+local SLICE_SOURCE_HEIGHT = {
+	ButtonPrimary = 42,
+	ButtonDefault = 42,
+	ButtonDanger = 42,
+	PillFrame = 38,
+	SectionBanner = 40,
 }
 
 -- A slice border draws at its source size unless scaled down. PanelFrame
@@ -35,18 +49,33 @@ local SLICE_CENTER = {
 -- swallowed the left edge of every section title sitting at x=16, and 0.6
 -- tucks the scrollwork back into the corner.
 --
--- The hexagons deliberately have NO entry here. They were authored oversized
--- with a scale to bring their caps down, and in-engine that scale did not
--- take -- every button rendered with its full 42px cap, which on a short
--- control is more than half the width, drawn out into a long arrow rather
--- than a notch. PanelFrame's own 0.6 does work, and the one thing that
--- differs is that these are 3-slices with zero-height top and bottom bands;
--- whatever the engine reason, the fix does not depend on knowing it. Their
--- caps are authored at final size instead, so there is nothing left to
--- scale. Anything added here must be a real 9-slice, like PanelFrame.
+-- The hexagons have no fixed entry here -- bindSliceScale gives each one a
+-- live scale instead, from the height it actually gets laid out at.
 local SLICE_SCALE = {
 	PanelFrame = 0.6,
 }
+
+-- Keep a 3-sliced hexagon's end caps isotropic. The caps are the only part
+-- of the image with a diagonal in them, and a diagonal is the one thing that
+-- shows an uneven scale: squash the source to 0.7 of its height without
+-- narrowing the caps to match and the angled ends keep a stroke weight the
+-- flat edges have lost, which is the whole reason these looked wrong before.
+-- Scaling the border by height/sourceHeight makes the cap's two axes agree
+-- again, and holds the art's notch angle at every control size.
+--
+-- The source is already authored at its render height, so SliceScale 1.0 --
+-- what the decal starts at, and what it keeps if AbsoluteSize never resolves
+-- -- is already close to right. This only refines it.
+local function bindSliceScale(decal: ImageLabel, target: GuiObject, sourceHeight: number)
+	local function apply()
+		local height = target.AbsoluteSize.Y
+		if height > 0 then
+			decal.SliceScale = math.clamp(height / sourceHeight, 0.5, 2)
+		end
+	end
+	apply()
+	target:GetPropertyChangedSignal("AbsoluteSize"):Connect(apply)
+end
 
 function Factory.New(className: string, properties: { [string]: any }?, children: { Instance }?): any
 	local instance = Instance.new(className)
@@ -643,6 +672,10 @@ local function attachDecal(target: GuiObject, assetKey: string): boolean
 		Parent = target,
 	})
 	decal:SetAttribute("ForgeDecal", true)
+	local sourceHeight = SLICE_SOURCE_HEIGHT[assetKey]
+	if sourceHeight then
+		bindSliceScale(decal :: ImageLabel, target, sourceHeight)
+	end
 	return decal ~= nil
 end
 
@@ -801,6 +834,13 @@ function Factory.SwapDecal(target: Instance, assetKey: string): boolean
 	local sliceCenter = SLICE_CENTER[assetKey]
 	if sliceCenter then
 		decal.SliceCenter = sliceCenter
+	end
+	-- Swapping between two hexagons (a nav row going active) can change the
+	-- source height, so the live scale is recomputed for the incoming asset
+	-- rather than left on the outgoing one's.
+	local sourceHeight = SLICE_SOURCE_HEIGHT[assetKey]
+	if sourceHeight and target:IsA("GuiObject") then
+		bindSliceScale(decal, target :: GuiObject, sourceHeight)
 	end
 	return true
 end

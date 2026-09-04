@@ -16,10 +16,10 @@
     "file": "button_primary.png",
     "kind": "slice",
     "sliceCenter": [
-      14,
+      18,
       0,
-      226,
-      120
+      222,
+      42
     ],
     "usage": "Factory.Button kind='primary'/'mint' background"
   },
@@ -28,10 +28,10 @@
     "file": "button_default.png",
     "kind": "slice",
     "sliceCenter": [
-      14,
+      18,
       0,
-      226,
-      120
+      222,
+      42
     ],
     "usage": "Factory.Button default background"
   },
@@ -40,10 +40,10 @@
     "file": "button_danger.png",
     "kind": "slice",
     "sliceCenter": [
-      14,
+      18,
       0,
-      226,
-      120
+      222,
+      42
     ],
     "usage": "Factory.Button kind='danger' background"
   },
@@ -52,10 +52,10 @@
     "file": "pill_frame.png",
     "kind": "slice",
     "sliceCenter": [
-      10,
+      16,
       0,
-      190,
-      100
+      184,
+      38
     ],
     "usage": "Factory.Pill background"
   },
@@ -64,10 +64,10 @@
     "file": "section_banner.png",
     "kind": "slice",
     "sliceCenter": [
-      12,
+      16,
       0,
-      228,
-      120
+      224,
+      40
     ],
     "usage": "Factory.SectionBanner background -- notched panel title tab"
   },
