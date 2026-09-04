@@ -486,6 +486,7 @@ function App.new()
 		generationOfferEvents = {} :: { [string]: boolean },
 		navButtons = {} :: { [string]: TextButton },
 		navHasIcon = {} :: { [string]: boolean },
+		navMedallions = {} :: { [string]: Frame },
 		activeViewport = nil :: any,
 		ambientMotionEnabled = false,
 		ambientBlobs = {} :: { { instance: Frame, restPosition: UDim2 } },
@@ -961,9 +962,27 @@ function App:_BuildChrome()
 		-- Only swap the unicode symbol for the decal icon once it's actually
 		-- uploaded (Factory.Icon returns nil until then) -- otherwise the
 		-- symbol stays exactly as it always has.
-		local icon = Factory.Icon(button, iconKeys[index], UDim2.fromOffset(22, 22), UDim2.fromOffset(10, 13))
+		local icon = Factory.Icon(button, iconKeys[index], UDim2.fromOffset(20, 20), UDim2.new(0, 11, 0.5, -10))
 		if icon then
 			icon.ZIndex = 2
+			-- The art seats every nav icon in its own dark medallion, ringed
+			-- in gold -- brighter and a touch heavier on the active row.
+			-- Built only alongside a real icon, since an empty ring around
+			-- the unicode fallback glyph would read as a mistake rather than
+			-- a frame. ZIndex, not creation order, keeps it behind.
+			local medallion = Factory.New("Frame", {
+				Name = "IconMedallion",
+				AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.new(0, 6, 0.5, 0),
+				Size = UDim2.fromOffset(30, 30),
+				BackgroundColor3 = Color3.fromRGB(30, 18, 56),
+				BorderSizePixel = 0,
+				ZIndex = 1,
+				Parent = button,
+			})
+			Factory.Corner(medallion, 15)
+			Factory.Stroke(medallion, Colors.Gold, 0.45, 1.6)
+			self.navMedallions[page] = medallion
 			button.Text = "      " .. label
 			-- _ApplyResponsiveLayout rewrites this text on every resize --
 			-- it has to know the decal icon is already carrying the glyph,
@@ -1157,6 +1176,30 @@ function App:_BuildChrome()
 	self.backgroundLayer = backgroundLayer
 	self.ambientBlobs = {}
 	self.ambientEmbers = {}
+	-- The arcane circle the concept art draws every one of its eight screens
+	-- over. Built once with the rest of the chrome, never rebuilt on a page
+	-- swap, and never animated -- it is the backdrop, not an effect, so it
+	-- stays put under reduce-motion too.
+	Factory.ArcaneCircle(backgroundLayer)
+	-- The art scatters a few still twinkles across the same backdrop. These
+	-- are the one place SparkleStar is used at page scale rather than as a
+	-- stud on a control; Factory.Icon returns nil until its id is real, so
+	-- the backdrop simply goes without until then.
+	for _, spark in
+		{
+			{ position = UDim2.fromScale(0.6, 0.07), size = 22, transparency = 0.15 },
+			{ position = UDim2.fromScale(0.92, 0.13), size = 28, transparency = 0.3 },
+			{ position = UDim2.fromScale(0.02, 0.6), size = 18, transparency = 0.4 },
+			{ position = UDim2.fromScale(0.79, 0.52), size = 15, transparency = 0.5 },
+		}
+	do
+		local sparkle =
+			Factory.Icon(backgroundLayer, "SparkleStar", UDim2.fromOffset(spark.size, spark.size), spark.position)
+		if sparkle then
+			sparkle.ImageTransparency = spark.transparency
+			sparkle.ZIndex = 0
+		end
+	end
 	for _, spec in
 		{
 			{ diameter = 560, position = UDim2.new(1, -160, 0, -220), color = Colors.Cyan, transparency = 0.93 },
@@ -3370,11 +3413,22 @@ function App:_HighlightNavigation()
 		-- one instead, a no-op fallback to the tween above while either id is
 		-- still 0.
 		Factory.SwapDecal(button, if active then "ButtonPrimary" else "ButtonDefault")
+		-- Dark on the molten fill, light on the dark one -- the art's active
+		-- row is the one place in the nav where near-white text would sit on
+		-- orange and lose most of its contrast.
 		self:_Animate(
 			button,
 			TweenInfo.new(0.16, Enum.EasingStyle.Quad),
-			{ TextColor3 = if active then Colors.Text else Colors.TextMuted }
+			{ TextColor3 = if active then Color3.fromRGB(58, 18, 6) else Colors.TextMuted }
 		)
+		local medallion = self.navMedallions[page]
+		local medallionStroke = medallion and medallion:FindFirstChildOfClass("UIStroke")
+		if medallionStroke then
+			self:_Animate(medallionStroke, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {
+				Transparency = if active then 0.1 else 0.45,
+				Thickness = if active then 2.2 else 1.6,
+			})
+		end
 		local stroke = button:FindFirstChildOfClass("UIStroke")
 		if stroke then
 			self:_Animate(stroke, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {

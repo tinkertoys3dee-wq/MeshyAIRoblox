@@ -322,6 +322,107 @@ function Factory.Pill(parent: Instance, text: string, color: Color3?, width: num
 	return pill
 end
 
+-- The backdrop every one of the eight mockups is drawn over: a set of
+-- concentric arcane rings with tick marks at the compass points, sitting
+-- far behind the content at low opacity. It is the single thing that makes
+-- the app read as a forge circle rather than a dark dashboard.
+--
+-- Sized off the container's HEIGHT through a square aspect constraint, so
+-- it stays a circle rather than stretching into an ellipse as the window
+-- gets wider, and every ring and tick is placed in scale rather than
+-- pixels -- their real radius is not known until the layout resolves.
+--
+-- Roblox cannot dash a UIStroke, so the two dashed rings in the art are
+-- built from small rotated segments the way Factory.RadialRing builds its
+-- arc. They never move or update; this runs once.
+local ARCANE_RINGS = {
+	-- radius as a fraction of the circle's own half-size, then how it draws
+	{ radius = 1.0, dashes = 0, thickness = 1.4, transparency = 0.85 },
+	{ radius = 0.95, dashes = 54, thickness = 1.6, transparency = 0.86 },
+	{ radius = 0.82, dashes = 26, thickness = 2.2, transparency = 0.84 },
+	{ radius = 0.66, dashes = 0, thickness = 1, transparency = 0.88 },
+}
+
+function Factory.ArcaneCircle(parent: Instance, heightScale: number?): Frame
+	local circle = Factory.New("Frame", {
+		Name = "ArcaneCircle",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		-- The art centres it left of middle and slightly low, so the rings
+		-- read behind the content rather than haloing it.
+		Position = UDim2.fromScale(0.38, 0.52),
+		Size = UDim2.new(0, 0, heightScale or 0.9, 0),
+		BackgroundTransparency = 1,
+		ZIndex = 0,
+		Parent = parent,
+	})
+	Factory.New("UIAspectRatioConstraint", {
+		AspectRatio = 1,
+		DominantAxis = Enum.DominantAxis.Height,
+		Parent = circle,
+	})
+
+	for index, ring in ARCANE_RINGS do
+		if ring.dashes == 0 then
+			local outline = Factory.New("Frame", {
+				Name = string.format("Ring%d", index),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromScale(ring.radius, ring.radius),
+				BackgroundTransparency = 1,
+				ZIndex = 0,
+				Parent = circle,
+			})
+			Factory.New("UICorner", { CornerRadius = UDim.new(0.5, 0), Parent = outline })
+			Factory.Stroke(outline, Colors.Cyan, ring.transparency, ring.thickness)
+		else
+			for dash = 1, ring.dashes do
+				local degrees = (dash - 1) / ring.dashes * 360
+				local radians = math.rad(degrees)
+				-- Scale, not pixels: half the ring's fractional radius is how
+				-- far from the centre a 0..1 scale position has to move.
+				Factory.New("Frame", {
+					Name = string.format("Ring%dDash%d", index, dash),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(
+						0.5 + math.cos(radians) * ring.radius / 2,
+						0.5 + math.sin(radians) * ring.radius / 2
+					),
+					Size = UDim2.fromOffset(if ring.dashes > 40 then 3 else 12, ring.thickness),
+					-- Tangent to the circle, so the dashes lie along it
+					-- rather than pointing out from the centre.
+					Rotation = degrees + 90,
+					BackgroundColor3 = Colors.Cyan,
+					BackgroundTransparency = ring.transparency,
+					BorderSizePixel = 0,
+					ZIndex = 0,
+					Parent = circle,
+				})
+			end
+		end
+	end
+
+	-- Gold ticks at the four compass points and the four diagonals, just
+	-- outside the widest ring.
+	for index = 0, 7 do
+		local degrees = index * 45
+		local radians = math.rad(degrees)
+		Factory.New("Frame", {
+			Name = string.format("Tick%d", index),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5 + math.cos(radians) * 0.52, 0.5 + math.sin(radians) * 0.52),
+			Size = UDim2.fromOffset(14, 1.6),
+			-- Radial here, not tangent: these point out of the circle.
+			Rotation = degrees,
+			BackgroundColor3 = Colors.Gold,
+			BackgroundTransparency = 0.78,
+			BorderSizePixel = 0,
+			ZIndex = 0,
+			Parent = circle,
+		})
+	end
+	return circle
+end
+
 -- A soft, oversized, mostly-transparent circle used purely as a background
 -- accent. Roblox frames can't blur, so a large low-opacity circle sitting
 -- behind normal content is the cheapest way to add the same sense of depth a
