@@ -1,7 +1,7 @@
 {
-  "ButtonDanger": 0,
-  "ButtonDefault": 0,
-  "ButtonPrimary": 0,
+  "ButtonDanger": 84082412510598,
+  "ButtonDefault": 95647587689636,
+  "ButtonPrimary": 90291588924472,
   "CornerOrnament": 94559088816529,
   "CrystalHero": 134340322938842,
   "EmberMascot": 90572499602200,
@@ -32,11 +32,11 @@
   "NavSettings": 86081367439274,
   "NavStudio": 91684276138668,
   "PanelFrame": 79483197951281,
-  "PillFrame": 0,
+  "PillFrame": 116099045163275,
   "PriceCartouche": 125437083012935,
   "RankRingFill": 83773430594246,
   "RivetStud": 81182628674765,
-  "SectionBanner": 0,
+  "SectionBanner": 102549666785169,
   "SparkleStar": 136233557211042,
   "TopbarCurve": 98816585832008
 }

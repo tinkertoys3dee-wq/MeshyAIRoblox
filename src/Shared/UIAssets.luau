@@ -10,11 +10,11 @@
 -- always safe to ship as-is, before or mid-rollout of any single asset.
 local UIAssets = {
 	PanelFrame = 79483197951281,
-	ButtonPrimary = 0,
-	ButtonDefault = 0,
-	ButtonDanger = 0,
-	PillFrame = 0,
-	SectionBanner = 0,
+	ButtonPrimary = 90291588924472,
+	ButtonDefault = 95647587689636,
+	ButtonDanger = 84082412510598,
+	PillFrame = 116099045163275,
+	SectionBanner = 102549666785169,
 	Logo = 89731587361349,
 	NavCreate = 134435082452963,
 	NavStudio = 91684276138668,
@@ -51,7 +51,7 @@ local UIAssets = {
 	GemRuby = 111830384173635,
 }
 
--- 35/40 assets have a real id right now.
-UIAssets.Ready = false
+-- 40/40 assets have a real id right now.
+UIAssets.Ready = true
 
 return UIAssets
