@@ -466,7 +466,9 @@ function RunwayHub.Show(app: any)
 		-- side by side) is what fits a narrow phone AND what fits the ~44%
 		-- right column above.
 		local heroNarrow = compact or twoColumn
-		local heroHeight = if heroNarrow then 610 else 396
+		-- 610 before the look summary above pushed the action row down 38px;
+		-- the wide layout has that much slack already and keeps its height.
+		local heroHeight = if heroNarrow then 648 else 396
 		local hero = Factory.ImageCard(rightColumn, UDim2.new(1, 0, 0, heroHeight), nil, "RoundHero")
 		hero.LayoutOrder = 1
 		local selectedIsSelf = selectedUserId == localPlayer.UserId
@@ -618,7 +620,50 @@ function RunwayHub.Show(app: any)
 			}
 		)
 
-		local actionY = statsY + 54
+		-- The art's YOUR LOOK panel names what you are about to lock in --
+		-- the item and what else is on with it -- and points at where to
+		-- change it. Read off the profile's own equipped list, so it needs
+		-- nothing from the runway state, and only shown for your own entry:
+		-- selecting somebody else's look means the panel is describing
+		-- theirs, and their loadout is not something this client knows.
+		local lookY = statsY + 40
+		if selectedIsSelf then
+			local profileNow = app.state and app.state.profile
+			local equipped = profileNow and profileNow.equippedItemIds or {}
+			local names = {}
+			for _, itemId in equipped do
+				local item = profileNow and profileNow.items[itemId]
+				if item then
+					table.insert(names, item.name)
+				end
+			end
+			Factory.Label(
+				hero,
+				if #names == 0 then "Nothing equipped yet" else names[1],
+				UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 20),
+				{
+					Position = UDim2.new(detailScale, detailOffset, 0, lookY),
+					Font = Theme.Fonts.Black,
+					TextSize = 15,
+					Truncate = Enum.TextTruncate.AtEnd,
+				}
+			)
+			Factory.Label(
+				hero,
+				if #names > 1
+					then string.format("+ %d more on your avatar", #names - 1)
+					else "Change it in My Studio before you lock.",
+				UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 18),
+				{
+					Position = UDim2.new(detailScale, detailOffset, 0, lookY + 20),
+					Color = Colors.TextMuted,
+					TextSize = 11,
+					Truncate = Enum.TextTruncate.AtEnd,
+				}
+			)
+		end
+
+		local actionY = statsY + 92
 		local primaryText = "Watch the runway"
 		local primaryAction: (() -> ())? = nil
 		if state.phase == "INTERMISSION" then

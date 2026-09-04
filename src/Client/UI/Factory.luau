@@ -186,14 +186,28 @@ function Factory.Card(parent: Instance, size: UDim2, position: UDim2?, name: str
 		Color3.fromRGB(51, 32, 94),
 		Color3.fromRGB(26, 16, 53),
 	}, 115)
+	-- The art's panelSheen: white falling from 0.13 to nothing down the top
+	-- of a panel, not a flat band that stops on a visible line. Sized in
+	-- scale because the art scales it with the panel too (roughly a third of
+	-- the tall sidebar, a fifth of a short content card), and carried by the
+	-- gradient rather than BackgroundTransparency so the falloff is real.
 	local gloss = Factory.New("Frame", {
 		Name = "Gloss",
-		Size = UDim2.new(1, -2, 0, 46),
+		Size = UDim2.new(1, -2, 0.26, 0),
 		Position = UDim2.fromOffset(1, 1),
 		BackgroundColor3 = Color3.new(1, 1, 1),
-		BackgroundTransparency = 0.94,
 		BorderSizePixel = 0,
 		Parent = card,
+	})
+	Factory.New("UISizeConstraint", { MaxSize = Vector2.new(math.huge, 120), Parent = gloss })
+	Factory.New("UIGradient", {
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.87),
+			NumberSequenceKeypoint.new(0.6, 0.98),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+		Rotation = 90,
+		Parent = gloss,
 	})
 	Factory.Corner(gloss, Theme.Corner - 1)
 	-- A soft ground shadow cast just below the card -- a child (not a
