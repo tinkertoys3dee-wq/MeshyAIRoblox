@@ -4566,6 +4566,7 @@ function App:_RenderCreate()
 				Parent = promptCard,
 			})
 			Factory.Corner(avatarPreview, 12)
+			Factory.Stroke(avatarPreview, Colors.Gold, 0.45)
 			Factory.Label(
 				promptCard,
 				"Fetched automatically from your current Roblox avatar -- nothing to upload",
@@ -5579,7 +5580,9 @@ function App:_RenderCreate()
 			end
 		end
 		local allDone = doneCount >= #quests
-		local cardHeight = #quests * 46 + (if allDone then 126 else 50)
+		-- 62 per quest, not 46: the art gives each one a progress bar and a
+		-- counted line under its label, rather than a single row.
+		local cardHeight = #quests * 62 + (if allDone then 126 else 50)
 		local questCard = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyQuests")
 		questCard.LayoutOrder = 1
 		-- Titled by the concept art's notched banner tab across the card's
@@ -5592,50 +5595,59 @@ function App:_RenderCreate()
 		local qy = 44
 		for _, quest in quests do
 			local done = questsDone[quest.key] == true
+			-- The art lays a quest out as its own small block rather than a
+			-- chip: the label with its reward opposite, a progress bar under
+			-- them, and the count beneath that. No enclosing tile and no
+			-- icon badge -- the bar is what carries the state.
 			local row = Factory.New("Frame", {
 				Position = UDim2.fromOffset(16, qy),
-				Size = UDim2.new(1, -32, 0, 38),
-				BackgroundColor3 = if done then Colors.Mint else Colors.Ink,
-				BackgroundTransparency = if done then 0.85 else 0.25,
-				BorderSizePixel = 0,
+				Size = UDim2.new(1, -32, 0, 54),
+				BackgroundTransparency = 1,
 				Parent = questCard,
 			})
-			Factory.Corner(row, 10)
-			if done then
-				Factory.Stroke(row, Colors.Mint, 0.5, 1)
-			end
-
-			local badge = Factory.New("Frame", {
-				Size = UDim2.fromOffset(28, 28),
-				Position = UDim2.fromOffset(5, 5),
-				BackgroundColor3 = if done then Colors.Mint else Colors.PanelSoft,
-				BorderSizePixel = 0,
-				Parent = row,
-			})
-			Factory.Corner(badge, 14)
-			Factory.Label(badge, if done then "✓" else quest.icon, UDim2.fromScale(1, 1), {
-				TextSize = if done then 14 else 13,
-				Color = if done then Colors.Ink else Colors.Text,
-				Font = Theme.Fonts.Black,
-				AlignX = Enum.TextXAlignment.Center,
-				AlignY = Enum.TextYAlignment.Center,
-			})
-
-			Factory.Label(row, quest.label, UDim2.new(1, -110, 1, 0), {
-				Position = UDim2.fromOffset(42, 0),
-				Font = if done then Theme.Fonts.Medium else Theme.Fonts.Regular,
+			Factory.Label(row, quest.label, UDim2.new(1, -56, 0, 20), {
+				Font = if done then Theme.Fonts.Bold else Theme.Fonts.Medium,
 				Color = if done then Colors.Text else Colors.TextMuted,
 				TextSize = 12,
 				Truncate = Enum.TextTruncate.AtEnd,
 			})
-			Factory.Label(row, string.format("+%d", quest.tokens), UDim2.fromOffset(50, 38), {
+			-- The art replaces the reward figure with the word once it has
+			-- been paid out, rather than showing what you already collected.
+			Factory.Label(row, if done then "DONE" else string.format("+%d", quest.tokens), UDim2.fromOffset(50, 20), {
 				AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, -10, 0, 0),
+				Position = UDim2.new(1, 0, 0, 0),
 				AlignX = Enum.TextXAlignment.Right,
-				AlignY = Enum.TextYAlignment.Center,
 				Font = Theme.Fonts.Bold,
-				Color = if done then Colors.Mint else Colors.TextMuted,
+				Color = if done then Colors.Mint else Colors.Gold,
 				TextSize = 12,
+			})
+			local track = Factory.New("Frame", {
+				Position = UDim2.fromOffset(0, 24),
+				Size = UDim2.new(1, 0, 0, 10),
+				BackgroundColor3 = Colors.Ink,
+				BackgroundTransparency = 0.25,
+				BorderSizePixel = 0,
+				Parent = row,
+			})
+			Factory.Corner(track, 5)
+			Factory.Stroke(track, Colors.Gold, 0.72, 1)
+			if done then
+				local fill = Factory.New("Frame", {
+					Size = UDim2.fromScale(1, 1),
+					BackgroundColor3 = Colors.Gold,
+					BorderSizePixel = 0,
+					Parent = track,
+				})
+				Factory.Corner(fill, 5)
+				Factory.Gradient(fill, { Colors.Gold, Colors.Rose }, 0)
+			end
+			-- Every quest Config defines is a single action, so the count is
+			-- honestly 0 or 1 of 1 -- the art's own first and third quests
+			-- read the same way.
+			Factory.Label(row, string.format("%d of 1", if done then 1 else 0), UDim2.new(1, 0, 0, 16), {
+				Position = UDim2.fromOffset(0, 37),
+				Color = Colors.TextMuted,
+				TextSize = 10,
 			})
 
 			if
@@ -5648,7 +5660,7 @@ function App:_RenderCreate()
 					:Play()
 			end
 
-			qy += 46
+			qy += 62
 		end
 
 		if allDone then
@@ -5978,6 +5990,7 @@ function App:_RenderStudio()
 				Parent = row,
 			})
 			Factory.Corner(image, 9)
+			Factory.Stroke(image, Colors.Gold, 0.5)
 			local imageHint = Factory.Label(image, "…", UDim2.fromScale(1, 1), {
 				AlignX = Enum.TextXAlignment.Center,
 				AlignY = Enum.TextYAlignment.Center,
@@ -7269,6 +7282,7 @@ function App:_RenderDiscoverFirstLook(topY: number): number
 		Parent = card,
 	})
 	Factory.Corner(visual, 14)
+	Factory.Stroke(visual, Colors.Gold, 0.45)
 	if visual.Image == "" then
 		Factory.Gradient(visual, { Color3.fromRGB(28, 35, 72), Color3.fromRGB(64, 39, 108) }, 135)
 		Factory.Label(visual, if self.marketplaceItems == nil then "…" else "◇", UDim2.fromScale(1, 1), {
@@ -9081,6 +9095,7 @@ function App:_RenderAvatarGraphics()
 			Parent = composer,
 		})
 		Factory.Corner(avatarPreview, 12)
+		Factory.Stroke(avatarPreview, Colors.Gold, 0.45)
 		Factory.Label(
 			composer,
 			"Fetched automatically from your current Roblox avatar — nothing to upload.",
