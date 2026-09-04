@@ -116,21 +116,35 @@ def panel_frame():
 # Button/Pill keep their own Gloss/Shade code overlays on top -- same deal
 # as Card.
 #
-# The cap is authored at the width it actually RENDERS at, and the source is
-# left tall so the vertical squash is what sets the angle: a 14px cap over a
-# 120px source height lands at 14 over ~21 once the image is drawn into a
-# 42px-tall button, which is the art's own proportion (a cap about 0.7 of the
-# shape's half-height).
+# THE SOURCE IS AUTHORED AT THE SIZE IT RENDERS AT. That is the whole trick,
+# and getting it wrong is what made these look bad twice.
 #
-# It has to be authored that way because a slice border draws at its source
-# width and SliceScale does not bring it down here -- see Factory.luau's
-# SLICE_SCALE note. A 42px cap with a 0.35 scale was rendering as a 42px cap:
-# more than half of a short button, drawn out into a long arrow.
+# A 3-slice draws the two end caps unstretched horizontally while the whole
+# image is squashed vertically to the control's height. Author the source
+# tall -- 120px for a control that ends up 42px -- and those two scales
+# diverge: the cap region gets (1.0 across, 0.35 down), so its stroke keeps
+# full weight, while the centre's flat top and bottom edges get 0.35 and thin
+# to a hairline. The result is a heavy gold chevron at each end bracketing a
+# barely-drawn box, which reads as an arrowhead, not a notch. No SliceCenter
+# or SliceScale fixes it: it is baked into the source's aspect ratio.
+#
+# So these match the concept art 1:1, in the art's own numbers. Every notched
+# shape in the eight mockups is drawn as `h<run> l<cap> <half-height>` with a
+# cap right around 0.85 of the half-height, at 38-52px tall:
+#
+#   buttons  cap 18 / half-height 21  ("Save look", the mode buttons)
+#   chips    cap 16 / half-height 19  (the topbar status pills)
+#   banner   cap 16 / half-height 20  ("COLLECTION * 6")
+#
+# and a 2.2-2.4px gold stroke on all three. Factory.luau then keeps the caps
+# isotropic at any control height by setting SliceScale to height/SOURCE_H --
+# but the default (SliceScale 1.0) is already right, because the source is
+# already the right height. Nothing has a cliff to fall off any more.
 # --------------------------------------------------------------------------
-BTN_W, BTN_H = 240, 120
-BTN_CAP = 14
-PILL_W, PILL_H = 200, 100
-PILL_CAP = 10
+BTN_W, BTN_H = 240, 42
+BTN_CAP = 18
+PILL_W, PILL_H = 200, 38
+PILL_CAP = 16
 
 
 def _hexagon(w: int, h: int, cap: int, inset: float) -> str:
@@ -143,14 +157,20 @@ def _hexagon(w: int, h: int, cap: int, inset: float) -> str:
 
 
 def _hex_asset(name, file, w, h, cap, fill, stroke, stroke_width, gloss, usage):
-    # The gloss is a second, smaller hexagon clipped to the top half -- the
-    # same top-highlight the rounded art carried, following the new outline
-    # instead of a rectangle that would poke out past the angled ends.
+    # Inset by half the stroke so the stroke lands inside the bitmap instead
+    # of being clipped in half by the edge -- at this size there is no room
+    # to spare, and a clipped stroke is what leaves one side looking thinner
+    # than the other.
+    edge = stroke_width / 2
+    # The gloss is a second, smaller hexagon clipped to the top -- the same
+    # top highlight the art draws over each button ("h170 l-8 13.52 h-170"),
+    # following the notched outline rather than a rectangle that would poke
+    # out past the angled ends.
     body = (
-        f'\n  <path d="{_hexagon(w, h, cap, 5)}" fill="{fill}"'
+        f'\n  <path d="{_hexagon(w, h, cap, edge)}" fill="{fill}"'
         f' stroke="{stroke}" stroke-width="{stroke_width}"/>'
-        f'\n  <clipPath id="{name}TopHalf"><rect x="0" y="0" width="{w}" height="{h * 0.42}"/></clipPath>'
-        f'\n  <path d="{_hexagon(w, h, cap, 13)}" fill="#FFFFFF" opacity="{gloss}"'
+        f'\n  <clipPath id="{name}TopHalf"><rect x="0" y="0" width="{w}" height="{h * 0.32}"/></clipPath>'
+        f'\n  <path d="{_hexagon(w, h, cap, edge + 2)}" fill="#FFFFFF" opacity="{gloss}"'
         f' clip-path="url(#{name}TopHalf)"/>'
     )
     render(body, w, h, file)
@@ -161,25 +181,25 @@ def _hex_asset(name, file, w, h, cap, fill, stroke, stroke_width, gloss, usage):
 
 def button_primary():
     return _hex_asset("ButtonPrimary", "button_primary", BTN_W, BTN_H, BTN_CAP,
-                      "url(#molten)", "url(#goldBar)", 5, 0.22,
+                      "url(#molten)", "url(#goldBar)", 2.4, 0.22,
                       "Factory.Button kind='primary'/'mint' background")
 
 
 def button_default():
     return _hex_asset("ButtonDefault", "button_default", BTN_W, BTN_H, BTN_CAP,
-                      "#241645", "url(#goldSoft)", 4.4, 0.07,
+                      "#241645", "url(#goldSoft)", 2.2, 0.07,
                       "Factory.Button default background")
 
 
 def button_danger():
     return _hex_asset("ButtonDanger", "button_danger", BTN_W, BTN_H, BTN_CAP,
-                      "url(#gemRuby)", "url(#goldBar)", 5, 0.18,
+                      "url(#gemRuby)", "url(#goldBar)", 2.4, 0.18,
                       "Factory.Button kind='danger' background")
 
 
 def pill_frame():
     return _hex_asset("PillFrame", "pill_frame", PILL_W, PILL_H, PILL_CAP,
-                      "url(#panelGlass)", "url(#goldBar)", 4, 0.14,
+                      "url(#panelGlass)", "url(#goldBar)", 2.2, 0.14,
                       "Factory.Pill background")
 
 
@@ -191,19 +211,21 @@ def pill_frame():
 # the flat middle stretches, hence a 3-slice (the slice centre spans the
 # full height, leaving no top/bottom band) rather than a 9-slice.
 # --------------------------------------------------------------------------
-BANNER_W, BANNER_H = 240, 120
-BANNER_SLICE = 12  # angled end cap, authored at the width it renders at
+BANNER_W, BANNER_H = 240, 40
+BANNER_SLICE = 16  # the art's own cap: "h300 l16 20 l-16 20 h-300 l-16 -20 z"
 
 
 def section_banner():
     w, h = BANNER_W, BANNER_H
     n = BANNER_SLICE
-    inset = 4
+    # Half the stroke, so it lands inside the bitmap rather than being
+    # clipped in half by the edge -- see _hex_asset.
+    inset = 1.1
     body = f'''
   <path d="M{n} {inset} h{w - 2 * n} l{n - inset} {h / 2 - inset} l{-(n - inset)} {h / 2 - inset}
            h{-(w - 2 * n)} l{-(n - inset)} {-(h / 2 - inset)} z"
-        fill="#2E1B54" stroke="url(#goldBar)" stroke-width="5"/>
-  <path d="M{n + 6} {inset + 10} h{w - 2 * n - 12}" stroke="#FFD98A" stroke-width="2" opacity="0.35"/>'''
+        fill="#2E1B54" stroke="url(#goldBar)" stroke-width="2.2"/>
+  <path d="M{n + 5} {inset + 4.5} h{w - 2 * n - 10}" stroke="#FFD98A" stroke-width="1" opacity="0.35"/>'''
     render(body, w, h, "section_banner")
     return {"name": "SectionBanner", "file": "section_banner.png", "kind": "slice",
             "sliceCenter": [BANNER_SLICE, 0, BANNER_W - BANNER_SLICE, BANNER_H],

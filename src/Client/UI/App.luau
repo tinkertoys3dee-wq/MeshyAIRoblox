@@ -963,8 +963,25 @@ function App:_BuildChrome()
 		-- NavAvatarArt, NavSettings -- see design/export_ui_assets.py.
 		local iconKeys = { "NavCreate", "NavStudio", "NavDiscover", "NavAvatarLab", "NavAvatarArt", "NavSettings" }
 		local label = NAV_LABELS[page] or page
-		local button = Factory.ImageButton(navStack, symbols[index] .. "   " .. label, UDim2.new(1, 0, 0, 48), nil, nil)
+		-- A nav row is the one control the art does NOT draw as the notched
+		-- hexagon: every rail row is a rounded rect ("rect ... rx=17", 204x54
+		-- in the mockups), with the active one the same rect filled molten.
+		-- So this stays Factory.Button rather than ImageButton -- a code-drawn
+		-- rounded rect is exactly the shape, and no decal has to exist for it.
+		local button = Factory.Button(navStack, symbols[index] .. "   " .. label, UDim2.new(1, 0, 0, 48), nil, nil)
 		button.Name = page
+		-- The art's active row is molten with a heavier gold edge, and the
+		-- rest sit dim behind a thin one. Both live on the row from the start
+		-- and _HighlightNavigation just toggles them, so going active is a
+		-- property flip rather than a rebuild.
+		local activeFill = Factory.Gradient(button, {
+			Color3.fromRGB(255, 222, 138),
+			Color3.fromRGB(255, 165, 60),
+			Color3.fromRGB(244, 104, 42),
+			Color3.fromRGB(193, 58, 30),
+		}, 90)
+		activeFill.Name = "ActiveFill"
+		activeFill.Enabled = false
 		button.LayoutOrder = index
 		button.TextXAlignment = Enum.TextXAlignment.Left
 		button.Selectable = true
@@ -3435,15 +3452,22 @@ function App:_HighlightNavigation()
 		self:_Animate(
 			button,
 			TweenInfo.new(0.16, Enum.EasingStyle.Quad),
-			{ BackgroundColor3 = if active then Colors.Violet else Colors.PanelSoft }
+			-- A UIGradient multiplies the fill underneath it, so the active
+			-- row takes the same base orange Factory.Button gives a primary
+			-- button. Anything else (white, Violet) would put the rail's
+			-- active row at a different temperature from every other molten
+			-- control on the page.
+			{ BackgroundColor3 = if active then Color3.fromRGB(244, 104, 42) else Colors.PanelSoft }
 		)
-		-- Once a real PanelFrame/ButtonPrimary/etc. decal is live, the button's
-		-- own BackgroundColor3 above is invisible (its background is fully
-		-- transparent behind the opaque image) -- swap the decal itself
-		-- between the molten ButtonPrimary look and the plain ButtonDefault
-		-- one instead, a no-op fallback to the tween above while either id is
-		-- still 0.
-		Factory.SwapDecal(button, if active then "ButtonPrimary" else "ButtonDefault")
+		-- The rail's rows are code-drawn rounded rects, matching the art, so
+		-- the active one is the molten gradient built alongside it rather
+		-- than a swapped decal. Its gold edge thickens to the art's 2.8 at
+		-- the same time, and the tween above is what paints the inactive
+		-- rows' fill underneath.
+		local activeFill = button:FindFirstChild("ActiveFill")
+		if activeFill and activeFill:IsA("UIGradient") then
+			activeFill.Enabled = active
+		end
 		-- Dark on the molten fill, light on the dark one -- the art's active
 		-- row is the one place in the nav where near-white text would sit on
 		-- orange and lose most of its contrast.
@@ -3462,9 +3486,14 @@ function App:_HighlightNavigation()
 		end
 		local stroke = button:FindFirstChildOfClass("UIStroke")
 		if stroke then
+			-- Gold, not cyan: the art rings the active row in the same
+			-- goldBar it uses for every other raised edge, just heavier
+			-- (2.8 against the inactive rows' 1.4) so the row reads as lit
+			-- rather than merely tinted.
 			self:_Animate(stroke, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {
-				Color = if active then Colors.Cyan else Colors.Line,
-				Transparency = if active then 0.3 else 0.55,
+				Color = if active then Colors.Gold else Colors.Line,
+				Transparency = if active then 0.2 else 0.55,
+				Thickness = if active then 2.2 else 1.2,
 			})
 		end
 		if active and self.navIndicator then
