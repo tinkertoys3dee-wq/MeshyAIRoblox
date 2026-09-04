@@ -486,7 +486,7 @@ function RunwayHub.Show(app: any)
 			Name = "SelectedLook",
 			Position = if heroNarrow then UDim2.fromOffset(16, 82) else UDim2.fromOffset(16, 80),
 			Size = if heroNarrow then UDim2.new(1, -32, 0, 260) else UDim2.new(0.5, -24, 1, -98),
-			BackgroundColor3 = Color3.fromRGB(61, 69, 103),
+			BackgroundColor3 = Color3.fromRGB(58, 40, 104),
 			BorderSizePixel = 0,
 			ZIndex = 2,
 			Parent = hero,

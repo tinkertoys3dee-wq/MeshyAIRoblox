@@ -179,10 +179,12 @@ function Factory.Card(parent: Instance, size: UDim2, position: UDim2?, name: str
 	Factory.Stroke(card)
 	-- The gradient's own colors render the card's visible surface (a
 	-- UIGradient paints over BackgroundColor3), so the mid-tone target lives
-	-- here, not just in Colors.PanelRaised.
+	-- here, not just in Colors.PanelRaised. These are the art's panelGlass
+	-- stops, so a card with no decal yet reads as the same purple glass as
+	-- one carrying the PanelFrame image.
 	Factory.Gradient(card, {
-		Color3.fromRGB(64, 72, 104),
-		Color3.fromRGB(46, 52, 80),
+		Color3.fromRGB(51, 32, 94),
+		Color3.fromRGB(26, 16, 53),
 	}, 115)
 	local gloss = Factory.New("Frame", {
 		Name = "Gloss",

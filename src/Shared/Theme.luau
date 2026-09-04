@@ -1,16 +1,24 @@
 --!strict
 
--- A mid-tone palette: dark enough to stay easy on the eyes for a long
--- creation session, light enough that panels read as slate/navy rather than
--- near-black. Accent hues are untouched; only the neutral surface ramp moved.
+-- The concept art's own surface ramp, read straight off its panelGlass
+-- gradient (#33205E / #241645 / #1A1035) and its lettering (#EBDCFF over
+-- #CDBBEE). The app had been slate/navy against art that is unmistakably
+-- purple -- and since the PanelFrame decal carries the art's purple, every
+-- code-drawn frame inside a card was reading a different colour from the
+-- card around it.
+--
+-- Darker panels under the same lettering means every pairing gained
+-- contrast rather than losing it: muted text on the softest panel goes
+-- 4.77 to 6.15, and borders clear the 3.0 non-text threshold for the first
+-- time (2.29 to 3.05). Accent hues are untouched.
 local DEFAULT_COLORS = {
-	Ink = Color3.fromRGB(24, 27, 44),
-	Panel = Color3.fromRGB(44, 50, 78),
-	PanelRaised = Color3.fromRGB(60, 67, 98),
-	PanelSoft = Color3.fromRGB(74, 82, 114),
-	Line = Color3.fromRGB(112, 122, 160),
-	Text = Color3.fromRGB(247, 249, 255),
-	TextMuted = Color3.fromRGB(196, 204, 226),
+	Ink = Color3.fromRGB(26, 16, 53),
+	Panel = Color3.fromRGB(36, 22, 69),
+	PanelRaised = Color3.fromRGB(51, 32, 94),
+	PanelSoft = Color3.fromRGB(68, 48, 120),
+	Line = Color3.fromRGB(126, 108, 168),
+	Text = Color3.fromRGB(243, 236, 255),
+	TextMuted = Color3.fromRGB(205, 187, 238),
 	Violet = Color3.fromRGB(135, 94, 255),
 	Cyan = Color3.fromRGB(55, 220, 255),
 	Mint = Color3.fromRGB(76, 239, 175),
@@ -23,13 +31,13 @@ local DEFAULT_COLORS = {
 -- Backgrounds go darker and near-black, borders and muted text go lighter,
 -- so every WCAG-relevant pairing (text-on-panel, line-on-panel) widens.
 local HIGH_CONTRAST_COLORS = {
-	Ink = Color3.fromRGB(2, 3, 8),
-	Panel = Color3.fromRGB(8, 9, 16),
-	PanelRaised = Color3.fromRGB(17, 18, 28),
-	PanelSoft = Color3.fromRGB(28, 29, 42),
-	Line = Color3.fromRGB(160, 170, 210),
+	Ink = Color3.fromRGB(4, 2, 12),
+	Panel = Color3.fromRGB(10, 6, 20),
+	PanelRaised = Color3.fromRGB(18, 12, 34),
+	PanelSoft = Color3.fromRGB(30, 22, 52),
+	Line = Color3.fromRGB(176, 160, 214),
 	Text = Color3.fromRGB(255, 255, 255),
-	TextMuted = Color3.fromRGB(216, 220, 236),
+	TextMuted = Color3.fromRGB(226, 216, 244),
 	Violet = Color3.fromRGB(184, 152, 255),
 	Cyan = Color3.fromRGB(130, 238, 255),
 	Mint = Color3.fromRGB(140, 255, 210),

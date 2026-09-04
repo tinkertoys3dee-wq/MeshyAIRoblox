@@ -624,7 +624,18 @@ function App:_BuildChrome()
 		Parent = backdrop,
 	})
 	Factory.Corner(shell, 22)
-	Factory.Stroke(shell, Color3.fromRGB(101, 113, 170), 0.35, 1.2)
+	-- The art's own "sky": indigo at the top-left running down through
+	-- violet into a warm plum at the bottom-right, which is what stops the
+	-- studio reading as one flat slab behind its panels and is where the
+	-- forge's warmth comes from. Rotated to run diagonally, as the art's
+	-- gradient does.
+	Factory.Gradient(shell, {
+		Color3.fromRGB(22, 14, 51),
+		Color3.fromRGB(42, 19, 85),
+		Color3.fromRGB(75, 27, 96),
+		Color3.fromRGB(126, 42, 74),
+	}, 70)
+	Factory.Stroke(shell, Colors.Line, 0.35, 1.2)
 	Factory.New("UISizeConstraint", {
 		MaxSize = Vector2.new(1440, 860),
 		MinSize = Vector2.new(330, 450),
@@ -1322,7 +1333,7 @@ function App:_BuildAvatarPreviewPanel(backdrop: Frame)
 		Name = "PreviewViewport",
 		Position = UDim2.fromOffset(14, 40),
 		Size = UDim2.new(1, -28, 0.5, -44),
-		BackgroundColor3 = Color3.fromRGB(62, 72, 108),
+		BackgroundColor3 = Color3.fromRGB(58, 40, 104),
 		BorderSizePixel = 0,
 		Parent = panel,
 	})
@@ -5967,7 +5978,7 @@ function App:_RenderStudio()
 		if item then
 			local row = Factory.New("TextButton", {
 				Size = UDim2.new(1, 0, 0, 82),
-				BackgroundColor3 = if itemId == self.selectedItemId then Color3.fromRGB(66, 58, 112) else Colors.Ink,
+				BackgroundColor3 = if itemId == self.selectedItemId then Color3.fromRGB(74, 50, 128) else Colors.Ink,
 				BorderSizePixel = 0,
 				AutoButtonColor = false,
 				Text = "",
@@ -6018,7 +6029,7 @@ function App:_RenderStudio()
 					Parent = row,
 				})
 				Factory.Corner(badge, 99)
-				Factory.Stroke(badge, Color3.fromRGB(14, 19, 38), 0, 2)
+				Factory.Stroke(badge, Color3.fromRGB(18, 11, 38), 0, 2)
 			end
 			Factory.Label(row, item.name, UDim2.new(1, -168, 0, 27), {
 				Position = UDim2.fromOffset(86, 12),
@@ -6110,7 +6121,7 @@ function App:_RenderStudio()
 	local viewport = Factory.New("ViewportFrame", {
 		Position = UDim2.fromOffset(16, 84),
 		Size = UDim2.new(1, -32, 0, 210),
-		BackgroundColor3 = Color3.fromRGB(62, 72, 108),
+		BackgroundColor3 = Color3.fromRGB(58, 40, 104),
 		BorderSizePixel = 0,
 		Parent = header,
 	})
@@ -7288,7 +7299,7 @@ function App:_RenderDiscoverFirstLook(topY: number): number
 	Factory.Corner(visual, 14)
 	Factory.Stroke(visual, Colors.Gold, 0.45)
 	if visual.Image == "" then
-		Factory.Gradient(visual, { Color3.fromRGB(28, 35, 72), Color3.fromRGB(64, 39, 108) }, 135)
+		Factory.Gradient(visual, { Color3.fromRGB(36, 22, 78), Color3.fromRGB(72, 40, 118) }, 135)
 		Factory.Label(visual, if self.marketplaceItems == nil then "…" else "◇", UDim2.fromScale(1, 1), {
 			AlignX = Enum.TextXAlignment.Center,
 			AlignY = Enum.TextYAlignment.Center,

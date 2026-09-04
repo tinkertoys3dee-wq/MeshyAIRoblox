@@ -673,8 +673,8 @@ function GamesHub.Show(app: any)
 	Factory.Corner(standingsHost, 14)
 	Factory.Stroke(standingsHost, Colors.Gold, 0.5)
 	Factory.Gradient(standingsHost, {
-		Color3.fromRGB(64, 72, 104),
-		Color3.fromRGB(46, 52, 80),
+		Color3.fromRGB(51, 32, 94),
+		Color3.fromRGB(26, 16, 53),
 	}, 115)
 
 	local standingsList = Factory.New("ScrollingFrame", {
@@ -1179,8 +1179,8 @@ function GamesHub.Show(app: any)
 		Factory.Corner(iconBadge, badgeSize / 2)
 		Factory.Stroke(iconBadge, color, 0.1, 2)
 		Factory.Gradient(iconBadge, {
-			Color3.fromRGB(56, 60, 82),
-			Color3.fromRGB(30, 33, 50),
+			Color3.fromRGB(46, 30, 82),
+			Color3.fromRGB(24, 15, 48),
 		}, 120)
 		Factory.Label(iconBadge, icon, UDim2.fromScale(1, 1), {
 			TextSize = badgeIconSize,
