@@ -1013,6 +1013,14 @@ function App:_BuildChrome()
 			Factory.Corner(medallion, 15)
 			Factory.Stroke(medallion, Colors.Gold, 0.45, 1.6)
 			self.navMedallions[page] = medallion
+			-- The medallion is an opaque child, and a TextButton's own text
+			-- draws underneath every child it has -- so the medallion was
+			-- covering the first ~30px of the row's label ("My Studio" read
+			-- as "Studio", "Create" as "te"). Lift the label into a child of
+			-- its own so it sits above the medallion instead of behind it.
+			-- The rows had this for free while they were ImageButtons, since
+			-- attachDecal lifts the label for the same reason.
+			Factory.LiftLabel(button)
 			button.Text = "      " .. label
 			-- _ApplyResponsiveLayout rewrites this text on every resize --
 			-- it has to know the decal icon is already carrying the glyph,

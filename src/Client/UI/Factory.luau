@@ -572,6 +572,92 @@ end
 -- Card/Button/Pill directly.
 -- ============================================================================
 
+-- A TextButton/TextLabel's own native Text always renders BELOW every child
+-- it has, no matter what ZIndex the child is given -- ZIndex only orders
+-- children against each other, never against the parent's own text/background
+-- paint. So anything a caller parents to a button -- a decal, but equally the
+-- nav rows' opaque icon medallion -- draws straight over the start of its own
+-- label.
+--
+-- This lifts the label out: the native Text property stays the live value
+-- callers all over App.luau keep reading and writing after creation (nav
+-- labels, idea-chip icons, ...), and only its rendering is hidden, mirrored
+-- into a real child that can sit above everything else.
+--
+-- Safe to call twice on the same object -- the second call is a no-op, so a
+-- caller that lifts a label itself can still be handed to attachDecal later.
+function Factory.LiftLabel(target: GuiObject): TextLabel?
+	if not (target:IsA("TextButton") or target:IsA("TextLabel")) then
+		return nil
+	end
+	local existing = target:FindFirstChild("Label")
+	if existing and existing:IsA("TextLabel") then
+		return existing
+	end
+	local textHolder = target :: TextButton | TextLabel
+	local label = Factory.New("TextLabel", {
+		Name = "Label",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Text = textHolder.Text,
+		TextColor3 = textHolder.TextColor3,
+		-- FontFace, not Font: the display serif is set as a weighted
+		-- face, and Font reads back as Unknown once it is, so mirroring
+		-- the enum would silently drop every button label to the
+		-- default face.
+		FontFace = textHolder.FontFace,
+		TextSize = textHolder.TextSize,
+		TextWrapped = textHolder.TextWrapped,
+		TextTruncate = textHolder.TextTruncate,
+		TextXAlignment = textHolder.TextXAlignment,
+		TextYAlignment = textHolder.TextYAlignment,
+		ZIndex = 5,
+		Parent = target,
+	}) :: TextLabel
+	textHolder.TextTransparency = 1
+	textHolder:GetPropertyChangedSignal("Text"):Connect(function()
+		label.Text = textHolder.Text
+	end)
+	textHolder:GetPropertyChangedSignal("TextColor3"):Connect(function()
+		label.TextColor3 = textHolder.TextColor3
+	end)
+	-- The nav rows re-align their text on every resize (left beside the icon
+	-- when the rail is wide, centred when it collapses to icons only), and a
+	-- lifted label that kept its creation-time alignment would sit where the
+	-- old layout put it.
+	textHolder:GetPropertyChangedSignal("TextXAlignment"):Connect(function()
+		label.TextXAlignment = textHolder.TextXAlignment
+	end)
+
+	-- UIPadding only insets its own object's native text (and any
+	-- UIListLayout/UIGridLayout children) -- never an unrelated sibling
+	-- child like `label`, which otherwise stays flush edge-to-edge and
+	-- can crowd into an icon a caller placed at a fixed offset (the nav
+	-- rows). Mirror any UIPadding onto the label too, whether it was
+	-- added before this ran or (as with the nav rows) after.
+	local function applyPadding(padding: UIPadding)
+		local left, right = padding.PaddingLeft, padding.PaddingRight
+		local top, bottom = padding.PaddingTop, padding.PaddingBottom
+		label.Position = UDim2.new(left.Scale, left.Offset, top.Scale, top.Offset)
+		label.Size = UDim2.new(
+			1 - left.Scale - right.Scale,
+			-(left.Offset + right.Offset),
+			1 - top.Scale - bottom.Scale,
+			-(top.Offset + bottom.Offset)
+		)
+	end
+	local existingPadding = target:FindFirstChildOfClass("UIPadding")
+	if existingPadding then
+		applyPadding(existingPadding)
+	end
+	target.ChildAdded:Connect(function(child: Instance)
+		if child:IsA("UIPadding") then
+			applyPadding(child)
+		end
+	end)
+	return label
+end
+
 local function attachDecal(target: GuiObject, assetKey: string): boolean
 	local assetId = (UIAssets :: any)[assetKey]
 	if type(assetId) ~= "number" or assetId == 0 then
@@ -579,71 +665,9 @@ local function attachDecal(target: GuiObject, assetKey: string): boolean
 	end
 	target.BackgroundTransparency = 1
 
-	-- A TextButton/TextLabel's own native Text always renders BELOW every
-	-- child it has, no matter what ZIndex the child is given -- ZIndex only
-	-- orders children against each other, never against the parent's own
-	-- text/background paint. Left alone, the decal (a child) would always
-	-- hide the button/pill's own label. Keep the native Text property as
-	-- the live value callers all over App.luau keep reading and writing
-	-- after creation (nav labels, idea-chip icons, ...) -- just hide its
-	-- own rendering and mirror it into a real child that can sit above the
-	-- decal.
-	if target:IsA("TextButton") or target:IsA("TextLabel") then
-		local textHolder = target :: TextButton | TextLabel
-		local label = Factory.New("TextLabel", {
-			Name = "Label",
-			Size = UDim2.fromScale(1, 1),
-			BackgroundTransparency = 1,
-			Text = textHolder.Text,
-			TextColor3 = textHolder.TextColor3,
-			-- FontFace, not Font: the display serif is set as a weighted
-			-- face, and Font reads back as Unknown once it is, so mirroring
-			-- the enum would silently drop every button label to the
-			-- default face.
-			FontFace = textHolder.FontFace,
-			TextSize = textHolder.TextSize,
-			TextWrapped = textHolder.TextWrapped,
-			TextTruncate = textHolder.TextTruncate,
-			TextXAlignment = textHolder.TextXAlignment,
-			TextYAlignment = textHolder.TextYAlignment,
-			ZIndex = 5,
-			Parent = target,
-		}) :: TextLabel
-		textHolder.TextTransparency = 1
-		textHolder:GetPropertyChangedSignal("Text"):Connect(function()
-			label.Text = textHolder.Text
-		end)
-		textHolder:GetPropertyChangedSignal("TextColor3"):Connect(function()
-			label.TextColor3 = textHolder.TextColor3
-		end)
-
-		-- UIPadding only insets its own object's native text (and any
-		-- UIListLayout/UIGridLayout children) -- never an unrelated sibling
-		-- child like `label`, which otherwise stays flush edge-to-edge and
-		-- can crowd into an icon a caller placed at a fixed offset (the nav
-		-- rows). Mirror any UIPadding onto the label too, whether it was
-		-- added before this ran or (as with the nav rows) after.
-		local function applyPadding(padding: UIPadding)
-			local left, right = padding.PaddingLeft, padding.PaddingRight
-			local top, bottom = padding.PaddingTop, padding.PaddingBottom
-			label.Position = UDim2.new(left.Scale, left.Offset, top.Scale, top.Offset)
-			label.Size = UDim2.new(
-				1 - left.Scale - right.Scale,
-				-(left.Offset + right.Offset),
-				1 - top.Scale - bottom.Scale,
-				-(top.Offset + bottom.Offset)
-			)
-		end
-		local existingPadding = target:FindFirstChildOfClass("UIPadding")
-		if existingPadding then
-			applyPadding(existingPadding)
-		end
-		target.ChildAdded:Connect(function(child: Instance)
-			if child:IsA("UIPadding") then
-				applyPadding(child)
-			end
-		end)
-	end
+	-- The decal is a child, so it would cover the button's own label. Lift
+	-- the label above it.
+	Factory.LiftLabel(target)
 
 	-- Factory.Button/Pill draw their own rounded Gloss and Shade overlays,
 	-- which fit a capsule and hang out past the corners of the hexagon the
