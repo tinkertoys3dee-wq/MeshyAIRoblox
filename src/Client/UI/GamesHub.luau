@@ -648,13 +648,14 @@ function GamesHub.Show(app: any)
 	local leaderboardTabs = Factory.New("ScrollingFrame", {
 		Name = "Tabs",
 		Position = UDim2.fromOffset(80, 3),
-		Size = UDim2.new(1, -80, 0, 28),
+		Size = UDim2.new(1, -80, 0, 36),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		CanvasSize = UDim2.new(),
 		AutomaticCanvasSize = Enum.AutomaticSize.X,
 		ScrollingDirection = Enum.ScrollingDirection.X,
-		ScrollBarThickness = 0,
+		ScrollBarThickness = 3,
+		ScrollBarImageColor3 = Colors.Rose,
 		ZIndex = 213,
 		Parent = leaderboardView,
 	})
@@ -666,7 +667,7 @@ function GamesHub.Show(app: any)
 	-- two unrelated controls stacked on top of each other.
 	local scopeToggle = Factory.New("Frame", {
 		Name = "ScopeToggle",
-		Position = UDim2.fromOffset(0, 37),
+		Position = UDim2.fromOffset(0, 45),
 		Size = UDim2.new(1, 0, 0, 26),
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.5,
@@ -679,8 +680,8 @@ function GamesHub.Show(app: any)
 
 	local standingsHost = Factory.New("Frame", {
 		Name = "StandingsHost",
-		Position = UDim2.fromOffset(0, 71),
-		Size = UDim2.new(1, 0, 1, -71),
+		Position = UDim2.fromOffset(0, 79),
+		Size = UDim2.new(1, 0, 1, -79),
 		BackgroundColor3 = Colors.PanelRaised,
 		BackgroundTransparency = 0.05,
 		BorderSizePixel = 0,

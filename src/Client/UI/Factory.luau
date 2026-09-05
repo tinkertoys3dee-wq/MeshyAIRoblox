@@ -683,6 +683,16 @@ function Factory.LiftLabel(target: GuiObject): TextLabel?
 	return label
 end
 
+-- Pad only a lifted button/label caption. A UIPadding parented directly to a
+-- GuiButton also offsets its decorative children, which used to push the
+-- sidebar medallions and icons to the right whenever we reserved a text
+-- gutter for them. Keeping the padding on the lifted label makes the icon
+-- geometry independent from the caption geometry.
+function Factory.LabelPadding(target: GuiObject, horizontal: number, vertical: number?): UIPadding
+	local label = Factory.LiftLabel(target)
+	return Factory.Padding(label or target, horizontal, vertical)
+end
+
 local function attachDecal(target: GuiObject, assetKey: string): boolean
 	local assetId = (UIAssets :: any)[assetKey]
 	if type(assetId) ~= "number" or assetId == 0 then

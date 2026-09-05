@@ -35,6 +35,31 @@ try {
     const scrollingRow = new RegExp(`Factory\\.New\\("ScrollingFrame", \\{[\\s\\S]{0,120}Name = "${name}"`);
     if (!scrollingRow.test(appSource)) throw new Error(`${name} must remain an overflow-safe ScrollingFrame`);
   }
+  if (!appSource.includes('Factory.LabelPadding(button, 15, 0)')) {
+    throw new Error('Navigation caption padding must not offset icon children');
+  }
+  for (const name of [
+    'IdeaSuggestions',
+    'ChoiceOptions',
+    'ReferenceQualityOptions',
+    'FitRegionOptions',
+    'MarketplaceFilters',
+    'GraphicsMarketplaceFilters',
+    'GraphicsChoiceOptions',
+    'GraphicsQualityOptions',
+  ]) {
+    const visibleScroller = new RegExp(`Name = "${name}"[\\s\\S]{0,640}ScrollBarThickness = [1-9]`);
+    if (!visibleScroller.test(appSource)) throw new Error(`${name} must expose a visible scrollbar`);
+  }
+  for (const file of [
+    'src/Client/UI/App.luau',
+    'src/Client/UI/AvatarLab.luau',
+    'src/Client/UI/GamesHub.luau',
+  ]) {
+    const source = read(file);
+    const hiddenHorizontal = /ScrollBarThickness\s*=\s*0,[\s\S]{0,180}ScrollingDirection\s*=\s*Enum\.ScrollingDirection\.X/;
+    if (hiddenHorizontal.test(source)) throw new Error(`${file} hides a horizontal overflow scrollbar`);
+  }
   const transition = appSource.match(/function App:_SetStudioOpen\(open: boolean\)[\s\S]*?(?=\nfunction App:)/)?.[0];
   if (!transition) throw new Error('Studio transition method not found');
   const transitionModule = `modules.StudioTransition = function() local App = {}; local Motion = require("Motion"); ${transition}; return App end`;

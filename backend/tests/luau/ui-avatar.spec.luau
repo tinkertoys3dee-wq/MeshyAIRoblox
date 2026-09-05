@@ -35,6 +35,18 @@ equal(mirrored.Position.X.Offset, 12, "Late padding insets lifted text")
 padding.PaddingLeft = UDim.new(0, 42)
 equal(mirrored.Position.X.Offset, 42, "Changing navigation icon gutter updates text")
 equal(mirrored.Size.X.Offset, -54, "Text reserves both gutters")
+
+local navButton = Factory.Button(parent, "Create", UDim2.fromOffset(150, 48))
+local navIcon = Instance.new("Frame")
+navIcon.Position = UDim2.new(0, 11, 0.5, -10)
+navIcon.Parent = navButton
+local navIconPosition = navIcon.Position
+local navLabel = navButton:FindFirstChild("Label")
+local navPadding = Factory.LabelPadding(navButton, 15, 0)
+equal(navPadding.Parent, navLabel, "Navigation caption padding lives on the lifted label")
+navPadding.PaddingLeft = UDim.new(0, 42)
+equal(navIcon.Position, navIconPosition, "Changing the caption gutter never shifts navigation icons")
+equal(navButton:FindFirstChildOfClass("UIPadding"), nil, "Navigation buttons keep decorative children unpadded")
 equal(
 	Factory.Label(parent, "Very long text", UDim2.fromOffset(30, 20)).TextTruncate,
 	Enum.TextTruncate.AtEnd,
