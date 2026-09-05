@@ -28,6 +28,18 @@ local TYPES = {
 	PantsAccessory = Enum.AvatarAssetType.PantsAccessory,
 }
 local CLASSIC = { Shirt = "Shirt", Pants = "Pants", TShirt = "GraphicTShirt", Face = "Face" }
+local LAYERED = {
+	JacketAccessory = true,
+	SweaterAccessory = true,
+	ShirtAccessory = true,
+	PantsAccessory = true,
+}
+local TYPE_NAME_BY_ID: { [number]: string } = {}
+for typeName, avatarAssetType in TYPES do
+	TYPE_NAME_BY_ID[avatarAssetType.Value] = typeName
+end
+
+type CatalogAsset = { assetType: string, name: string }
 
 function CatalogService.new(profileService: any, playerStateService: any, analyticsService: any)
 	return setmetatable({
@@ -35,8 +47,70 @@ function CatalogService.new(profileService: any, playerStateService: any, analyt
 		playerStates = playerStateService,
 		analytics = analyticsService,
 		assetNameCache = {} :: { [number]: string },
+		assetDetailsCache = {} :: { [number]: CatalogAsset },
 		history = {} :: { [Player]: any },
 	}, CatalogService)
+end
+
+-- Resolve against AvatarEditorService first because it is the source of the
+-- catalog cards and returns AvatarAssetType names directly. MarketplaceService
+-- remains a fallback so a transient Avatar Editor throttle does not break
+-- try-on. The client-provided type is never trusted as asset metadata.
+function CatalogService:_ResolveAsset(assetId: number): CatalogAsset?
+	local cached = self.assetDetailsCache[assetId]
+	if cached then
+		return cached
+	end
+	local detailsSuccess, details = pcall(function()
+		return AvatarEditorService:GetItemDetailsAsync(assetId, Enum.AvatarItemType.Asset)
+	end)
+	if detailsSuccess and type(details) == "table" then
+		local typeName = if type(details.AssetType) == "string" then details.AssetType else nil
+		if
+			typeName
+			and TYPES[typeName]
+			and tonumber(details.Id) == assetId
+			and (details.ItemType == nil or details.ItemType == "Asset")
+		then
+			local asset = {
+				assetType = typeName,
+				name = if type(details.Name) == "string"
+					then details.Name
+					else string.format("Avatar item %d", assetId),
+			}
+			self.assetDetailsCache[assetId] = asset
+			self.assetNameCache[assetId] = asset.name
+			return asset
+		end
+	end
+	local infoSuccess, info = pcall(function()
+		return MarketplaceService:GetProductInfoAsync(assetId, Enum.InfoType.Asset)
+	end)
+	if infoSuccess and type(info) == "table" then
+		local numericType = tonumber(info.AssetTypeId)
+		local typeName = if numericType
+				and numericType == numericType
+				and numericType > 0
+			then TYPE_NAME_BY_ID[math.floor(numericType)]
+			else nil
+		if typeName then
+			local asset = {
+				assetType = typeName,
+				name = if type(info.Name) == "string" then info.Name else string.format("Avatar item %d", assetId),
+			}
+			self.assetDetailsCache[assetId] = asset
+			self.assetNameCache[assetId] = asset.name
+			return asset
+		end
+	end
+	return nil
+end
+
+local function applyDescription(humanoid: Humanoid, description: HumanoidDescription)
+	-- Forge accessories are attached directly with Humanoid:AddAccessory().
+	-- Roblox documents incremental ApplyDescription as undefined after external
+	-- character changes; ResetAsync reliably reconciles the complete look.
+	humanoid:ApplyDescriptionResetAsync(description)
 end
 
 function CatalogService:_Remember(player: Player, snapshot: any)
@@ -70,7 +144,7 @@ function CatalogService:History(player: Player, redo: boolean): (boolean, any)
 		local before = AvatarLook.Read(humanoid)
 		local description = AvatarLook.Description(source[#source])
 		local applied, problem = pcall(function()
-			humanoid:ApplyDescriptionAsync(description)
+			applyDescription(humanoid, description)
 		end)
 		description:Destroy()
 		if not applied then
@@ -151,17 +225,16 @@ function CatalogService:TryOn(player: Player, payload: any): (boolean, any)
 	then
 		return false, "INVALID_REQUEST"
 	end
-	local avatarAssetType = if type(payload.avatarAssetType) == "string" then TYPES[payload.avatarAssetType] else nil
-	if not avatarAssetType then
+	local requestedType = if type(payload.avatarAssetType) == "string" then payload.avatarAssetType else nil
+	if not requestedType or not TYPES[requestedType] then
 		return false, "INVALID_ASSET_TYPE"
 	end
 	local assetId = math.floor(payload.assetId)
-	local infoSuccess, info = pcall(function()
-		return MarketplaceService:GetProductInfoAsync(assetId, Enum.InfoType.Asset)
-	end)
-	if not infoSuccess or type(info) ~= "table" or info.AssetTypeId ~= avatarAssetType.Value then
+	local asset = self:_ResolveAsset(assetId)
+	if not asset or asset.assetType ~= requestedType then
 		return false, "CATALOG_ITEM_UNAVAILABLE"
 	end
+	local avatarAssetType = TYPES[asset.assetType]
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
@@ -172,13 +245,13 @@ function CatalogService:TryOn(player: Player, payload: any): (boolean, any)
 	local success, appliedOrProblem = pcall(function(): boolean
 		description = humanoid:GetAppliedDescription()
 		before = AvatarLook.Capture(description)
-		local classicProperty = CLASSIC[payload.avatarAssetType]
+		local classicProperty = CLASSIC[asset.assetType]
 		if classicProperty then
 			if (description :: any)[classicProperty] == assetId then
 				return false
 			end
 			(description :: any)[classicProperty] = assetId
-			humanoid:ApplyDescriptionAsync(description)
+			applyDescription(humanoid, description)
 			return true
 		end
 		local accessories = description:GetAccessories(true)
@@ -187,14 +260,21 @@ function CatalogService:TryOn(player: Player, payload: any): (boolean, any)
 				return false
 			end
 		end
-		table.insert(accessories, {
+		local accessory: { [string]: any } = {
 			AssetId = assetId,
 			AccessoryType = AvatarEditorService:GetAccessoryType(avatarAssetType),
-			Order = #accessories + 1,
-			IsLayered = avatarAssetType.Value >= 64,
-		})
+			IsLayered = LAYERED[asset.assetType] == true,
+		}
+		if LAYERED[asset.assetType] then
+			local highestOrder = 0
+			for _, worn in accessories do
+				highestOrder = math.max(highestOrder, tonumber(worn.Order) or 0)
+			end
+			accessory.Order = highestOrder + 1
+		end
+		table.insert(accessories, accessory)
 		description:SetAccessories(accessories, true)
-		humanoid:ApplyDescriptionAsync(description)
+		applyDescription(humanoid, description)
 		return true
 	end)
 	if description then
@@ -215,7 +295,7 @@ function CatalogService:TryOn(player: Player, payload: any): (boolean, any)
 		self.profiles:Mutate(player, function(profile)
 			profile.stats.catalogTryOns = (profile.stats.catalogTryOns or 0) + 1
 		end)
-		self.analytics:Custom(player, "CatalogItemTried", 1, { assetType = payload.avatarAssetType })
+		self.analytics:Custom(player, "CatalogItemTried", 1, { assetType = asset.assetType })
 	end
 	return true, {}
 end
@@ -260,7 +340,7 @@ function CatalogService:Untry(player: Player, payload: any): (boolean, any)
 			return false
 		end
 		description:SetAccessories(filtered, true)
-		humanoid:ApplyDescriptionAsync(description)
+		applyDescription(humanoid, description)
 		return true
 	end)
 	if description then
@@ -298,7 +378,7 @@ function CatalogService:Reset(player: Player): (boolean, any)
 	local before = nil
 	local applied = pcall(function()
 		before = AvatarLook.Read(humanoid)
-		humanoid:ApplyDescriptionAsync(description)
+		applyDescription(humanoid, description)
 	end)
 	description:Destroy()
 	if not applied then

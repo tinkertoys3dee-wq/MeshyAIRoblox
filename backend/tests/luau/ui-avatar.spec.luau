@@ -228,11 +228,19 @@ equal(restored.UntrustedProperty, nil, "Only allowlisted properties are restored
 local function cloneDescription(value)
 	return AvatarLook.Description(AvatarLook.Capture(value))
 end
-local humanoid = { description = cloneDescription(description), fail = false, applies = 0 }
+local humanoid = { description = cloneDescription(description), fail = false, applies = 0, incrementalApplies = 0 }
 function humanoid:GetAppliedDescription()
 	return cloneDescription(self.description)
 end
 function humanoid:ApplyDescriptionAsync(value)
+	self.incrementalApplies += 1
+	if self.fail then
+		error("Roblox apply failed")
+	end
+	self.description = cloneDescription(value)
+	self.applies += 1
+end
+function humanoid:ApplyDescriptionResetAsync(value)
 	if self.fail then
 		error("Roblox apply failed")
 	end
@@ -266,7 +274,14 @@ function profiles:GenerateId()
 end
 local analytics = { Custom = function() end }
 local catalog = CatalogService.new(profiles, {}, analytics)
-local assetTypes = { [101] = 11, [201] = 8, [301] = 67, [401] = 12 }
+local assetTypes = { [101] = 11, [201] = 8, [301] = 67, [401] = 12, [501] = "8" }
+local avatarAssetTypes = { [101] = "Shirt", [201] = "Hat", [301] = "JacketAccessory", [401] = "Pants" }
+services.AvatarEditorService.GetItemDetailsAsync = function(_, id)
+	if id == 501 then
+		error("Avatar catalog temporarily throttled")
+	end
+	return { Id = id, ItemType = "Asset", AssetType = avatarAssetTypes[id] or "Hat", Name = "Catalog item " .. id }
+end
 services.MarketplaceService.GetProductInfoAsync = function(_, id)
 	return { AssetTypeId = assetTypes[id] or 8, Name = "Catalog item " .. id }
 end
@@ -281,10 +296,14 @@ equal(humanoid.applies, applies, "Already worn item does not reapply avatar")
 equal(profile.stats.catalogTryOns, 1, "No-op does not inflate try-on count")
 check(catalog:TryOn(player, { assetId = 301, avatarAssetType = "JacketAccessory" }), "Layered jacket can be tried on")
 equal(humanoid.description:GetAccessories(true)[2].IsLayered, true, "Layered category retains layering")
+check(
+	catalog:TryOn(player, { assetId = 501, avatarAssetType = "Hat" }),
+	"Marketplace metadata fallback keeps try-on available"
+)
 check(catalog:History(player, false), "Undo succeeds")
-equal(#humanoid.description:GetAccessories(true), 1, "Undo removes newly tried jacket")
+equal(#humanoid.description:GetAccessories(true), 2, "Undo removes the most recent marketplace fallback item")
 check(catalog:History(player, true), "Redo succeeds")
-equal(#humanoid.description:GetAccessories(true), 2, "Redo restores jacket")
+equal(#humanoid.description:GetAccessories(true), 3, "Redo restores the marketplace fallback item")
 humanoid.fail = true
 local historyCount = #catalog.history[player].undo
 check(not catalog:History(player, false), "Failed avatar apply is reported")
@@ -329,6 +348,7 @@ profile.equippedItemIds = { "owned" }
 humanoid.description.Shirt = 999
 check(items:EquipOutfit(player, { outfitId = "legacy" }), "Legacy Forge-only outfits still work")
 equal(humanoid.description.Shirt, 999, "Legacy outfit does not replace catalog appearance")
+equal(humanoid.incrementalApplies, 0, "Catalog and outfit changes never use unsafe incremental avatar apply")
 
 -- Construct each real Avatar Lab view using the UI doubles. This catches
 -- missing client state/wiring; visual layout remains a Studio release gate.
