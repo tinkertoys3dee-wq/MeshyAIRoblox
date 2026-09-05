@@ -251,10 +251,13 @@ end
 
 local function row(parent: Instance, order: number, height: number?): ScrollingFrame
 	local frame = Factory.New("ScrollingFrame", {
-		Size = UDim2.new(1, 0, 0, height or 44),
+		-- Buttons occupy 42px; the remaining 8px is a visible scrollbar lane
+		-- so catalog actions/categories never masquerade as a clipped list.
+		Size = UDim2.new(1, 0, 0, height or 50),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		ScrollBarThickness = 0,
+		ScrollBarThickness = 3,
+		ScrollBarImageColor3 = C.Gold,
 		ScrollingDirection = Enum.ScrollingDirection.X,
 		AutomaticCanvasSize = Enum.AutomaticSize.X,
 		CanvasSize = UDim2.new(),

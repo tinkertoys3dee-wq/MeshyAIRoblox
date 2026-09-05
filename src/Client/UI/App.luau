@@ -970,7 +970,8 @@ function App:_BuildChrome()
 		button.LayoutOrder = index
 		button.TextXAlignment = Enum.TextXAlignment.Left
 		button.Selectable = true
-		Factory.Padding(button, 15, 0)
+		local navLabelPadding = Factory.LabelPadding(button, 15, 0)
+		navLabelPadding.Name = "NavLabelPadding"
 		-- Only swap the unicode symbol for the decal icon once it's actually
 		-- uploaded (Factory.Icon returns nil until then) -- otherwise the
 		-- symbol stays exactly as it always has.
@@ -1912,10 +1913,16 @@ function App:_ApplyResponsiveLayout(scaleOverride: number?)
 			elseif hasIcon then label
 			else symbol .. "   " .. label
 		button.TextXAlignment = if compact then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
-		local padding = button:FindFirstChildOfClass("UIPadding")
-		padding.PaddingLeft = UDim.new(0, if compact then 1 elseif hasIcon then 42 else 12)
-		padding.PaddingRight = UDim.new(0, if compact then 1 else 6)
-		padding.PaddingBottom = UDim.new(0, if compact and hasIcon then 5 else 0)
+		-- Caption padding belongs to the lifted Label, never the button: a
+		-- button-level UIPadding shifts NavIcon/IconMedallion as well and was
+		-- the reason the entire visible row leaned to the right.
+		local liftedLabel = button:FindFirstChild("Label")
+		local padding = if liftedLabel then liftedLabel:FindFirstChild("NavLabelPadding") else nil
+		if padding and padding:IsA("UIPadding") then
+			padding.PaddingLeft = UDim.new(0, if compact then 1 elseif hasIcon then 42 else 12)
+			padding.PaddingRight = UDim.new(0, if compact then 1 else 6)
+			padding.PaddingBottom = UDim.new(0, if compact and hasIcon then 5 else 0)
+		end
 		-- Compact rows are icon-only (the label above goes empty), so the
 		-- medallion and its icon move to the middle of the rail rather than
 		-- sitting against the left edge where a label used to follow them.
@@ -4207,11 +4214,16 @@ function App:_RenderCreate()
 			})
 			cursorY += 20
 			local sparkRow = Factory.New("ScrollingFrame", {
+				Name = "IdeaSuggestions",
 				Position = UDim2.fromOffset(16, cursorY),
-				Size = UDim2.new(1, -32, 0, 34),
+				-- Leave a dedicated lane below the 34px chips for the drag
+				-- thumb. Hiding this bar made the fourth and fifth ideas look
+				-- cut off rather than horizontally scrollable.
+				Size = UDim2.new(1, -32, 0, 42),
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
-				ScrollBarThickness = 0,
+				ScrollBarThickness = 3,
+				ScrollBarImageColor3 = Colors.Gold,
 				AutomaticCanvasSize = Enum.AutomaticSize.X,
 				CanvasSize = UDim2.new(),
 				ScrollingDirection = Enum.ScrollingDirection.X,
@@ -4276,7 +4288,7 @@ function App:_RenderCreate()
 					self.selectedAccessoryType = spark.accessoryType
 				end)
 			end
-			cursorY += 42
+			cursorY += 50
 
 			-- The concept art's ember-mascot writing tip -- net-new content,
 			-- not a restyle of anything that existed here before. Guides a
@@ -4326,11 +4338,13 @@ function App:_RenderCreate()
 			onChoose: (string) -> ()
 		)
 			local row = Factory.New("ScrollingFrame", {
+				Name = "ChoiceOptions",
 				Position = UDim2.fromOffset(16, positionY),
-				Size = UDim2.new(1, -32, 0, 38),
+				Size = UDim2.new(1, -32, 0, 42),
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
-				ScrollBarThickness = 0,
+				ScrollBarThickness = 3,
+				ScrollBarImageColor3 = color,
 				AutomaticCanvasSize = Enum.AutomaticSize.X,
 				CanvasSize = UDim2.new(),
 				ScrollingDirection = Enum.ScrollingDirection.X,
@@ -4407,7 +4421,7 @@ function App:_RenderCreate()
 				self.selectedAvatarView = value
 				self:_RenderActivePage()
 			end)
-			cursorY += 46
+			cursorY += 50
 			local previewThumbType = "AvatarHeadShot"
 			for _, view in Config.Generation.AvatarViews do
 				if view.Id == self.selectedAvatarView then
@@ -4462,7 +4476,7 @@ function App:_RenderCreate()
 				self.selectedStylePreset = value
 				self:_RenderActivePage()
 			end)
-			cursorY += 46
+			cursorY += 50
 			step += 1
 
 			if self.selectedMethod == "IMAGE_PREVIEW" then
@@ -4479,11 +4493,13 @@ function App:_RenderCreate()
 				)
 				cursorY += 27
 				local qualityRow = Factory.New("ScrollingFrame", {
+					Name = "ReferenceQualityOptions",
 					Position = UDim2.fromOffset(16, cursorY),
-					Size = UDim2.new(1, -32, 0, 38),
+					Size = UDim2.new(1, -32, 0, 42),
 					BackgroundTransparency = 1,
 					BorderSizePixel = 0,
-					ScrollBarThickness = 0,
+					ScrollBarThickness = 3,
+					ScrollBarImageColor3 = Colors.Gold,
 					AutomaticCanvasSize = Enum.AutomaticSize.X,
 					CanvasSize = UDim2.new(),
 					ScrollingDirection = Enum.ScrollingDirection.X,
@@ -4508,7 +4524,7 @@ function App:_RenderCreate()
 						self:_RenderActivePage()
 					end)
 				end
-				cursorY += 46
+				cursorY += 50
 				step += 1
 				Factory.Label(
 					promptCard,
@@ -4527,11 +4543,13 @@ function App:_RenderCreate()
 			})
 			cursorY += 27
 			local chipRow = Factory.New("ScrollingFrame", {
+				Name = "FitRegionOptions",
 				Position = UDim2.fromOffset(16, cursorY),
-				Size = UDim2.new(1, -32, 0, 38),
+				Size = UDim2.new(1, -32, 0, 42),
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
-				ScrollBarThickness = 0,
+				ScrollBarThickness = 3,
+				ScrollBarImageColor3 = Colors.Cyan,
 				AutomaticCanvasSize = Enum.AutomaticSize.X,
 				CanvasSize = UDim2.new(),
 				ScrollingDirection = Enum.ScrollingDirection.X,
@@ -7399,11 +7417,13 @@ function App:_RenderDiscover()
 
 		local filtersY = toolsY + toolsHeight + 6
 		local filters = Factory.New("ScrollingFrame", {
+			Name = "MarketplaceFilters",
 			Position = UDim2.new(0.025, 0, 0, filtersY),
-			Size = UDim2.new(0.95, 0, 0, 34),
+			Size = UDim2.new(0.95, 0, 0, 38),
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
-			ScrollBarThickness = 0,
+			ScrollBarThickness = 3,
+			ScrollBarImageColor3 = Colors.Gold,
 			AutomaticCanvasSize = Enum.AutomaticSize.X,
 			CanvasSize = UDim2.new(),
 			ScrollingDirection = Enum.ScrollingDirection.X,
@@ -7468,7 +7488,7 @@ function App:_RenderDiscover()
 			self:_UpdateSetting("simpleMode", true)
 		end)
 
-		gridY = filtersY + 58
+		gridY = filtersY + 62
 	else
 		-- Centred and flanked by a flourish either side, exactly as the
 		-- concept art draws every one of these mode-switch links. Fixed
@@ -7865,11 +7885,13 @@ function App:_RenderGraphicsDiscoverBody()
 
 	if showAllMethods then
 		local filters = Factory.New("ScrollingFrame", {
+			Name = "GraphicsMarketplaceFilters",
 			Position = UDim2.new(0.025, 0, 0, if self.compact then 248 else 198),
-			Size = UDim2.new(0.95, 0, 0, 34),
+			Size = UDim2.new(0.95, 0, 0, 38),
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
-			ScrollBarThickness = 0,
+			ScrollBarThickness = 3,
+			ScrollBarImageColor3 = Colors.Mint,
 			AutomaticCanvasSize = Enum.AutomaticSize.X,
 			CanvasSize = UDim2.new(),
 			ScrollingDirection = Enum.ScrollingDirection.X,
@@ -7933,7 +7955,7 @@ function App:_RenderGraphicsDiscoverBody()
 	-- entirely (tools row bottom: 242 compact / 192 desktop), and shows a
 	-- switch-to-Advanced link in that freed space instead of the filter row.
 	local toolsBottom = 144 + (if self.compact then 98 else 48)
-	local gridTop = if showAllMethods then (if self.compact then 306 else 256) else toolsBottom + 10 + 28 + 16
+	local gridTop = if showAllMethods then (if self.compact then 310 else 260) else toolsBottom + 10 + 28 + 16
 	if self.graphicsMarketplaceItems == nil then
 		Factory.Label(self.content, "Loading trending graphics…", UDim2.new(1, -52, 0, 60), {
 			Position = UDim2.fromOffset(26, gridTop - 30),
@@ -8296,11 +8318,13 @@ function App:_RenderAvatarGraphics()
 		onChoose: (string) -> ()
 	)
 		local row = Factory.New("ScrollingFrame", {
+			Name = "GraphicsChoiceOptions",
 			Position = UDim2.fromOffset(16, positionY),
-			Size = UDim2.new(1, -32, 0, 38),
+			Size = UDim2.new(1, -32, 0, 42),
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
-			ScrollBarThickness = 0,
+			ScrollBarThickness = 3,
+			ScrollBarImageColor3 = color,
 			AutomaticCanvasSize = Enum.AutomaticSize.X,
 			CanvasSize = UDim2.new(),
 			ScrollingDirection = Enum.ScrollingDirection.X,
@@ -8346,7 +8370,7 @@ function App:_RenderAvatarGraphics()
 			self.selectedAvatarView = value
 			self:_RenderActivePage()
 		end)
-		cursorY += 46
+		cursorY += 50
 
 		local previewThumbType = "AvatarBust"
 		for _, view in Config.Generation.AvatarViews do
@@ -8425,7 +8449,7 @@ function App:_RenderAvatarGraphics()
 			self.selectedStylePreset = value
 			self:_RenderActivePage()
 		end)
-		cursorY += 46
+		cursorY += 50
 
 		local qualityStepLabel = if isTextMode then "2 · CHOOSE IMAGE QUALITY" else "3 · CHOOSE IMAGE QUALITY"
 		Factory.Label(composer, qualityStepLabel, UDim2.new(1, -32, 0, 22), {
@@ -8436,11 +8460,13 @@ function App:_RenderAvatarGraphics()
 		})
 		cursorY += 27
 		local qualityRow = Factory.New("ScrollingFrame", {
+			Name = "GraphicsQualityOptions",
 			Position = UDim2.fromOffset(16, cursorY),
-			Size = UDim2.new(1, -32, 0, 38),
+			Size = UDim2.new(1, -32, 0, 42),
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
-			ScrollBarThickness = 0,
+			ScrollBarThickness = 3,
+			ScrollBarImageColor3 = Colors.Gold,
 			AutomaticCanvasSize = Enum.AutomaticSize.X,
 			CanvasSize = UDim2.new(),
 			ScrollingDirection = Enum.ScrollingDirection.X,
@@ -8465,7 +8491,7 @@ function App:_RenderAvatarGraphics()
 				self:_RenderActivePage()
 			end)
 		end
-		cursorY += 46
+		cursorY += 50
 	end
 
 	local promptStepLabel
