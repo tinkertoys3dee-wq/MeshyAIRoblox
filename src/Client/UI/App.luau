@@ -158,7 +158,8 @@ local ERROR_MESSAGES = {
 	SUBSCRIPTION_PROMPT_FAILED = "Roblox could not open the Plus subscription prompt.",
 	RATE_LIMITED = "Slow down for a moment, then try again.",
 	UGC_VALIDATION_FAILED = "Roblox validation did not accept this fit. Adjust it and try again.",
-	UGC_BOUNDS_TOO_LARGE = "This wearable exceeds Roblox's size limit. Check the measured X/Y/Z bounds in Fitting and reduce the highlighted scale axes.",
+	UGC_BOUNDS_TOO_LARGE = "This wearable crosses Roblox's attachment-space bounds. Move it away from the named edge or reduce its scale in Fitting.",
+	UGC_BOUNDS_UNVERIFIED = "Forge could not verify the exact editable-mesh bounds. Retry after the model finishes processing.",
 	UGC_MODERATION_PENDING = "Roblox is still processing or moderating this model or texture. Your item is saved; retry publishing later.",
 	ITEM_NOT_EQUIPPED = "That item is not currently equipped.",
 	INVALID_IMAGE_QUALITY = "Choose one of the available reference image quality tiers.",
@@ -6230,7 +6231,9 @@ function App:_RenderStudio()
 		self.fitDrafts[selected.id] = deepCopy(selected.fit)
 	end
 	local fit = self.fitDrafts[selected.id]
+	local baseMeshCenter = nil :: Vector3?
 	local baseMeshSize = nil :: Vector3?
+	local boundsExact = false
 	local textureStatus = "CHECKING"
 	local meshStats = nil :: { [string]: any }?
 
@@ -6361,45 +6364,80 @@ function App:_RenderStudio()
 
 	local function measureReadiness()
 		local maximum = AccessoryBounds.GetMaximum(fit.accessoryType)
-		if not baseMeshSize or not maximum then
+		local safeEnvelope = AccessoryBounds.GetEnvelope(fit.accessoryType, true)
+		if not baseMeshSize or not maximum or not safeEnvelope then
 			sizeStatus.Text = "Measuring the model against Roblox's publishing bounds…"
 			sizeStatus.TextColor3 = Colors.Gold
 			readinessStroke.Color = Colors.Gold
 		else
-			local fittedSize = AccessoryBounds.GetFittedSize(baseMeshSize, fit)
-			local exceededAxes = AccessoryBounds.ExceededAxes(fittedSize, maximum)
-			sizeStatus.Text = string.format(
-				"%s · X %.2f/%.2f  Y %.2f/%.2f  Z %.2f/%.2f studs",
-				ACCESSORY_LABELS[fit.accessoryType] or "Accessory",
-				fittedSize.X,
-				maximum.X,
-				fittedSize.Y,
-				maximum.Y,
-				fittedSize.Z,
-				maximum.Z
+			local fitted = AccessoryBounds.GetFittedBounds(baseMeshCenter or Vector3.new(), baseMeshSize, fit)
+			local violations = AccessoryBounds.GetViolations(
+				fitted.minimum,
+				fitted.maximum,
+				safeEnvelope.minimum,
+				safeEnvelope.maximum
 			)
-			if #exceededAxes > 0 then
+			if #violations > 0 then
+				local parts = {}
+				for _, violation in violations do
+					table.insert(
+						parts,
+						string.format("%s %s %.3f", violation.axis, violation.direction, violation.amount)
+					)
+				end
+				sizeStatus.Text = (if boundsExact then "Outside" else "Estimated outside")
+					.. " safe publish zone · "
+					.. table.concat(parts, " · ")
+					.. " studs"
 				sizeStatus.TextColor3 = Colors.Rose
 				readinessStroke.Color = Colors.Rose
-				textureStatusLabel.Text = string.format(
-					"Too large on %s. Reduce those scale axes before publishing; position can also affect Roblox's final check.",
-					table.concat(exceededAxes, ", ")
-				)
+				textureStatusLabel.Text = if boundsExact
+					then "Move the model toward its attachment or reduce scale. Position, rotation, and asymmetric Roblox limits are included."
+					else "This is an estimate. Publishing will require an exact editable-mesh check before Roblox opens."
 				textureStatusLabel.TextColor3 = Colors.Rose
 				return
 			end
-			sizeStatus.TextColor3 = Colors.Mint
-			readinessStroke.Color = if textureStatus == "READY" then Colors.Mint else Colors.Gold
+			local closest = AccessoryBounds.GetClosestBoundary(
+				fitted.minimum,
+				fitted.maximum,
+				safeEnvelope.minimum,
+				safeEnvelope.maximum
+			)
+			sizeStatus.Text = string.format(
+				"%s · X %.2f/%.2f  Y %.2f/%.2f  Z %.2f/%.2f · nearest %s %s %.3f clear",
+				ACCESSORY_LABELS[fit.accessoryType] or "Accessory",
+				fitted.size.X,
+				maximum.X,
+				fitted.size.Y,
+				maximum.Y,
+				fitted.size.Z,
+				maximum.Z,
+				closest.axis,
+				closest.direction,
+				closest.amount
+			)
+			if boundsExact then
+				sizeStatus.Text = "✓ " .. sizeStatus.Text
+				sizeStatus.TextColor3 = Colors.Mint
+				readinessStroke.Color = if textureStatus == "READY" then Colors.Mint else Colors.Gold
+			else
+				sizeStatus.Text = "Estimated · " .. sizeStatus.Text
+				sizeStatus.TextColor3 = Colors.Gold
+				readinessStroke.Color = Colors.Gold
+			end
 		end
 
+		local measurementNote = if baseMeshSize and not boundsExact
+			then "Exact vertex bounds were unavailable; the server will require an exact check before opening Roblox. "
+			else ""
 		if textureStatus == "READY" then
 			local textureDetail = if meshStats
 					and meshStats.textureWidth
 					and meshStats.textureHeight
 				then string.format(" · %d×%d source", meshStats.textureWidth, meshStats.textureHeight)
 				else ""
-			textureStatusLabel.Text = "✓ Generated texture is available on Roblox" .. textureDetail .. "."
-			textureStatusLabel.TextColor3 = Colors.Mint
+			textureStatusLabel.Text = measurementNote .. "✓ Generated texture is available on Roblox" .. textureDetail .. "."
+			textureStatusLabel.TextColor3 = if boundsExact then Colors.Mint else Colors.Gold
 		elseif textureStatus == "PROCESSING" or textureStatus == "FETCH_FAILED" then
 			textureStatusLabel.Text =
 				"Texture is still processing/moderating on Roblox. The model is saved; use Retry preview before publishing."
@@ -6444,7 +6482,9 @@ function App:_RenderStudio()
 
 			local data = dataOrCode
 			local diagnostics = if type(data.diagnostics) == "table" then data.diagnostics else {}
+			baseMeshCenter = vectorFromData(diagnostics.baseCenter)
 			baseMeshSize = vectorFromData(diagnostics.baseSize)
+			boundsExact = diagnostics.boundsExact == true
 			meshStats = diagnostics
 			textureStatus = tostring(diagnostics.textureStatus or "CHECKING")
 			refreshReadiness()

@@ -130,17 +130,149 @@ local function hasTextureReference(mesh: MeshPart): boolean
 	return textureContent(mesh) ~= nil
 end
 
-local function itemDiagnostics(item: { [string]: any }, source: MeshPart): { [string]: any }
-	local fittedSize = AccessoryBounds.GetFittedSize(source.Size, item.fit)
+local function vectorFinite(value: any): boolean
+	return typeof(value) == "Vector3" and finite(value.X) and finite(value.Y) and finite(value.Z)
+end
+
+local function scaledVector(value: Vector3, scale: Vector3): Vector3
+	return Vector3.new(value.X * scale.X, value.Y * scale.Y, value.Z * scale.Z)
+end
+
+-- EditableMesh exposes the vertex-space center/size that Roblox validates.
+-- MeshPart.Size alone loses an authored off-center origin, so the former check
+-- could say a span fit while the same span crossed an attachment-space face.
+-- Roblox's own EditableMesh examples map vertex coordinates into a MeshPart
+-- with Size / MeshSize, which is the same render scale used here.
+local function meshGeometry(source: MeshPart, editableMesh: EditableMesh?): (Vector3, Vector3, boolean)
+	if not editableMesh then
+		return Vector3.new(), source.Size, false
+	end
+	local success, center, size = pcall(function()
+		local minimum = nil :: Vector3?
+		local maximum = nil :: Vector3?
+		for _, vertexId in editableMesh:GetVertices() do
+			local position = editableMesh:GetPosition(vertexId)
+			minimum = if minimum then Vector3.new(
+				math.min(minimum.X, position.X),
+				math.min(minimum.Y, position.Y),
+				math.min(minimum.Z, position.Z)
+			) else position
+			maximum = if maximum then Vector3.new(
+				math.max(maximum.X, position.X),
+				math.max(maximum.Y, position.Y),
+				math.max(maximum.Z, position.Z)
+			) else position
+		end
+		if not minimum or not maximum then
+			error("EditableMesh contains no vertices")
+		end
+		return (minimum + maximum) / 2, maximum - minimum
+	end)
+	local meshSize = source.MeshSize
+	if
+		not success
+		or not vectorFinite(center)
+		or not vectorFinite(size)
+		or not vectorFinite(meshSize)
+		or math.abs(meshSize.X) < 0.000001
+		or math.abs(meshSize.Y) < 0.000001
+		or math.abs(meshSize.Z) < 0.000001
+	then
+		return Vector3.new(), source.Size, false
+	end
+	local renderScale = source.Size / meshSize
+	return scaledVector(center, renderScale),
+		scaledVector(size, Vector3.new(
+			math.abs(renderScale.X),
+			math.abs(renderScale.Y),
+			math.abs(renderScale.Z)
+		)),
+		true
+end
+
+local function tryCreateEditableMesh(source: MeshPart): EditableMesh?
+	if source.MeshId == "" then
+		return nil
+	end
+	local success, editableMesh = pcall(function()
+		return AssetService:CreateEditableMeshAsync(Content.fromUri(source.MeshId))
+	end)
+	if not success or not editableMesh then
+		return nil
+	end
+	return editableMesh
+end
+
+local function violationsData(violations: { any }): { { [string]: any } }
+	local result = {}
+	for _, violation in violations do
+		table.insert(result, {
+			axis = violation.axis,
+			side = violation.side,
+			direction = violation.direction,
+			amount = violation.amount,
+		})
+	end
+	return result
+end
+
+local function itemDiagnostics(
+	item: { [string]: any },
+	source: MeshPart,
+	editableMesh: EditableMesh?,
+	fitOverride: { [string]: any }?
+): { [string]: any }
+	local baseCenter, baseSize, boundsExact = meshGeometry(source, editableMesh)
+	local fit = fitOverride or item.fit
+	local fitted = AccessoryBounds.GetFittedBounds(baseCenter, baseSize, fit)
 	local maximumSize = AccessoryBounds.GetMaximum(item.fit.accessoryType)
-	local exceededAxes = if maximumSize then AccessoryBounds.ExceededAxes(fittedSize, maximumSize) else {}
+	local officialEnvelope = AccessoryBounds.GetEnvelope(item.fit.accessoryType, false)
+	local safeEnvelope = AccessoryBounds.GetEnvelope(item.fit.accessoryType, true)
+	local violations = if safeEnvelope
+		then AccessoryBounds.GetViolations(
+			fitted.minimum,
+			fitted.maximum,
+			safeEnvelope.minimum,
+			safeEnvelope.maximum
+		)
+		else {}
+	local officialViolations = if officialEnvelope
+		then AccessoryBounds.GetViolations(
+			fitted.minimum,
+			fitted.maximum,
+			officialEnvelope.minimum,
+			officialEnvelope.maximum
+		)
+		else {}
+	local exceededAxes = AccessoryBounds.GetExceededAxes(violations)
+	local closestBoundary = if safeEnvelope
+		then AccessoryBounds.GetClosestBoundary(
+			fitted.minimum,
+			fitted.maximum,
+			safeEnvelope.minimum,
+			safeEnvelope.maximum
+		)
+		else nil
 	local textureReady = hasTextureReference(source)
 	return {
-		baseSize = vectorData(source.Size),
-		fittedSize = vectorData(fittedSize),
+		baseCenter = vectorData(baseCenter),
+		baseSize = vectorData(baseSize),
+		fittedCenter = vectorData(fitted.center),
+		fittedSize = vectorData(fitted.size),
+		fittedMinimum = vectorData(fitted.minimum),
+		fittedMaximum = vectorData(fitted.maximum),
 		maximumSize = if maximumSize then vectorData(maximumSize) else nil,
+		officialMinimum = if officialEnvelope then vectorData(officialEnvelope.minimum) else nil,
+		officialMaximum = if officialEnvelope then vectorData(officialEnvelope.maximum) else nil,
+		safeMinimum = if safeEnvelope then vectorData(safeEnvelope.minimum) else nil,
+		safeMaximum = if safeEnvelope then vectorData(safeEnvelope.maximum) else nil,
+		boundsSafetyInset = AccessoryBounds.SafetyInset,
+		boundsExact = boundsExact,
+		violations = violationsData(violations),
+		officialViolations = violationsData(officialViolations),
+		closestBoundary = closestBoundary,
 		exceededAxes = exceededAxes,
-		tooLarge = #exceededAxes > 0,
+		tooLarge = #violations > 0,
 		textureStatus = if textureReady then "READY" else "PROCESSING",
 		textureExpected = true,
 		triangles = item.triangles,
@@ -154,19 +286,44 @@ local function formatSize(value: { [string]: any }): string
 	return string.format("%.2f × %.2f × %.2f", value.x, value.y, value.z)
 end
 
+local function formatViolations(violations: { [string]: any }): string
+	local parts = {}
+	for _, violation in violations do
+		table.insert(
+			parts,
+			string.format("%s %s by %.3f studs", violation.axis, violation.direction, violation.amount)
+		)
+	end
+	return table.concat(parts, ", ")
+end
+
 local function boundsProblem(item: { [string]: any }, diagnostics: { [string]: any }): { [string]: any }
-	local axes = table.concat(diagnostics.exceededAxes, ", ")
+	local outsideOfficial = type(diagnostics.officialViolations) == "table" and #diagnostics.officialViolations > 0
+	local reason = if outsideOfficial
+		then "outside Roblox's attachment-space bounds"
+		else "too close to Roblox's bounds for reliable publishing"
 	return {
 		code = "UGC_BOUNDS_TOO_LARGE",
 		details = {
 			diagnostics = diagnostics,
 			userMessage = string.format(
-				"This %s is %s studs after fit; Roblox's limit is %s. Reduce the %s scale in Fitting.",
+				"This %s is %s: %s. Move it toward the attachment or reduce scale. Forge keeps a %.2f-stud safety margin (fitted span %s; published maximum %s).",
 				tostring(item.fit.accessoryType),
+				reason,
+				formatViolations(diagnostics.violations),
+				diagnostics.boundsSafetyInset,
 				formatSize(diagnostics.fittedSize),
-				formatSize(diagnostics.maximumSize),
-				axes
+				formatSize(diagnostics.maximumSize)
 			),
+		},
+	}
+end
+
+local function unverifiedBoundsProblem(): { [string]: any }
+	return {
+		code = "UGC_BOUNDS_UNVERIFIED",
+		details = {
+			userMessage = "Forge could not read the exact editable-mesh bounds Roblox will publish. Retry after the model finishes processing; publishing was stopped before Roblox could reject it.",
 		},
 	}
 end
@@ -207,11 +364,11 @@ local function classifyValidationProblem(value: any): string
 	return "UGC_VALIDATION_FAILED"
 end
 
-local function validationProblem(value: any): { [string]: any }
+local function validationProblem(value: any, diagnostics: { [string]: any }?): { [string]: any }
 	local code = classifyValidationProblem(value)
 	local platformMessage = sanitizePlatformMessage(value)
 	local fallback = if code == "UGC_BOUNDS_TOO_LARGE"
-		then "Roblox says this wearable is outside its size bounds. Check the measured X/Y/Z limits in Fitting."
+		then "Roblox says this wearable is outside its attachment-space bounds. Move it away from the nearest edge or reduce scale in Fitting."
 		elseif
 			code == "UGC_MODERATION_PENDING"
 		then "Roblox is still processing or moderating this model or texture. Your item is saved; retry publishing later."
@@ -219,10 +376,23 @@ local function validationProblem(value: any): { [string]: any }
 			code == "MODEL_TEXTURE_PROCESSING"
 		then "Roblox has not released this model's texture yet. Your item is saved; retry after the texture appears in Fitting."
 		else "Roblox validation rejected this wearable. Adjust the fit and review the validation detail below."
+	local measured = ""
+	if code == "UGC_BOUNDS_TOO_LARGE" and diagnostics and type(diagnostics.closestBoundary) == "table" then
+		local closest = diagnostics.closestBoundary
+		measured = string.format(
+			" Forge's closest measured edge was %s %s with %.3f studs of safe clearance.",
+			tostring(closest.axis),
+			tostring(closest.direction),
+			tonumber(closest.amount) or 0
+		)
+	end
 	return {
 		code = code,
 		details = {
-			userMessage = if platformMessage ~= "" then fallback .. " Roblox: " .. platformMessage else fallback,
+			diagnostics = diagnostics,
+			userMessage = if platformMessage ~= ""
+				then fallback .. measured .. " Roblox: " .. platformMessage
+				else fallback .. measured,
 		},
 	}
 end
@@ -709,7 +879,11 @@ function ItemService:RequestPrivateModel(player: Player, item: { [string]: any }
 		sourceModel:Destroy()
 		return false, "MESH_NOT_FOUND"
 	end
-	local diagnostics = itemDiagnostics(item, source)
+	local measurementMesh = tryCreateEditableMesh(source)
+	local diagnostics = itemDiagnostics(item, source, measurementMesh)
+	if measurementMesh then
+		measurementMesh:Destroy()
+	end
 	if diagnostics.textureStatus ~= "READY" then
 		self:_InvalidateModel(item.modelAssetId)
 	end
@@ -754,7 +928,7 @@ function ItemService:Publish(player: Player, itemId: string): (boolean, any)
 	if type(tokenId) ~= "string" or tokenId == "" or not avatarAssetType then
 		return false, "CREATION_TOKEN_NOT_CONFIGURED"
 	end
-	local success, accessoryOrError = self:_CreateAccessory(item, true, true)
+	local success, accessoryOrError, publishDiagnostics = self:_CreateAccessory(item, true, true)
 	if not success then
 		return false, accessoryOrError
 	end
@@ -771,7 +945,7 @@ function ItemService:Publish(player: Player, itemId: string): (boolean, any)
 			local validationProblemMessage = if validationSuccess then validationMessage else isValid
 			warn(string.format("[ItemService] UGC validation failed: %s", tostring(validationProblemMessage)))
 			accessory:Destroy()
-			return false, validationProblem(validationProblemMessage)
+			return false, validationProblem(validationProblemMessage, publishDiagnostics)
 		end
 	end
 
@@ -781,7 +955,7 @@ function ItemService:Publish(player: Player, itemId: string): (boolean, any)
 	if not promptSuccess then
 		accessory:Destroy()
 		warn(`[ItemService] Avatar creation prompt failed: {result}`)
-		local classified = validationProblem(result)
+		local classified = validationProblem(result, publishDiagnostics)
 		if classified.code ~= "UGC_VALIDATION_FAILED" then
 			return false, classified
 		end
@@ -793,7 +967,7 @@ function ItemService:Publish(player: Player, itemId: string): (boolean, any)
 		if string.find(string.lower(tostring(result)), "cancel", 1, true) then
 			return false, "AVATAR_CREATION_CANCELLED"
 		end
-		return false, validationProblem(resultMessage)
+		return false, validationProblem(resultMessage, publishDiagnostics)
 	end
 	accessory:Destroy()
 	local assetId = tonumber(resultMessage)
@@ -869,18 +1043,22 @@ function ItemService:_CreateAccessory(
 	item: { [string]: any },
 	editable: boolean,
 	forceRefresh: boolean?
-): (boolean, any)
-	local callSuccess, creationSuccess, accessoryOrProblem = pcall(function()
+): (boolean, any, any?)
+	local callSuccess, creationSuccess, accessoryOrProblem, diagnostics = pcall(function()
 		return self:_BuildAccessory(item, editable, forceRefresh)
 	end)
 	if not callSuccess then
 		warn(`[ItemService] Accessory preparation crashed for {item.id}: {creationSuccess}`)
 		return false, "ACCESSORY_PREPARATION_FAILED"
 	end
-	return creationSuccess, accessoryOrProblem
+	return creationSuccess, accessoryOrProblem, diagnostics
 end
 
-function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean, forceRefresh: boolean?): (boolean, any)
+function ItemService:_BuildAccessory(
+	item: { [string]: any },
+	editable: boolean,
+	forceRefresh: boolean?
+): (boolean, any, any?)
 	local success, modelOrError = self:_LoadModel(item.modelAssetId, forceRefresh)
 	if not success then
 		return false, modelOrError
@@ -891,11 +1069,7 @@ function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean,
 		model:Destroy()
 		return false, "MESH_NOT_FOUND"
 	end
-	local diagnostics = itemDiagnostics(item, source)
-	if editable and diagnostics.tooLarge then
-		model:Destroy()
-		return false, boundsProblem(item, diagnostics)
-	end
+	local diagnostics = itemDiagnostics(item, source, nil)
 	if editable and diagnostics.textureStatus ~= "READY" then
 		model:Destroy()
 		self:_InvalidateModel(item.modelAssetId)
@@ -910,8 +1084,9 @@ function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean,
 	end
 
 	local handle: MeshPart
+	local editableBoundsMesh = nil :: EditableMesh?
 	if editable then
-		local editSuccess, editableHandle = pcall(function()
+		local editSuccess, editableHandle, editableMesh = pcall(function()
 			local editableMesh = AssetService:CreateEditableMeshAsync(Content.fromUri(source.MeshId))
 			if not editableMesh then
 				error("EditableMesh memory budget exceeded")
@@ -930,7 +1105,7 @@ function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean,
 					surface.Parent = created
 				end
 			end
-			return created
+			return created, editableMesh
 		end)
 		if not editSuccess then
 			model:Destroy()
@@ -938,6 +1113,7 @@ function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean,
 			return false, "EDITABLE_ASSET_FAILED"
 		end
 		handle = editableHandle
+		editableBoundsMesh = editableMesh
 	else
 		handle = source:Clone()
 	end
@@ -954,6 +1130,32 @@ function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean,
 	handle.Color = if editable then AVATAR_CREATION_HANDLE_COLOR else Color3.new(1, 1, 1)
 	local scale = item.fit.scale
 	handle.Size = Vector3.new(handle.Size.X * scale.x, handle.Size.Y * scale.y, handle.Size.Z * scale.z)
+	local publishDiagnostics = nil :: { [string]: any }?
+	if editable then
+		-- Size already includes fit.scale at this point. Measure the exact Handle
+		-- Roblox will receive, then apply only its attachment position/rotation.
+		local appliedFit = {
+			position = item.fit.position,
+			rotation = item.fit.rotation,
+			scale = { x = 1, y = 1, z = 1 },
+			accessoryType = item.fit.accessoryType,
+		}
+		publishDiagnostics = itemDiagnostics(item, handle, editableBoundsMesh, appliedFit)
+		if not publishDiagnostics.boundsExact then
+			handle:Destroy()
+			if editableBoundsMesh then
+				editableBoundsMesh:Destroy()
+			end
+			return false, unverifiedBoundsProblem()
+		end
+		if publishDiagnostics.tooLarge then
+			handle:Destroy()
+			if editableBoundsMesh then
+				editableBoundsMesh:Destroy()
+			end
+			return false, boundsProblem(item, publishDiagnostics)
+		end
+	end
 	for _, child in handle:GetChildren() do
 		if not child:IsA("SurfaceAppearance") then
 			child:Destroy()
@@ -972,7 +1174,7 @@ function ItemService:_BuildAccessory(item: { [string]: any }, editable: boolean,
 	accessory.Name = item.name
 	accessory.AccessoryType = ACCESSORY_ENUMS[item.fit.accessoryType] or Enum.AccessoryType.Hat
 	handle.Parent = accessory
-	return true, accessory
+	return true, accessory, publishDiagnostics
 end
 
 return ItemService
