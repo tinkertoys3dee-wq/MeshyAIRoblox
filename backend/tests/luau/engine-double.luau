@@ -371,8 +371,10 @@ local services = {
 			return Enum.AccessoryType[assetType.Name:gsub("Accessory", "")]
 		end,
 	},
+	GroupService = {},
 	MarketplaceService = {},
 	Players = {},
+	PolicyService = {},
 	AssetService = {},
 	AvatarCreationService = {},
 	RunService = {},
@@ -406,7 +408,16 @@ fixtures.Network = { Actions = setmetatable({}, {
 		return name
 	end,
 }) }
-fixtures.Config, fixtures.AccessoryBounds, fixtures.AccessoryFit = {}, {}, {}
+fixtures.Config = {
+	Generation = { BaseQueueSlots = 1 },
+	Group = {
+		Id = 15575113,
+		Name = "Mundane Studios",
+		ExtraQueueSlots = 1,
+		GenerationSpeedMultiplier = 0.9,
+	},
+}
+fixtures.AccessoryBounds, fixtures.AccessoryFit = {}, {}
 fixtures.ViewportController = {
 	new = function()
 		return {}

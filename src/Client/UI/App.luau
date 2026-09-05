@@ -21,6 +21,7 @@ local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Factory)
 local GamesHub = require(script.Parent.GamesHub)
+local GroupJoin = require(script.Parent.GroupJoin)
 local RunwayHub = require(script.Parent.RunwayHub)
 local SoundController = require(script.Parent.SoundController)
 local ViewportController = require(script.Parent.ViewportController)
@@ -197,6 +198,9 @@ local ERROR_MESSAGES = {
 	RUNWAY_LOOK_UNAVAILABLE = "That look left the runway or was not locked in.",
 	RUNWAY_NOT_VOTING = "Voting is not open for this runway round.",
 	RUNWAY_LOOK_LOCKED = "Your runway look is frozen during voting and results.",
+	GROUP_NOT_CONFIGURED = "The creator group has not been configured yet.",
+	GROUP_CHECK_FAILED = "Roblox could not verify your group membership. Try again, or rejoin to activate the boost.",
+	PLAYER_STATE_UNAVAILABLE = "Your live benefits are still loading. Try again in a moment.",
 }
 
 -- The nav rail is a fixed slice of the app's width, so the longest page
@@ -415,6 +419,12 @@ function App.new()
 		-- De-duplicates guide impressions across Discover's frequent re-renders
 		-- while retaining click telemetry for the same stage.
 		firstLookGuideEvents = {} :: { [string]: boolean },
+		groupJoinPrompting = false,
+		groupJoinPending = false,
+		groupTipTitle = nil :: TextLabel?,
+		groupTipDescription = nil :: TextLabel?,
+		groupTipBenefit = nil :: TextLabel?,
+		groupJoinButton = nil :: TextButton?,
 		-- True whenever the player's actual applied avatar description may
 		-- have changed since the panel's ViewportController last snapshotted
 		-- it (see ViewportController.new), so the panel knows to rebuild the
@@ -1142,25 +1152,35 @@ function App:_BuildChrome()
 	self.modeButtons = { simple = simpleModeButton, advanced = advancedModeButton }
 	self:_RefreshModeToggle()
 
-	local tip = Factory.ImageCard(navExtras, UDim2.new(1, 0, 0, 142), nil, "GroupTip")
-	Factory.Label(tip, "GROUP BOOST", UDim2.new(1, -24, 0, 22), {
+	local tip = Factory.ImageCard(navExtras, UDim2.new(1, 0, 0, 188), nil, "GroupTip")
+	self.groupTipTitle = Factory.Label(tip, "GROUP BOOST", UDim2.new(1, -24, 0, 22), {
 		Position = UDim2.fromOffset(12, 12),
 		Color = Colors.Mint,
 		Font = Theme.Fonts.Bold,
 		TextSize = 11,
 	})
-	Factory.Label(tip, "Join the creator group for priority scheduling and +1 queue slot.", UDim2.new(1, -24, 0, 62), {
-		Position = UDim2.fromOffset(12, 38),
-		Color = Colors.TextMuted,
-		TextSize = 12,
-		Wrapped = true,
-		AlignY = Enum.TextYAlignment.Top,
-	})
-	Factory.Label(tip, "10% queue boost", UDim2.new(1, -24, 0, 25), {
-		Position = UDim2.fromOffset(12, 106),
+	self.groupTipDescription =
+		Factory.Label(tip, "Join in one tap for faster generation and an extra queue slot.", UDim2.new(1, -24, 0, 52), {
+			Position = UDim2.fromOffset(12, 38),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
+		})
+	self.groupTipBenefit = Factory.Label(tip, "+5 bonus tokens · Priority Pass", UDim2.new(1, -24, 0, 26), {
+		Position = UDim2.fromOffset(12, 98),
 		Font = Theme.Fonts.Bold,
-		TextSize = 12,
+		TextSize = 10,
+		Wrapped = true,
 	})
+	local joinGroup =
+		Factory.ImageButton(tip, "Join group", UDim2.new(1, -24, 0, 42), UDim2.fromOffset(12, 134), "mint")
+	self:_BindButton(joinGroup)
+	joinGroup.Activated:Connect(function()
+		GroupJoin.Prompt(self)
+	end)
+	self.groupJoinButton = joinGroup
+	self:_RefreshGroupTip()
 
 	local content = Factory.New("Frame", {
 		Name = "Content",
@@ -3193,6 +3213,7 @@ function App:_RenderStatus()
 		pill.LayoutOrder = 4
 		gemIcon(pill, if benefits.plusSubscriber then "GemMint" else "GemRose")
 	end
+	self:_RefreshGroupTip()
 end
 
 function App:_OpenPage(page: string)
@@ -6289,19 +6310,20 @@ function App:_RenderStudio()
 		})
 
 		local function sliderRow(field: string, axis: string, y: number, minimum: number, maximum: number, step: number)
-			Factory.Label(controls, string.upper(axis), UDim2.new(0.06, 0, 0, 45), {
-				Position = UDim2.new(0.015, 0, 0, y),
+			-- Fixed edge controls with a fluid centre track. The old percentage
+			-- positions combined with 42px UISizeConstraint minimums, making −
+			-- overlap the track and + overlap the value on phone-width panels.
+			Factory.Label(controls, string.upper(axis), UDim2.fromOffset(22, 45), {
+				Position = UDim2.fromOffset(12, y),
 				AlignX = Enum.TextXAlignment.Center,
 				Font = Theme.Fonts.Bold,
-				TextSize = 18,
+				TextSize = 16,
 				Color = if axis == "x" then Colors.Rose elseif axis == "y" then Colors.Mint else Colors.Cyan,
 			})
-			local minus =
-				Factory.ImageButton(controls, "−", UDim2.new(0.075, -4, 0, 45), UDim2.new(0.08, 0, 0, y), nil)
-			Factory.New("UISizeConstraint", { MinSize = Vector2.new(42, 45), Parent = minus })
+			local minus = Factory.ImageButton(controls, "−", UDim2.fromOffset(40, 45), UDim2.fromOffset(38, y), nil)
 			local track = Factory.New("TextButton", {
-				Position = UDim2.new(0.17, 0, 0, y + 6),
-				Size = UDim2.new(0.55, 0, 0, 32),
+				Position = UDim2.fromOffset(84, y + 6),
+				Size = UDim2.new(1, -188, 0, 32),
 				BackgroundColor3 = Colors.PanelSoft,
 				BorderSizePixel = 0,
 				AutoButtonColor = false,
@@ -6327,13 +6349,12 @@ function App:_RenderStudio()
 			})
 			Factory.Corner(knob, 99)
 			Factory.Stroke(knob, Colors.Cyan, 0.15)
-			local plus = Factory.ImageButton(controls, "+", UDim2.new(0.075, -4, 0, 45), UDim2.new(0.735, 0, 0, y), nil)
-			Factory.New("UISizeConstraint", { MinSize = Vector2.new(42, 45), Parent = plus })
-			local valueLabel = Factory.Label(controls, "", UDim2.new(0.17, -10, 0, 45), {
-				Position = UDim2.new(0.82, 0, 0, y),
-				AlignX = Enum.TextXAlignment.Right,
+			local plus = Factory.ImageButton(controls, "+", UDim2.fromOffset(40, 45), UDim2.new(1, -98, 0, y), nil)
+			local valueLabel = Factory.Label(controls, "", UDim2.fromOffset(44, 45), {
+				Position = UDim2.new(1, -52, 0, y),
+				AlignX = Enum.TextXAlignment.Center,
 				Font = Theme.Fonts.Bold,
-				TextSize = 18,
+				TextSize = 15,
 				Color = Colors.Text,
 			})
 
@@ -6579,34 +6600,39 @@ function App:_RenderStudio()
 
 		local actionsY = presetsY + presetsHeight + 16
 		local isEquipped = table.find(profile.equippedItemIds or {}, selected.id) ~= nil
-		local save = Factory.ImageButton(
-			body,
-			"Save fit",
-			UDim2.new(0.25, -22, 0, 42),
-			UDim2.fromOffset(16, actionsY),
-			"primary"
-		)
+		-- Long action labels need stable readable widths. A horizontal scroller
+		-- lets short/narrow inspector panels reach every action instead of
+		-- squeezing four labels into clipped quarter-width buttons.
+		local actionRow = Factory.New("ScrollingFrame", {
+			Name = "FitActions",
+			Position = UDim2.fromOffset(16, actionsY),
+			Size = UDim2.new(1, -32, 0, 44),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 2,
+			ScrollBarImageColor3 = Colors.Cyan,
+			CanvasSize = UDim2.new(),
+			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			Parent = body,
+		})
+		Factory.List(actionRow, Enum.FillDirection.Horizontal, 8)
+		local save = Factory.ImageButton(actionRow, "Save fit", UDim2.fromOffset(108, 40), nil, "primary")
 		local equip = Factory.ImageButton(
-			body,
+			actionRow,
 			if isEquipped then "Unequip" else "Equip in game",
-			UDim2.new(0.25, -12, 0, 42),
-			UDim2.new(0.25, 6, 0, actionsY),
+			UDim2.fromOffset(136, 40),
+			nil,
 			if isEquipped then "danger" else "mint"
 		)
 		local publish = Factory.ImageButton(
-			body,
+			actionRow,
 			if selected.publishedAssetId then "Published ✓" else "Publish wearable",
-			UDim2.new(0.25, -12, 0, 42),
-			UDim2.new(0.5, 6, 0, actionsY),
+			UDim2.fromOffset(154, 40),
+			nil,
 			nil
 		)
-		local resetFit = Factory.ImageButton(
-			body,
-			"↺ Reset fit",
-			UDim2.new(0.25, -22, 0, 42),
-			UDim2.new(0.75, 6, 0, actionsY),
-			nil
-		)
+		local resetFit = Factory.ImageButton(actionRow, "↺ Reset fit", UDim2.fromOffset(126, 40), nil, nil)
 		for _, button in { save, equip, publish, resetFit } do
 			self:_BindButton(button)
 		end
@@ -6825,11 +6851,28 @@ function App:_RenderStudio()
 				Color = Colors.Rose,
 				TextSize = 11,
 			})
+			-- Three independent controls were scale-divided across one narrow
+			-- line, leaving "List for sale" and its price with tiny hit areas.
+			-- Keep useful widths and make the row swipe/scroll when needed.
+			local salesRow = Factory.New("ScrollingFrame", {
+				Name = "SharingActions",
+				Position = UDim2.fromOffset(14, 42),
+				Size = UDim2.new(1, -28, 0, 42),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				ScrollBarThickness = 2,
+				ScrollBarImageColor3 = Colors.Rose,
+				CanvasSize = UDim2.new(),
+				AutomaticCanvasSize = Enum.AutomaticSize.X,
+				ScrollingDirection = Enum.ScrollingDirection.X,
+				Parent = social,
+			})
+			Factory.List(salesRow, Enum.FillDirection.Horizontal, 8)
 			local visibility = Factory.ImageButton(
-				social,
+				salesRow,
 				if selected.visibility == "PUBLIC" then "Private" else "Share",
-				if self.compact then UDim2.new(0.31, -8, 0, 38) else UDim2.fromOffset(132, 38),
-				UDim2.fromOffset(14, 42),
+				UDim2.fromOffset(126, 38),
+				nil,
 				nil
 			)
 			self:_BindButton(visibility)
@@ -6845,20 +6888,14 @@ function App:_RenderStudio()
 					end
 				end)
 			end)
-			local priceBox = self:_TextBox(
-				social,
-				"R$ 10–500",
-				if self.compact then UDim2.new(0.31, -8, 0, 38) else UDim2.fromOffset(118, 38),
-				if self.compact then UDim2.new(0.31, 12, 0, 42) else UDim2.fromOffset(156, 42),
-				false
-			)
+			local priceBox = self:_TextBox(salesRow, "R$ 10–500", UDim2.fromOffset(118, 38), UDim2.new(), false)
 			priceBox.Text = tostring(selected.listingPriceRobux or 50)
 			priceBox.TextXAlignment = Enum.TextXAlignment.Center
 			local list = Factory.ImageButton(
-				social,
+				salesRow,
 				if selected.isListed then "End listing" else "List for sale",
-				if self.compact then UDim2.new(0.38, -24, 0, 38) else UDim2.fromOffset(126, 38),
-				if self.compact then UDim2.new(0.62, 10, 0, 42) else UDim2.fromOffset(284, 42),
+				UDim2.fromOffset(132, 38),
+				nil,
 				"primary"
 			)
 			self:_BindButton(list)
@@ -8227,14 +8264,14 @@ function App:_RenderAvatarGraphics()
 	})
 	local fromAvatar = Factory.ImageButton(
 		sourceRow,
-		"🧑 From My Avatar",
+		if self.compact then "🧑 My avatar" else "🧑 From My Avatar",
 		UDim2.new(0.5, -5, 1, 0),
 		nil,
 		if isTextMode then nil else "primary"
 	)
 	local fromText = Factory.ImageButton(
 		sourceRow,
-		"✍ Text Prompt",
+		if self.compact then "✍ Text" else "✍ Text Prompt",
 		UDim2.new(0.5, -5, 1, 0),
 		UDim2.new(0.5, 5, 0, 0),
 		if isTextMode then "primary" else nil
@@ -9026,6 +9063,45 @@ function App:_RefreshModeToggle()
 	Factory.SwapDecal(self.modeButtons.advanced, if simpleActive then "ButtonDefault" else "ButtonPrimary")
 end
 
+-- The persistent desktop card is built before bootstrap data arrives, so it
+-- cannot be treated as static copy. Keep it in sync with the server-verified
+-- membership state and with the native Roblox prompt while it is open. The
+-- same action is also rendered in Settings for compact/mobile layouts, where
+-- the sidebar extras are intentionally hidden.
+function App:_RefreshGroupTip()
+	if
+		not self.groupTipTitle
+		or not self.groupTipDescription
+		or not self.groupTipBenefit
+		or not self.groupJoinButton
+	then
+		return
+	end
+	local benefits = self.state and self.state.benefits
+	local isMember = benefits ~= nil and benefits.groupMember == true
+	self.groupTipTitle.Text = if isMember then "GROUP MEMBER  ✓" else "GROUP BOOST"
+	self.groupTipTitle.TextColor3 = if isMember then Colors.Mint else Colors.Gold
+	self.groupTipDescription.Text = if isMember
+		then string.format("Your %s benefits are active in this server.", Config.Group.Name)
+		else "Join in one tap for faster generation and an extra queue slot."
+	self.groupTipBenefit.Text = if isMember
+		then string.format(
+			"10%% faster · %d queue slot%s",
+			benefits.queueSlots or Config.Generation.BaseQueueSlots,
+			if (benefits.queueSlots or Config.Generation.BaseQueueSlots) == 1 then "" else "s"
+		)
+		else "+5 bonus tokens · Priority Pass"
+	self.groupJoinButton.Text = if isMember
+		then "Joined  ✓"
+		elseif self.groupJoinPrompting then "Opening Roblox…"
+		elseif self.groupJoinPending then "Check membership"
+		else "Join group"
+	self.groupJoinButton.Active = not isMember and not self.groupJoinPrompting and Config.Group.Id > 0
+	self.groupJoinButton.BackgroundColor3 = if isMember then Colors.PanelSoft else Colors.Mint
+	self.groupJoinButton.TextColor3 = if isMember then Colors.TextMuted else Colors.Ink
+	Factory.SwapDecal(self.groupJoinButton, if isMember then "ButtonDefault" else "ButtonPrimary")
+end
+
 function App:_UpdateSetting(key: string, value: any)
 	task.spawn(function()
 		local success, data = self:_Invoke(Network.Actions.UpdateSettings, { [key] = value })
@@ -9137,14 +9213,20 @@ function App:_RenderSettings()
 	-- work out whether it reports the state or the action.
 	local simpleButton = Factory.ImageButton(
 		createMode,
-		if simpleModeOn then "Simple Mode · ON" else "Simple Mode",
+		if self.compact
+			then (if simpleModeOn then "Simple  ✓" else "Simple")
+			elseif simpleModeOn then "Simple Mode · ON"
+			else "Simple Mode",
 		UDim2.new(0.5, -22, 0, 44),
 		UDim2.fromOffset(16, 110),
 		if simpleModeOn then "primary" else nil
 	)
 	local advancedButton = Factory.ImageButton(
 		createMode,
-		if simpleModeOn then "Advanced Mode" else "Advanced Mode · ON",
+		if self.compact
+			then (if simpleModeOn then "Advanced" else "Advanced  ✓")
+			elseif simpleModeOn then "Advanced Mode"
+			else "Advanced Mode · ON",
 		UDim2.new(0.5, -22, 0, 44),
 		UDim2.new(0.5, 6, 0, 110),
 		if simpleModeOn then nil else "primary"
@@ -9391,12 +9473,67 @@ function App:_RenderSettings()
 		self:_PromptFriendInvite()
 	end)
 
+	-- GROUP ---------------------------------------------------------------
+	-- navExtras are hidden behind the labelled bottom navigation on phones,
+	-- so Settings is the universal home for this native one-tap join flow.
+	-- Membership is rechecked by the server after Roblox closes the prompt;
+	-- successful benefits therefore turn on immediately, without a rejoin.
+	local groupMember = self.state.benefits.groupMember == true
+	local group = Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 176 else 124), nil, "CreatorGroup")
+	group.LayoutOrder = 4
+	Factory.SectionBanner(group, Config.Group.Name)
+	Factory.Label(
+		group,
+		if groupMember then "Member benefits active  ✓" else "Join the creator community",
+		if self.compact then UDim2.new(1, -32, 0, 26) else UDim2.new(1, -220, 0, 26),
+		{
+			Position = UDim2.fromOffset(16, 34),
+			Font = Theme.Fonts.Black,
+			TextSize = 16,
+			Color = if groupMember then Colors.Mint else Colors.Text,
+			Truncate = Enum.TextTruncate.AtEnd,
+		}
+	)
+	Factory.Label(
+		group,
+		if groupMember
+			then string.format(
+				"10%% faster generation and %d queue slots are active for this server.",
+				self.state.benefits.queueSlots or Config.Generation.BaseQueueSlots
+			)
+			else "Join inside Roblox for 10% faster generation, +1 queue slot, and 5 bonus tokens for Priority Pass.",
+		if self.compact then UDim2.new(1, -32, 0, 48) else UDim2.new(1, -220, 0, 52),
+		{
+			Position = UDim2.fromOffset(16, 64),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
+		}
+	)
+	local groupButton = Factory.ImageButton(
+		group,
+		if groupMember
+			then "Joined  ✓"
+			elseif self.groupJoinPrompting then "Opening Roblox…"
+			elseif self.groupJoinPending then "Check membership"
+			else "Join group",
+		if self.compact then UDim2.new(1, -32, 0, 42) else UDim2.fromOffset(188, 42),
+		if self.compact then UDim2.fromOffset(16, 120) else UDim2.new(1, -204, 0, 48),
+		if groupMember then nil else "mint"
+	)
+	groupButton.Active = not groupMember and not self.groupJoinPrompting and Config.Group.Id > 0
+	self:_BindButton(groupButton)
+	groupButton.Activated:Connect(function()
+		GroupJoin.Prompt(self)
+	end)
+
 	-- EQUIPPED NOW ----------------------------------------------------------
 	local profile = self.state.profile
 	local equippedIds = profile.equippedItemIds or {}
 	local loadout =
 		Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, 46 + math.max(1, #equippedIds) * 62), nil, "Loadout")
-	loadout.LayoutOrder = 4
+	loadout.LayoutOrder = 5
 	Factory.SectionBanner(loadout, string.format("Equipped Now · %d", #equippedIds))
 	if #equippedIds == 0 then
 		Factory.Label(loadout, "Nothing equipped yet. Equip an item from My Studio.", UDim2.new(1, -32, 0, 40), {
@@ -9497,7 +9634,7 @@ function App:_RenderSettings()
 		nil,
 		"Achievements"
 	)
-	achievements.LayoutOrder = 5
+	achievements.LayoutOrder = 6
 	Factory.SectionBanner(achievements, string.format("Achievements · %d/%d", unlockedCount, #Achievements.List))
 	local achievementGrid = Factory.New("Frame", {
 		Position = UDim2.fromOffset(16, 38),
@@ -10215,10 +10352,17 @@ function App:_ShowContentDetail(descriptor: { [string]: any })
 			Color = Colors.Gold,
 			ZIndex = ZBASE + 2,
 		})
-		local tipRow = Factory.New("Frame", {
+		local tipRow = Factory.New("ScrollingFrame", {
+			Name = "TipOptions",
 			Position = UDim2.fromOffset(14, 512),
-			Size = UDim2.new(1, -28, 0, 40),
+			Size = UDim2.new(1, -28, 0, 44),
 			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 2,
+			ScrollBarImageColor3 = Colors.Gold,
+			CanvasSize = UDim2.new(),
+			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			ScrollingDirection = Enum.ScrollingDirection.X,
 			ZIndex = ZBASE + 2,
 			Parent = modal,
 		})

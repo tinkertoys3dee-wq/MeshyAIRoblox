@@ -293,6 +293,19 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		analytics:Custom(player, "GameInviteSent", math.min(math.floor(recipientCount), 20), {})
 		return true, {}
 	end,
+	[Network.Actions.RefreshGroupMembership] = function(player)
+		local success, result = playerStates:RefreshGroupMembership(player)
+		if not success then
+			return false, result
+		end
+		if result.groupMember then
+			achievements:Unlock(player, "GROUP_JOINED")
+		end
+		if result.newlyJoined then
+			analytics:Custom(player, "CreatorGroupJoined", 1, {})
+		end
+		return true, result
+	end,
 	[Network.Actions.ReportJourneyAction] = function(player, payload)
 		local action = type(payload) == "table" and payload.action or nil
 		if action ~= "OPEN_STUDIO" then

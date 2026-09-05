@@ -63,6 +63,7 @@ Network.Actions = table.freeze({
 	EnterAfkLounge = "EnterAfkLounge",
 	LeaveAfkLounge = "LeaveAfkLounge",
 	ReportInviteSent = "ReportInviteSent",
+	RefreshGroupMembership = "RefreshGroupMembership",
 	SubmitArcadeScore = "SubmitArcadeScore",
 	GetArcadeLeaderboard = "GetArcadeLeaderboard",
 	GetFriendArcadeLeaderboard = "GetFriendArcadeLeaderboard",
