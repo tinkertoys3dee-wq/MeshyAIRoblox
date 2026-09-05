@@ -595,7 +595,9 @@ function ItemService:EquipOutfit(player: Player, payload: any): (boolean, any)
 			local description = AvatarLook.Description(outfit.avatarLook)
 			local humanoid = character:FindFirstChildOfClass("Humanoid") :: Humanoid
 			local ok, problem = pcall(function()
-				humanoid:ApplyDescriptionAsync(description)
+				-- Forge pieces are attached outside HumanoidDescription, so Roblox's
+				-- reset-safe path is required before the outfit pieces are restored.
+				humanoid:ApplyDescriptionResetAsync(description)
 			end)
 			description:Destroy()
 			if not ok then
