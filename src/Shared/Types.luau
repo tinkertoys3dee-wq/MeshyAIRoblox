@@ -153,10 +153,10 @@ export type FitPreset = {
 	createdAt: number,
 }
 
--- A saved list of item IDs to re-equip together -- "wear exactly these
--- items again later" -- distinct from FitPreset above, which saves one
--- item's transform for reuse on a different item of the same type.
+-- Server-captured catalog appearance plus owned Forge item IDs. avatarLook
+-- is optional for backwards compatibility with Forge-only saved outfits.
 export type OutfitRecord = {
+	avatarLook: { [string]: any }?,
 	id: string,
 	name: string,
 	itemIds: { string },

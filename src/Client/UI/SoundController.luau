@@ -42,11 +42,19 @@ function SoundController:Play(name: string)
 end
 
 function SoundController:Bind(button: GuiButton)
+	if button:GetAttribute("ForgeSoundBound") then
+		return
+	end
+	button:SetAttribute("ForgeSoundBound", true)
 	button.MouseEnter:Connect(function()
-		self:Play("Hover")
+		if button.Active then
+			self:Play("Hover")
+		end
 	end)
 	button.Activated:Connect(function()
-		self:Play("Press")
+		if button.Active then
+			self:Play("Press")
+		end
 	end)
 end
 

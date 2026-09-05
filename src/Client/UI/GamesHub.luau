@@ -18,6 +18,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SocialService = game:GetService("SocialService")
 local TweenService = game:GetService("TweenService")
+local Motion = require(script.Parent.Motion)
 
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
@@ -242,10 +243,9 @@ function GamesHub.Show(app: any)
 	-- UI scale for readability. Registered on `app` so the Settings page's
 	-- scale chips can keep it live while the Arcade is open; cleared below
 	-- when the modal closes.
-	local uiScale = Factory.New("UIScale", {
-		Scale = if app.state then tonumber(app.state.profile.settings.uiScale) or 1 else 1,
-		Parent = modal,
-	})
+	local uiScale = Motion.FitPanel(modal, function()
+		return if app.state then tonumber(app.state.profile.settings.uiScale) or 1 else 1
+	end)
 	app.arcadeUiScale = uiScale
 
 	-- A soft, static (non-animated -- cheap and reduceMotion-safe by
@@ -596,7 +596,7 @@ function GamesHub.Show(app: any)
 			shell:Destroy()
 		end
 		app.arcadeUiScale = nil
-		overlay:Destroy()
+		app:_CloseModal(overlay, modal)
 	end)
 
 	-- ===== Leaderboard tab =====
@@ -1174,24 +1174,7 @@ function GamesHub.Show(app: any)
 		end
 
 		local tileScale = Factory.New("UIScale", { Scale = 1, Parent = button })
-		-- Desktop hover feedback: a light grow, distinct from (and gentler
-		-- than) the click-punch below. Never fires on touch, which has no
-		-- concept of hover -- fine, since the tap itself already answers
-		-- "did something respond".
-		button.MouseEnter:Connect(function()
-			if not reduceMotion then
-				TweenService:Create(
-					tileScale,
-					TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-					{ Scale = 1.03 }
-				):Play()
-			end
-		end)
-		button.MouseLeave:Connect(function()
-			TweenService
-				:Create(tileScale, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 })
-				:Play()
-		end)
+		-- Shared outline feedback does not enlarge a tile into its neighbours.
 
 		-- The art's medallion is the game's own colour washed at 20% behind
 		-- its ring, with a white hairline inside -- not a dark disc with a

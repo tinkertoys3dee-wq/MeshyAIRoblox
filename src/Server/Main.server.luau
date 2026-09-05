@@ -369,6 +369,7 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		local success, result = items:EquipOutfit(player, payload)
 		if success then
+			catalog:Remove(player) -- undo/redo starts afresh after replacing the entire look
 			analytics:Custom(player, "OutfitEquipped", 1, {})
 		end
 		return success, result
@@ -562,9 +563,7 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			achievements:Unlock(player, "FIRST_TRY_ON")
 			retention:MarkJourney(player, "TRY_STYLE")
 			retention:MarkQuest(player, "TRY_STYLE")
-			task.defer(function()
-				items:RestoreEquipped(player)
-			end)
+			items:RestoreEquipped(player)
 		end
 		return success, result
 	end,
@@ -574,14 +573,32 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		local success, result = catalog:Untry(player, payload)
 		if success then
-			task.defer(function()
-				items:RestoreEquipped(player)
-			end)
+			items:RestoreEquipped(player)
 		end
 		return success, result
 	end,
 	[Network.Actions.GetEquippedAvatarAccessories] = function(player)
 		return catalog:GetEquippedAccessories(player)
+	end,
+	[Network.Actions.UndoAvatar] = function(player)
+		if runway:IsLookFrozen(player) then
+			return false, "RUNWAY_LOOK_LOCKED"
+		end
+		local success, result = catalog:History(player, false)
+		if success then
+			items:RestoreEquipped(player)
+		end
+		return success, result
+	end,
+	[Network.Actions.RedoAvatar] = function(player)
+		if runway:IsLookFrozen(player) then
+			return false, "RUNWAY_LOOK_LOCKED"
+		end
+		local success, result = catalog:History(player, true)
+		if success then
+			items:RestoreEquipped(player)
+		end
+		return success, result
 	end,
 	[Network.Actions.ResetAvatar] = function(player)
 		if runway:IsLookFrozen(player) then
@@ -589,9 +606,7 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		local success, result = catalog:Reset(player)
 		if success then
-			task.defer(function()
-				items:RestoreEquipped(player)
-			end)
+			items:RestoreEquipped(player)
 		end
 		return success, result
 	end,
@@ -790,6 +805,22 @@ local structuredGenerationActions: { [string]: boolean } = {
 	[Network.Actions.ConvertImage] = true,
 }
 
+local avatarBusy: { [Player]: boolean } = {}
+local avatarActions = {
+	[Network.Actions.TryCatalogAsset] = true,
+	[Network.Actions.UntryCatalogAsset] = true,
+	[Network.Actions.ResetAvatar] = true,
+	[Network.Actions.UndoAvatar] = true,
+	[Network.Actions.RedoAvatar] = true,
+	[Network.Actions.EquipOutfit] = true,
+	[Network.Actions.SaveOutfit] = true,
+	[Network.Actions.DeleteOutfit] = true,
+	[Network.Actions.EquipItem] = true,
+	[Network.Actions.UnequipItem] = true,
+	[Network.Actions.TryOnCommunityItem] = true,
+	[Network.Actions.ClearCommunityTryOn] = true,
+}
+
 typedRequestRemote.OnServerInvoke = function(player: Player, action: any, payload: any)
 	if not remoteLimiter:consume(player.UserId) then
 		return { ok = false, error = "RATE_LIMITED" }
@@ -800,7 +831,16 @@ typedRequestRemote.OnServerInvoke = function(player: Player, action: any, payloa
 	if not loaded[player] and action ~= Network.Actions.Bootstrap then
 		initializePlayer(player)
 	end
+	if avatarActions[action] and avatarBusy[player] then
+		return { ok = false, error = "AVATAR_BUSY" }
+	end
+	if avatarActions[action] then
+		avatarBusy[player] = true
+	end
 	local success, ok, result = pcall(handlers[action], player, payload)
+	if avatarActions[action] then
+		avatarBusy[player] = nil
+	end
 	if not success then
 		warn(string.format("[Main] Remote %s failed for %d: %s", action, player.UserId, tostring(ok)))
 		return { ok = false, error = "SERVER_ERROR" }
@@ -841,6 +881,8 @@ Players.PlayerAdded:Connect(function(player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
+	avatarBusy[player] = nil
+	catalog:Remove(player)
 	loaded[player] = nil
 	loading[player] = nil
 	if characterConnections[player] then

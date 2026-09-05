@@ -64,6 +64,14 @@ local ASSET_TYPE_VALUES = {
 	FrontAccessory = true,
 	BackAccessory = true,
 	WaistAccessory = true,
+	Shirt = true,
+	Pants = true,
+	TShirt = true,
+	Face = true,
+	JacketAccessory = true,
+	SweaterAccessory = true,
+	ShirtAccessory = true,
+	PantsAccessory = true,
 }
 local ONBOARDING_STEP_NAMES = {
 	[1] = "Entered Forge",

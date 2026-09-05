@@ -24,6 +24,10 @@ local GamesHub = require(script.Parent.GamesHub)
 local RunwayHub = require(script.Parent.RunwayHub)
 local SoundController = require(script.Parent.SoundController)
 local ViewportController = require(script.Parent.ViewportController)
+local Motion = require(script.Parent.Motion)
+local NotificationService = require(script.Parent.NotificationService)
+local AvatarLab = require(script.Parent.AvatarLab)
+local StartGuide = require(script.Parent.StartGuide)
 
 local Colors = Theme.Colors
 local player = Players.LocalPlayer
@@ -90,6 +94,8 @@ local function waitForPushRemote(folder: Folder): RemoteEvent?
 end
 
 local ERROR_MESSAGES = {
+	AVATAR_BUSY = "Your last avatar change is still applying. Try again in a moment.",
+	AVATAR_HISTORY_EMPTY = "There are no more catalog changes to undo or redo this visit.",
 	SERVER_ERROR = "The Roblox server hit an unexpected error. Check Server Output for the logged cause, then retry.",
 	SERVER_STARTING = "The Forge server is still starting. Wait a moment and try again.",
 	PROFILE_UNAVAILABLE = "Your creator profile is still loading. Try again in a moment.",
@@ -201,17 +207,6 @@ local NAV_LABELS: { [string]: string } = {
 	["Avatar Graphics"] = "Avatar Art",
 }
 
-local CATALOG_TYPES = {
-	Hat = Enum.AvatarAssetType.Hat,
-	HairAccessory = Enum.AvatarAssetType.HairAccessory,
-	FaceAccessory = Enum.AvatarAssetType.FaceAccessory,
-	NeckAccessory = Enum.AvatarAssetType.NeckAccessory,
-	ShoulderAccessory = Enum.AvatarAssetType.ShoulderAccessory,
-	FrontAccessory = Enum.AvatarAssetType.FrontAccessory,
-	BackAccessory = Enum.AvatarAssetType.BackAccessory,
-	WaistAccessory = Enum.AvatarAssetType.WaistAccessory,
-}
-
 local ACCESSORY_LABELS = {
 	Hat = "Hat",
 	HairAccessory = "Hair",
@@ -221,49 +216,6 @@ local ACCESSORY_LABELS = {
 	FrontAccessory = "Front",
 	BackAccessory = "Back",
 	WaistAccessory = "Waist",
-}
-
--- Avatar Lab's category chips read off the table above, which is a
--- dictionary: iterating it directly gives Luau's hash order, so the row came
--- out shuffled differently on every render -- and, once each chip took a gem
--- from CHIP_GEMS by position, those colours changed under the player's cursor
--- too. This is the concept art's own order, and it is fixed.
-local ACCESSORY_ORDER = {
-	"Hat",
-	"HairAccessory",
-	"FaceAccessory",
-	"BackAccessory",
-	"FrontAccessory",
-	"NeckAccessory",
-	"ShoulderAccessory",
-	"WaistAccessory",
-}
-
-local CATALOG_SORT_TYPES = {
-	Relevance = Enum.CatalogSortType.Relevance,
-	Bestselling = Enum.CatalogSortType.Bestselling,
-	MostFavorited = Enum.CatalogSortType.MostFavorited,
-	PriceLowToHigh = Enum.CatalogSortType.PriceLowToHigh,
-	PriceHighToLow = Enum.CatalogSortType.PriceHighToLow,
-	RecentlyCreated = Enum.CatalogSortType.RecentlyCreated,
-}
-
-local CATALOG_SORT_ORDER = {
-	"Relevance",
-	"Bestselling",
-	"MostFavorited",
-	"PriceLowToHigh",
-	"PriceHighToLow",
-	"RecentlyCreated",
-}
-
-local CATALOG_SORT_LABELS = {
-	Relevance = "Relevance",
-	Bestselling = "Bestselling",
-	MostFavorited = "Most favorited",
-	PriceLowToHigh = "Price ↑",
-	PriceHighToLow = "Price ↓",
-	RecentlyCreated = "Newest",
 }
 
 local function thumbnail(assetId: any, size: number?): string
@@ -501,6 +453,9 @@ function App.new()
 		arcadeUiScale = nil :: UIScale?,
 		runwayUiScale = nil :: UIScale?,
 	}, App)
+	Motion.Configure(function()
+		return self.state ~= nil and self.state.profile.settings.reduceMotion == true
+	end)
 	self:_BuildChrome()
 	-- Nothing opens before Bootstrap resolves -- self.state doesn't exist
 	-- yet, so there's nothing to decide a first-timer vs. returning player
@@ -523,6 +478,14 @@ function App.new()
 				self:_RenderActivePage()
 			end
 		end
+	end)
+	AvatarEditorService.PromptSaveAvatarCompleted:Connect(function(result)
+		self:_Toast(
+			if result == Enum.AvatarPromptResult.Success then "success" else "info",
+			if result == Enum.AvatarPromptResult.Success
+				then "Your Roblox avatar was saved."
+				else "Avatar save closed without a confirmed save. Your Forge look is still here."
+		)
 	end)
 	-- Fires once the local player closes Roblox's native invite dialog.
 	-- recipientIds only tells us invites were sent, never accepted (Roblox
@@ -602,6 +565,12 @@ function App:_BuildChrome()
 		Parent = player:WaitForChild("PlayerGui"),
 	})
 	self.gui = gui
+	gui.DescendantAdded:Connect(function(child)
+		if child:IsA("GuiButton") then
+			self.sounds:Bind(child)
+			Motion.Bind(child)
+		end
+	end)
 
 	local backdrop = Factory.New("Frame", {
 		Name = "Backdrop",
@@ -881,13 +850,13 @@ function App:_BuildChrome()
 	-- The art letters the wordmark about a third of the topbar's height, over
 	-- a small letterspaced strapline -- so the mark leads and the line under
 	-- it recedes, rather than the two sitting at nearly the same weight.
-	Factory.Label(topbar, Config.Brand.Name, UDim2.fromOffset(200, 30), {
+	Factory.Label(topbar, Config.Brand.Name, UDim2.new(1, -145, 0, 30), {
 		Position = UDim2.fromOffset(76, 12),
 		Font = Theme.Fonts.Display,
 		TextSize = 23,
 		Truncate = Enum.TextTruncate.AtEnd,
 	})
-	Factory.Label(topbar, Config.Brand.Tagline, UDim2.fromOffset(250, 20), {
+	Factory.Label(topbar, Config.Brand.Tagline, UDim2.new(1, -145, 0, 20), {
 		Position = UDim2.fromOffset(77, 43),
 		Color = Colors.TextMuted,
 		Font = Theme.Fonts.Bold,
@@ -929,15 +898,20 @@ function App:_BuildChrome()
 	-- _ApplyResponsiveLayout, which rewrites this rect on every resize.
 	local nav = Factory.ImageCard(shell, UDim2.new(0.145, -14, 1, -96), UDim2.fromOffset(10, 86), "Navigation")
 	self.nav = nav
-	local navStack = Factory.New("Frame", {
+	local navStack = Factory.New("ScrollingFrame", {
 		-- 26, not 18: the panel's own corner ornaments reach into the top of
 		-- the frame, and the first nav row has to start below them.
 		Position = UDim2.fromOffset(12, 26),
 		Size = UDim2.new(1, -24, 0, 330),
 		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 0,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
 		Parent = nav,
 	})
-	Factory.List(navStack, Enum.FillDirection.Vertical, 9)
+	Factory.New("UISizeConstraint", { MaxSize = Vector2.new(400, 342), Parent = navStack })
+	self.navLayout = Factory.List(navStack, Enum.FillDirection.Vertical, 9)
 	self.navStack = navStack
 	-- A single persistent bar that slides to whichever nav button is active,
 	-- rather than every button just flatly recoloring on its own -- sits
@@ -1256,12 +1230,15 @@ function App:_BuildChrome()
 	self.toastHost = Factory.New("Frame", {
 		Name = "Toasts",
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -20, 0, 92),
-		Size = UDim2.fromOffset(360, 320),
+		Position = UDim2.new(1, -16, 0, 56),
+		Size = UDim2.new(1, -32, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
-		ZIndex = 50,
-		Parent = shell,
+		ZIndex = 500,
+		Parent = gui,
 	})
+	Factory.New("UISizeConstraint", { MaxSize = Vector2.new(380, 1000), Parent = self.toastHost })
+	self.notifications = NotificationService.new(self.toastHost, self.sounds)
 	Factory.New("UIListLayout", {
 		FillDirection = Enum.FillDirection.Vertical,
 		HorizontalAlignment = Enum.HorizontalAlignment.Right,
@@ -1457,6 +1434,7 @@ function App:_LayoutAvatarPreviewPanel()
 	local wanted = (self.activePage == "Avatar Lab" or self.activePage == "Discover")
 		and not self.compact
 		and shell.Visible
+		and self.studioOpen ~= false
 		and viewportWidth >= MIN_VIEWPORT_FOR_PANEL
 	local reserve = if wanted then PANEL_WIDTH + PANEL_GAP else 0
 	-- Only ever the two hardcoded base values (no panel) or those values
@@ -1490,13 +1468,22 @@ end
 -- Accessory instances and are not written into the player's saved Roblox
 -- HumanoidDescription.
 function App:_RefreshAvatarAccessories()
-	if self.avatarAccessoriesLoading then
+	if self.avatarAccessoriesLoading or os.clock() < (self.avatarAccessoriesRetryAt or 0) then
 		return
 	end
 	self.avatarAccessoriesLoading = true
+	local revision = self.avatarAccessoriesRevision or 0
 	task.spawn(function()
 		local success, data = self:_Invoke(Network.Actions.GetEquippedAvatarAccessories, {})
 		self.avatarAccessoriesLoading = false
+		if revision ~= (self.avatarAccessoriesRevision or 0) then
+			task.defer(function()
+				self:_RefreshAvatarAccessories()
+			end)
+			return
+		end
+		self.avatarAccessoriesRetryAt = if success then 0 else os.clock() + 8
+		self.avatarAccessoriesError = not success
 		if success then
 			local equipped = {} :: { [number]: boolean }
 			local info = {} :: { [number]: { name: string, assetType: string } }
@@ -1517,6 +1504,9 @@ function App:_RefreshAvatarAccessories()
 		end
 		if self.activePage == "Avatar Lab" or self.activePage == "Discover" then
 			self:_SyncAvatarPreviewPanel()
+			if self.catalogWorkspace and self.catalogWorkspace.tab == "LOOK" and self.activePage == "Avatar Lab" then
+				self:_RenderActivePage()
+			end
 		end
 	end)
 end
@@ -1775,8 +1765,34 @@ function App:_SetAmbientMotion(enabled: boolean)
 end
 
 function App:_SetStudioOpen(open: boolean)
-	local changed = self.shell.Visible ~= open
-	self.shell.Visible = open
+	local changed = self.studioOpen ~= open
+	self.studioOpen = open
+	if changed then
+		self.studioTransition = (self.studioTransition or 0) + 1
+	end
+	local transition = self.studioTransition
+	local motionScale = self.uiScaleInstance
+	local restingScale = self.fittedUiScale or (self.state and self.state.profile.settings.uiScale) or 1
+	if open then
+		self.shell.Visible = true
+		if changed then
+			motionScale.Scale = restingScale * 0.98
+		end
+		Motion.Tween(motionScale, 0.18, { Scale = restingScale })
+	elseif changed then
+		Motion.Tween(motionScale, 0.15, { Scale = restingScale * 0.98 })
+		local function hide()
+			if transition == self.studioTransition and not self.studioOpen then
+				self.shell.Visible = false
+				self:_LayoutAvatarPreviewPanel()
+			end
+		end
+		if self.state and self.state.profile.settings.reduceMotion then
+			hide()
+		else
+			task.delay(0.15, hide)
+		end
+	end
 	-- AvatarPreviewPanel is a sibling of the studio shell so it can sit to
 	-- the shell's right without being clipped. That also means hiding the
 	-- shell does not hide the panel automatically; recompute its visibility
@@ -1801,22 +1817,34 @@ function App:_SetStudioOpen(open: boolean)
 	end
 end
 
-function App:_ApplyResponsiveLayout()
+function App:_ApplyResponsiveLayout(scaleOverride: number?)
 	local camera = Workspace.CurrentCamera
 	local width = if camera then camera.ViewportSize.X else 1200
-	local compact = width < 760
-	local gridColumns = if compact then 1 elseif width < 1050 then 2 elseif width < 1420 then 3 else 4
+	local height = if camera then camera.ViewportSize.Y else 800
+	local preferredScale = scaleOverride or (self.state and tonumber(self.state.profile.settings.uiScale)) or 1
+	self.fittedUiScale = Motion.FitScale(
+		Vector2.new(math.clamp(width * 0.9, 330, 1440), math.clamp(height * 0.88, 450, 860)),
+		Vector2.new(width, height),
+		preferredScale
+	)
+	self.uiScaleInstance.Scale = self.fittedUiScale
+	local compact = width / (self.uiScaleInstance and self.uiScaleInstance.Scale or 1) < 1080
+	-- The desktop mannequin reserves 254px; count columns from the space
+	-- actually left for cards, not the full monitor width.
+	local estimatedContent = (math.min(width * 0.9, 1440) - (if compact then 0 else 254))
+		* (if compact then 1 else 0.855)
+	local gridColumns = math.clamp(math.floor(estimatedContent / self.fittedUiScale / 250), 1, 4)
 	local layoutChanged = self.compact ~= nil
 		and (self.compact ~= compact or (self.gridColumns ~= nil and self.gridColumns ~= gridColumns))
 	self.compact = compact
 	self.gridColumns = gridColumns
-	local navScale = if compact then 0.16 else 0.145
-	-- Matches _BuildChrome's inset panel: 10 in from the shell's left edge,
-	-- stopping 4 short of where the content column starts.
-	self.nav.Position = UDim2.fromOffset(10, 86)
-	self.nav.Size = UDim2.new(navScale, -14, 1, -96)
-	self.content.Position = UDim2.new(navScale, 0, 0, 78)
-	self.content.Size = UDim2.new(1 - navScale, 0, 1, -78)
+	local navScale = 0.145
+	-- Phones get a labelled bottom bar, not an unexplained icon rail that
+	-- steals a sixth of the already narrow editor's width.
+	self.nav.Position = if compact then UDim2.new(0, 8, 1, -72) else UDim2.fromOffset(10, 86)
+	self.nav.Size = if compact then UDim2.new(1, -16, 0, 64) else UDim2.new(navScale, -14, 1, -96)
+	self.content.Position = if compact then UDim2.fromOffset(0, 78) else UDim2.new(navScale, 0, 0, 78)
+	self.content.Size = if compact then UDim2.new(1, 0, 1, -158) else UDim2.new(1 - navScale, 0, 1, -78)
 	-- AmbientBackground has to track Content's rect exactly: it's a sibling
 	-- (see _BuildChrome for why), not a child, so it doesn't get this for
 	-- free the way a normal child would.
@@ -1824,8 +1852,23 @@ function App:_ApplyResponsiveLayout()
 		self.backgroundLayer.Position = self.content.Position
 		self.backgroundLayer.Size = self.content.Size
 	end
-	self.navStack.Position = UDim2.fromOffset(if compact then 8 else 12, 26)
-	self.navStack.Size = UDim2.new(1, if compact then -16 else -24, 0, 387)
+	self.navStack.Position = if compact then UDim2.fromOffset(6, 6) else UDim2.fromOffset(12, 26)
+	self.navStack.Size = if compact then UDim2.new(1, -12, 1, -12) else UDim2.new(1, -24, 1, -36)
+	local stackConstraint = self.navStack:FindFirstChildOfClass("UISizeConstraint")
+	stackConstraint.MaxSize = if compact then Vector2.new(math.huge, 342) else Vector2.new(400, 342)
+	self.navStack.ScrollingDirection = if compact then Enum.ScrollingDirection.X else Enum.ScrollingDirection.Y
+	self.navStack.AutomaticCanvasSize = if compact then Enum.AutomaticSize.X else Enum.AutomaticSize.Y
+	self.navStack.CanvasPosition = Vector2.zero
+	self.navLayout.FillDirection = if compact then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical
+	self.navLayout.Padding = UDim.new(0, if compact then 2 else 9)
+	local shortLabels = {
+		Create = "Create",
+		["My Studio"] = "Studio",
+		Discover = "Explore",
+		["Avatar Lab"] = "Style",
+		["Avatar Graphics"] = "Art",
+		Settings = "Settings",
+	}
 	for page, button in self.navButtons do
 		local symbol = if page == "Create"
 			then "✦"
@@ -1839,34 +1882,42 @@ function App:_ApplyResponsiveLayout()
 		-- extra width is what wrapped these rows onto a second line).
 		local hasIcon = self.navHasIcon[page] == true
 		local label = NAV_LABELS[page] or page
+		button.Size = if compact then UDim2.new(1 / 6, -2, 1, 0) else UDim2.new(1, 0, 0, 48)
+		button.TextSize = if compact then 10 else 13
+		button.TextWrapped = compact and not hasIcon
+		button.TextYAlignment = if compact and hasIcon then Enum.TextYAlignment.Bottom else Enum.TextYAlignment.Center
 		button.Text = if compact
-			then (if hasIcon then "" else symbol)
-			elseif hasIcon then "      " .. label
+			then (if hasIcon then shortLabels[page] else symbol .. "\n" .. shortLabels[page])
+			elseif hasIcon then label
 			else symbol .. "   " .. label
 		button.TextXAlignment = if compact then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
+		local padding = button:FindFirstChildOfClass("UIPadding")
+		padding.PaddingLeft = UDim.new(0, if compact then 1 elseif hasIcon then 42 else 12)
+		padding.PaddingRight = UDim.new(0, if compact then 1 else 6)
+		padding.PaddingBottom = UDim.new(0, if compact and hasIcon then 5 else 0)
 		-- Compact rows are icon-only (the label above goes empty), so the
 		-- medallion and its icon move to the middle of the rail rather than
 		-- sitting against the left edge where a label used to follow them.
 		local medallion = self.navMedallions[page]
 		if medallion then
+			medallion.Visible = not compact
 			medallion.AnchorPoint = if compact then Vector2.new(0.5, 0.5) else Vector2.new(0, 0.5)
 			medallion.Position = if compact then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 6, 0.5, 0)
 		end
 		local navIcon = button:FindFirstChild("NavIcon")
 		if navIcon and navIcon:IsA("ImageLabel") then
-			navIcon.AnchorPoint = if compact then Vector2.new(0.5, 0.5) else Vector2.zero
-			navIcon.Position = if compact then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 11, 0.5, -10)
+			navIcon.AnchorPoint = if compact then Vector2.new(0.5, 0) else Vector2.zero
+			navIcon.Position = if compact then UDim2.new(0.5, 0, 0, 6) else UDim2.new(0, 11, 0.5, -10)
 		end
 	end
 	self:_UpdateSoundButton()
-	-- The nav rail's own narrow width in compact mode (icon-only rows,
-	-- see the symbol swap above) can't fit these text-heavy cards, so the
-	-- whole scrolling stack (see _BuildChrome's navExtras) hides there;
-	-- everywhere else it scrolls instead of a height-based on/off switch.
+	-- Desktop extras stay in the rail. The labelled mobile bottom bar keeps
+	-- its full width for navigation; these settings remain in Settings.
 	if self.navExtras then
 		self.navExtras.Visible = not compact
 	end
-	self.statusArea.Visible = width >= 1120
+	self.statusArea.Visible = self.shell.AbsoluteSize.X / self.fittedUiScale >= 1020
+	self.navIndicator.Visible = not compact and self.navStack.AbsoluteSize.Y / self.fittedUiScale >= 330
 	-- Belt-and-suspenders alongside the AbsoluteSize/AbsolutePosition signals
 	-- wired up in _BuildAvatarPreviewPanel: those cover shell's rect actually
 	-- moving/resizing, but self.compact (read by _LayoutAvatarPreviewPanel)
@@ -1949,8 +2000,24 @@ function App:_AnimateModalIn(overlay: Frame, modal: Frame)
 		TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 		{ BackgroundTransparency = targetTransparency }
 	)
-	local scale = Factory.New("UIScale", { Scale = 0.92, Parent = modal })
-	self:_Animate(scale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+	local scale = Motion.FitPanel(modal, function()
+		return (self.state and tonumber(self.state.profile.settings.uiScale)) or 1
+	end)
+	local targetScale = scale.Scale
+	scale.Scale = targetScale * 0.97
+	self:_Animate(scale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = targetScale })
+end
+
+function App:_CloseModal(overlay: GuiObject, modal: GuiObject?, finished: (() -> ())?)
+	if not modal then
+		for _, child in overlay:GetChildren() do
+			if child:IsA("Frame") and string.find(child.Name, "Modal") then
+				modal = child
+				break
+			end
+		end
+	end
+	Motion.Close(overlay, modal, finished)
 end
 
 -- One short, visual explanation replaces the old multi-page onboarding. The
@@ -1959,320 +2026,8 @@ end
 -- materially clearer edition can reach existing players once without becoming
 -- a modal they must dismiss every session.
 function App:_ShowVisualTutorial()
-	if not self.state then
-		return
-	end
-	if self.tutorialOverlay and self.tutorialOverlay.Parent then
-		return
-	end
-
-	local camera = Workspace.CurrentCamera
-	local viewport = if camera then camera.ViewportSize else Vector2.new(1200, 800)
-	local vertical = self.compact == true or viewport.X < 760
-	local modalWidth = math.floor(math.clamp(viewport.X * 0.9, 300, if vertical then 560 else 760))
-	local modalHeight =
-		math.floor(math.clamp(viewport.Y * 0.88, if vertical then 460 else 440, if vertical then 520 else 500))
-	local ZBASE = 350
-
-	local overlay = Factory.New("Frame", {
-		Name = "HowToPlay",
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Color3.fromRGB(5, 7, 20),
-		BackgroundTransparency = 0.08,
-		BorderSizePixel = 0,
-		Active = true,
-		ZIndex = ZBASE,
-		Parent = self.gui,
-	})
-	self.tutorialOverlay = overlay
-	local modal = Factory.New("Frame", {
-		Name = "TutorialCard",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(modalWidth, modalHeight),
-		BackgroundColor3 = Colors.Panel,
-		BorderSizePixel = 0,
-		ZIndex = ZBASE + 1,
-		Parent = overlay,
-	})
-	Factory.Corner(modal, 26)
-	Factory.Stroke(modal, Colors.Cyan, 0.18, 2)
-	Factory.Gradient(modal, { Color3.fromRGB(72, 67, 119), Colors.Panel, Color3.fromRGB(37, 45, 76) }, 125)
-
-	local badge = Factory.ImagePill(modal, "FREE START · NO ROBUX", Colors.Mint, 166)
-	badge.AnchorPoint = Vector2.new(0.5, 0)
-	badge.Position = UDim2.new(0.5, 0, 0, if vertical then 11 else 17)
-	badge.ZIndex = ZBASE + 3
-	Factory.Label(modal, "HOW TO PLAY", UDim2.new(1, -36, 0, if vertical then 28 else 34), {
-		Position = UDim2.fromOffset(18, if vertical then 38 else 49),
-		Font = Theme.Fonts.Black,
-		TextSize = if vertical then 23 else 29,
-		AlignX = Enum.TextXAlignment.Center,
-		ZIndex = ZBASE + 3,
-	})
-	Factory.Label(modal, "Try a look for free. Make your own when you're ready.", UDim2.new(1, -48, 0, 34), {
-		Position = UDim2.fromOffset(24, if vertical then 68 else 84),
-		Color = Colors.TextMuted,
-		TextSize = if vertical then 12 else 13,
-		Wrapped = true,
-		AlignX = Enum.TextXAlignment.Center,
-		AlignY = Enum.TextYAlignment.Top,
-		ZIndex = ZBASE + 3,
-	})
-
-	local steps = {
-		{ number = "1", word = "TRY", body = "Tap a free look", color = Colors.Mint },
-		{ number = "2", word = "MAKE", body = "Type your idea", color = Colors.Violet },
-		{ number = "3", word = "WEAR", body = "Fit it on your avatar", color = Colors.Cyan },
-	}
-	if vertical then
-		local connector = Factory.New("Frame", {
-			Position = UDim2.fromOffset(44, 128),
-			Size = UDim2.fromOffset(3, 132),
-			BackgroundColor3 = Colors.Line,
-			BackgroundTransparency = 0.35,
-			BorderSizePixel = 0,
-			ZIndex = ZBASE + 2,
-			Parent = modal,
-		})
-		Factory.Corner(connector, 2)
-		for index, step in steps do
-			local rowY = 106 + (index - 1) * 59
-			local circle = Factory.New("Frame", {
-				Position = UDim2.fromOffset(22, rowY),
-				Size = UDim2.fromOffset(47, 47),
-				BackgroundColor3 = step.color,
-				BorderSizePixel = 0,
-				ZIndex = ZBASE + 4,
-				Parent = modal,
-			})
-			Factory.Corner(circle, 24)
-			Factory.Stroke(circle, Colors.Text, 0.55, 1.5)
-			Factory.Label(circle, step.number, UDim2.fromScale(1, 1), {
-				Color = if index == 1 then Colors.Ink else Colors.Text,
-				Font = Theme.Fonts.Black,
-				TextSize = 20,
-				AlignX = Enum.TextXAlignment.Center,
-				AlignY = Enum.TextYAlignment.Center,
-				ZIndex = ZBASE + 5,
-			})
-			Factory.Label(modal, step.word, UDim2.new(1, -112, 0, 22), {
-				Position = UDim2.fromOffset(86, rowY + 2),
-				Color = step.color,
-				Font = Theme.Fonts.Black,
-				TextSize = 17,
-				ZIndex = ZBASE + 4,
-			})
-			Factory.Label(modal, step.body, UDim2.new(1, -112, 0, 20), {
-				Position = UDim2.fromOffset(86, rowY + 25),
-				Color = Colors.TextMuted,
-				TextSize = 12,
-				ZIndex = ZBASE + 4,
-			})
-		end
-	else
-		local stepArea = Factory.New("Frame", {
-			Position = UDim2.fromOffset(24, 125),
-			Size = UDim2.new(1, -48, 0, 160),
-			BackgroundTransparency = 1,
-			ZIndex = ZBASE + 2,
-			Parent = modal,
-		})
-		for index, step in steps do
-			local card = Factory.New("Frame", {
-				Position = UDim2.new((index - 1) / 3, if index == 1 then 0 else 8, 0, 0),
-				Size = UDim2.new(1 / 3, -11, 1, 0),
-				BackgroundColor3 = Colors.PanelSoft,
-				BackgroundTransparency = 0.12,
-				BorderSizePixel = 0,
-				ZIndex = ZBASE + 3,
-				Parent = stepArea,
-			})
-			Factory.Corner(card, 18)
-			Factory.Stroke(card, step.color, 0.38, 1.4)
-			local circle = Factory.New("Frame", {
-				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0, 13),
-				Size = UDim2.fromOffset(56, 56),
-				BackgroundColor3 = step.color,
-				BorderSizePixel = 0,
-				ZIndex = ZBASE + 4,
-				Parent = card,
-			})
-			Factory.Corner(circle, 28)
-			Factory.Label(circle, step.number, UDim2.fromScale(1, 1), {
-				Color = if index == 1 then Colors.Ink else Colors.Text,
-				Font = Theme.Fonts.Black,
-				TextSize = 23,
-				AlignX = Enum.TextXAlignment.Center,
-				AlignY = Enum.TextYAlignment.Center,
-				ZIndex = ZBASE + 5,
-			})
-			Factory.Label(card, step.word, UDim2.new(1, -20, 0, 25), {
-				Position = UDim2.fromOffset(10, 79),
-				Color = step.color,
-				Font = Theme.Fonts.Black,
-				TextSize = 18,
-				AlignX = Enum.TextXAlignment.Center,
-				ZIndex = ZBASE + 4,
-			})
-			Factory.Label(card, step.body, UDim2.new(1, -20, 0, 30), {
-				Position = UDim2.fromOffset(10, 108),
-				Color = Colors.TextMuted,
-				TextSize = 12,
-				Wrapped = true,
-				AlignX = Enum.TextXAlignment.Center,
-				AlignY = Enum.TextYAlignment.Top,
-				ZIndex = ZBASE + 4,
-			})
-			if index < #steps then
-				Factory.Label(stepArea, "→", UDim2.fromOffset(28, 34), {
-					Position = UDim2.new(index / 3, -14, 0, 62),
-					Color = Colors.Gold,
-					Font = Theme.Fonts.Black,
-					TextSize = 25,
-					AlignX = Enum.TextXAlignment.Center,
-					ZIndex = ZBASE + 6,
-				})
-			end
-		end
-	end
-
-	local noteY = if vertical then 286 else 300
-	local note = Factory.New("Frame", {
-		Position = UDim2.fromOffset(22, noteY),
-		Size = UDim2.new(1, -44, 0, if vertical then 38 else 40),
-		BackgroundColor3 = Colors.Gold,
-		BackgroundTransparency = 0.86,
-		BorderSizePixel = 0,
-		ZIndex = ZBASE + 3,
-		Parent = modal,
-	})
-	Factory.Corner(note, 10)
-	Factory.Label(
-		note,
-		"Making your own can cost Robux. Roblox always asks before charging.",
-		UDim2.new(1, -18, 1, 0),
-		{
-			Position = UDim2.fromOffset(9, 0),
-			Color = Colors.Text,
-			Font = Theme.Fonts.Bold,
-			TextSize = if vertical then 10 else 11,
-			Wrapped = true,
-			AlignX = Enum.TextXAlignment.Center,
-			AlignY = Enum.TextYAlignment.Center,
-			ZIndex = ZBASE + 4,
-		}
-	)
-
-	local primaryY = if vertical then 332 else 352
-	local primary = Factory.ImageButton(
-		modal,
-		"START FREE LOOK  →",
-		UDim2.new(1, -44, 0, 42),
-		UDim2.fromOffset(22, primaryY),
-		"primary"
-	)
-	local makeOwn = Factory.ImageButton(
-		modal,
-		"MAKE MY OWN",
-		if vertical then UDim2.new(1, -44, 0, 38) else UDim2.new(0.5, -28, 0, 42),
-		if vertical then UDim2.fromOffset(22, primaryY + 48) else UDim2.new(0.5, 6, 0, primaryY),
-		nil
-	)
-	if not vertical then
-		primary.Size = UDim2.new(0.5, -28, 0, 42)
-	end
-	primary.ZIndex = ZBASE + 4
-	makeOwn.ZIndex = ZBASE + 4
-	self:_BindButton(primary)
-	self:_BindButton(makeOwn)
-	local skipY = if vertical then primaryY + 91 else primaryY + 48
-	local skip = Factory.New("TextButton", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, skipY),
-		Size = UDim2.fromOffset(140, 26),
-		BackgroundTransparency = 1,
-		Text = "Skip tutorial",
-		TextColor3 = Colors.TextMuted,
-		BackgroundColor3 = Colors.PanelSoft,
-		BackgroundTransparency = 0.65,
-		Font = Theme.Fonts.Medium,
-		TextSize = 12,
-		ZIndex = ZBASE + 4,
-		Parent = modal,
-	})
-	Factory.Corner(skip, 13)
-	self:_BindButton(skip)
-
-	if not self.visualTutorialShown then
-		self.visualTutorialShown = true
-		self:_Track({ event = "VisualTutorialShown" })
-	end
-	local choosing = false
-	local function choose(choice: string)
-		if choosing then
-			return
-		end
-		choosing = true
-		primary.Active = false
-		makeOwn.Active = false
-		skip.Active = false
-		if choice == "START_FREE" then
-			primary.Text = "OPENING FREE LOOK…"
-		elseif choice == "MAKE_OWN" then
-			makeOwn.Text = "OPENING CREATOR…"
-		else
-			skip.Text = "Opening…"
-		end
-		task.spawn(function()
-			local success, result = self:_Invoke(Network.Actions.CompleteTutorial, { choice = choice })
-			if not success then
-				choosing = false
-				primary.Active = true
-				makeOwn.Active = true
-				skip.Active = true
-				primary.Text = "START FREE LOOK  →"
-				makeOwn.Text = "MAKE MY OWN"
-				skip.Text = "Skip tutorial"
-				return
-			end
-			self.state.profile.tutorialVersion = if type(result) == "table"
-				then tonumber(result.tutorialVersion) or Config.Tutorial.Version
-				else Config.Tutorial.Version
-			self.state.profile.onboarding.completed = true
-			self.state.profile.onboarding.step = math.max(self.state.profile.onboarding.step or 1, 2)
-			if self.tutorialOverlay == overlay then
-				self.tutorialOverlay = nil
-			end
-			overlay:Destroy()
-			self:_SetStudioOpen(true)
-			if choice == "START_FREE" then
-				self:_OpenPage(if self.state.policy.contentSharingAllowed then "Discover" else "Avatar Lab")
-			else
-				if choice == "MAKE_OWN" then
-					self.scrollPositions.Create = Vector2.new(0, 150)
-				end
-				self:_OpenPage("Create")
-			end
-		end)
-	end
-	primary.Activated:Connect(function()
-		choose("START_FREE")
-	end)
-	makeOwn.Activated:Connect(function()
-		choose("MAKE_OWN")
-	end)
-	skip.Activated:Connect(function()
-		choose("SKIP")
-	end)
-	self:_AnimateModalIn(overlay, modal)
-	GuiService.SelectedObject = primary
+	StartGuide.Show(self)
 end
-
--- Shared by the Settings page's own Invite card and any other contextual
--- invite touchpoint (e.g. the Daily Quests clear-all banner) -- same native
--- prompt + eligibility check everywhere a "grow the studio" moment happens.
 function App:_PromptFriendInvite()
 	local player = Players.LocalPlayer
 	local checkSuccess, allowed = pcall(function()
@@ -2331,31 +2086,21 @@ end
 
 function App:_BindButton(button: GuiButton)
 	self.sounds:Bind(button)
-	button.Selectable = true
-	-- A decal-backed button's own background is fully transparent (see
-	-- Factory's attachDecal) and its art is the concept art's hexagon, so
-	-- fading that background back in on hover would light up a rounded
-	-- rectangle poking out past the artwork's angled ends. Those buttons
-	-- keep the hover sound and the selection outline instead.
-	if button:FindFirstChild("Decal") then
-		return
-	end
-	local original = button.BackgroundTransparency
-	button.MouseEnter:Connect(function()
-		self:_Animate(button, TweenInfo.new(0.14), { BackgroundTransparency = math.min(0.18, original + 0.06) })
-	end)
-	button.MouseLeave:Connect(function()
-		self:_Animate(button, TweenInfo.new(0.14), { BackgroundTransparency = original })
-	end)
-	button.SelectionGained:Connect(function()
-		self:_Animate(button, TweenInfo.new(0.1), { BackgroundTransparency = math.min(0.18, original + 0.06) })
-	end)
-	button.SelectionLost:Connect(function()
-		self:_Animate(button, TweenInfo.new(0.1), { BackgroundTransparency = original })
-	end)
+	Motion.Bind(button)
 end
 
 function App:_Invoke(action: string, payload: any?): (boolean, any)
+	local progress = {
+		[Network.Actions.CreateGeneration] = "Checking your idea and price… Nothing starts before payment is confirmed.",
+		[Network.Actions.CreateFromAvatar] = "Checking your avatar idea… Roblox will ask before charging.",
+		[Network.Actions.ConvertImage] = "Checking the approved image and conversion price…",
+		[Network.Actions.SaveFit] = "Saving your fit…",
+		[Network.Actions.PublishItem] = "Checking your wearable for Roblox publishing…",
+		[Network.Actions.SaveOutfit] = "Saving your outfit…",
+	}
+	if progress[action] then
+		self:_Toast("info", progress[action])
+	end
 	local folder = waitForRemoteFolder()
 	local remote = if folder then waitForRequestRemote(folder) else nil
 	if not remote then
@@ -2591,7 +2336,7 @@ function App:_CloseAfkLounge()
 	end
 	local overlay = self.afkOverlay
 	self.afkOverlay = nil
-	overlay:Destroy()
+	self:_CloseModal(overlay)
 	self.launcher.Visible = not self.shell.Visible
 	self.runwayLauncher.Visible = not self.shell.Visible
 	self.arcadeLauncher.Visible = not self.shell.Visible
@@ -2901,6 +2646,7 @@ function App:_Bootstrap()
 		end
 		self:_ApplyLauncherEmphasis()
 		self.uiScaleInstance.Scale = tonumber(data.profile.settings.uiScale) or 1
+		self:_ApplyResponsiveLayout()
 		self:_UpdateSoundButton()
 		self:_SetAmbientMotion(data.profile.settings.reduceMotion ~= true)
 		self.loading:Destroy()
@@ -3181,7 +2927,7 @@ function App:_ShowCreationComplete(kind: string, record: { [string]: any }, comp
 		if self.completionOverlay == overlay then
 			self.completionOverlay = nil
 		end
-		overlay:Destroy()
+		self:_CloseModal(overlay)
 	end
 	close.Activated:Connect(dismiss)
 	view.Activated:Connect(function()
@@ -3436,6 +3182,7 @@ function App:_RenderStatus()
 end
 
 function App:_OpenPage(page: string)
+	self.animateNextPage = self.activePage ~= page
 	self.activePage = page
 	self.sounds:Play("PanelOpen")
 	self:_HighlightNavigation()
@@ -3587,13 +3334,22 @@ function App:_RenderActivePage()
 		self:_RenderSettings()
 	end
 	self:_SyncAvatarPreviewPanel()
+	if self.animateNextPage then
+		self.animateNextPage = false
+		local scale = Factory.New("UIScale", { Scale = 0.99, Parent = self.content })
+		Motion.Tween(scale, 0.16, { Scale = 1 })
+	end
 end
 
 function App:_PageHeader(title: string, subtitle: string, accent: boolean?)
-	Factory.Label(self.content, title, UDim2.new(0.95, 0, 0, 42), {
+	local rightReserve = if self.activePage == "Create"
+		then (if self.compact then 54 else 150)
+		elseif accent then 36
+		else 0
+	Factory.Label(self.content, title, UDim2.new(0.95, -rightReserve, 0, 38), {
 		Position = UDim2.new(0.025, 0, 0, 18),
 		Font = Theme.Fonts.Black,
-		TextSize = 28,
+		TextSize = if self.compact then 22 else 28,
 	})
 	if accent then
 		-- The concept art's small flourish ornament next to the page title.
@@ -3608,7 +3364,7 @@ function App:_PageHeader(title: string, subtitle: string, accent: boolean?)
 	Factory.Label(self.content, subtitle, UDim2.new(0.95, 0, 0, 32), {
 		Position = UDim2.new(0.025, 0, 0, 57),
 		Color = Colors.TextMuted,
-		TextSize = 13,
+		TextSize = if self.compact then 12 else 13,
 		Wrapped = true,
 		AlignY = Enum.TextYAlignment.Top,
 	})
@@ -3696,7 +3452,7 @@ function App:_RenderCreate()
 			else if self.compact then "Describe it." else "Describe it. Wear it.",
 		if showAllMethods
 			then "Three paths, precise art direction, one Roblox-ready accessory. Every input is moderated."
-			else "Type what you want below and Forge builds a real, wearable Roblox accessory from it. Every input is moderated.",
+			else "Describe → confirm price → fit in My Studio → wear here. Publishing is a separate Roblox step.",
 		true
 	)
 	local howToPlay = Factory.ImageButton(
@@ -3770,7 +3526,7 @@ function App:_RenderCreate()
 		local complete = firstLook.completed == true
 		local done = firstLook.done or {}
 		local card = Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 158 else 132), nil, "FirstLook")
-		card.LayoutOrder = if simpleMode then -30 else -1
+		card.LayoutOrder = if simpleMode then -5 else -1
 		local icon = Factory.New("Frame", {
 			Size = UDim2.fromOffset(44, 44),
 			Position = UDim2.fromOffset(16, 16),
@@ -7962,618 +7718,13 @@ function App:_RequestCatalogAccess()
 	end)
 end
 
--- Reads every live catalog filter control (query, sort has already been set
--- directly on self by its chip; creator name and price range still live in
--- their TextBoxes until this runs) and re-searches. Used by the Search
--- button, Enter on any filter field, and the type/sort chips so a filter you
--- just typed but never blurred is never silently dropped.
-function App:_ApplyCatalogFilters()
-	if self.catalogSearchBox and self.catalogSearchBox.Parent then
-		self.catalogQuery = self.catalogSearchBox.Text
-	end
-	if self.catalogCreatorBox and self.catalogCreatorBox.Parent then
-		self.catalogCreatorName = self.catalogCreatorBox.Text
-	end
-	if self.catalogMinBox and self.catalogMinBox.Parent then
-		self.catalogMinPrice = self.catalogMinBox.Text
-	end
-	if self.catalogMaxBox and self.catalogMaxBox.Parent then
-		self.catalogMaxPrice = self.catalogMaxBox.Text
-	end
-	self.catalogResults = nil
-	self:_SearchCatalog(self.catalogQuery)
-end
-
 function App:_SearchCatalog(query: string)
-	if self.catalogSearching then
-		return
-	end
-	self.catalogQuery = query
-	if self.catalogAccess ~= true then
-		self:_RequestCatalogAccess()
-		return
-	end
-	self.catalogSearching = true
-	self.catalogError = nil
-	task.spawn(function()
-		local parameters = CatalogSearchParams.new()
-		parameters.SearchKeyword = string.sub(query, 1, 60)
-		parameters.AssetTypes = { CATALOG_TYPES[self.catalogType] }
-		parameters.IncludeOffSale = false
-		parameters.Limit = 30
-		parameters.SortType = CATALOG_SORT_TYPES[self.catalogSortType] or Enum.CatalogSortType.Relevance
-		local creatorName = string.match(self.catalogCreatorName or "", "^%s*(.-)%s*$")
-		if creatorName ~= "" then
-			parameters.CreatorName = string.sub(creatorName, 1, 50)
-		end
-		local minPrice = tonumber(self.catalogMinPrice)
-		if minPrice then
-			parameters.MinPrice = math.clamp(math.floor(minPrice), 0, 2147483647)
-		end
-		local maxPrice = tonumber(self.catalogMaxPrice)
-		if maxPrice then
-			parameters.MaxPrice = math.clamp(math.floor(maxPrice), 0, 2147483647)
-		end
-		local success, resultsOrProblem = pcall(function()
-			local pages = AvatarEditorService:SearchCatalogAsync(parameters)
-			return pages:GetCurrentPage()
-		end)
-		if success then
-			self.catalogResults = resultsOrProblem
-			self:_Track({
-				event = "CatalogSearch",
-				fields = {
-					assetType = self.catalogType,
-					resultCount = #self.catalogResults,
-					sortType = self.catalogSortType,
-					hasCreatorFilter = creatorName ~= "",
-					hasPriceFilter = minPrice ~= nil or maxPrice ~= nil,
-				},
-			})
-		else
-			self.catalogResults = {}
-			self.catalogError =
-				"Roblox catalog search failed. Confirm inventory access was approved, then retry in a published server."
-			warn(string.format("[App] Catalog search failed: %s", tostring(resultsOrProblem)))
-			self:_Toast("error", self.catalogError)
-		end
-		self.catalogSearching = false
-		if self.activePage == "Avatar Lab" then
-			self:_RenderActivePage()
-		end
-	end)
+	AvatarLab.Search(self, query)
 end
 
 function App:_RenderAvatarLab()
-	local simpleMode = self.state.profile.settings.simpleMode ~= false
-	local showAllMethods = not simpleMode
-	self:_PageHeader(
-		"Avatar Lab",
-		if showAllMethods
-			then "Mix Roblox Marketplace accessories with your Forge creations and stay longer in the look."
-			else "Try on free Roblox items. Tap a category below, then Try on.",
-		true
-	)
-	-- The creator-name/price-range row is the single biggest thing in this
-	-- card, and most searches never touch it — collapsed by default, it only
-	-- renders (and only counts toward controlsHeight) once a player asks for
-	-- it, so the catalog grid below gets that space back instead of always
-	-- reserving it for filters most sessions never open. Simple Mode never
-	-- expands it at all (nor the SORT row below) -- see the showAllMethods
-	-- branches further down.
-	local filtersExpanded = showAllMethods and self.catalogFiltersExpanded == true
-	local filtersActive = showAllMethods
-		and (self.catalogCreatorName ~= "" or self.catalogMinPrice ~= "" or self.catalogMaxPrice ~= "")
-	local controlsHeight: number
-	if showAllMethods then
-		controlsHeight = if filtersExpanded
-			then (if self.compact then 276 else 200)
-			else (if self.compact then 194 else 151)
-	else
-		-- accessoryChipsY (106 compact / 63 desktop, computed below) + the
-		-- 32px chip row + 16px bottom padding. Simple Mode's switch-to-
-		-- Advanced control is the last chip in that same row now (the
-		-- concept art puts it there), not a separate bar below it.
-		controlsHeight = if self.compact then 154 else 111
-	end
-	local runwayState = self.runwayState or self.state.runwayState
-	local runwayJoined = runwayState and runwayState.joined == true
-	local controlsTop = if runwayJoined then 164 else 94
-	if runwayJoined then
-		local runwayBanner =
-			Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, 54), UDim2.new(0.025, 0, 0, 94), "RunwayReturn")
-		local runwayLabel = Factory.Label(runwayBanner, "", UDim2.new(1, -154, 1, 0), {
-			Position = UDim2.fromOffset(14, 0),
-			Font = Theme.Fonts.Bold,
-			TextSize = 11,
-			Color = Colors.Rose,
-			Truncate = Enum.TextTruncate.AtEnd,
-		})
-		local returnButton = Factory.ImageButton(
-			runwayBanner,
-			if runwayState.ready then "View round" else "Return & lock in",
-			UDim2.fromOffset(158, 34),
-			UDim2.new(1, -172, 0, 10),
-			"primary"
-		)
-		self:_BindButton(returnButton)
-		returnButton.Activated:Connect(function()
-			RunwayHub.Show(self)
-		end)
-		local bannerVersion = self.pageVersion
-		task.spawn(function()
-			while bannerVersion == self.pageVersion and runwayLabel.Parent do
-				local liveState = self.runwayState or runwayState
-				local remaining = math.max(0, math.floor((liveState.endsAt or os.time()) - os.time()))
-				runwayLabel.Text = string.format(
-					"◆  %s · %d:%02d",
-					liveState.theme or "Forge Runway",
-					math.floor(remaining / 60),
-					remaining % 60
-				)
-				returnButton.Text = if liveState.joined == false
-					then "Next round"
-					elseif liveState.ready then "View round"
-					else "Return & lock in"
-				task.wait(1)
-			end
-		end)
-	end
-	local controls = Factory.ImageCard(
-		self.content,
-		UDim2.new(0.95, 0, 0, controlsHeight),
-		UDim2.new(0.025, 0, 0, controlsTop),
-		"CatalogControls"
-	)
-	local search = self:_TextBox(
-		controls,
-		"Search the Roblox avatar marketplace",
-		if self.compact then UDim2.new(1, -28, 0, 40) else UDim2.new(1, -346, 0, 42),
-		UDim2.fromOffset(14, 13),
-		false
-	)
-	search.Text = self.catalogQuery
-	-- Same glowing well the concept art gives Create's prompt and
-	-- Discover's search, with the magnifier inside its right edge.
-	self:_GlowField(search)
-	Factory.Label(search, "🔍", UDim2.fromOffset(24, 24), {
-		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, 0, 0.5, 0),
-		AlignX = Enum.TextXAlignment.Center,
-		TextSize = 16,
-		Color = Colors.Cyan,
-	})
-	local searchButton = Factory.ImageButton(
-		controls,
-		"Search",
-		if self.compact then UDim2.new(0.32, -8, 0, 36) else UDim2.fromOffset(92, 42),
-		if self.compact then UDim2.fromOffset(14, 59) else UDim2.new(1, -322, 0, 13),
-		"primary"
-	)
-	local saveAvatar = Factory.ImageButton(
-		controls,
-		if self.compact then "Save" else "Save avatar",
-		if self.compact then UDim2.new(0.34, -8, 0, 36) else UDim2.fromOffset(100, 42),
-		if self.compact then UDim2.new(0.32, 7, 0, 59) else UDim2.new(1, -220, 0, 13),
-		"mint"
-	)
-	local reset = Factory.ImageButton(
-		controls,
-		if self.compact then "Reset" else "Reset look",
-		if self.compact then UDim2.new(0.34, -20, 0, 36) else UDim2.fromOffset(96, 42),
-		if self.compact then UDim2.new(0.66, 7, 0, 59) else UDim2.new(1, -110, 0, 13),
-		nil
-	)
-	for _, button in { searchButton, saveAvatar, reset } do
-		self:_BindButton(button)
-	end
-	saveAvatar.Activated:Connect(function()
-		local character = player.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			local success, problem = pcall(function()
-				AvatarEditorService:PromptSaveAvatar(humanoid:GetAppliedDescription(), Enum.HumanoidRigType.R15)
-			end)
-			if not success then
-				warn(string.format("[App] Save avatar prompt failed: %s", tostring(problem)))
-				self:_Toast("error", "Roblox could not open the save-avatar prompt.")
-			end
-		else
-			self:_Toast("error", ERROR_MESSAGES.CHARACTER_UNAVAILABLE)
-		end
-	end)
-	reset.Activated:Connect(function()
-		task.spawn(function()
-			local success = self:_Invoke(Network.Actions.ResetAvatar, {})
-			if success then
-				-- Reset reapplies the player's saved Roblox avatar wholesale,
-				-- discarding every catalog try-on at once, so the client's
-				-- per-item tracking must be cleared to match.
-				self.triedOnAssetIds = {}
-				self.triedOnAssetInfo = {}
-				self.avatarAccessoriesDirty = true
-				self.communityTryOnItem = nil
-				self.avatarPreviewDirty = true
-				self:_RenderActivePage()
-			end
-		end)
-	end)
-	local accessoryChipsY = if self.compact then 106 else 63
-	local chips = Factory.New("ScrollingFrame", {
-		Position = UDim2.fromOffset(14, accessoryChipsY),
-		Size = UDim2.new(1, -28, 0, 32),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		ScrollBarThickness = 0,
-		AutomaticCanvasSize = Enum.AutomaticSize.X,
-		CanvasSize = UDim2.new(),
-		ScrollingDirection = Enum.ScrollingDirection.X,
-		Parent = controls,
-	})
-	Factory.List(chips, Enum.FillDirection.Horizontal, 7)
-	for chipIndex, typeName in ACCESSORY_ORDER do
-		local label = ACCESSORY_LABELS[typeName]
-		local chip = Factory.ImageButton(
-			chips,
-			label,
-			UDim2.fromOffset(94, 30),
-			nil,
-			if self.catalogType == typeName then "primary" else nil
-		)
-		-- The concept art studs every category chip with a gem, walking down
-		-- the palette across the row.
-		local stud = Factory.Icon(
-			chip,
-			CHIP_GEMS[(chipIndex - 1) % #CHIP_GEMS + 1],
-			UDim2.fromOffset(12, 12),
-			UDim2.fromOffset(9, 9)
-		)
-		if stud then
-			stud.ZIndex = 2
-			chip.Text = "  " .. label
-		end
-		self:_BindButton(chip)
-		chip.Activated:Connect(function()
-			self.catalogType = typeName
-			self:_ApplyCatalogFilters()
-			self:_RenderActivePage()
-		end)
-	end
-	if not showAllMethods then
-		-- The concept art keeps this at the end of the category row rather
-		-- than as its own full-width bar below -- the mirror image of
-		-- Advanced Mode's "<- Simple Mode" chip in the same spot.
-		local switchAdvanced = Factory.ImageButton(chips, "Advanced Mode ✦", UDim2.fromOffset(150, 30), nil, nil)
-		self:_BindButton(switchAdvanced)
-		switchAdvanced.Activated:Connect(function()
-			self:_UpdateSetting("simpleMode", false)
-		end)
-	end
-	if showAllMethods then
-		local filtersToggle = Factory.ImageButton(
-			chips,
-			if filtersExpanded then "Filters ▲" elseif filtersActive then "Filters ✓" else "Filters ▾",
-			UDim2.fromOffset(if filtersActive and not filtersExpanded then 92 else 78, 30),
-			nil,
-			if filtersExpanded or filtersActive then "primary" else nil
-		)
-		self:_BindButton(filtersToggle)
-		filtersToggle.Activated:Connect(function()
-			self.catalogFiltersExpanded = not filtersExpanded
-			self:_RenderActivePage()
-		end)
-		local simpleChip = Factory.ImageButton(chips, "← Simple Mode", UDim2.fromOffset(132, 30), nil, nil)
-		self:_BindButton(simpleChip)
-		simpleChip.Activated:Connect(function()
-			self:_UpdateSetting("simpleMode", true)
-		end)
-	end
-
-	-- Also the Y the creator/price filter fields build on below (once
-	-- expanded) -- kept in scope outside the branch since filtersExpanded
-	-- can only be true when showAllMethods is true, but that check happens
-	-- well after this branch closes.
-	local sortY = accessoryChipsY + 40
-	if showAllMethods then
-		-- Real Roblox Marketplace search options: sort order, then creator
-		-- name and price range. A visible Label precedes every input here
-		-- (rather than relying on placeholder text alone) so the row reads
-		-- correctly for screen-reader-style access and keyboard/gamepad
-		-- users tabbing through. Simple Mode skips sorting/creator/price
-		-- entirely -- see controlsHeight above for its shorter card.
-		Factory.Label(controls, "SORT", UDim2.fromOffset(60, 32), {
-			Position = UDim2.fromOffset(14, sortY),
-			AlignY = Enum.TextYAlignment.Center,
-			Font = Theme.Fonts.Bold,
-			TextSize = 10,
-			Color = Colors.TextMuted,
-		})
-		local sortChips = Factory.New("ScrollingFrame", {
-			Position = UDim2.fromOffset(66, sortY),
-			Size = UDim2.new(1, -80, 0, 32),
-			BackgroundTransparency = 1,
-			BorderSizePixel = 0,
-			ScrollBarThickness = 0,
-			AutomaticCanvasSize = Enum.AutomaticSize.X,
-			CanvasSize = UDim2.new(),
-			ScrollingDirection = Enum.ScrollingDirection.X,
-			Parent = controls,
-		})
-		Factory.List(sortChips, Enum.FillDirection.Horizontal, 7)
-		for _, sortKey in CATALOG_SORT_ORDER do
-			local chip = Factory.ImageButton(
-				sortChips,
-				CATALOG_SORT_LABELS[sortKey],
-				UDim2.fromOffset(math.max(72, #CATALOG_SORT_LABELS[sortKey] * 7 + 24), 30),
-				nil,
-				if self.catalogSortType == sortKey then "primary" else nil
-			)
-			self:_BindButton(chip)
-			chip.Activated:Connect(function()
-				self.catalogSortType = sortKey
-				self:_ApplyCatalogFilters()
-				self:_RenderActivePage()
-			end)
-		end
-	end
-
-	self.catalogSearchBox = search
-	if filtersExpanded then
-		local filterY = sortY + 40
-		local filterFieldHeight = 34
-		local creatorField = self:_TextBox(
-			controls,
-			"Search by creator",
-			if self.compact then UDim2.new(1, -28, 0, filterFieldHeight) else UDim2.new(0, 220, 0, filterFieldHeight),
-			UDim2.fromOffset(14, filterY),
-			false
-		)
-		creatorField.Text = self.catalogCreatorName
-		local priceRowY = if self.compact then filterY + filterFieldHeight + 8 else filterY
-		local minField = self:_TextBox(
-			controls,
-			"Min R$",
-			if self.compact then UDim2.new(0.5, -18, 0, filterFieldHeight) else UDim2.fromOffset(90, filterFieldHeight),
-			if self.compact then UDim2.fromOffset(14, priceRowY) else UDim2.fromOffset(242, filterY),
-			false
-		)
-		minField.Text = self.catalogMinPrice
-		minField.TextXAlignment = Enum.TextXAlignment.Center
-		local maxField = self:_TextBox(
-			controls,
-			"Max R$",
-			if self.compact then UDim2.new(0.5, -18, 0, filterFieldHeight) else UDim2.fromOffset(90, filterFieldHeight),
-			if self.compact then UDim2.new(0.5, 4, 0, priceRowY) else UDim2.fromOffset(340, filterY),
-			false
-		)
-		maxField.Text = self.catalogMaxPrice
-		maxField.TextXAlignment = Enum.TextXAlignment.Center
-		self.catalogCreatorBox = creatorField
-		self.catalogMinBox = minField
-		self.catalogMaxBox = maxField
-		for _, field in { creatorField, minField, maxField } do
-			field.FocusLost:Connect(function(enterPressed)
-				if enterPressed then
-					self:_ApplyCatalogFilters()
-				end
-			end)
-		end
-	else
-		-- _ApplyCatalogFilters nil-guards every box before reading it, so
-		-- clearing these is enough to stop it re-reading stale, unparented
-		-- TextBoxes from the last time the filter row was open; the values
-		-- already copied into catalogCreatorName/catalogMinPrice/
-		-- catalogMaxPrice stay in effect either way.
-		self.catalogCreatorBox = nil
-		self.catalogMinBox = nil
-		self.catalogMaxBox = nil
-	end
-	searchButton.Activated:Connect(function()
-		self:_ApplyCatalogFilters()
-	end)
-	search.FocusLost:Connect(function(enterPressed)
-		if enterPressed then
-			self:_ApplyCatalogFilters()
-		end
-	end)
-
-	if self.catalogAccess ~= true then
-		if self.catalogAccess == nil and not self.catalogAccessPrompting then
-			self:_RequestCatalogAccess()
-		end
-		local access = Factory.ImageCard(
-			self.content,
-			UDim2.new(0.95, 0, 0, 190),
-			UDim2.new(0.025, 0, 0, controlsTop + controlsHeight + 16),
-			"CatalogAccess"
-		)
-		Factory.Label(access, "Enable Roblox catalog access", UDim2.new(1, -32, 0, 34), {
-			Position = UDim2.fromOffset(16, 18),
-			Font = Theme.Fonts.Black,
-			TextSize = 20,
-		})
-		Factory.Label(
-			access,
-			self.catalogError
-				or "Roblox asks once per session before Forge can search your inventory and the avatar marketplace.",
-			UDim2.new(1, -32, 0, 62),
-			{
-				Position = UDim2.fromOffset(16, 56),
-				Color = Colors.TextMuted,
-				TextSize = 12,
-				Wrapped = true,
-				AlignY = Enum.TextYAlignment.Top,
-			}
-		)
-		local enable = Factory.ImageButton(
-			access,
-			if self.catalogAccessPrompting then "Waiting for Roblox…" else "Enable catalog",
-			UDim2.new(0.42, 0, 0, 40),
-			UDim2.fromOffset(16, 132),
-			"primary"
-		)
-		enable.Active = not self.catalogAccessPrompting
-		self:_BindButton(enable)
-		enable.Activated:Connect(function()
-			self:_RequestCatalogAccess()
-		end)
-		return
-	end
-	if self.catalogResults == nil and not self.catalogSearching then
-		self:_SearchCatalog(self.catalogQuery)
-	end
-	local belowControls = controlsTop + controlsHeight + 16
-	if self.catalogSearching then
-		Factory.Label(self.content, "Searching Roblox Marketplace…", UDim2.new(1, -52, 0, 60), {
-			Position = UDim2.fromOffset(26, belowControls + 20),
-			AlignX = Enum.TextXAlignment.Center,
-			Color = Colors.TextMuted,
-			Font = Theme.Fonts.Bold,
-		})
-		return
-	end
-	local grid = Factory.New("ScrollingFrame", {
-		Position = UDim2.new(0.02, 0, 0, belowControls),
-		Size = UDim2.new(0.96, 0, 1, -(belowControls + 16)),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		CanvasSize = UDim2.new(),
-		ScrollBarThickness = 4,
-		ScrollBarImageColor3 = Colors.Cyan,
-		Parent = self.content,
-	})
-	self:_TrackScroll(grid, "AvatarLabGrid")
-	Factory.ScalePadding(grid, 0.008, 0.008)
-	Factory.New("UIGridLayout", {
-		-- 292 left only 6px between the Try/Buy row (bottom at 286) and the
-		-- card's own bottom edge; grown 4px so that's a real ~10px.
-		CellSize = UDim2.new(1 / self.gridColumns, -12 * (self.gridColumns - 1) / self.gridColumns, 0, 296),
-		CellPadding = UDim2.fromOffset(12, 12),
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Parent = grid,
-	})
-	for index, item in self.catalogResults or {} do
-		local assetId = tonumber(item.Id or item.AssetId) or 0
-		if assetId > 0 then
-			local card = Factory.ImageCard(grid, UDim2.fromScale(1, 1), nil, "CatalogItem")
-			card.LayoutOrder = index
-			local image = Factory.New("ImageLabel", {
-				Size = UDim2.new(1, -20, 0, 180),
-				Position = UDim2.fromOffset(10, 10),
-				BackgroundColor3 = Colors.Ink,
-				BorderSizePixel = 0,
-				Image = thumbnail(assetId, 420),
-				ScaleType = Enum.ScaleType.Crop,
-				Parent = card,
-			})
-			Factory.Corner(image, 11)
-			-- Same thin gold rim the concept art frames every gallery
-			-- preview in, on Discover and here alike.
-			Factory.Stroke(image, Colors.Gold, 0.45)
-			Factory.Label(card, tostring(item.Name or "Catalog item"), UDim2.new(1, -20, 0, 28), {
-				Position = UDim2.fromOffset(10, 196),
-				AlignX = if showAllMethods then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center,
-				Font = Theme.Fonts.Bold,
-				TextSize = 13,
-				Truncate = Enum.TextTruncate.AtEnd,
-			})
-			local price = tonumber(item.Price or item.LowestPrice)
-			if showAllMethods then
-				Factory.Label(
-					card,
-					if price then string.format("R$ %d", price) else "View details",
-					UDim2.new(1, -20, 0, 22),
-					{
-						Position = UDim2.fromOffset(10, 222),
-						Color = if price then Colors.Mint else Colors.TextMuted,
-						Font = Theme.Fonts.Bold,
-						TextSize = 11,
-					}
-				)
-			end
-			-- The old -12/-8 split left "Buy" only ~4px from the card's own
-			-- right edge; widened both the outer and inter-button gaps to a
-			-- real ~10px (matching the CellSize bump above).
-			-- "Try on" in Simple Mode, matching the concept art's full-width
-			-- button; Advanced Mode keeps the shorter "Try" that has to
-			-- share the row with Buy.
-			local try = Factory.ImageButton(
-				card,
-				if self.triedOnAssetIds[assetId] then "Unequip" elseif showAllMethods then "Try" else "Try on",
-				if showAllMethods then UDim2.new(0.45, -14, 0, 38) else UDim2.new(1, -20, 0, 38),
-				UDim2.fromOffset(10, 248),
-				if self.triedOnAssetIds[assetId] then "danger" else "primary"
-			)
-			self:_BindButton(try)
-			if showAllMethods then
-				local buy =
-					Factory.ImageButton(card, "Buy", UDim2.new(0.55, -14, 0, 38), UDim2.new(0.45, 4, 0, 248), "mint")
-				self:_BindButton(buy)
-				buy.Activated:Connect(function()
-					local success, problem = pcall(function()
-						MarketplaceService:PromptPurchase(player, assetId)
-					end)
-					if not success then
-						warn(string.format("[App] Catalog purchase prompt failed: %s", tostring(problem)))
-						self:_Toast("error", "Roblox could not open the catalog purchase prompt.")
-					end
-				end)
-			end
-			try.Activated:Connect(function()
-				local removing = self.triedOnAssetIds[assetId] == true
-				try.Active = false
-				try.Text = if removing then "Removing…" else "Applying…"
-				task.spawn(function()
-					local success = self:_Invoke(
-						if removing then Network.Actions.UntryCatalogAsset else Network.Actions.TryCatalogAsset,
-						{ assetId = assetId, avatarAssetType = self.catalogType }
-					)
-					if success then
-						-- Applying a HumanoidDescription replaces temporary physical
-						-- try-ons. Forge-owned equipped items are restored server-side;
-						-- a community preview is intentionally cleared.
-						self.communityTryOnItem = nil
-						if removing then
-							self.triedOnAssetIds[assetId] = nil
-							self.triedOnAssetInfo[assetId] = nil
-							self.avatarAccessoriesDirty = true
-							self:_Toast("success", "Catalog item removed.")
-						else
-							self.triedOnAssetIds[assetId] = true
-							self.triedOnAssetInfo[assetId] =
-								{ name = tostring(item.Name or "Catalog item"), assetType = self.catalogType }
-							self.avatarAccessoriesLoaded = true
-							self:_Toast("success", "Catalog item applied. Keep browsing to build your look.")
-						end
-						self.avatarPreviewDirty = true
-						self:_RenderActivePage()
-					elseif try.Parent then
-						try.Active = true
-						try.Text = if removing then "Unequip" elseif showAllMethods then "Try" else "Try on"
-					end
-				end)
-			end)
-		end
-	end
-	if #(self.catalogResults or {}) == 0 then
-		Factory.Label(grid, self.catalogError or "No catalog items matched this search.", UDim2.new(1, -8, 0, 100), {
-			AlignX = Enum.TextXAlignment.Center,
-			Color = Colors.TextMuted,
-			Wrapped = true,
-			TextSize = 13,
-		})
-	end
+	AvatarLab.Render(self)
 end
-
--- A standalone image section, deliberately separate from every accessory /
--- 3D-model generation method above: nothing created here can be equipped,
--- fitted, or converted to a mesh. It exists purely to turn the player's own
--- current Roblox avatar into a piece of art they can browse and keep, using
--- the same purchasable image-quality tiers as the reference-image step
--- (Config.Generation.ImageQualityTiers) since both are a single OpenAI image
--- call with no Meshy pipeline cost behind them -- see
--- GenerationService:CreateAvatarGraphic.
 function App:_RefreshGraphicsMarketplace(query: string?)
 	self.graphicsMarketplaceQuery = query or self.graphicsMarketplaceQuery or ""
 	task.spawn(function()
@@ -9871,6 +9022,9 @@ function App:_UpdateSetting(key: string, value: any)
 			end
 			self:_RefreshModeToggle()
 		end
+		if key == "uiScale" then
+			self:_ApplyResponsiveLayout()
+		end
 		self:_RenderActivePage()
 	end)
 end
@@ -10101,13 +9255,15 @@ function App:_RenderSettings()
 		scaleValueLabel.Text = string.format("%d%%", math.floor(value * 100 + 0.5))
 	end
 	local function applyScale(value: number)
-		self.uiScaleInstance.Scale = value
-		if self.arcadeUiScale then
-			self.arcadeUiScale.Scale = value
-		end
-		if self.runwayUiScale then
-			self.runwayUiScale.Scale = value
-		end
+		local viewport = if Workspace.CurrentCamera
+			then Workspace.CurrentCamera.ViewportSize
+			else Vector2.new(1200, 800)
+		self.fittedUiScale = Motion.FitScale(
+			Vector2.new(math.clamp(viewport.X * 0.9, 330, 1440), math.clamp(viewport.Y * 0.88, 450, 860)),
+			viewport,
+			value
+		)
+		self.uiScaleInstance.Scale = self.fittedUiScale
 	end
 	local function scaleFromPointer(pointerX: number): number
 		if scaleTrack.AbsoluteSize.X <= 0 then
@@ -10599,11 +9755,11 @@ function App:_ShowPlus()
 			self:_Invoke(Network.Actions.PromptPlus, {})
 		end)
 		self.sounds:Play("PanelClose")
-		overlay:Destroy()
+		self:_CloseModal(overlay)
 	end)
 	closeButton.Activated:Connect(function()
 		self.sounds:Play("PanelClose")
-		overlay:Destroy()
+		self:_CloseModal(overlay)
 	end)
 	self:_AnimateModalIn(overlay, modal)
 end
@@ -10650,7 +9806,7 @@ function App:_ShowLeaderboard()
 	self:_BindButton(closeButton)
 	closeButton.Activated:Connect(function()
 		self.sounds:Play("PanelClose")
-		overlay:Destroy()
+		self:_CloseModal(overlay)
 	end)
 	self:_AnimateModalIn(overlay, modal)
 	local list = Factory.New("ScrollingFrame", {
@@ -10840,7 +9996,7 @@ function App:_ShowContentDetail(descriptor: { [string]: any })
 	self:_BindButton(closeButton)
 	closeButton.Activated:Connect(function()
 		self.sounds:Play("PanelClose")
-		overlay:Destroy()
+		self:_CloseModal(overlay)
 	end)
 
 	local previewFrame = Factory.New("Frame", {
@@ -11101,84 +10257,9 @@ function App:_ShowContentDetail(descriptor: { [string]: any })
 end
 
 function App:_Toast(tone: string, message: string)
-	self.toastVersion += 1
-	local toast = Factory.New("Frame", {
-		Name = "Toast",
-		Size = UDim2.fromOffset(350, 70),
-		BackgroundColor3 = Colors.PanelRaised,
-		BackgroundTransparency = 0.03,
-		BorderSizePixel = 0,
-		LayoutOrder = -self.toastVersion,
-		ZIndex = 51,
-		Parent = self.toastHost,
-	})
-	Factory.Corner(toast, 13)
-	local color = if tone == "error" then Colors.Danger elseif tone == "ready" then Colors.Cyan else Colors.Mint
-	-- A glyph, not just the accent color, marks the tone so the toast still
-	-- reads correctly for colorblind players and in high-contrast mode.
-	local icon = if tone == "error" then "✕" elseif tone == "ready" then "◆" else "✓"
-	Factory.Stroke(toast, color, 0.2, 1.2)
-	Factory.Gradient(toast, {
-		Color3.fromRGB(66, 74, 106),
-		Color3.fromRGB(44, 50, 78),
-	}, 120)
-	local bar = Factory.New("Frame", {
-		Size = UDim2.fromOffset(5, 48),
-		Position = UDim2.fromOffset(10, 11),
-		BackgroundColor3 = color,
-		BorderSizePixel = 0,
-		ZIndex = 52,
-		Parent = toast,
-	})
-	Factory.Corner(bar, 99)
-	local iconBadge = Factory.New("Frame", {
-		Name = "IconBadge",
-		Size = UDim2.fromOffset(30, 30),
-		Position = UDim2.fromOffset(22, 8),
-		BackgroundColor3 = color,
-		BackgroundTransparency = 0.82,
-		BorderSizePixel = 0,
-		ZIndex = 52,
-		Parent = toast,
-	})
-	Factory.Corner(iconBadge, 10)
-	Factory.Label(iconBadge, icon, UDim2.fromScale(1, 1), {
-		Color = color,
-		Font = Theme.Fonts.Black,
-		TextSize = 15,
-		AlignX = Enum.TextXAlignment.Center,
-		AlignY = Enum.TextYAlignment.Center,
-		ZIndex = 53,
-	})
-	Factory.Label(toast, message, UDim2.new(1, -70, 1, -18), {
-		Position = UDim2.fromOffset(62, 9),
-		Color = Colors.Text,
-		TextSize = 12,
-		Wrapped = true,
-		ZIndex = 52,
-	})
-
-	-- A combined slide-and-scale entrance -- the scale (via UIScale, since a
-	-- Frame's own Size can't itself "pop") is the extra flourish; the slide
-	-- is the part that was already there.
-	local toastScale = Factory.New("UIScale", { Scale = 0.9, Parent = toast })
-	toast.Position = UDim2.fromOffset(40, 0)
-	self:_Animate(toast, TweenInfo.new(0.25, Enum.EasingStyle.Quint), { Position = UDim2.new() })
-	self:_Animate(toastScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
-	if tone == "error" then
-		self.sounds:Play("Error")
-	elseif tone == "ready" then
-		self.sounds:Play("GenerationReady")
+	if self.notifications then
+		self.notifications:Show(tone, message)
 	end
-	task.delay(5, function()
-		if toast.Parent then
-			local tween = self:_Animate(toast, TweenInfo.new(0.2), { BackgroundTransparency = 1 })
-			if tween then
-				tween.Completed:Wait()
-			end
-			toast:Destroy()
-		end
-	end)
 end
 
 return App

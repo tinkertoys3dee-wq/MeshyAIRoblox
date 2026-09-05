@@ -16,6 +16,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Factory)
+local Motion = require(script.Parent.Motion)
 local ViewportController = require(script.Parent.ViewportController)
 
 local Colors = Theme.Colors
@@ -175,10 +176,9 @@ function RunwayHub.Show(app: any)
 		MaxSize = Vector2.new(940, 760),
 		Parent = modal,
 	})
-	local uiScale = Factory.New("UIScale", {
-		Scale = if app.state then tonumber(app.state.profile.settings.uiScale) or 1 else 1,
-		Parent = modal,
-	})
+	local uiScale = Motion.FitPanel(modal, function()
+		return if app.state then tonumber(app.state.profile.settings.uiScale) or 1 else 1
+	end)
 	app.runwayUiScale = uiScale
 
 	local accent = Factory.New("Frame", {
@@ -347,7 +347,7 @@ function RunwayHub.Show(app: any)
 		app.runwayUiScale = nil
 		app.runwayOverlay = nil
 		app.sounds:Play("PanelClose")
-		overlay:Destroy()
+		app:_CloseModal(overlay, modal)
 		setLaunchersVisible(app, not app.shell.Visible and app.afkOverlay == nil)
 	end
 
