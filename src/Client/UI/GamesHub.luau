@@ -161,10 +161,14 @@ local GamesHub = {}
 -- `app` needs: .gui, .sounds, .compact, .state, :_Invoke(action, payload),
 -- :_Track(payload), :_BindButton(button).
 function GamesHub.Show(app: any)
+	if app.gui:FindFirstChild("ArcadeOverlay") then
+		return
+	end
 	local reduceMotion = app.state ~= nil and app.state.profile.settings.reduceMotion == true
 
 	local overlay = Factory.New("Frame", {
 		Name = "ArcadeOverlay",
+		Active = true,
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = if reduceMotion then 0.2 else 1,

@@ -26,6 +26,7 @@ local SoundController = require(script.Parent.SoundController)
 local ViewportController = require(script.Parent.ViewportController)
 local Motion = require(script.Parent.Motion)
 local NotificationService = require(script.Parent.NotificationService)
+local WindowFocus = require(script.Parent.WindowFocus)
 local AvatarLab = require(script.Parent.AvatarLab)
 local StartGuide = require(script.Parent.StartGuide)
 
@@ -2092,7 +2093,7 @@ end
 function App:_Invoke(action: string, payload: any?): (boolean, any)
 	local progress = {
 		[Network.Actions.CreateGeneration] = "Checking your idea and price… Nothing starts before payment is confirmed.",
-		[Network.Actions.CreateFromAvatar] = "Checking your avatar idea… Roblox will ask before charging.",
+		[Network.Actions.CreateFromAvatar] = "Checking your avatar idea and selected payment method…",
 		[Network.Actions.ConvertImage] = "Checking the approved image and conversion price…",
 		[Network.Actions.SaveFit] = "Saving your fit…",
 		[Network.Actions.PublishItem] = "Checking your wearable for Roblox publishing…",
@@ -2789,8 +2790,20 @@ function App:_ShowCreationComplete(kind: string, record: { [string]: any }, comp
 		return
 	end
 	self.completionShownIds[completionId] = true
-	if self.completionOverlay then
-		self.completionOverlay:Destroy()
+	if not WindowFocus.CanCelebrate(self) then
+		local destination = if kind == "MODEL"
+			then "My Studio"
+			elseif kind == "REFERENCE" then "Create"
+			else "Avatar Graphics"
+		self:_Toast(
+			"ready",
+			"Your "
+				.. (if kind == "MODEL" then "custom model" elseif kind == "REFERENCE" then "reference image" else "image")
+				.. " is ready and saved. Open "
+				.. destination
+				.. " when you're ready—keep playing or styling for now."
+		)
+		return
 	end
 
 	local title = if kind == "MODEL"
@@ -2805,6 +2818,7 @@ function App:_ShowCreationComplete(kind: string, record: { [string]: any }, comp
 	local previewImage = if kind == "MODEL" then modelPreviewImage(record) else directImage(imageId)
 	local overlay = Factory.New("Frame", {
 		Name = "CreationComplete",
+		Active = true,
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = Color3.fromRGB(4, 4, 15),
 		BackgroundTransparency = 0.08,

@@ -22,6 +22,7 @@ try {
     Factory: 'src/Client/UI/Factory.luau',
     NotificationService: 'src/Client/UI/NotificationService.luau',
     AvatarLab: 'src/Client/UI/AvatarLab.luau',
+    WindowFocus: 'src/Client/UI/WindowFocus.luau',
   };
   const definitions = Object.entries(modules).map(([name, file]) =>
     `modules.${name} = function()\n${read(file)}\nend`).join('\n');

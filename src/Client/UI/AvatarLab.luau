@@ -202,6 +202,7 @@ local function mutate(app: any, action: string, payload: any, message: string)
 		return
 	end
 	lab.busy = true
+	local startedTab = lab.tab
 	app:_Toast("info", "Updating your look…")
 	task.spawn(function()
 		local ok, result = app:_Invoke(action, payload)
@@ -221,6 +222,15 @@ local function mutate(app: any, action: string, payload: any, message: string)
 				if index then
 					table.remove(app.state.profile.equippedItemIds, index)
 				end
+			end
+			local firstPreview = action == Network.Actions.TryCatalogAsset and not lab.previewIntroduced
+			if firstPreview and app.compact and app.activePage == "Avatar Lab" and lab.tab == startedTab then
+				lab.tab = "LOOK"
+				app.scrollPositions.AvatarLabWorkspace = Vector2.zero
+				message = "Item applied! Drag to see your look, then use Browse to add more. Nothing was purchased."
+			end
+			if firstPreview then
+				lab.previewIntroduced = true
 			end
 			app:_Toast("success", message)
 			changed(app)
@@ -702,6 +712,44 @@ function AvatarLab.Render(app: any)
 		itemGrid(app, stack, records)
 		return
 	end
+	-- Permission is the first available action, not a button below several
+	-- screens of filters that cannot do anything until access is granted.
+	if app.catalogAccess ~= true then
+		label(stack, "READY TO TRY YOUR FIRST LOOK?", 46, true).LayoutOrder = 1
+		local access = row(stack, 2)
+		local enable = button(
+			app,
+			access,
+			if app.catalogAccessPrompting then "Waiting for Roblox…" else "Enable catalog · free",
+			230,
+			function()
+				app:_RequestCatalogAccess()
+				render(app)
+			end,
+			true
+		)
+		enable.Active = not app.catalogAccessPrompting
+		label(
+			stack,
+			app.catalogError
+				or "Roblox asks for permission once this visit. Enabling the catalog doesn't buy an item or start a custom generation.",
+			78
+		).LayoutOrder =
+			3
+		local preview = row(stack, 4)
+		button(app, preview, "See my current avatar", 220, function()
+			lab.tab = "LOOK"
+			app.scrollPositions.AvatarLabWorkspace = Vector2.zero
+			render(app)
+		end)
+		label(
+			stack,
+			"After enabling: choose an item → tap Try on → see it on your avatar. Owning an item is a separate Roblox purchase.",
+			78
+		).LayoutOrder =
+			5
+		return
+	end
 	local searchRow = Factory.New(
 		"Frame",
 		{ BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44), LayoutOrder = 1, Parent = stack }
@@ -728,29 +776,39 @@ function AvatarLab.Render(app: any)
 			AvatarLab.Search(app, app.catalogQuery)
 		end, app.catalogType == category[1])
 	end
-	local sparks = row(stack, 3)
-	for index, spark in SPARKS do
-		button(app, sparks, spark[1], 120, function()
-			lab.spark = index
-			AvatarLab.Search(app, spark[2])
-		end)
-	end
-	local filters = row(stack, 4)
+	local filters = row(stack, 3)
 	button(app, filters, if lab.filters then "Hide filters" else "Price & sort", 138, function()
 		lab.filters = not lab.filters
 		render(app)
 	end)
-	button(app, filters, "Design a matching UGC", 208, function()
-		design(app)
+	button(app, filters, if lab.sparkOpen then "Hide Style Sparks" else "Style Sparks", 164, function()
+		lab.sparkOpen = not lab.sparkOpen
+		render(app)
 	end)
+	if lab.sparkOpen then
+		local sparks = row(stack, 4)
+		for index, spark in SPARKS do
+			button(app, sparks, spark[1], 120, function()
+				lab.spark = index
+				AvatarLab.Search(app, spark[2])
+			end, lab.spark == index)
+		end
+		label(stack, "Pick a theme to find catalog pieces, then design a missing piece yourself.", 46).LayoutOrder = 5
+		local designRow = row(stack, 6)
+		button(app, designRow, "Design a matching UGC", 208, function()
+			design(app)
+		end)
+	end
 	if lab.filters then
-		local sorting = row(stack, 5)
+		local sorting = row(stack, 7)
 		for _, option in
 			{
 				{ "Relevance", "Relevant" },
 				{ "Bestselling", "Popular" },
 				{ "RecentlyCreated", "Newest" },
 				{ "PriceLowToHigh", "Price: low first" },
+				{ "PriceHighToLow", "Price: high first" },
+				{ "MostFavorited", "Most saved" },
 			}
 		do
 			button(app, sorting, option[2], 144, function()
@@ -758,7 +816,7 @@ function AvatarLab.Render(app: any)
 				AvatarLab.Search(app, app.catalogQuery)
 			end, app.catalogSortType == option[1])
 		end
-		local budget = row(stack, 6)
+		local budget = row(stack, 8)
 		for _, amount in { -1, 0, 50, 100, 250 } do
 			button(
 				app,
@@ -774,7 +832,7 @@ function AvatarLab.Render(app: any)
 			)
 		end
 		local creator = app:_TextBox(stack, "Creator name (optional)", UDim2.new(1, 0, 0, 42), UDim2.new(), false)
-		creator.LayoutOrder = 7
+		creator.LayoutOrder = 9
 		creator.Text = app.catalogCreatorName
 		creator:GetPropertyChangedSignal("Text"):Connect(function()
 			app.catalogCreatorName = creator.Text
@@ -784,30 +842,6 @@ function AvatarLab.Render(app: any)
 				AvatarLab.Search(app, app.catalogQuery)
 			end
 		end)
-	end
-	if app.catalogAccess ~= true then
-		label(stack, "One Roblox permission, then you're ready to style.", 48, true).LayoutOrder = 10
-		label(
-			stack,
-			app.catalogError
-				or "Allow catalog access to browse. Nothing is purchased or changed by granting access. You can cancel and use Forge or the Arcade.",
-			76
-		).LayoutOrder =
-			11
-		local access = row(stack, 12)
-		local enable = button(
-			app,
-			access,
-			if app.catalogAccessPrompting then "Waiting for Roblox…" else "Enable catalog",
-			198,
-			function()
-				app:_RequestCatalogAccess()
-				render(app)
-			end,
-			true
-		)
-		enable.Active = not app.catalogAccessPrompting
-		return
 	end
 	if app.catalogResults == nil and not app.catalogSearching then
 		task.defer(function()

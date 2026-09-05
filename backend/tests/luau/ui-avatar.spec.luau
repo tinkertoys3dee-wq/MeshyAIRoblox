@@ -383,4 +383,53 @@ equal(invoked[1].payload.avatarAssetType, "Hat", "Try-on uses the card's capture
 saveButton.Activated:Fire()
 equal(#invoked, 1, "Bookmarking neither purchases nor generates anything")
 check(app.catalogWorkspace.favorites[201] ~= nil, "Bookmark is available in this visit")
+app.compact = true
+app.catalogWorkspace.previewIntroduced = nil
+tryButton.Activated:Fire()
+runSpawn()
+equal(app.catalogWorkspace.tab, "LOOK", "First mobile try-on opens its visible result")
+app.catalogWorkspace.tab = "BROWSE"
+tryButton.Activated:Fire()
+runSpawn()
+equal(app.catalogWorkspace.tab, "BROWSE", "Subsequent try-ons do not keep changing tabs")
+app.catalogWorkspace.previewIntroduced = nil
+tryButton.Activated:Fire()
+app.activePage = "Create"
+runSpawn()
+equal(app.catalogWorkspace.tab, "BROWSE", "Late try-on never hijacks navigation away from styling")
+app.activePage = "Avatar Lab"
+for _, child in app.content:GetChildren() do
+	child:Destroy()
+end
+app.catalogAccess = false
+AvatarLab.Render(app)
+local enable, searchControls = nil, 0
+for _, control in app.content:GetDescendants() do
+	if control:IsA("TextButton") and control.Text == "Enable catalog · free" then
+		enable = control
+	end
+	if control:IsA("TextBox") then
+		searchControls += 1
+	end
+end
+check(enable ~= nil, "First-use catalog access has a clear action")
+equal(enable.Parent.LayoutOrder, 2, "Permission action appears directly after the heading")
+equal(searchControls, 0, "Unusable search/filter controls are not placed before consent")
+
+local WindowFocus = require("WindowFocus")
+local focus = { gui = Instance.new("ScreenGui"), shell = { Visible = true }, studioOpen = true, activePage = "Create" }
+check(WindowFocus.CanCelebrate(focus), "Unobstructed creator page can celebrate")
+local toastHost = Factory.New("Frame", { Name = "Toasts", ZIndex = 500, Parent = focus.gui })
+check(WindowFocus.CanCelebrate(focus), "Non-blocking notices do not count as windows")
+local arcade = Factory.New("Frame", { Name = "ArcadeOverlay", ZIndex = 210, Parent = focus.gui })
+check(not WindowFocus.CanCelebrate(focus), "Automatic completion cannot cover an active game")
+arcade:Destroy()
+focus.activePage = "Avatar Lab"
+check(not WindowFocus.CanCelebrate(focus), "Automatic completion does not interrupt styling")
+focus.activePage = "Create"
+focus.shell.Visible = false
+check(not WindowFocus.CanCelebrate(focus), "A closed editor is not reopened by a completion")
+focus.shell.Visible = true
+Factory.New("Frame", { Name = "CreationComplete", ZIndex = 300, Parent = focus.gui })
+check(not WindowFocus.CanCelebrate(focus), "A second completion never covers the first")
 return checks

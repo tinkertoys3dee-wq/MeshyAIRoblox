@@ -9,6 +9,8 @@
 - A versioned, scrollable starting guide with Create, Style and Arcade routes. The paid custom-generation process is explained before a purchase; catalog try-on is explicitly separate from ownership.
 - Avatar Lab: 16 accessory/clothing categories, price/creator/sort filters, paginated results, session bookmarks, a mobile-accessible live look preview, worn-item removal, bounded server-side undo/redo, and Roblox's native avatar-save prompt.
 - Mixed outfits save catalog appearance together with owned Forge UGC IDs. Existing Forge-only outfits remain compatible. A Style Spark theme can seed a catalog search and an editable matching custom-UGC idea; it does not submit or purchase anything.
+- Catalog permission now appears before search/filter controls. The first successful phone try-on opens My look once; later edits preserve the player's chosen tab. Style Sparks are expandable to keep initial results closer to the top.
+- Completed generations use non-blocking notices during Arcade, styling or another modal, rather than covering active play. Repeated Arcade opens cannot stack duplicate windows.
 
 No price, entitlement, generation backend, publishing-bound calculation, or world/map changes are included. This is separate from the earlier paid-generation/bounds PR.
 
