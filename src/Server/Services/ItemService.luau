@@ -11,6 +11,7 @@ local AccessoryBounds = require(ReplicatedStorage:WaitForChild("AccessoryBounds"
 local AccessoryFit = require(ReplicatedStorage:WaitForChild("AccessoryFit"))
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
+local AvatarLook = require(ReplicatedStorage:WaitForChild("AvatarLook"))
 
 local ItemService = {}
 ItemService.__index = ItemService
@@ -485,13 +486,9 @@ function ItemService:Unequip(player: Player, itemId: string): (boolean, any)
 	return true, { unequipped = true }
 end
 
--- Outfits are a snapshot of profile.equippedItemIds at save time -- purely a
--- list of item IDs, not a copy of each item's own fit (an item already
--- remembers its own saved fit, so there's nothing else to capture). This is
--- deliberately a different concept from a fit preset above: a fit preset is
--- one item's position/rotation/scale, reusable on a different item of the
--- same accessory type; an outfit is "wear exactly these items together
--- again later," regardless of type.
+-- An outfit snapshots the server-applied catalog appearance plus owned
+-- Forge item IDs. Each Forge item keeps its own saved fit. Legacy outfits
+-- without avatarLook still restore their custom item selection as before.
 function ItemService:SaveOutfit(player: Player, payload: any): (boolean, any)
 	if type(payload) ~= "table" then
 		return false, "INVALID_REQUEST"
@@ -508,8 +505,15 @@ function ItemService:SaveOutfit(player: Player, payload: any): (boolean, any)
 		return false, "PROFILE_UNAVAILABLE"
 	end
 	local equippedItemIds = profile.equippedItemIds or {}
-	if #equippedItemIds == 0 then
-		return false, "NOTHING_EQUIPPED"
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return false, "CHARACTER_UNAVAILABLE"
+	end
+	local captured, avatarLook = pcall(function()
+		return AvatarLook.Read(humanoid)
+	end)
+	if not captured then
+		return false, "AVATAR_UNAVAILABLE"
 	end
 	if #(profile.outfitOrder or {}) >= MAX_OUTFITS then
 		return false, "OUTFIT_LIMIT_REACHED"
@@ -519,6 +523,7 @@ function ItemService:SaveOutfit(player: Player, payload: any): (boolean, any)
 		id = id,
 		name = name,
 		itemIds = table.clone(equippedItemIds),
+		avatarLook = avatarLook,
 		createdAt = os.time(),
 		updatedAt = os.time(),
 	}
@@ -530,6 +535,13 @@ function ItemService:SaveOutfit(player: Player, payload: any): (boolean, any)
 		return false, mutateProblem or "PROFILE_UNAVAILABLE"
 	end
 	if not self.profiles:Save(player) then
+		self.profiles:Mutate(player, function(mutableProfile)
+			mutableProfile.outfits[id] = nil
+			local index = table.find(mutableProfile.outfitOrder, id)
+			if index then
+				table.remove(mutableProfile.outfitOrder, index)
+			end
+		end)
 		return false, "SAVE_FAILED"
 	end
 	return true, { outfit = record }
@@ -578,12 +590,31 @@ function ItemService:EquipOutfit(player: Player, payload: any): (boolean, any)
 	if not character or not character:FindFirstChildOfClass("Humanoid") then
 		return false, "CHARACTER_UNAVAILABLE"
 	end
+	if outfit.avatarLook then
+		local applied = pcall(function()
+			local description = AvatarLook.Description(outfit.avatarLook)
+			local humanoid = character:FindFirstChildOfClass("Humanoid") :: Humanoid
+			local ok, problem = pcall(function()
+				humanoid:ApplyDescriptionAsync(description)
+			end)
+			description:Destroy()
+			if not ok then
+				error(problem)
+			end
+		end)
+		if not applied then
+			return false, "TRY_ON_FAILED"
+		end
+	end
+	if character ~= player.Character then
+		return false, "CHARACTER_UNAVAILABLE"
+	end
 	local target: { [string]: boolean } = {}
 	for _, itemId in outfit.itemIds do
 		target[itemId] = true
 	end
 	for _, itemId in table.clone(profile.equippedItemIds or {}) do
-		if not target[itemId] then
+		if outfit.avatarLook or not target[itemId] then
 			self:Unequip(player, itemId)
 		end
 	end
@@ -591,7 +622,9 @@ function ItemService:EquipOutfit(player: Player, payload: any): (boolean, any)
 	local skipped = 0
 	for _, itemId in outfit.itemIds do
 		local currentProfile = self.profiles:Get(player)
-		local alreadyEquipped = currentProfile ~= nil and table.find(currentProfile.equippedItemIds, itemId) ~= nil
+		local alreadyEquipped = not outfit.avatarLook
+			and currentProfile ~= nil
+			and table.find(currentProfile.equippedItemIds, itemId) ~= nil
 		if alreadyEquipped then
 			equippedCount += 1
 		else
@@ -603,10 +636,19 @@ function ItemService:EquipOutfit(player: Player, payload: any): (boolean, any)
 			end
 		end
 	end
-	if equippedCount == 0 then
+	if equippedCount == 0 and not outfit.avatarLook then
 		return false, "OUTFIT_ITEMS_UNAVAILABLE"
 	end
-	return true, { equippedCount = equippedCount, skipped = skipped }
+	local currentProfile = self.profiles:Get(player)
+	if not currentProfile then
+		return false, "PROFILE_UNAVAILABLE"
+	end
+	return true,
+		{
+			equippedCount = equippedCount,
+			skipped = skipped,
+			equippedItemIds = table.clone(currentProfile.equippedItemIds),
+		}
 end
 
 function ItemService:RestoreEquipped(player: Player)

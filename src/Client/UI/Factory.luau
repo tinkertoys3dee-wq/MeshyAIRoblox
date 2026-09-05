@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Colors = Theme.Colors
 local UIAssets = require(ReplicatedStorage:WaitForChild("UIAssets"))
+local Motion = require(script.Parent.Motion)
 
 local Factory = {}
 
@@ -117,6 +118,9 @@ function Factory.New(className: string, properties: { [string]: any }?, children
 	then
 		instance.VerticalScrollBarInset = Enum.ScrollBarInset.Always
 	end
+	if instance:IsA("GuiButton") then
+		Motion.Bind(instance)
+	end
 	return instance
 end
 
@@ -193,7 +197,12 @@ function Factory.Label(parent: Instance, text: string, size: UDim2, options: { [
 		TextYAlignment = options.AlignY or Enum.TextYAlignment.Center,
 		TextWrapped = options.Wrapped == true,
 		RichText = options.RichText == true,
-		TextTruncate = options.Truncate or Enum.TextTruncate.None,
+		TextTruncate = options.Truncate or (if options.AutomaticSize == Enum.AutomaticSize.Y
+				or options.AutomaticSize == Enum.AutomaticSize.XY
+			then Enum.TextTruncate.None
+			else Enum.TextTruncate.AtEnd),
+		AutomaticSize = options.AutomaticSize or Enum.AutomaticSize.None,
+		ClipsDescendants = true,
 		ZIndex = options.ZIndex or 1,
 		Parent = parent,
 	})
@@ -356,6 +365,7 @@ function Factory.Button(parent: Instance, text: string, size: UDim2, position: U
 		Parent = button,
 	})
 	Factory.Corner(shade, glossRadius)
+	Factory.LiftLabel(button)
 	return button
 end
 
@@ -611,6 +621,8 @@ function Factory.LiftLabel(target: GuiObject): TextLabel?
 		TextTruncate = textHolder.TextTruncate,
 		TextXAlignment = textHolder.TextXAlignment,
 		TextYAlignment = textHolder.TextYAlignment,
+		RichText = textHolder.RichText,
+		ClipsDescendants = true,
 		ZIndex = 5,
 		Parent = target,
 	}) :: TextLabel
@@ -628,6 +640,11 @@ function Factory.LiftLabel(target: GuiObject): TextLabel?
 	textHolder:GetPropertyChangedSignal("TextXAlignment"):Connect(function()
 		label.TextXAlignment = textHolder.TextXAlignment
 	end)
+	for _, property in { "FontFace", "TextSize", "TextWrapped", "TextTruncate", "TextYAlignment", "RichText" } do
+		textHolder:GetPropertyChangedSignal(property):Connect(function()
+			(label :: any)[property] = (textHolder :: any)[property]
+		end)
+	end
 
 	-- UIPadding only insets its own object's native text (and any
 	-- UIListLayout/UIGridLayout children) -- never an unrelated sibling
@@ -646,13 +663,21 @@ function Factory.LiftLabel(target: GuiObject): TextLabel?
 			-(top.Offset + bottom.Offset)
 		)
 	end
+	local function bindPadding(padding: UIPadding)
+		applyPadding(padding)
+		for _, property in { "PaddingLeft", "PaddingRight", "PaddingTop", "PaddingBottom" } do
+			padding:GetPropertyChangedSignal(property):Connect(function()
+				applyPadding(padding)
+			end)
+		end
+	end
 	local existingPadding = target:FindFirstChildOfClass("UIPadding")
 	if existingPadding then
-		applyPadding(existingPadding)
+		bindPadding(existingPadding)
 	end
 	target.ChildAdded:Connect(function(child: Instance)
 		if child:IsA("UIPadding") then
-			applyPadding(child)
+			bindPadding(child)
 		end
 	end)
 	return label

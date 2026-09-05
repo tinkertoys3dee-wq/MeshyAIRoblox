@@ -15,7 +15,7 @@ return table.freeze({
 	-- The client compares it with profile.tutorialVersion, so a new version
 	-- reaches existing players once without repeatedly interrupting them.
 	Tutorial = {
-		Version = 1,
+		Version = 2,
 	},
 
 	Backend = {
