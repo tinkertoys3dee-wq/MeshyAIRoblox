@@ -15,7 +15,7 @@ return table.freeze({
 	-- The client compares it with profile.tutorialVersion, so a new version
 	-- reaches existing players once without repeatedly interrupting them.
 	Tutorial = {
-		Version = 2,
+		Version = 3,
 	},
 
 	Backend = {
@@ -245,20 +245,73 @@ return table.freeze({
 		-- tier repeats every this-many days instead of the table needing an
 		-- entry for every future day forever.
 		StreakMilestoneRepeatDay = 30,
-		-- A free first-session route through the systems that make Forge feel
-		-- like a game. Only OPEN_STUDIO is client-reported; every later step is
-		-- completed from a successful server action (try-on, runway lock-in,
-		-- round completion). Rewards are bonusTokens, so they can accelerate a
-		-- queue but can never pay OpenAI/Meshy provider cost.
+		-- A free first-session route that reaches a visible, saved result before
+		-- asking a new player to join a long multiplayer activity. Only
+		-- OPEN_STUDIO is client-reported; every later step is completed from a
+		-- successful server action. Rewards are bonusTokens, so they can
+		-- accelerate a queue but can never pay OpenAI/Meshy provider cost.
 		FirstLookJourney = {
-			{ key = "OPEN_STUDIO", label = "Open your creator studio", icon = "✦" },
-			{ key = "TRY_STYLE", label = "Try any accessory", icon = "◇" },
-			{ key = "JOIN_RUNWAY", label = "Lock in a runway look", icon = "◆" },
-			{ key = "COMPLETE_RUNWAY", label = "Finish a style round", icon = "★" },
+			{ key = "OPEN_STUDIO", label = "Open your makeover studio", icon = "✦" },
+			{ key = "TRY_STYLE", label = "Wear a starter look", icon = "◇" },
+			{ key = "PERSONALIZE", label = "Change one item", icon = "✧" },
+			{ key = "SAVE_LOOK", label = "Save your outfit", icon = "★" },
 		},
 		FirstLookStepTokens = 2,
 		FirstLookCompletionTokens = 12,
 		FirstLookCompletionXP = 100,
+	},
+
+	-- A solo, low-pressure activation loop. Starter looks are resolved from
+	-- Roblox's live catalog on the client, then validated and applied as one
+	-- atomic avatar edit on the server. No entry in this table is a generation
+	-- product and none can spend Robux or Forge Tokens.
+	StyleSprint = {
+		DurationSeconds = 90,
+		DailyCompletionXP = 40,
+		DailyThemes = {
+			"Celestial streetwear",
+			"Bio-luminescent garden",
+			"Retro arcade relic",
+			"Soft cloud fantasy",
+			"Deep-sea explorer",
+			"Prismatic festival",
+			"Ancient tech artifact",
+		},
+		StarterLooks = {
+			{
+				key = "SOFT",
+				label = "Soft & Sweet",
+				tagline = "Pastels, bows and a cozy layer",
+				accent = "ROSE",
+				pieces = {
+					{ assetType = "HairAccessory", query = "pastel cute hair" },
+					{ assetType = "Hat", query = "pink bow" },
+					{ assetType = "JacketAccessory", query = "pastel jacket" },
+				},
+			},
+			{
+				key = "CYBER",
+				label = "Cyber Star",
+				tagline = "Neon tech with a sharp silhouette",
+				accent = "CYAN",
+				pieces = {
+					{ assetType = "HairAccessory", query = "cyber hair" },
+					{ assetType = "FaceAccessory", query = "cyber visor" },
+					{ assetType = "JacketAccessory", query = "cyber jacket" },
+				},
+			},
+			{
+				key = "FANTASY",
+				label = "Fantasy Royal",
+				tagline = "A crown, flowing hair and statement wings",
+				accent = "VIOLET",
+				pieces = {
+					{ assetType = "HairAccessory", query = "fantasy hair" },
+					{ assetType = "Hat", query = "crystal crown" },
+					{ assetType = "BackAccessory", query = "fairy wings" },
+				},
+			},
+		},
 	},
 
 	-- A populated server-wide style round lasts exactly six minutes. A solo

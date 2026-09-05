@@ -24,6 +24,7 @@ local CLIENT_EVENTS = {
 	RunwayOpened = true,
 	ArcadeGameStarted = true,
 	FirstLookGuide = true,
+	MakeoverAction = true,
 	VisualTutorialShown = true,
 	GenerationOfferShown = true,
 }
@@ -84,8 +85,42 @@ local FIRST_LOOK_GUIDE_STAGES: { [string]: boolean } = {
 	ENTER_RUNWAY = true,
 	FINISH_RUNWAY = true,
 	EMPTY_MARKETPLACE = true,
+	OPEN_MAKEOVER = true,
+	SAVE_LOOK = true,
+	NEXT_ACTION = true,
 }
 local FIRST_LOOK_GUIDE_ACTIONS: { [string]: boolean } = { IMPRESSION = true, CLICK = true }
+local MAKEOVER_STAGES: { [string]: boolean } = {
+	LOOKS_DISPLAYED = true,
+	APPLY_CLICKED = true,
+	REQUEST_STARTED = true,
+	REQUEST_SUCCEEDED = true,
+	AVATAR_VISIBLE = true,
+	AVATAR_NOT_VISIBLE = true,
+	REQUEST_FAILED = true,
+	PERSONALIZE_CLICKED = true,
+	SAVE_CLICKED = true,
+	NEXT_ACTION_CLICKED = true,
+}
+local MAKEOVER_LOOKS: { [string]: boolean } = { NONE = true }
+for _, look in Config.StyleSprint.StarterLooks do
+	MAKEOVER_LOOKS[look.key] = true
+end
+local MAKEOVER_SOURCES: { [string]: boolean } = {
+	STARTER = true,
+	CATALOG = true,
+	COMMUNITY = true,
+	FORGE = true,
+}
+local MAKEOVER_FAILURES: { [string]: boolean } = {
+	AVATAR_BUSY = true,
+	CHARACTER_UNAVAILABLE = true,
+	CATALOG_ITEM_UNAVAILABLE = true,
+	TRY_ON_FAILED = true,
+	NETWORK_ERROR = true,
+	RATE_LIMITED = true,
+	OTHER = true,
+}
 
 local function safeCall(callback: () -> ())
 	local success, problem = pcall(callback)
@@ -131,6 +166,7 @@ function AnalyticsService:PlayerJoined(player: Player, returning: boolean)
 		marketplace = HttpService:GenerateGUID(false),
 		runway = HttpService:GenerateGUID(false),
 		creator_journey = HttpService:GenerateGUID(false),
+		makeover = HttpService:GenerateGUID(false),
 		playtime = HttpService:GenerateGUID(false),
 		startedAt = os.time(),
 	}
@@ -263,6 +299,30 @@ function AnalyticsService:TrackClient(player: Player, payload: any): (boolean, a
 		end
 		fields.stage = stage
 		fields.action = action
+	elseif payload.event == "MakeoverAction" then
+		local raw = if type(payload.fields) == "table" then payload.fields else {}
+		local stage = raw.stage
+		local look = raw.look or "NONE"
+		local source = raw.source or "STARTER"
+		if
+			type(stage) ~= "string"
+			or not MAKEOVER_STAGES[stage]
+			or type(look) ~= "string"
+			or not MAKEOVER_LOOKS[look]
+			or type(source) ~= "string"
+			or not MAKEOVER_SOURCES[source]
+		then
+			return false, "INVALID_ANALYTICS_FIELDS"
+		end
+		fields.stage = stage
+		fields.look = look
+		fields.source = source
+		if stage == "REQUEST_FAILED" or stage == "AVATAR_NOT_VISIBLE" then
+			local failure = if type(raw.failure) == "string" and MAKEOVER_FAILURES[raw.failure]
+				then raw.failure
+				else "OTHER"
+			fields.failure = failure
+		end
 	elseif payload.event == "GenerationOfferShown" then
 		local productKey = type(payload.fields) == "table" and payload.fields.productKey or nil
 		local paymentMethod = type(payload.fields) == "table" and payload.fields.paymentMethod or nil

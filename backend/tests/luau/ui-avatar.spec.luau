@@ -304,6 +304,19 @@ app.catalogMinPrice = "100"
 app.catalogMaxPrice = "50"
 AvatarLab.Search(app, "bad budget")
 equal(#spawned, 0, "Invalid price range is rejected locally")
+app.catalogMinPrice, app.catalogMaxPrice = "", ""
+services.AvatarEditorService.SearchCatalogAsync = function(_, params)
+	local assetType = params.AssetTypes[1].Name
+	return pages(if assetType == "HairAccessory" then 701 else 702)
+end
+app.catalogWorkspace.starterLookStatus = "IDLE"
+AvatarLab.LoadStarterLooks(app)
+equal(#spawned, 1, "Starter looks resolve independently without serial UI blocking")
+runSpawn()
+local starter = app.catalogWorkspace.starterLooks.SOFT
+check(starter.available, "A starter look becomes usable only after every configured piece loads")
+equal(#starter.assets, 2, "The live starter look contains every configured catalog category")
+equal(starter.assets[1].forgeCategory, "HairAccessory", "Starter pieces retain server-verifiable types")
 
 local AvatarLook, CatalogService = require("AvatarLook"), require("CatalogService")
 local description = Instance.new("HumanoidDescription")
@@ -367,8 +380,14 @@ function profiles:GenerateId()
 end
 local analytics = { Custom = function() end }
 local catalog = CatalogService.new(profiles, {}, analytics)
-local assetTypes = { [101] = 11, [201] = 8, [301] = 67, [401] = 12, [501] = "8" }
-local avatarAssetTypes = { [101] = "Shirt", [201] = "Hat", [301] = "JacketAccessory", [401] = "Pants" }
+local assetTypes = { [101] = 11, [201] = 8, [301] = 67, [401] = 12, [501] = "8", [601] = 41 }
+local avatarAssetTypes = {
+	[101] = "Shirt",
+	[201] = "Hat",
+	[301] = "JacketAccessory",
+	[401] = "Pants",
+	[601] = "HairAccessory",
+}
 services.AvatarEditorService.GetItemDetailsAsync = function(_, id)
 	if id == 501 then
 		error("Avatar catalog temporarily throttled")
@@ -443,13 +462,55 @@ check(items:EquipOutfit(player, { outfitId = "legacy" }), "Legacy Forge-only out
 equal(humanoid.description.Shirt, 999, "Legacy outfit does not replace catalog appearance")
 equal(humanoid.incrementalApplies, 0, "Catalog and outfit changes never use unsafe incremental avatar apply")
 
+check(
+	not catalog:ApplyLook(player, { lookKey = "UNKNOWN", assets = {} }),
+	"Starter look keys and minimum piece counts are server validated"
+)
+local appliesBeforeLook = humanoid.applies
+local lookOk, lookData = catalog:ApplyLook(player, {
+	lookKey = "SOFT",
+	assets = {
+		{ assetId = 201, avatarAssetType = "Hat" },
+		{ assetId = 601, avatarAssetType = "HairAccessory" },
+	},
+})
+check(lookOk, "A resolved starter look applies successfully")
+equal(lookData.appliedCount, 2, "Starter look reports the pieces that changed")
+equal(humanoid.applies, appliesBeforeLook + 1, "A full starter look uses one atomic avatar apply")
+local appliedIds = {}
+for _, accessory in humanoid.description:GetAccessories(true) do
+	appliedIds[accessory.AssetId] = true
+end
+check(appliedIds[201] and appliedIds[601], "Starter look includes every resolved piece")
+check(not appliedIds[501], "Starter look replaces a conflicting accessory category")
+check(catalog:History(player, false), "The complete starter look is one undo checkpoint")
+local undoneIds = {}
+for _, accessory in humanoid.description:GetAccessories(true) do
+	undoneIds[accessory.AssetId] = true
+end
+check(undoneIds[501] and not undoneIds[601], "One undo restores the avatar from before the full look")
+
 -- Construct each real Avatar Lab view using the UI doubles. This catches
 -- missing client state/wiring; visual layout remains a Studio release gate.
 services.Players.LocalPlayer = player
 app.content = Instance.new("Frame")
 app.uiScaleInstance = Instance.new("UIScale")
 app.pageConnections = {}
-app.state = { profile = profile, policy = { commerceAllowed = true } }
+app.state = {
+	profile = profile,
+	policy = { commerceAllowed = true },
+	dailyBrief = { theme = "Test theme" },
+	journeyState = { done = { OPEN_STUDIO = true }, completed = false },
+	makeoverState = {
+		active = true,
+		theme = "Test theme",
+		remainingSeconds = 90,
+		starterApplied = false,
+		personalized = false,
+		completed = false,
+	},
+}
+app.catalogWorkspace.starterLookStatus = "READY"
 app.triedOnAssetIds, app.triedOnAssetInfo = {}, {}
 app.avatarAccessoriesLoaded = true
 app.catalogResults = { { Id = 201, Name = "Long catalog item name", Price = 50, forgeCategory = "Hat" } }
@@ -489,6 +550,10 @@ for _, control in app.content:GetDescendants() do
 	end
 end
 check(tryButton ~= nil and saveButton ~= nil, "Catalog cards expose try and bookmark controls")
+-- Style Sprint's display-only countdown owns background scheduler entries;
+-- interaction assertions below advance only the task created by the tap.
+table.clear(spawned)
+table.clear(delayed)
 tryButton.Activated:Fire()
 runSpawn()
 equal(invoked[1].action, "TryCatalogAsset", "Try-on invokes only the catalog edit action")
@@ -528,6 +593,78 @@ end
 check(enable ~= nil, "First-use catalog access has a clear action")
 equal(enable.Parent.LayoutOrder, 2, "Permission action appears directly after the heading")
 equal(searchControls, 0, "Unusable search/filter controls are not placed before consent")
+
+local MakeoverService = require("MakeoverService")
+local sprintProfile = {
+	makeover = { dailyDay = 0, dailyCompleted = false, bestScore = 0, completedCount = 0 },
+	tokens = 7,
+	bonusTokens = 9,
+}
+local sprintProfiles = { saves = 0 }
+function sprintProfiles:Get()
+	return sprintProfile
+end
+function sprintProfiles:Mutate(_, callback)
+	callback(sprintProfile)
+	return true
+end
+function sprintProfiles:Save()
+	self.saves += 1
+	return true
+end
+local analyticsCalls = {}
+local sprintAnalytics = {}
+function sprintAnalytics:BeginFunnel(_, funnel, name)
+	table.insert(analyticsCalls, funnel .. ":" .. name)
+end
+function sprintAnalytics:Funnel(_, funnel, step, name)
+	table.insert(analyticsCalls, funnel .. ":" .. step .. ":" .. name)
+end
+function sprintAnalytics:Custom(_, name)
+	table.insert(analyticsCalls, name)
+end
+local journeyMarks = {}
+local sprintRetention = {}
+function sprintRetention:MarkJourney(_, key)
+	table.insert(journeyMarks, key)
+end
+local xpGrants = {}
+local sprintProgression = {}
+function sprintProgression:Grant(_, amount, reason)
+	table.insert(xpGrants, { amount = amount, reason = reason })
+end
+local sprintPushes = {}
+local sprint = MakeoverService.new(
+	sprintProfiles,
+	sprintAnalytics,
+	sprintRetention,
+	sprintProgression,
+	function(_, event, payload)
+		table.insert(sprintPushes, { event = event, payload = payload })
+	end
+)
+local sprintPlayer = { Parent = services.Players }
+local started, sprintState = sprint:Start(sprintPlayer)
+check(started and sprintState.active, "Style Sprint starts as a server-owned session")
+sprint:RecordStarterLook(sprintPlayer, "SOFT", {
+	{ assetId = 201, assetType = "Hat" },
+	{ assetId = 601, assetType = "HairAccessory" },
+})
+equal(journeyMarks[1], "TRY_STYLE", "A validated starter look advances the real journey")
+check(sprint:Complete(sprintPlayer).needsPersonalize, "Saving a stock look does not skip personalization")
+sprint:RecordChange(sprintPlayer, "catalog:301", "JacketAccessory", "CATALOG")
+equal(journeyMarks[2], "PERSONALIZE", "A distinct item change advances personalization")
+local completion = sprint:Complete(sprintPlayer)
+equal(completion.score, 100, "A fast, varied, personalized makeover earns the full score")
+equal(journeyMarks[3], "SAVE_LOOK", "Saving the personalized look completes the first-session route")
+equal(xpGrants[1].amount, 40, "The first daily sprint grants the configured Creator XP")
+equal(xpGrants[1].reason, "DAILY_STYLE_SPRINT", "Style XP has a bounded server-authored reason")
+equal(sprintProfile.tokens, 7, "Style Sprint never grants provider-backed generation tokens")
+equal(sprintProfile.bonusTokens, 9, "Style Sprint itself does not mint free generation currency")
+equal(sprintProfile.makeover.bestScore, 100, "Best makeover score persists")
+local again = sprint:Complete(sprintPlayer)
+check(again.alreadyCompleted, "Repeated completion is idempotent")
+equal(#xpGrants, 1, "Repeated completion cannot farm Creator XP")
 
 local WindowFocus = require("WindowFocus")
 local focus = { gui = Instance.new("ScreenGui"), shell = { Visible = true }, studioOpen = true, activePage = "Create" }

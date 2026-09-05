@@ -792,7 +792,7 @@ function RunwayHub.Show(app: any)
 			end)
 		end
 
-		-- First-look journey -------------------------------------------------
+		-- First-makeover journey ---------------------------------------------
 		local journey = state.journeyState or (app.state and app.state.journeyState) or { done = {} }
 		local journeyComplete = journey.completed == true
 		local journeyHeight = 84 + #Config.Retention.FirstLookJourney * 34
@@ -800,7 +800,7 @@ function RunwayHub.Show(app: any)
 		journeyCard.LayoutOrder = 2
 		Factory.Label(
 			journeyCard,
-			if journeyComplete then "FIRST LOOK COMPLETE" else "YOUR FIRST LOOK",
+			if journeyComplete then "FIRST MAKEOVER COMPLETE" else "YOUR FIRST MAKEOVER",
 			UDim2.new(1, -126, 0, 20),
 			{
 				Position = UDim2.fromOffset(16, 13),

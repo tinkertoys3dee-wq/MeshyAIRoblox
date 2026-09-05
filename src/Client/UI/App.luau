@@ -394,7 +394,11 @@ function App.new()
 		graphicsMarketplaceSortBy = "TRENDING",
 		catalogResults = nil :: { any }?,
 		catalogSearching = false,
-		catalogAccess = nil :: boolean?,
+		-- SearchCatalogAsync does not read the player's inventory. Forge's
+		-- catalog preview is server-applied and its worn list reads the live
+		-- HumanoidDescription, so an unrelated inventory-consent prompt must
+		-- not block the first makeover.
+		catalogAccess = true :: boolean?,
 		catalogAccessPrompting = false,
 		catalogError = nil :: string?,
 		catalogType = "Hat",
@@ -416,6 +420,7 @@ function App.new()
 		avatarAccessoriesLoading = false,
 		avatarAccessoriesDirty = true,
 		communityTryOnItem = nil :: { [string]: any }?,
+		makeoverReveal = nil :: Frame?,
 		-- De-duplicates guide impressions across Discover's frequent re-renders
 		-- while retaining click telemetry for the same stage.
 		firstLookGuideEvents = {} :: { [string]: boolean },
@@ -482,6 +487,7 @@ function App.new()
 		if self.catalogAccess then
 			self.catalogError = nil
 			self.catalogResults = nil
+			AvatarLab.LoadStarterLooks(self)
 			self:_SearchCatalog(self.catalogQuery)
 		else
 			self.catalogError = "Catalog access was not approved. You can enable it whenever you are ready."
@@ -3138,6 +3144,11 @@ function App:_ConnectPush()
 				self.runwayRefresh(self.runwayState)
 			end
 			self:_RenderActivePage()
+		elseif eventName == Network.PushEvents.Makeover then
+			self.state.makeoverState = payload.state or self.state.makeoverState
+			if self.activePage == "Avatar Lab" then
+				self:_RenderActivePage()
+			end
 		elseif eventName == Network.PushEvents.CreatorProgress then
 			self.state.profile.creator = payload.creator
 			self.state.creatorProgress = payload.progress
@@ -3230,8 +3241,8 @@ function App:_OpenPage(page: string)
 	self:_HighlightNavigation()
 	self:_RenderActivePage()
 	self:_Track({ event = "AppOpenedTab", fields = { page = page } })
-	-- Opening Discover (or Avatar Lab when community sharing is policy-
-	-- unavailable) is now the actual free First Look. Record the journey
+	-- Opening the Avatar Lab or its community inspiration page is the actual
+	-- free makeover route. Record the journey
 	-- only when a player intentionally reaches it, not automatically while
 	-- their profile is merely booting behind the onboarding modal.
 	if
@@ -3587,7 +3598,7 @@ function App:_RenderCreate()
 		})
 		Factory.Label(
 			card,
-			if complete then "First Look complete" else "Try a look for FREE",
+			if complete then "First makeover complete" else "Make a look in 90 seconds",
 			UDim2.new(1, if self.compact then -88 else -240, 0, 26),
 			{
 				Position = UDim2.fromOffset(72, 13),
@@ -3599,8 +3610,8 @@ function App:_RenderCreate()
 		Factory.Label(
 			card,
 			if complete
-				then "Keep leveling up in six-minute Forge Runway style battles."
-				else "Put a creator's item on your avatar, then join a runway round. No Robux needed.",
+				then "Style again, make avatar art, enter Runway, or Forge the one item your look is missing."
+				else "Pick a full catalog look, change one item, and save it. Free to try; no Robux spent.",
 			UDim2.new(if self.compact then 1 else 0.68, if self.compact then -32 else -80, 0, 38),
 			{
 				Position = UDim2.fromOffset(if self.compact then 16 else 72, if self.compact then 67 else 42),
@@ -3631,19 +3642,18 @@ function App:_RenderCreate()
 		local continue = Factory.ImageButton(
 			card,
 			if complete
-				then "Open Forge Runway"
-				else if not done.TRY_STYLE then "START FREE →" else "Enter Forge Runway →",
+				then "STYLE AGAIN →"
+				else if not done.TRY_STYLE
+					then "START FREE →"
+					else if not done.PERSONALIZE then "CHANGE ONE ITEM →" else "SAVE MY LOOK →",
 			if self.compact then UDim2.new(1, -32, 0, 36) else UDim2.new(0.27, -12, 0, 42),
 			if self.compact then UDim2.fromOffset(16, 116) else UDim2.new(0.72, 0, 0, 45),
 			if complete then "mint" else "primary"
 		)
 		self:_BindButton(continue)
 		continue.Activated:Connect(function()
-			if not done.OPEN_STUDIO or not done.TRY_STYLE then
-				self:_OpenPage(if self.state.policy.contentSharingAllowed then "Discover" else "Avatar Lab")
-			else
-				RunwayHub.Show(self)
-			end
+			self:_OpenPage("Avatar Lab")
+			AvatarLab.StartSprint(self)
 		end)
 	end
 
@@ -7093,11 +7103,17 @@ function App:_TrackFirstLookGuide(stage: string, action: string)
 	})
 end
 
--- Shared by the featured First Look card and the regular marketplace grid.
+-- Shared by the guided makeover and the regular marketplace grid.
 -- A successful response means ItemService actually attached the model; the
 -- server now logs funnel step two only at that point.
 function App:_ApplyCommunityTryOn(item: { [string]: any }, button: TextButton, entryPoint: string)
 	local removing = self.communityTryOnItem ~= nil and self.communityTryOnItem.id == item.id
+	if not removing then
+		self:_Track({
+			event = "MakeoverAction",
+			fields = { stage = "PERSONALIZE_CLICKED", look = "NONE", source = "COMMUNITY" },
+		})
+	end
 	button.Active = false
 	button.Text = if removing then "Removing…" else "Applying…"
 	task.spawn(function()
@@ -7111,6 +7127,9 @@ function App:_ApplyCommunityTryOn(item: { [string]: any }, button: TextButton, e
 				}
 		)
 		if success then
+			if type(errorCode) == "table" and type(errorCode.makeoverState) == "table" then
+				self.state.makeoverState = errorCode.makeoverState
+			end
 			self.communityTryOnItem = if removing then nil else item
 			self.avatarPreviewDirty = true
 			if not removing then
@@ -7120,7 +7139,7 @@ function App:_ApplyCommunityTryOn(item: { [string]: any }, button: TextButton, e
 				"success",
 				if removing
 					then "Community model removed."
-					else "Look applied! Check your avatar, then take it to Forge Runway."
+					else "Community item applied! Save the look, or keep mixing catalog and custom pieces."
 			)
 			self:_RenderActivePage()
 			return
@@ -7136,13 +7155,24 @@ function App:_ApplyCommunityTryOn(item: { [string]: any }, button: TextButton, e
 			self.marketplaceItems = nil
 			self:_RefreshMarketplace("")
 		end
+		if not removing then
+			self:_Track({
+				event = "MakeoverAction",
+				fields = {
+					stage = "REQUEST_FAILED",
+					look = "NONE",
+					source = "COMMUNITY",
+					failure = "OTHER",
+				},
+			})
+		end
 	end)
 end
 
 -- Returns the vertical space consumed above Discover's search controls.
--- Until First Look is complete, this is the page's dominant action: a free
--- public-model try-on with no AvatarEditorService permission prompt, then a
--- direct handoff to the already-performing Runway loop.
+-- Until the first makeover is complete, this is the page's dominant action:
+-- a direct handoff to the 90-second full-look flow. Community discovery stays
+-- below it as inspiration instead of being mistaken for the whole tutorial.
 function App:_RenderDiscoverFirstLook(topY: number): number
 	local journey = self.state.journeyState
 	if not journey or journey.completed == true then
@@ -7155,15 +7185,7 @@ function App:_RenderDiscoverFirstLook(topY: number): number
 		Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, height), UDim2.new(0.025, 0, 0, topY), "FirstLookGuide")
 	Factory.Stroke(card, if done.TRY_STYLE then Colors.Mint else Colors.Cyan, 0.18, 1.5)
 
-	local featured = self.featuredCommunityItem
-		or (if self.marketplaceItems and #self.marketplaceItems > 0 then self.marketplaceItems[1] else nil)
-	local previewRecord = if done.TRY_STYLE and self.communityTryOnItem then self.communityTryOnItem else featured
-	local previewImage = if previewRecord then modelPreviewImage(previewRecord) else ""
-	local previewModelId = if previewRecord then tonumber(previewRecord.modelAssetId) else nil
-	local previewFallback = if previewModelId and previewModelId > 0 then thumbnail(previewModelId, 150) else nil
-	if previewImage == "" and previewFallback then
-		previewImage = previewFallback
-	end
+	local previewImage = avatarThumbnail(player.UserId, "AvatarBust", 150)
 	local visualSize = if self.compact then 72 else 116
 	local visual = Factory.New("ImageLabel", {
 		Position = UDim2.fromOffset(14, 14),
@@ -7176,64 +7198,30 @@ function App:_RenderDiscoverFirstLook(topY: number): number
 	})
 	Factory.Corner(visual, 14)
 	Factory.Stroke(visual, Colors.Gold, 0.45)
-	if visual.Image == "" then
-		Factory.Gradient(visual, { Color3.fromRGB(36, 22, 78), Color3.fromRGB(72, 40, 118) }, 135)
-		Factory.Label(visual, if self.marketplaceItems == nil then "…" else "◇", UDim2.fromScale(1, 1), {
-			AlignX = Enum.TextXAlignment.Center,
-			AlignY = Enum.TextYAlignment.Center,
-			Font = Theme.Fonts.Black,
-			TextSize = 32,
-			Color = Colors.Cyan,
-		})
-	elseif previewRecord then
-		local hint = Factory.Label(visual, "Loading preview…", UDim2.new(1, -12, 0, 28), {
-			AnchorPoint = Vector2.new(0, 1),
-			Position = UDim2.new(0, 6, 1, -6),
-			AlignX = Enum.TextXAlignment.Center,
-			Color = Colors.Text,
-			TextSize = 9,
-			Wrapped = true,
-			ZIndex = 2,
-		})
-		hint.BackgroundColor3 = Colors.Ink
-		hint.BackgroundTransparency = 0.18
-		Factory.Corner(hint, 7)
-		self:_WatchImageLoad(visual, hint, previewFallback)
-	end
+	local visualBadge = Factory.Label(visual, "YOUR AVATAR", UDim2.new(1, -10, 0, 22), {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 5, 1, -5),
+		AlignX = Enum.TextXAlignment.Center,
+		Color = Colors.Text,
+		Font = Theme.Fonts.Bold,
+		TextSize = 9,
+		ZIndex = 2,
+	})
+	visualBadge.BackgroundColor3 = Colors.Ink
+	visualBadge.BackgroundTransparency = 0.18
+	Factory.Corner(visualBadge, 7)
 
 	local textX = if self.compact then 98 else 146
 	local headingWidth = if self.compact then UDim2.new(1, -112, 0, 28) else UDim2.new(1, -390, 0, 28)
-	local stage = "TRY_FREE_LOOK"
-	local heading = "Your free First Look"
-	local description = "One tap puts a featured creator accessory on your avatar. No Robux. No catalog permission."
-	local buttonText = "Try this look · FREE"
-	local badgeText = "STEP 2 OF 4"
-	if done.TRY_STYLE then
-		if done.JOIN_RUNWAY then
-			stage = "FINISH_RUNWAY"
-			heading = "Finish your style round"
-			description = "Your look is locked. Complete the round to finish First Look and earn the completion reward."
-			buttonText = "Return to Runway"
-			badgeText = "FINAL STEP"
-		else
-			stage = "ENTER_RUNWAY"
-			heading = "Your look is on!"
-			description = "Now bring it to Forge Runway. Locking your look is the next step—and the round is free."
-			buttonText = "Enter Forge Runway →"
-			badgeText = "STEP 3 OF 4"
-		end
-	elseif not featured and self.marketplaceItems ~= nil and #self.marketplaceItems == 0 then
-		stage = "EMPTY_MARKETPLACE"
-		heading = "No community looks are live yet"
-		description = "You can still complete this step with a free Roblox catalog try-on in Avatar Lab."
-		buttonText = "Open Avatar Lab"
-		badgeText = "FREE FALLBACK"
-	elseif not featured and self.marketplaceItems == nil then
-		heading = "Finding a free look…"
-		description = "Loading the current trending community accessory. This does not spend Robux or Forge Tokens."
-		buttonText = "Loading…"
-		badgeText = "FIRST LOOK"
-	end
+	local stage = if done.PERSONALIZE then "SAVE_LOOK" else "OPEN_MAKEOVER"
+	local heading = if done.TRY_STYLE then "Finish your makeover" else "Build a full look in 90 seconds"
+	local description = if done.PERSONALIZE
+		then "Your look is personal now. Name it and save it, then choose Runway, avatar art, or custom UGC."
+		else if done.TRY_STYLE
+			then "Your starter look is on. Change one catalog item to make it yours."
+			else "Pick one of three complete catalog looks, see the reveal, change one item, and save."
+	local buttonText = if done.PERSONALIZE then "Save my look →" else if done.TRY_STYLE then "Change one item →" else "Start free makeover →"
+	local badgeText = if done.PERSONALIZE then "FINAL STEP" else if done.TRY_STYLE then "STEP 3 OF 4" else "FREE MAKEOVER"
 
 	-- The concept art leads with the step badge and reads downward from it
 	-- into the heading and the line of copy -- the step you are on is the
@@ -7268,20 +7256,15 @@ function App:_RenderDiscoverFirstLook(topY: number): number
 		if done.TRY_STYLE then "mint" else "primary"
 	)
 	self:_BindButton(action)
-	local actionReady = done.TRY_STYLE or featured ~= nil or self.marketplaceItems ~= nil
+	local actionReady = true
 	action.Active = actionReady
 	if actionReady then
 		self:_TrackFirstLookGuide(stage, "IMPRESSION")
 	end
 	action.Activated:Connect(function()
 		self:_TrackFirstLookGuide(stage, "CLICK")
-		if done.TRY_STYLE then
-			RunwayHub.Show(self)
-		elseif featured then
-			self:_ApplyCommunityTryOn(featured, action, "FIRST_LOOK")
-		else
-			self:_OpenPage("Avatar Lab")
-		end
+		self:_OpenPage("Avatar Lab")
+		AvatarLab.StartSprint(self)
 	end)
 
 	return height + 12
