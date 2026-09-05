@@ -105,6 +105,87 @@ equal(#notices.entries, 1, "Short landscape screens show one notice at a time")
 table.clear(spawned)
 table.clear(delayed)
 
+local GroupJoin = require("GroupJoin")
+local joinApp = {
+	activePage = "Settings",
+	groupJoinPrompting = false,
+	groupJoinPending = false,
+	state = { benefits = { groupMember = false, queueSlots = 1, speedMultiplier = 1 } },
+	notices = {},
+	tracks = {},
+	refreshes = 0,
+	settingsRenders = 0,
+	statusRenders = 0,
+	sounds = { Play = function() end },
+	_Toast = function(self, tone, message)
+		table.insert(self.notices, { tone = tone, message = message })
+	end,
+	_Track = function(self, event)
+		table.insert(self.tracks, event)
+	end,
+	_RefreshGroupTip = function(self)
+		self.refreshes += 1
+	end,
+	_RenderActivePage = function(self)
+		self.settingsRenders += 1
+	end,
+	_RenderStatus = function(self)
+		self.statusRenders += 1
+	end,
+	_Invoke = function(_, action)
+		equal(action, "RefreshGroupMembership", "Native join asks the server to verify membership")
+		return true, { groupMember = true, queueSlots = 2, speedMultiplier = 0.9 }
+	end,
+}
+services.GroupService.PromptJoinAsync = function(_, groupId)
+	equal(groupId, 15575113, "Native prompt uses the configured creator group")
+	return Enum.GroupMembershipStatus.Joined
+end
+GroupJoin.Prompt(joinApp)
+check(joinApp.groupJoinPrompting, "Group action immediately prevents duplicate prompts")
+check(joinApp.settingsRenders > 0, "Settings reflects the opening native group prompt")
+GroupJoin.Prompt(joinApp)
+equal(#spawned, 1, "Repeated taps cannot stack native group prompts")
+runSpawn()
+check(joinApp.state.benefits.groupMember, "Verified native join updates membership in this session")
+equal(joinApp.state.benefits.queueSlots, 2, "Verified join activates the extra queue slot")
+equal(joinApp.state.benefits.speedMultiplier, 0.9, "Verified join activates faster generation")
+equal(joinApp.statusRenders, 1, "Top-level benefit readouts refresh after joining")
+equal(joinApp.notices[#joinApp.notices].tone, "success", "Confirmed membership produces success feedback")
+
+joinApp.state.benefits.groupMember = false
+joinApp.groupJoinPending = false
+joinApp.activePage = "Create"
+services.GroupService.PromptJoinAsync = function()
+	return Enum.GroupMembershipStatus.JoinRequestPending
+end
+GroupJoin.Prompt(joinApp)
+runSpawn()
+check(joinApp.groupJoinPending, "Approval-only groups expose a retryable pending state")
+equal(joinApp.notices[#joinApp.notices].tone, "info", "Pending join requests explain what happens next")
+
+local PlayerStateService = require("PlayerStateService")
+local membership = PlayerStateService.new()
+local groupPlayer = { UserId = 42, joined = true, attributes = {} }
+function groupPlayer:IsInGroupAsync(groupId)
+	equal(groupId, 15575113, "Server verifies the configured group independently")
+	return self.joined
+end
+function groupPlayer:SetAttribute(name, value)
+	self.attributes[name] = value
+end
+membership.states[groupPlayer] = { groupMember = false, queueSlots = 1, queueSpeedMultiplier = 1 }
+local membershipOk, membershipData = membership:RefreshGroupMembership(groupPlayer)
+check(membershipOk, "Server can refresh group membership after the client prompt")
+check(membershipData.newlyJoined, "First verified refresh is identified for rewards and analytics")
+equal(membershipData.queueSlots, 2, "Server owns the activated queue-slot count")
+equal(membershipData.speedMultiplier, 0.9, "Server owns the activated speed multiplier")
+equal(groupPlayer.attributes.ForgeGroupMember, true, "Replicated membership attribute updates immediately")
+equal(groupPlayer.attributes.ForgeQueueSlots, 2, "Replicated queue attribute updates immediately")
+
+table.clear(spawned)
+table.clear(delayed)
+
 local AvatarLab = require("AvatarLab")
 local StudioTransition = require("StudioTransition")
 local studio = setmetatable({

@@ -9,6 +9,14 @@ local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local PlayerStateService = {}
 PlayerStateService.__index = PlayerStateService
 
+local function applyGroupMembership(player: Player, state: { [string]: any }, groupMember: boolean)
+	state.groupMember = groupMember
+	state.queueSlots = Config.Generation.BaseQueueSlots + (if groupMember then Config.Group.ExtraQueueSlots else 0)
+	state.queueSpeedMultiplier = if groupMember then Config.Group.GenerationSpeedMultiplier else 1
+	player:SetAttribute("ForgeGroupMember", groupMember)
+	player:SetAttribute("ForgeQueueSlots", state.queueSlots)
+end
+
 function PlayerStateService.new()
 	return setmetatable({ states = {} :: { [Player]: { [string]: any } } }, PlayerStateService)
 end
@@ -66,8 +74,7 @@ function PlayerStateService:Initialize(player: Player): { [string]: any }
 	}
 	self.states[player] = state
 	player:SetAttribute("ForgeContentSharingAllowed", state.contentSharingAllowed)
-	player:SetAttribute("ForgeGroupMember", groupMember)
-	player:SetAttribute("ForgeQueueSlots", state.queueSlots)
+	applyGroupMembership(player, state, groupMember)
 	return state
 end
 
@@ -78,6 +85,36 @@ function PlayerStateService:Get(player: Player): { [string]: any }
 	end
 	state.plusSubscriber = player.HasRobloxSubscription
 	return state
+end
+
+-- PromptJoinAsync runs on the client. Roblox clears its group-membership
+-- cache when that native prompt joins a player, then this server-authoritative
+-- refresh turns the benefits on without making the player leave and rejoin.
+function PlayerStateService:RefreshGroupMembership(player: Player): (boolean, any)
+	if Config.Group.Id <= 0 then
+		return false, "GROUP_NOT_CONFIGURED"
+	end
+	local success, result = pcall(function()
+		return player:IsInGroupAsync(Config.Group.Id)
+	end)
+	if not success then
+		warn(`[PlayerStateService] Group refresh failed for {player.UserId}: {tostring(result)}`)
+		return false, "GROUP_CHECK_FAILED"
+	end
+	local state = self.states[player]
+	if not state then
+		return false, "PLAYER_STATE_UNAVAILABLE"
+	end
+	local groupMember = result == true
+	local newlyJoined = groupMember and state.groupMember ~= true
+	applyGroupMembership(player, state, groupMember)
+	return true,
+		{
+			groupMember = groupMember,
+			newlyJoined = newlyJoined,
+			queueSlots = state.queueSlots,
+			speedMultiplier = state.queueSpeedMultiplier,
+		}
 end
 
 function PlayerStateService:Remove(player: Player)

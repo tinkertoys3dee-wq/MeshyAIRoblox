@@ -21,7 +21,9 @@ try {
     Motion: 'src/Client/UI/Motion.luau',
     Factory: 'src/Client/UI/Factory.luau',
     NotificationService: 'src/Client/UI/NotificationService.luau',
+    GroupJoin: 'src/Client/UI/GroupJoin.luau',
     AvatarLab: 'src/Client/UI/AvatarLab.luau',
+    PlayerStateService: 'src/Server/Services/PlayerStateService.luau',
     WindowFocus: 'src/Client/UI/WindowFocus.luau',
   };
   const definitions = Object.entries(modules).map(([name, file]) =>
@@ -29,6 +31,10 @@ try {
   // Exercise the actual studio transition method without bootstrapping the
   // whole Roblox client. Keep the extraction fail-closed if it is renamed.
   const appSource = read('src/Client/UI/App.luau');
+  for (const name of ['FitActions', 'SharingActions', 'TipOptions']) {
+    const scrollingRow = new RegExp(`Factory\\.New\\("ScrollingFrame", \\{[\\s\\S]{0,120}Name = "${name}"`);
+    if (!scrollingRow.test(appSource)) throw new Error(`${name} must remain an overflow-safe ScrollingFrame`);
+  }
   const transition = appSource.match(/function App:_SetStudioOpen\(open: boolean\)[\s\S]*?(?=\nfunction App:)/)?.[0];
   if (!transition) throw new Error('Studio transition method not found');
   const transitionModule = `modules.StudioTransition = function() local App = {}; local Motion = require("Motion"); ${transition}; return App end`;

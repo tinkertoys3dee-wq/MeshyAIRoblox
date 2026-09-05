@@ -25,6 +25,7 @@ return table.freeze({
 
 	Group = {
 		Id = 15575113, -- Your Roblox group ID
+		Name = "Mundane Studios",
 		GenerationSpeedMultiplier = 0.90,
 		ExtraQueueSlots = 1,
 	},
