@@ -7220,8 +7220,12 @@ function App:_RenderDiscoverFirstLook(topY: number): number
 		else if done.TRY_STYLE
 			then "Your starter look is on. Change one catalog item to make it yours."
 			else "Pick one of three complete catalog looks, see the reveal, change one item, and save."
-	local buttonText = if done.PERSONALIZE then "Save my look →" else if done.TRY_STYLE then "Change one item →" else "Start free makeover →"
-	local badgeText = if done.PERSONALIZE then "FINAL STEP" else if done.TRY_STYLE then "STEP 3 OF 4" else "FREE MAKEOVER"
+	local buttonText = if done.PERSONALIZE
+		then "Save my look →"
+		else if done.TRY_STYLE then "Change one item →" else "Start free makeover →"
+	local badgeText = if done.PERSONALIZE
+		then "FINAL STEP"
+		else if done.TRY_STYLE then "STEP 3 OF 4" else "FREE MAKEOVER"
 
 	-- The concept art leads with the step badge and reads downward from it
 	-- into the heading and the line of copy -- the step you are on is the

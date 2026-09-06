@@ -350,7 +350,10 @@ function AvatarLab.StartSprint(app: any)
 			if restarting then
 				lab.makeoverEvents.looksDisplayed = nil
 			end
-			app:_Toast("info", "Style Sprint started: pick a look, change one item, then save. The timer is only a bonus.")
+			app:_Toast(
+				"info",
+				"Style Sprint started: pick a look, change one item, then save. The timer is only a bonus."
+			)
 			AvatarLab.LoadStarterLooks(app)
 		end
 		render(app)
@@ -430,8 +433,7 @@ function AvatarLab.LoadStarterLooks(app: any)
 end
 
 local function avatarContains(assetIds: { number }): boolean
-	local humanoid = Players.LocalPlayer.Character
-		and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+	local humanoid = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
 		return false
 	end
@@ -688,14 +690,24 @@ local function sprintPanel(app: any, stack: Frame)
 	local card = Factory.ImageCard(stack, UDim2.new(1, 0, 0, cardHeight), nil, "StyleSprint")
 	card.LayoutOrder = -9
 	Factory.Stroke(card, if completed then C.Mint else C.Cyan, 0.2, 1.5)
-	Factory.Label(card, if completed then "STYLE SPRINT COMPLETE" else "TODAY'S 90-SECOND STYLE SPRINT", UDim2.new(1, -120, 0, 24), {
-		Position = UDim2.fromOffset(16, 14),
-		Font = Theme.Fonts.Black,
-		TextSize = 16,
-		Truncate = Enum.TextTruncate.AtEnd,
-		Color = if completed then C.Mint else C.Gold,
-	})
-	local timer = Factory.ImagePill(card, completed and string.format("%d / 100", sprint.score or sprint.bestScore or 100) or "1:30", if completed then C.Mint else C.Cyan, 86)
+	Factory.Label(
+		card,
+		if completed then "STYLE SPRINT COMPLETE" else "TODAY'S 90-SECOND STYLE SPRINT",
+		UDim2.new(1, -120, 0, 24),
+		{
+			Position = UDim2.fromOffset(16, 14),
+			Font = Theme.Fonts.Black,
+			TextSize = 16,
+			Truncate = Enum.TextTruncate.AtEnd,
+			Color = if completed then C.Mint else C.Gold,
+		}
+	)
+	local timer = Factory.ImagePill(
+		card,
+		completed and string.format("%d / 100", sprint.score or sprint.bestScore or 100) or "1:30",
+		if completed then C.Mint else C.Cyan,
+		86
+	)
 	timer.Position = UDim2.new(1, -102, 0, 10)
 	if not completed and sprint.active then
 		task.spawn(function()
@@ -831,7 +843,8 @@ local function sprintPanel(app: any, stack: Frame)
 	for lookIndex, definition in Config.StyleSprint.StarterLooks do
 		local look = lab.starterLooks[definition.key]
 		local available = look and look.available == true
-		local recommended = lookIndex == (((tonumber(sprint.themeIndex) or 1) - 1) % #Config.StyleSprint.StarterLooks) + 1
+		local recommended = lookIndex
+			== (((tonumber(sprint.themeIndex) or 1) - 1) % #Config.StyleSprint.StarterLooks) + 1
 		if available then
 			readyCount += 1
 		end
@@ -868,20 +881,29 @@ local function sprintPanel(app: any, stack: Frame)
 				Factory.Corner(image, 9)
 			end
 		else
-			Factory.Label(lookCard, if lab.starterLookStatus == "LOADING" then "Loading live catalog pieces…" else "This look is unavailable right now.", UDim2.new(1, -24, 0, 58), {
-				Position = UDim2.fromOffset(12, 76),
-				Wrapped = true,
-				AlignX = Enum.TextXAlignment.Center,
-				Color = C.TextMuted,
-				TextSize = 11,
-			})
+			Factory.Label(
+				lookCard,
+				if lab.starterLookStatus == "LOADING"
+					then "Loading live catalog pieces…"
+					else "This look is unavailable right now.",
+				UDim2.new(1, -24, 0, 58),
+				{
+					Position = UDim2.fromOffset(12, 76),
+					Wrapped = true,
+					AlignX = Enum.TextXAlignment.Center,
+					Color = C.TextMuted,
+					TextSize = 11,
+				}
+			)
 		end
 		local wear = Factory.ImageButton(
 			lookCard,
 			if lab.busy
 				then "Applying…"
 				else if available
-					then if recommended then "★ Wear today's pick" else string.format("Wear %d-piece look", #look.assets)
+					then if recommended
+						then "★ Wear today's pick"
+						else string.format("Wear %d-piece look", #look.assets)
 					else "Still loading…",
 			UDim2.new(1, -24, 0, 42),
 			UDim2.fromOffset(12, 154),
@@ -989,7 +1011,10 @@ local function lookPanel(app: any, stack: Frame)
 				if type(styleSprint) == "table" and type(styleSprint.state) == "table" then
 					app.state.makeoverState = styleSprint.state
 					if styleSprint.needsPersonalize then
-						app:_Toast("info", "Saved! For the Style Sprint, change one item so the starter look becomes yours.")
+						app:_Toast(
+							"info",
+							"Saved! For the Style Sprint, change one item so the starter look becomes yours."
+						)
 						lab.tab = "BROWSE"
 					elseif styleSprint.score then
 						lab.tab = "BROWSE"

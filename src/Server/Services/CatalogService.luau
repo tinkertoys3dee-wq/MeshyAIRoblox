@@ -427,12 +427,13 @@ function CatalogService:ApplyLook(player: Player, payload: any): (boolean, any)
 		end)
 		self.analytics:Custom(player, "CatalogStarterLookApplied", changedCount, { look = payload.lookKey })
 	end
-	return true, {
-		changed = changedCount > 0,
-		appliedCount = changedCount,
-		assets = resolved,
-		lookKey = payload.lookKey,
-	}
+	return true,
+		{
+			changed = changedCount > 0,
+			appliedCount = changedCount,
+			assets = resolved,
+			lookKey = payload.lookKey,
+		}
 end
 
 function CatalogService:Untry(player: Player, payload: any): (boolean, any)
