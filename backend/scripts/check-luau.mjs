@@ -66,11 +66,18 @@ try {
     const visibleScroller = new RegExp(`Name = "${name}"[\\s\\S]{0,420}ScrollBarThickness = [1-9]`);
     if (!visibleScroller.test(avatarLabSource)) throw new Error(`${name} must expose a visible scrollbar`);
   }
+  for (const marker of ['GuidedMakeoverCard', 'GuideProgress', 'GuideArrow', 'GuidedChangeCategories', 'ForgeGuideTarget']) {
+    if (!avatarLabSource.includes(marker)) throw new Error(`Contextual makeover guide is missing ${marker}`);
+  }
   if (!appSource.includes('catalogAccess = true :: boolean?')) {
     throw new Error('Catalog search must not be blocked by unrelated inventory-read consent');
   }
-  if (!read('src/Client/UI/StartGuide.luau').includes('there is no free first generation')) {
+  const startGuideSource = read('src/Client/UI/StartGuide.luau');
+  if (!startGuideSource.includes('there is no free first generation')) {
     throw new Error('First-session copy must distinguish free try-on from paid generation');
+  }
+  if (!startGuideSource.includes('START GUIDED MAKEOVER') || !startGuideSource.includes('TutorialPath')) {
+    throw new Error('First-session tutorial must promise and preview the guided three-step path');
   }
   const transition = appSource.match(/function App:_SetStudioOpen\(open: boolean\)[\s\S]*?(?=\nfunction App:)/)?.[0];
   if (!transition) throw new Error('Studio transition method not found');

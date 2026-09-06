@@ -421,6 +421,7 @@ function App.new()
 		avatarAccessoriesDirty = true,
 		communityTryOnItem = nil :: { [string]: any }?,
 		makeoverReveal = nil :: Frame?,
+		makeoverGuideRequested = false,
 		-- De-duplicates guide impressions across Discover's frequent re-renders
 		-- while retaining click telemetry for the same stage.
 		firstLookGuideEvents = {} :: { [string]: boolean },
@@ -3146,6 +3147,9 @@ function App:_ConnectPush()
 			self:_RenderActivePage()
 		elseif eventName == Network.PushEvents.Makeover then
 			self.state.makeoverState = payload.state or self.state.makeoverState
+			if self.state.makeoverState and self.state.makeoverState.completed == true then
+				self.makeoverGuideRequested = false
+			end
 			if self.activePage == "Avatar Lab" then
 				self:_RenderActivePage()
 			end

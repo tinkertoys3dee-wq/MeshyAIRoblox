@@ -8,6 +8,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Factory)
+local Motion = require(script.Parent.Motion)
 local ViewportController = require(script.Parent.ViewportController)
 local RunwayHub = require(script.Parent.RunwayHub)
 
@@ -36,6 +37,12 @@ local SPARKS = {
 	{ "Fantasy", "fantasy", "A violet crystal crown with a chunky connected silhouette", "Hat" },
 	{ "Soft pastel", "pastel", "A pastel butterfly backpack with rounded connected wings", "BackAccessory" },
 	{ "Streetwear", "streetwear", "A glossy black crossbody bag with a silver star buckle", "FrontAccessory" },
+}
+local GUIDED_CATEGORIES = {
+	{ "HairAccessory", "Hair" },
+	{ "Hat", "Hats" },
+	{ "FaceAccessory", "Face" },
+	{ "BackAccessory", "Back" },
 }
 
 local function state(app: any): any
@@ -200,7 +207,7 @@ local function changed(app: any)
 	render(app)
 end
 
-local trackMakeover: (any, string, string?, string?, string?) -> ()
+local trackMakeover: (any, string, string?, string?, string?, number?) -> ()
 
 local function mutate(app: any, action: string, payload: any, message: string)
 	local lab = state(app)
@@ -320,7 +327,14 @@ local MAKEOVER_FAILURES: { [string]: boolean } = {
 	RATE_LIMITED = true,
 }
 
-trackMakeover = function(app: any, stage: string, lookKey: string?, source: string?, failure: string?)
+trackMakeover = function(
+	app: any,
+	stage: string,
+	lookKey: string?,
+	source: string?,
+	failure: string?,
+	guideStep: number?
+)
 	app:_Track({
 		event = "MakeoverAction",
 		fields = {
@@ -328,8 +342,138 @@ trackMakeover = function(app: any, stage: string, lookKey: string?, source: stri
 			look = lookKey or "NONE",
 			source = source or "STARTER",
 			failure = if failure and MAKEOVER_FAILURES[failure] then failure else if failure then "OTHER" else nil,
+			guideStep = guideStep,
 		},
 	})
+end
+
+local function currentGuideStep(app: any, lab: any): number?
+	if lab.guideDismissed then
+		return nil
+	end
+	local sprint = app.state.makeoverState or {}
+	local journey = app.state.journeyState or { done = {}, completed = false }
+	local explicitlyRequested = app.makeoverGuideRequested == true
+	if sprint.completed == true or (not explicitlyRequested and journey.completed == true) then
+		return nil
+	end
+	if not explicitlyRequested and sprint.dailyCompleted == true and sprint.active ~= true then
+		return nil
+	end
+	local done = journey.done or {}
+	local starterApplied = sprint.starterApplied == true or (not explicitlyRequested and done.TRY_STYLE == true)
+	local personalized = sprint.personalized == true or (not explicitlyRequested and done.PERSONALIZE == true)
+	if not starterApplied then
+		return 1
+	end
+	if not personalized then
+		return 2
+	end
+	return 3
+end
+
+local function pulseGuideTarget(target: GuiObject)
+	target:SetAttribute("ForgeGuideTarget", true)
+	local stroke = Factory.Stroke(target, C.Gold, 0.04, 3)
+	stroke.Name = "GuideTarget"
+	Motion.Pulse(stroke, 0.62, { Transparency = 0.65 })
+end
+
+local GUIDE_COPY = {
+	{
+		title = "Pick the look you like most",
+		body = "Swipe the three looks, then tap the glowing Wear button. You can change everything afterward.",
+		arrow = "↓  TAP A LOOK BELOW",
+	},
+	{
+		title = "Make one change",
+		body = "Choose a category, then tap the glowing Try on button on any item. One change makes the look yours.",
+		arrow = "↓  TAP ONE ITEM BELOW",
+	},
+	{
+		title = "Save your first look",
+		body = "Keep the suggested name or type your own, then tap the glowing Save in Forge button. Saving is free.",
+		arrow = "↓  SAVE BUTTON BELOW",
+	},
+}
+
+local function guidePanel(app: any, stack: Frame, step: number, copyOverride: any?)
+	local lab = state(app)
+	local copy = copyOverride or GUIDE_COPY[step]
+	local card = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 180), nil, "GuidedMakeoverCard")
+	card.LayoutOrder = -9
+	Factory.Stroke(card, C.Gold, 0.08, 2)
+	Factory.Label(card, string.format("GUIDED · %d OF 3", step), UDim2.new(1, -126, 0, 22), {
+		Position = UDim2.fromOffset(16, 10),
+		Font = Theme.Fonts.Black,
+		TextSize = 12,
+		Color = C.Gold,
+	})
+	local exit = Factory.Button(card, "Show all tools", UDim2.fromOffset(104, 28), UDim2.new(1, -118, 0, 7))
+	exit.Name = "DismissMakeoverGuide"
+	exit.TextSize = 10
+	app:_BindButton(exit)
+	exit.Activated:Connect(function()
+		lab.guideDismissed = true
+		app.makeoverGuideRequested = false
+		trackMakeover(app, "GUIDE_DISMISSED", "NONE", "STARTER", nil, step)
+		app:_Toast("info", "All Avatar Lab tools are visible. Your makeover progress is safe.")
+		render(app)
+	end)
+	Factory.Label(card, copy.title, UDim2.new(1, -32, 0, 26), {
+		Position = UDim2.fromOffset(16, 38),
+		Font = Theme.Fonts.Black,
+		TextSize = 18,
+		Truncate = Enum.TextTruncate.AtEnd,
+	})
+	Factory.Label(card, copy.body, UDim2.new(1, -32, 0, 38), {
+		Position = UDim2.fromOffset(16, 65),
+		Wrapped = true,
+		TextSize = 12,
+		Color = C.TextMuted,
+		AlignY = Enum.TextYAlignment.Top,
+	})
+	local progress = Factory.New("Frame", {
+		Name = "GuideProgress",
+		Position = UDim2.fromOffset(16, 108),
+		Size = UDim2.new(1, -32, 0, 25),
+		BackgroundTransparency = 1,
+		Parent = card,
+	})
+	Factory.List(progress, Enum.FillDirection.Horizontal, 6)
+	for index, caption in { "1  PICK", "2  CHANGE", "3  SAVE" } do
+		local finished = index < step
+		local active = index == step
+		local segment = Factory.New("Frame", {
+			Name = if active then "CurrentGuideStep" else "GuideStep",
+			Size = UDim2.new(1 / 3, -4, 1, 0),
+			BackgroundColor3 = if finished then C.Mint elseif active then C.Gold else C.Panel,
+			BackgroundTransparency = if finished or active then 0.05 else 0.25,
+			BorderSizePixel = 0,
+			Parent = progress,
+		})
+		Factory.Corner(segment, 8)
+		Factory.Label(segment, (if finished then "✓  " else "") .. caption, UDim2.fromScale(1, 1), {
+			AlignX = Enum.TextXAlignment.Center,
+			Font = Theme.Fonts.Bold,
+			TextSize = 9,
+			Color = if finished or active then C.Ink else C.TextMuted,
+		})
+	end
+	local arrow = Factory.Label(card, copy.arrow, UDim2.new(1, -32, 0, 28), {
+		Name = "GuideArrow",
+		Position = UDim2.fromOffset(16, 143),
+		AlignX = Enum.TextXAlignment.Center,
+		Font = Theme.Fonts.Black,
+		TextSize = 14,
+		Color = C.Gold,
+	})
+	Motion.Pulse(arrow, 0.55, { Position = arrow.Position + UDim2.fromOffset(0, 4) })
+	local impressionKey = "guideStage" .. tostring(step)
+	if not lab.makeoverEvents[impressionKey] then
+		lab.makeoverEvents[impressionKey] = true
+		trackMakeover(app, "GUIDE_STAGE_SHOWN", "NONE", "STARTER", nil, step)
+	end
 end
 
 function AvatarLab.StartSprint(app: any)
@@ -680,148 +824,156 @@ function AvatarLab.ApplyStarterLook(app: any, look: any)
 	end)
 end
 
-local function sprintPanel(app: any, stack: Frame)
+local function sprintPanel(app: any, stack: Frame, guideStep: number?)
 	local lab = state(app)
 	local sprint = app.state.makeoverState or {}
 	local journey = app.state.journeyState or { done = {} }
 	local done = journey.done or {}
 	local completed = sprint.completed == true or (sprint.dailyCompleted == true and sprint.active ~= true)
-	local cardHeight = if completed then 210 else 178
-	local card = Factory.ImageCard(stack, UDim2.new(1, 0, 0, cardHeight), nil, "StyleSprint")
-	card.LayoutOrder = -9
-	Factory.Stroke(card, if completed then C.Mint else C.Cyan, 0.2, 1.5)
-	Factory.Label(
-		card,
-		if completed then "STYLE SPRINT COMPLETE" else "TODAY'S 90-SECOND STYLE SPRINT",
-		UDim2.new(1, -120, 0, 24),
-		{
-			Position = UDim2.fromOffset(16, 14),
-			Font = Theme.Fonts.Black,
-			TextSize = 16,
-			Truncate = Enum.TextTruncate.AtEnd,
-			Color = if completed then C.Mint else C.Gold,
-		}
-	)
-	local timer = Factory.ImagePill(
-		card,
-		completed and string.format("%d / 100", sprint.score or sprint.bestScore or 100) or "1:30",
-		if completed then C.Mint else C.Cyan,
-		86
-	)
-	timer.Position = UDim2.new(1, -102, 0, 10)
-	if not completed and sprint.active then
-		task.spawn(function()
-			local remaining = math.max(0, math.floor(sprint.remainingSeconds or Config.StyleSprint.DurationSeconds))
-			while timer.Parent and remaining >= 0 do
-				timer.Text = string.format("%d:%02d", math.floor(remaining / 60), remaining % 60)
-				if remaining == 0 then
-					timer.Text = "NO RUSH"
-					return
+	if guideStep then
+		guidePanel(app, stack, guideStep)
+		if guideStep ~= 1 then
+			return
+		end
+	else
+		local cardHeight = if completed then 210 else 178
+		local card = Factory.ImageCard(stack, UDim2.new(1, 0, 0, cardHeight), nil, "StyleSprint")
+		card.LayoutOrder = -9
+		Factory.Stroke(card, if completed then C.Mint else C.Cyan, 0.2, 1.5)
+		Factory.Label(
+			card,
+			if completed then "STYLE SPRINT COMPLETE" else "TODAY'S 90-SECOND STYLE SPRINT",
+			UDim2.new(1, -120, 0, 24),
+			{
+				Position = UDim2.fromOffset(16, 14),
+				Font = Theme.Fonts.Black,
+				TextSize = 16,
+				Truncate = Enum.TextTruncate.AtEnd,
+				Color = if completed then C.Mint else C.Gold,
+			}
+		)
+		local timer = Factory.ImagePill(
+			card,
+			completed and string.format("%d / 100", sprint.score or sprint.bestScore or 100) or "1:30",
+			if completed then C.Mint else C.Cyan,
+			86
+		)
+		timer.Position = UDim2.new(1, -102, 0, 10)
+		if not completed and sprint.active then
+			task.spawn(function()
+				local remaining = math.max(0, math.floor(sprint.remainingSeconds or Config.StyleSprint.DurationSeconds))
+				while timer.Parent and remaining >= 0 do
+					timer.Text = string.format("%d:%02d", math.floor(remaining / 60), remaining % 60)
+					if remaining == 0 then
+						timer.Text = "NO RUSH"
+						return
+					end
+					remaining -= 1
+					task.wait(1)
 				end
-				remaining -= 1
-				task.wait(1)
+			end)
+		end
+		Factory.Label(
+			card,
+			"THEME  ·  "
+				.. tostring(sprint.theme or (app.state.dailyBrief and app.state.dailyBrief.theme) or "Open style"),
+			UDim2.new(1, -32, 0, 22),
+			{
+				Position = UDim2.fromOffset(16, 42),
+				Font = Theme.Fonts.Bold,
+				TextSize = 12,
+				Color = C.TextMuted,
+				Truncate = Enum.TextTruncate.AtEnd,
+			}
+		)
+		local steps = Factory.New("ScrollingFrame", {
+			Name = "MakeoverObjectives",
+			Position = UDim2.fromOffset(16, 72),
+			Size = UDim2.new(1, -32, 0, 43),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 3,
+			ScrollBarImageColor3 = C.Gold,
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			CanvasSize = UDim2.new(),
+			Parent = card,
+		})
+		Factory.List(steps, Enum.FillDirection.Horizontal, 7)
+		for _, step in Config.Retention.FirstLookJourney do
+			if step.key ~= "OPEN_STUDIO" then
+				local finished = done[step.key] == true
+				local chip = Factory.New("Frame", {
+					Size = UDim2.fromOffset(if step.key == "PERSONALIZE" then 150 else 138, 34),
+					BackgroundColor3 = if finished then C.Mint else C.PanelRaised,
+					BackgroundTransparency = if finished then 0.08 else 0.18,
+					BorderSizePixel = 0,
+					Parent = steps,
+				})
+				Factory.Corner(chip, 10)
+				Factory.Label(chip, (if finished then "✓  " else "○  ") .. step.label, UDim2.new(1, -12, 1, 0), {
+					Position = UDim2.fromOffset(6, 0),
+					AlignX = Enum.TextXAlignment.Center,
+					Font = Theme.Fonts.Bold,
+					TextSize = 11,
+					Color = if finished then C.Ink else C.Text,
+					Truncate = Enum.TextTruncate.AtEnd,
+				})
 			end
-		end)
-	end
-	Factory.Label(
-		card,
-		"THEME  ·  " .. tostring(sprint.theme or (app.state.dailyBrief and app.state.dailyBrief.theme) or "Open style"),
-		UDim2.new(1, -32, 0, 22),
-		{
-			Position = UDim2.fromOffset(16, 42),
-			Font = Theme.Fonts.Bold,
+		end
+		local breakdown = sprint.breakdown
+		local instruction = if completed
+			then if type(breakdown) == "table"
+				then string.format(
+					"Saved! Completion %d · Variety %d · Personal %d · Theme %d · Speed %d",
+					breakdown.completion or 0,
+					breakdown.variety or 0,
+					breakdown.personalization or 0,
+					breakdown.themeHarmony or 0,
+					breakdown.speed or 0
+				)
+				else "Saved! Choose a next adventure—your makeover is already safe."
+			else if not sprint.starterApplied and not done.TRY_STYLE
+				then "Pick a vibe below. One tap applies the complete look."
+				else if not sprint.personalized and not done.PERSONALIZE
+					then "Now make it yours: try any different catalog item below."
+					else "Great. Open My look, name it, and save your outfit."
+		Factory.Label(card, instruction, UDim2.new(1, if completed then -32 else -186, 0, 42), {
+			Position = UDim2.fromOffset(16, 126),
+			Wrapped = true,
 			TextSize = 12,
 			Color = C.TextMuted,
-			Truncate = Enum.TextTruncate.AtEnd,
-		}
-	)
-	local steps = Factory.New("ScrollingFrame", {
-		Name = "MakeoverObjectives",
-		Position = UDim2.fromOffset(16, 72),
-		Size = UDim2.new(1, -32, 0, 43),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		ScrollBarThickness = 3,
-		ScrollBarImageColor3 = C.Gold,
-		ScrollingDirection = Enum.ScrollingDirection.X,
-		AutomaticCanvasSize = Enum.AutomaticSize.X,
-		CanvasSize = UDim2.new(),
-		Parent = card,
-	})
-	Factory.List(steps, Enum.FillDirection.Horizontal, 7)
-	for _, step in Config.Retention.FirstLookJourney do
-		if step.key ~= "OPEN_STUDIO" then
-			local finished = done[step.key] == true
-			local chip = Factory.New("Frame", {
-				Size = UDim2.fromOffset(if step.key == "PERSONALIZE" then 150 else 138, 34),
-				BackgroundColor3 = if finished then C.Mint else C.PanelRaised,
-				BackgroundTransparency = if finished then 0.08 else 0.18,
-				BorderSizePixel = 0,
-				Parent = steps,
-			})
-			Factory.Corner(chip, 10)
-			Factory.Label(chip, (if finished then "✓  " else "○  ") .. step.label, UDim2.new(1, -12, 1, 0), {
-				Position = UDim2.fromOffset(6, 0),
-				AlignX = Enum.TextXAlignment.Center,
-				Font = Theme.Fonts.Bold,
-				TextSize = 11,
-				Color = if finished then C.Ink else C.Text,
-				Truncate = Enum.TextTruncate.AtEnd,
-			})
+			AlignY = Enum.TextYAlignment.Top,
+		})
+		if not completed and (sprint.personalized or done.PERSONALIZE) then
+			local save = button(app, card, "Open My look →", 158, function()
+				trackMakeover(app, "SAVE_CLICKED", "NONE", "CATALOG")
+				lab.tab = "LOOK"
+				app.scrollPositions.AvatarLabWorkspace = Vector2.zero
+				render(app)
+			end, true)
+			save.Position = UDim2.new(1, -174, 0, 124)
+		elseif completed then
+			local choices = row(card, 1, 48)
+			choices.Position = UDim2.fromOffset(16, 154)
+			choices.Size = UDim2.new(1, -32, 0, 48)
+			button(app, choices, "Style again", 122, function()
+				trackMakeover(app, "NEXT_ACTION_CLICKED", "NONE", "CATALOG")
+				AvatarLab.StartSprint(app)
+			end, true)
+			button(app, choices, "Avatar Art", 122, function()
+				trackMakeover(app, "NEXT_ACTION_CLICKED", "NONE", "CATALOG")
+				app:_OpenPage("Avatar Graphics")
+			end)
+			button(app, choices, "Forge Runway", 142, function()
+				trackMakeover(app, "NEXT_ACTION_CLICKED", "NONE", "CATALOG")
+				RunwayHub.Show(app)
+			end)
+			button(app, choices, "Forge a missing piece", 188, function()
+				trackMakeover(app, "NEXT_ACTION_CLICKED", "NONE", "FORGE")
+				design(app)
+			end)
 		end
-	end
-	local breakdown = sprint.breakdown
-	local instruction = if completed
-		then if type(breakdown) == "table"
-			then string.format(
-				"Saved! Completion %d · Variety %d · Personal %d · Theme %d · Speed %d",
-				breakdown.completion or 0,
-				breakdown.variety or 0,
-				breakdown.personalization or 0,
-				breakdown.themeHarmony or 0,
-				breakdown.speed or 0
-			)
-			else "Saved! Choose a next adventure—your makeover is already safe."
-		else if not sprint.starterApplied and not done.TRY_STYLE
-			then "Pick a vibe below. One tap applies the complete look."
-			else if not sprint.personalized and not done.PERSONALIZE
-				then "Now make it yours: try any different catalog item below."
-				else "Great. Open My look, name it, and save your outfit."
-	Factory.Label(card, instruction, UDim2.new(1, if completed then -32 else -186, 0, 42), {
-		Position = UDim2.fromOffset(16, 126),
-		Wrapped = true,
-		TextSize = 12,
-		Color = C.TextMuted,
-		AlignY = Enum.TextYAlignment.Top,
-	})
-	if not completed and (sprint.personalized or done.PERSONALIZE) then
-		local save = button(app, card, "Open My look →", 158, function()
-			trackMakeover(app, "SAVE_CLICKED", "NONE", "CATALOG")
-			lab.tab = "LOOK"
-			app.scrollPositions.AvatarLabWorkspace = Vector2.zero
-			render(app)
-		end, true)
-		save.Position = UDim2.new(1, -174, 0, 124)
-	elseif completed then
-		local choices = row(card, 1, 48)
-		choices.Position = UDim2.fromOffset(16, 154)
-		choices.Size = UDim2.new(1, -32, 0, 48)
-		button(app, choices, "Style again", 122, function()
-			trackMakeover(app, "NEXT_ACTION_CLICKED", "NONE", "CATALOG")
-			AvatarLab.StartSprint(app)
-		end, true)
-		button(app, choices, "Avatar Art", 122, function()
-			trackMakeover(app, "NEXT_ACTION_CLICKED", "NONE", "CATALOG")
-			app:_OpenPage("Avatar Graphics")
-		end)
-		button(app, choices, "Forge Runway", 142, function()
-			trackMakeover(app, "NEXT_ACTION_CLICKED", "NONE", "CATALOG")
-			RunwayHub.Show(app)
-		end)
-		button(app, choices, "Forge a missing piece", 188, function()
-			trackMakeover(app, "NEXT_ACTION_CLICKED", "NONE", "FORGE")
-			design(app)
-		end)
 	end
 
 	label(stack, "PICK A STARTER LOOK", 26, true).LayoutOrder = -8
@@ -840,6 +992,16 @@ local function sprintPanel(app: any, stack: Frame)
 	})
 	Factory.List(looks, Enum.FillDirection.Horizontal, 12)
 	local readyCount = 0
+	local guideTargetLook: string? = nil
+	if guideStep == 1 then
+		for _, definition in Config.StyleSprint.StarterLooks do
+			local candidate = lab.starterLooks[definition.key]
+			if candidate and candidate.available == true then
+				guideTargetLook = definition.key
+				break
+			end
+		end
+	end
 	for lookIndex, definition in Config.StyleSprint.StarterLooks do
 		local look = lab.starterLooks[definition.key]
 		local available = look and look.available == true
@@ -911,6 +1073,17 @@ local function sprintPanel(app: any, stack: Frame)
 		)
 		app:_BindButton(wear)
 		wear.Active = available and not lab.busy
+		if definition.key == guideTargetLook then
+			Factory.Label(lookCard, "↓  TAP HERE", UDim2.new(1, -24, 0, 18), {
+				Name = "GuideTargetLabel",
+				Position = UDim2.fromOffset(12, 135),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = 10,
+				Color = C.Gold,
+			})
+			pulseGuideTarget(wear)
+		end
 		wear.Activated:Connect(function()
 			AvatarLab.ApplyStarterLook(app, look)
 		end)
@@ -925,6 +1098,9 @@ local function sprintPanel(app: any, stack: Frame)
 			AvatarLab.LoadStarterLooks(app)
 		end, true)
 		retry.Size = UDim2.fromOffset(180, 42)
+		if guideStep == 1 then
+			pulseGuideTarget(retry)
+		end
 		if app.state.policy.contentSharingAllowed then
 			local community = button(app, looks, "Try community styles", 190, function()
 				app:_OpenPage("Discover")
@@ -934,8 +1110,11 @@ local function sprintPanel(app: any, stack: Frame)
 	end
 end
 
-local function lookPanel(app: any, stack: Frame)
+local function lookPanel(app: any, stack: Frame, guideStep: number?)
 	local lab = state(app)
+	if guideStep == 3 then
+		guidePanel(app, stack, 3)
+	end
 	if lab.outfitName == "" and app.state.makeoverState and app.state.makeoverState.active then
 		lab.outfitName = tostring(app.state.makeoverState.theme or "Daily") .. " Look"
 	end
@@ -944,48 +1123,59 @@ local function lookPanel(app: any, stack: Frame)
 		Size = UDim2.new(1, 0, 0, 260),
 		BackgroundColor3 = C.Ink,
 		BorderSizePixel = 0,
-		LayoutOrder = 1,
+		LayoutOrder = if guideStep == 3 then 3 else 1,
 		Parent = stack,
 	})
 	Factory.Corner(preview, 14)
 	app.activeViewport = ViewportController.new(preview)
-	label(stack, "Drag to rotate. Trying items is free; owning them is separate.", 42).LayoutOrder = 2
-	local actions = row(stack, 3)
-	button(app, actions, "Undo", 92, function()
-		mutate(app, Network.Actions.UndoAvatar, {}, "Last catalog change undone.")
-	end)
-	button(app, actions, "Redo", 92, function()
-		mutate(app, Network.Actions.RedoAvatar, {}, "Catalog change restored.")
-	end)
-	button(app, actions, "Reset catalog", 138, function()
-		mutate(
-			app,
-			Network.Actions.ResetAvatar,
-			{},
-			"Catalog reset to your saved Roblox avatar. Custom UGCs stay equipped; undo is available."
-		)
-	end)
-	button(app, actions, "Save to Roblox", 150, function()
-		local humanoid = Players.LocalPlayer.Character
-			and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-		if not humanoid then
-			app:_Toast("error", "Wait for your character to load.")
-			return
-		end
-		local ok = pcall(function()
-			AvatarEditorService:PromptSaveAvatar(humanoid:GetAppliedDescription(), humanoid.RigType)
+	label(
+		stack,
+		if guideStep == 3
+			then "Your finished look is below. Keep the suggested name or type your own."
+			else "Drag to rotate. Trying items is free; owning them is separate.",
+		42
+	).LayoutOrder =
+		2
+	if guideStep ~= 3 then
+		local actions = row(stack, 3)
+		button(app, actions, "Undo", 92, function()
+			mutate(app, Network.Actions.UndoAvatar, {}, "Last catalog change undone.")
 		end)
-		app:_Toast(
-			if ok then "info" else "error",
-			if ok
-				then "Confirm in Roblox. Only owned catalog items can be saved; unpublished Forge models stay in this game."
-				else "Roblox couldn't open the save prompt."
-		)
-	end)
-	local saveRow = Factory.New(
-		"Frame",
-		{ Size = UDim2.new(1, 0, 0, 48), BackgroundTransparency = 1, LayoutOrder = 4, Parent = stack }
-	)
+		button(app, actions, "Redo", 92, function()
+			mutate(app, Network.Actions.RedoAvatar, {}, "Catalog change restored.")
+		end)
+		button(app, actions, "Reset catalog", 138, function()
+			mutate(
+				app,
+				Network.Actions.ResetAvatar,
+				{},
+				"Catalog reset to your saved Roblox avatar. Custom UGCs stay equipped; undo is available."
+			)
+		end)
+		button(app, actions, "Save to Roblox", 150, function()
+			local humanoid = Players.LocalPlayer.Character
+				and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+			if not humanoid then
+				app:_Toast("error", "Wait for your character to load.")
+				return
+			end
+			local ok = pcall(function()
+				AvatarEditorService:PromptSaveAvatar(humanoid:GetAppliedDescription(), humanoid.RigType)
+			end)
+			app:_Toast(
+				if ok then "info" else "error",
+				if ok
+					then "Confirm in Roblox. Only owned catalog items can be saved; unpublished Forge models stay in this game."
+					else "Roblox couldn't open the save prompt."
+			)
+		end)
+	end
+	local saveRow = Factory.New("Frame", {
+		Size = UDim2.new(1, 0, 0, 48),
+		BackgroundTransparency = 1,
+		LayoutOrder = if guideStep == 3 then 1 else 4,
+		Parent = stack,
+	})
 	local name = app:_TextBox(saveRow, "Name this mixed outfit", UDim2.new(1, -134, 0, 42), UDim2.new(), false)
 	name.Text = lab.outfitName
 	name:GetPropertyChangedSignal("Text"):Connect(function()
@@ -1026,6 +1216,10 @@ local function lookPanel(app: any, stack: Frame)
 		end)
 	end, true)
 	save.Position = UDim2.new(1, -126, 0, 0)
+	if guideStep == 3 then
+		pulseGuideTarget(save)
+		return
+	end
 	label(stack, "WORN NOW", 24, true).LayoutOrder = 5
 	local worn = Factory.New("Frame", {
 		BackgroundTransparency = 1,
@@ -1133,8 +1327,10 @@ local function lookPanel(app: any, stack: Frame)
 	end
 end
 
-local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean?)
+local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean?, guided: boolean?)
 	local lab = state(app)
+	local cardHeight = if guided then 290 else 326
+	local guideTargetAssigned = false
 	local grid = Factory.New("Frame", {
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
@@ -1149,7 +1345,7 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 	local function resize()
 		local width = math.max(1, grid.AbsoluteSize.X / (app.uiScaleInstance.Scale or 1))
 		local columns = math.max(1, math.floor((width + 12) / 190))
-		layout.CellSize = UDim2.new(1 / columns, -12 * (columns - 1) / columns, 0, 326)
+		layout.CellSize = UDim2.new(1 / columns, -12 * (columns - 1) / columns, 0, cardHeight)
 	end
 	resize()
 	table.insert(app.pageConnections, grid:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize))
@@ -1188,12 +1384,14 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 		local price = tonumber(item.Price or item.LowestPrice)
 		Factory.Label(
 			card,
-			if forge
-				then "Your custom Forge creation"
-				elseif price == 0 then "Free to own · free to try"
-				elseif price then string.format("R$ %d to own · free to try", price)
-				else "Free to try · check price in Roblox",
-			UDim2.new(1, -24, 0, 32),
+			if guided
+				then "FREE PREVIEW · NOTHING PURCHASED"
+				else if forge
+					then "Your custom Forge creation"
+					elseif price == 0 then "Free to own · free to try"
+					elseif price then string.format("R$ %d to own · free to try", price)
+					else "Free to try · check price in Roblox",
+			UDim2.new(1, -24, 0, if guided then 20 else 32),
 			{ Position = UDim2.fromOffset(12, 198), TextSize = 11, Wrapped = true, Color = C.TextMuted }
 		)
 		local customWorn = forge and table.find(app.state.profile.equippedItemIds, item.id) ~= nil
@@ -1208,6 +1406,19 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 			"primary"
 		)
 		try.Active = not lab.busy
+		local guideTarget = guided == true and not guideTargetAssigned and not forge and not app.triedOnAssetIds[id]
+		if guideTarget then
+			guideTargetAssigned = true
+			Factory.Label(card, "↓  TAP TRY ON", UDim2.new(1, -24, 0, 18), {
+				Name = "GuideTargetLabel",
+				Position = UDim2.fromOffset(12, 216),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = 10,
+				Color = C.Gold,
+			})
+			pulseGuideTarget(try)
+		end
 		try.Activated:Connect(function()
 			if forge then
 				mutate(
@@ -1230,7 +1441,7 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 					else "Item applied! Open My look to preview or save."
 			)
 		end)
-		if not forge then
+		if not forge and not guided then
 			local star = Factory.ImageButton(
 				card,
 				if lab.favorites[id] then "Saved" else "Save",
@@ -1285,7 +1496,19 @@ end
 
 function AvatarLab.Render(app: any)
 	local lab = state(app)
-	app:_PageHeader("Avatar Lab", "Try it free. Make it yours. Mix catalog fashion with your custom Forge UGCs.", true)
+	local guideStep = currentGuideStep(app, lab)
+	if guideStep == 1 or guideStep == 2 then
+		lab.tab = "BROWSE"
+	elseif guideStep == 3 then
+		lab.tab = "LOOK"
+	end
+	app:_PageHeader(
+		"Avatar Lab",
+		if guideStep
+			then "Follow the gold glow—only the control you need right now is shown."
+			else "Try it free. Make it yours. Mix catalog fashion with your custom Forge UGCs.",
+		true
+	)
 	local page = Factory.New("ScrollingFrame", {
 		Name = "AvatarLabWorkspace",
 		Size = UDim2.new(0.96, 0, 1, -106),
@@ -1306,23 +1529,25 @@ function AvatarLab.Render(app: any)
 		Parent = page,
 	})
 	Factory.List(stack, Enum.FillDirection.Vertical, 12)
-	local tabs = row(stack, -10)
-	for _, tab in
-		{
-			{ "BROWSE", "Browse" },
-			{ "LOOK", "My look" },
-			{ "SAVED", "Saved this visit" },
-			{ "FORGE", "My custom UGCs" },
-		}
-	do
-		button(app, tabs, tab[2], if #tab[2] > 9 then 148 else 100, function()
-			lab.tab = tab[1]
-			app.scrollPositions.AvatarLabWorkspace = Vector2.zero
-			render(app)
-		end, lab.tab == tab[1])
+	if not guideStep then
+		local tabs = row(stack, -10)
+		for _, tab in
+			{
+				{ "BROWSE", "Browse" },
+				{ "LOOK", "My look" },
+				{ "SAVED", "Saved this visit" },
+				{ "FORGE", "My custom UGCs" },
+			}
+		do
+			button(app, tabs, tab[2], if #tab[2] > 9 then 148 else 100, function()
+				lab.tab = tab[1]
+				app.scrollPositions.AvatarLabWorkspace = Vector2.zero
+				render(app)
+			end, lab.tab == tab[1])
+		end
 	end
 	if lab.tab == "LOOK" then
-		lookPanel(app, stack)
+		lookPanel(app, stack, guideStep)
 		return
 	end
 	if lab.tab == "FORGE" then
@@ -1372,6 +1597,13 @@ function AvatarLab.Render(app: any)
 	-- Permission is the first available action, not a button below several
 	-- screens of filters that cannot do anything until access is granted.
 	if app.catalogAccess ~= true then
+		if guideStep == 1 then
+			guidePanel(app, stack, 1, {
+				title = "First, enable free try-ons",
+				body = "Roblox asks once so Forge can preview catalog items on your avatar. This does not buy anything.",
+				arrow = "↓  TAP ENABLE CATALOG",
+			})
+		end
 		label(stack, "READY TO TRY YOUR FIRST LOOK?", 46, true).LayoutOrder = 1
 		local access = row(stack, 2)
 		local enable = button(
@@ -1386,6 +1618,9 @@ function AvatarLab.Render(app: any)
 			true
 		)
 		enable.Active = not app.catalogAccessPrompting
+		if guideStep == 1 then
+			pulseGuideTarget(enable)
+		end
 		label(
 			stack,
 			app.catalogError
@@ -1393,18 +1628,20 @@ function AvatarLab.Render(app: any)
 			78
 		).LayoutOrder =
 			3
-		local preview = row(stack, 4)
-		button(app, preview, "See my current avatar", 220, function()
-			lab.tab = "LOOK"
-			app.scrollPositions.AvatarLabWorkspace = Vector2.zero
-			render(app)
-		end)
-		label(
-			stack,
-			"After enabling: choose an item → tap Try on → see it on your avatar. Owning an item is a separate Roblox purchase.",
-			78
-		).LayoutOrder =
-			5
+		if not guideStep then
+			local preview = row(stack, 4)
+			button(app, preview, "See my current avatar", 220, function()
+				lab.tab = "LOOK"
+				app.scrollPositions.AvatarLabWorkspace = Vector2.zero
+				render(app)
+			end)
+			label(
+				stack,
+				"After enabling: choose an item → tap Try on → see it on your avatar. Owning an item is a separate Roblox purchase.",
+				78
+			).LayoutOrder =
+				5
+		end
 		return
 	end
 	local sprint = app.state.makeoverState or {}
@@ -1422,7 +1659,57 @@ function AvatarLab.Render(app: any)
 			end
 		end)
 	end
-	sprintPanel(app, stack)
+	sprintPanel(app, stack, guideStep)
+	if guideStep == 1 then
+		return
+	end
+	if guideStep == 2 then
+		local categories = row(stack, -7)
+		categories.Name = "GuidedChangeCategories"
+		for _, category in GUIDED_CATEGORIES do
+			button(app, categories, category[2], 104, function()
+				app.catalogType = category[1]
+				app.catalogQuery = ""
+				AvatarLab.Search(app, "")
+			end, app.catalogType == category[1])
+		end
+		if app.catalogResults == nil and not app.catalogSearching then
+			task.defer(function()
+				if app.activePage == "Avatar Lab" and currentGuideStep(app, lab) == 2 then
+					AvatarLab.Search(app, "")
+				end
+			end)
+		end
+		local quickResults = {}
+		for _, item in app.catalogResults or {} do
+			if not app.triedOnAssetIds[item.Id] then
+				table.insert(quickResults, item)
+				if #quickResults >= 6 then
+					break
+				end
+			end
+		end
+		label(
+			stack,
+			if app.catalogSearching
+				then "Finding a few easy changes…"
+				else if app.catalogError
+					then app.catalogError
+					else "Pick any card. The gold outline marks the easiest next tap.",
+			40
+		).LayoutOrder =
+			-6
+		itemGrid(app, stack, quickResults, false, true)
+		if #quickResults == 0 and not app.catalogSearching then
+			local retry = row(stack, 21)
+			local retryButton = button(app, retry, "Try another category", 190, function()
+				app.catalogType = "HairAccessory"
+				AvatarLab.Search(app, "")
+			end, true)
+			pulseGuideTarget(retryButton)
+		end
+		return
+	end
 	local searchRow = Factory.New(
 		"Frame",
 		{ BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44), LayoutOrder = 1, Parent = stack }

@@ -69,6 +69,9 @@ end)
 Motion.Tween(button, 1, { TextSize = 18 })
 equal(tweenCount, before, "Reduced motion skips TweenService")
 equal(mirrored.TextSize, 18, "Reduced motion still applies final state")
+Motion.Pulse(button, 1, { TextSize = 20 })
+equal(tweenCount, before, "Reduced motion also disables repeating tutorial pulses")
+equal(mirrored.TextSize, 18, "Disabled pulse preserves the bright static tutorial target")
 for _, viewport in { Vector2.new(320, 568), Vector2.new(844, 390), Vector2.new(768, 1024), Vector2.new(1920, 1080) } do
 	local modalSize = Vector2.new(560, 702)
 	local scale = Motion.FitScale(modalSize, viewport, 1.4)
@@ -528,13 +531,99 @@ app._Invoke = function(_, action, payload)
 	table.insert(invoked, { action = action, payload = payload })
 	return true, {}
 end
+
+-- First-session guided mode exposes only one decision at a time. The gold
+-- target attribute is more stable to assert than a particular art asset and
+-- is also what lets Studio inspectors identify the active coach mark.
+local function guidedSnapshot()
+	local named = {}
+	local buttons = {}
+	local textBoxes = 0
+	for _, control in app.content:GetDescendants() do
+		named[control.Name] = (named[control.Name] or 0) + 1
+		if control:IsA("TextButton") then
+			buttons[control.Text] = control
+		end
+		if control:IsA("TextBox") then
+			textBoxes += 1
+		end
+	end
+	return named, buttons, textBoxes
+end
+local function clearPage()
+	for _, child in app.content:GetChildren() do
+		child:Destroy()
+	end
+end
+
+app.makeoverGuideRequested = true
+app.catalogAccess = false
+AvatarLab.Render(app)
+local permissionNames, permissionButtons, permissionTextBoxes = guidedSnapshot()
+check(permissionNames.GuidedMakeoverCard == 1, "Catalog permission stays inside the guided coach flow")
+check(
+	permissionButtons["Enable catalog · free"]:GetAttribute("ForgeGuideTarget"),
+	"Catalog permission highlights the exact next action"
+)
+equal(permissionTextBoxes, 0, "Catalog permission step hides unusable search controls")
+check(permissionButtons["See my current avatar"] == nil, "Catalog permission step hides navigation distractions")
+clearPage()
+
+app.catalogAccess = true
+AvatarLab.Render(app)
+local stepOneNames, stepOneButtons, stepOneTextBoxes = guidedSnapshot()
+check(stepOneNames.GuidedMakeoverCard == 1, "Guided makeover has one clear coach card")
+check(stepOneNames.GuideProgress == 1 and stepOneNames.GuideArrow == 1, "Guide shows progress and an arrow")
+equal(stepOneTextBoxes, 0, "Pick step hides unrelated catalog search controls")
+check(stepOneButtons["My custom UGCs"] == nil, "Pick step hides unrelated Avatar Lab tabs")
+local firstTarget = nil
+for _, control in app.content:GetDescendants() do
+	if control:GetAttribute("ForgeGuideTarget") then
+		firstTarget = control
+		break
+	end
+end
+check(firstTarget ~= nil, "Pick step highlights one exact Wear button")
+clearPage()
+
+app.state.makeoverState.starterApplied = true
+AvatarLab.Render(app)
+local stepTwoNames, stepTwoButtons, stepTwoTextBoxes = guidedSnapshot()
+check(stepTwoNames.GuidedChangeCategories == 1, "Change step offers only simple category choices")
+equal(stepTwoTextBoxes, 0, "Change step hides advanced search and price filters")
+check(stepTwoButtons["Try on · free"] ~= nil, "Change step keeps the required try-on action")
+check(
+	stepTwoButtons.Save == nil and stepTwoButtons["Buy / view in Roblox"] == nil,
+	"Change step hides bookmark and purchase distractions"
+)
+check(
+	stepTwoButtons["Try on · free"]:GetAttribute("ForgeGuideTarget"),
+	"Change step highlights one exact Try on button"
+)
+clearPage()
+
+app.state.makeoverState.personalized = true
+AvatarLab.Render(app)
+local _, stepThreeButtons, stepThreeTextBoxes = guidedSnapshot()
+check(stepThreeButtons["Save in Forge"] ~= nil, "Save step opens the actual outfit-save action")
+check(stepThreeButtons["Save in Forge"]:GetAttribute("ForgeGuideTarget"), "Save step highlights the save button")
+equal(stepThreeButtons["Save in Forge"].Parent.LayoutOrder, 1, "Save target stays directly below its coach mark")
+check(
+	stepThreeButtons.Undo == nil and stepThreeButtons["Save to Roblox"] == nil,
+	"Save step hides secondary look tools"
+)
+equal(stepThreeTextBoxes, 1, "Save step exposes only the optional outfit name field")
+clearPage()
+
+app.catalogWorkspace.guideDismissed = true
+app.makeoverGuideRequested = false
+app.state.makeoverState.starterApplied = false
+app.state.makeoverState.personalized = false
 for _, tab in { "BROWSE", "LOOK", "SAVED", "FORGE" } do
 	app.catalogWorkspace.tab = tab
 	AvatarLab.Render(app)
 	check(#app.content:GetChildren() > 0, "Avatar Lab " .. tab .. " view constructs")
-	for _, child in app.content:GetChildren() do
-		child:Destroy()
-	end
+	clearPage()
 end
 app.catalogWorkspace.tab = "BROWSE"
 AvatarLab.Render(app)
