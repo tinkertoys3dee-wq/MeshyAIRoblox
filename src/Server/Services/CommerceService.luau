@@ -57,17 +57,11 @@ local function validatePassConfiguration()
 	end
 end
 
-function CommerceService.new(
-	profileService: any,
-	playerStateService: any,
-	analyticsService: any,
-	push: (Player, string, any) -> ()
-)
+function CommerceService.new(profileService: any, analyticsService: any, push: (Player, string, any) -> ())
 	validateProductConfiguration()
 	validatePassConfiguration()
 	local self = setmetatable({
 		profiles = profileService,
-		playerStates = playerStateService,
 		handlers = {} :: { [string]: GrantHandler },
 		analytics = analyticsService,
 		push = push,
@@ -224,9 +218,6 @@ function CommerceService:PromptPass(player: Player, passKey: string): (boolean, 
 	if not pass then
 		return false, "UNKNOWN_GAME_PASS"
 	end
-	if not self.playerStates:Get(player).commerceAllowed then
-		return false, "COMMERCE_NOT_ALLOWED"
-	end
 	local lookupSuccess, owned = self:OwnsPass(player, passKey, true)
 	if lookupSuccess and owned == true then
 		return true, { alreadyOwned = true }
@@ -265,9 +256,6 @@ function CommerceService:BeginIntent(
 	local handler = self.handlers[productKey]
 	if not product or not handler then
 		return false, "UNKNOWN_PRODUCT"
-	end
-	if not self.playerStates:Get(player).commerceAllowed then
-		return false, "COMMERCE_NOT_ALLOWED"
 	end
 
 	local now = os.time()
@@ -405,9 +393,6 @@ function CommerceService:BeginIntentWithTokens(
 	local handler = self.handlers[productKey]
 	if not handler then
 		return false, "UNKNOWN_PRODUCT"
-	end
-	if not self.playerStates:Get(player).commerceAllowed then
-		return false, "COMMERCE_NOT_ALLOWED"
 	end
 	local robuxPrice = self:GetPrices()[productKey]
 	if type(robuxPrice) ~= "number" or robuxPrice <= 0 then

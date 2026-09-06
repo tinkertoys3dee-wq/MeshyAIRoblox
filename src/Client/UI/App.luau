@@ -114,7 +114,7 @@ local ERROR_MESSAGES = {
 	PRODUCT_ID_NOT_CONFIGURED = "This purchase is not configured yet. Add the developer product ID in Config.luau.",
 	BACKEND_NOT_CONFIGURED = "The generation backend is not connected yet.",
 	CONTENT_SHARING_DISABLED = "Roblox policy settings do not allow shared content for this account.",
-	COMMERCE_NOT_ALLOWED = "Purchases are unavailable for this account.",
+	PAID_TRADING_NOT_ALLOWED = "Roblox policy settings do not allow paid creator transfers for this account.",
 	PLUS_REQUIRED = "Roblox Plus is required to buy another creator's model.",
 	LISTING_UNAVAILABLE = "This creator is not currently selling that model.",
 	ITEM_NOT_FOUND = "That model is no longer available. Refresh the page and try again.",
@@ -3490,6 +3490,15 @@ function App:_GlowField(box: TextBox, studCorners: boolean?)
 	end
 end
 
+local function hasCreatedPersonalUGC(profile: { [string]: any }): boolean
+	for _, item in profile.items or {} do
+		if type(item) == "table" and item.license == "ORIGINAL" and item.originalOwnerUserId == profile.userId then
+			return true
+		end
+	end
+	return false
+end
+
 function App:_RenderCreate()
 	-- Simple Mode is a real, persisted setting (profile.settings.
 	-- simpleMode, defaulting true for every account -- see ProfileService's
@@ -3502,9 +3511,8 @@ function App:_RenderCreate()
 	-- never removed, just not the default for an audience that skews young.
 	local simpleMode = self.state.profile.settings.simpleMode ~= false
 	local showAllMethods = not simpleMode
-	local generationsCompleted = self.state.profile.stats.generationsCompleted or 0
 	local customGuideActive = self.customUGCGuideRequested == true
-		or (generationsCompleted == 0 and self.customUGCGuideDismissed ~= true)
+		or (not hasCreatedPersonalUGC(self.state.profile) and self.customUGCGuideDismissed ~= true)
 	-- A player can enter Simple Mode after selecting an advanced method in the
 	-- same session. Keep the hidden state honest: the one visible creator is
 	-- always Direct Forge, never a stale image/avatar method with mismatched
@@ -4774,9 +4782,6 @@ function App:_RenderCreate()
 			if simpleMode
 				then if simpleRetryAvailable
 					then "Your retry credit will be used · No Robux charge"
-					elseif
-						self.state.policy.commerceAllowed ~= true
-					then "Roblox has disabled purchases for this account · Try a free look instead"
 					elseif self.paymentMethod == "TOKENS" then string.format(
 						"One custom 3D accessory · %d ad tokens · Free reward tokens cannot pay for AI",
 						tokenPrice(self.state.prices.DirectGeneration, "DirectGeneration")
@@ -4827,7 +4832,6 @@ function App:_RenderCreate()
 			self.shell.Visible
 			and not isUpload
 			and not hasRetryCredit
-			and self.state.policy.commerceAllowed == true
 			and (tonumber(self.state.profile.tutorialVersion) or 0) >= Config.Tutorial.Version
 		then
 			local offerKey = string.format("%s:%s:%s", generationProductKey, self.paymentMethod, tostring(simpleMode))
@@ -4850,9 +4854,6 @@ function App:_RenderCreate()
 		-- method Simple Mode ever leaves selected.
 		local actionText = if hasRetryCredit
 			then if not showAllMethods then "Retry My UGC · FREE CREDIT" else "Use retry credit · FREE"
-			elseif
-				self.state.policy.commerceAllowed ~= true and not isUpload
-			then "Purchases unavailable on this account"
 			elseif not showAllMethods then string.format("Create My UGC  ·  %s", priceText)
 			elseif self.selectedMethod == "TEXT_TO_3D" then string.format("Forge 3D · %s", priceText)
 			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · %s", priceText)
@@ -4875,7 +4876,7 @@ function App:_RenderCreate()
 			"primary"
 		)
 		generate.Name = "CreatePersonalUGCButton"
-		generate.Active = isUpload or hasRetryCredit or self.state.policy.commerceAllowed == true
+		generate.Active = true
 		self:_BindButton(generate)
 		-- The concept art's molten CTA has a small gold rivet stud near each
 		-- end -- a light corner accent that scales with the button's own

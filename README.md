@@ -25,6 +25,7 @@ Generated item metadata, ownership, fit transforms, likes, favorites, purchase r
 - Filtered prompts receive a second provider-side safety check before any purchase prompt can open. Generated reference, texture, and thumbnail images are checked again before any visual asset is shown or uploaded.
 - Custom references accept numeric Roblox Image/Decal IDs only, require completed Roblox moderation, player/group ownership, and `IsContentSharingAllowed`, and resolve through fixed Roblox hosts with format/dimension validation before Meshy receives any bytes.
 - Public sharing, listings, likes, and other-player try-on are disabled when `PolicyService` reports `IsContentSharingAllowed == false`.
+- `PolicyService.IsEligibleToPurchaseCommerceProduct` is retained only for Roblox real-world Commerce Products. It never pre-blocks ordinary developer products, passes, catalog purchase prompts, Robux transfers, or rewarded ads; the matching Roblox APIs decide whether those actions can proceed.
 - Meshy and OpenAI keys are Railway environment variables. The Roblox-to-Railway credential is a Creator Hub secret returned by `HttpService:GetSecret()`.
 - A generated rigid accessory targets 3,600 triangles and must remain strictly below 4,000 triangles and vertices. The backend requires one watertight textured mesh with UVs and normalizes its embedded texture to at most 2048×2048.
 - A marketplace copy is granted only after a Roblox Plus transfer sender receipt matches a stored transfer request. Copies are permanently marked `PERSONAL_COPY` and cannot be listed again.

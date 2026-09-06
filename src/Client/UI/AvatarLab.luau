@@ -1513,10 +1513,6 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 				Parent = card,
 			})
 			buy.Activated:Connect(function()
-				if not app.state.policy.commerceAllowed then
-					app:_Toast("info", "Purchases are unavailable for this account. You can still try items.")
-					return
-				end
 				local ok = pcall(function()
 					MarketplaceService:PromptPurchase(Players.LocalPlayer, id)
 				end)

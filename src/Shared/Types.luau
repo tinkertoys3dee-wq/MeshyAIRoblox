@@ -252,8 +252,9 @@ export type PlayerProfile = {
 }
 
 export type PolicySnapshot = {
+	policyLookupSucceeded: boolean,
 	contentSharingAllowed: boolean,
-	commerceAllowed: boolean,
+	commerceProductAllowed: boolean,
 	subscriptionAllowed: boolean,
 	paidTradingAllowed: boolean,
 }

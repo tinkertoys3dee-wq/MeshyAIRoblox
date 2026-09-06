@@ -400,6 +400,11 @@ end
 services.MarketplaceService.GetProductInfoAsync = function(_, id)
 	return { AssetTypeId = assetTypes[id] or 8, Name = "Catalog item " .. id }
 end
+local promptedCatalogId = nil
+services.MarketplaceService.PromptPurchase = function(_, promptedPlayer, id)
+	equal(promptedPlayer, player, "Catalog purchase prompt targets the local player")
+	promptedCatalogId = id
+end
 check(not catalog:TryOn(player, { assetId = 1 / 0, avatarAssetType = "Hat" }), "Non-finite IDs are rejected")
 check(not catalog:TryOn(player, { assetId = 101, avatarAssetType = "Hat" }), "Server checks actual asset type")
 check(catalog:TryOn(player, { assetId = 101, avatarAssetType = "Shirt" }), "Classic shirt can be tried on")
@@ -501,7 +506,9 @@ app.uiScaleInstance = Instance.new("UIScale")
 app.pageConnections = {}
 app.state = {
 	profile = profile,
-	policy = { commerceAllowed = true },
+	-- This Roblox policy is only about real-world Commerce Products. Keeping it
+	-- false here proves it cannot disable ordinary Robux catalog purchases.
+	policy = { commerceProductAllowed = false },
 	dailyBrief = { theme = "Test theme" },
 	journeyState = { done = { OPEN_STUDIO = true }, completed = false },
 	makeoverState = {
@@ -636,7 +643,7 @@ for _, tab in { "BROWSE", "LOOK", "SAVED", "FORGE" } do
 end
 app.catalogWorkspace.tab = "BROWSE"
 AvatarLab.Render(app)
-local tryButton, saveButton
+local tryButton, saveButton, buyButton
 for _, control in app.content:GetDescendants() do
 	if control:IsA("TextButton") then
 		if control.Text == "Try on · free" then
@@ -645,9 +652,17 @@ for _, control in app.content:GetDescendants() do
 		if control.Text == "Save" then
 			saveButton = control
 		end
+		if control.Text == "Buy / view in Roblox" then
+			buyButton = control
+		end
 	end
 end
-check(tryButton ~= nil and saveButton ~= nil, "Catalog cards expose try and bookmark controls")
+check(
+	tryButton ~= nil and saveButton ~= nil and buyButton ~= nil,
+	"Catalog cards expose try, bookmark, and buy controls"
+)
+buyButton.Activated:Fire()
+equal(promptedCatalogId, 201, "Real-world commerce policy never blocks a catalog purchase prompt")
 -- Style Sprint's display-only countdown owns background scheduler entries;
 -- interaction assertions below advance only the task created by the tap.
 table.clear(spawned)
