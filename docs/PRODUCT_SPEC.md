@@ -58,6 +58,7 @@ This file is the durable source of truth for future Forge UGC updates. A change 
 ## Presentation
 
 - UI should remain glossy, vibrant, layered, responsive, and straightforward—not a collection of flat default frames.
+- Arcade cards reserve separate title, objective, and action regions; both the full card and its visible `GO` control must launch the game, and a completed transition may never leave an invisible input shield behind. Full-screen controls account for Roblox's top CoreGui inset, while automatic focus outlines appear only for keyboard/gamepad navigation.
 - Simple Mode puts a first-creator explanation immediately above the idea box and temporarily removes the unrelated free-makeover card. A large arrow and gold field identify the starting action; a horizontally scrollable four-step rail explains describing, confirming the price, fitting, and in-game wear. Separate copy makes clear that Roblox publishing is optional and happens later. Method details and the token/payment card come later; copy uses concrete verbs and avoids provider, topology, moderation-pipeline, and texture-resolution jargon. The paid button and nearby reassurance show the price before interaction and state that the native Roblox confirmation appears before charging.
 - Effects should be polished and restrained; excessive confetti or sparkle noise is out of scope.
 - Every sound ID remains creator-owned. `src/Shared/SoundIds.luau` is the only place to enter them, with directions in `docs/SOUND_SETUP.md`.

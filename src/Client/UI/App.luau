@@ -2457,8 +2457,25 @@ function App:_OpenAfkLounge()
 		):Play()
 	end
 
-	local leave =
-		Factory.ImageButton(overlay, "← Leave lounge", UDim2.fromOffset(154, 42), UDim2.fromOffset(24, 22), nil)
+	-- ForgeUGC intentionally draws behind Roblox's inset, so a fixed y=22
+	-- puts this button underneath the CoreGui menu/chat strip. Resolve the
+	-- actual top inset and keep the complete hit target below it.
+	local safeTop = 58
+	local insetSuccess, topLeftInset = pcall(function()
+		local topLeft = GuiService:GetGuiInset()
+		return topLeft
+	end)
+	if insetSuccess and typeof(topLeftInset) == "Vector2" then
+		safeTop = topLeftInset.Y
+	end
+	local leave = Factory.ImageButton(
+		overlay,
+		"← Leave lounge",
+		UDim2.fromOffset(164, 44),
+		UDim2.fromOffset(24, math.max(22, safeTop + 10)),
+		nil
+	)
+	leave.Name = "LeaveAfkLoungeButton"
 	leave.ZIndex = 246
 	self:_BindButton(leave)
 	leave.Activated:Connect(function()
@@ -2610,7 +2627,7 @@ function App:_OpenAfkLounge()
 			self:_CloseAfkLounge()
 		end
 	end)
-	GuiService.SelectedObject = leave
+	Motion.AutoFocus(leave)
 	self:_RefreshAfkDisplay()
 	self:_RefreshAfkAdAvailability()
 	self:_Track({ event = "AfkLoungeOpened", fields = {} })
@@ -3026,7 +3043,7 @@ function App:_ShowCreationComplete(kind: string, record: { [string]: any }, comp
 			end)
 		end
 	end
-	GuiService.SelectedObject = view
+	Motion.AutoFocus(view)
 end
 
 function App:_ConnectPush()

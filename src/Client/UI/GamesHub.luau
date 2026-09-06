@@ -344,8 +344,8 @@ function GamesHub.Show(app: any)
 	})
 	Factory.Label(
 		modal,
-		string.format("%d games, one weekly leaderboard. Play free, earn Forge Tokens.", #GAMES),
-		UDim2.new(1, -220, 0, 18),
+		string.format("%d free games · weekly prizes · scores save", #GAMES),
+		UDim2.new(1, -148, 0, 18),
 		{
 			Position = UDim2.fromOffset(78, 38),
 			Font = Theme.Fonts.Medium,
@@ -495,6 +495,8 @@ function GamesHub.Show(app: any)
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
+		Active = false,
+		Visible = false,
 		ZIndex = 218,
 		Parent = modal,
 	})
@@ -508,10 +510,11 @@ function GamesHub.Show(app: any)
 			return
 		end
 		if switchingView then
-			applyVisibility()
 			return
 		end
 		switchingView = true
+		transitionOverlay.Visible = true
+		transitionOverlay.Active = true
 		TweenService:Create(transitionOverlay, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			BackgroundTransparency = 0,
 		}):Play()
@@ -526,6 +529,11 @@ function GamesHub.Show(app: any)
 				})
 				:Play()
 			task.delay(0.18, function()
+				if not transitionOverlay.Parent then
+					return
+				end
+				transitionOverlay.Active = false
+				transitionOverlay.Visible = false
 				switchingView = false
 			end)
 		end)
@@ -1103,6 +1111,7 @@ function GamesHub.Show(app: any)
 		-- the bottom scrim, which only existed to keep light text legible
 		-- over a bright card.
 		local button = Factory.New("TextButton", {
+			Name = if statsGameKey then statsGameKey .. "Tile" else "LeaderboardTile",
 			Size = size,
 			Position = position,
 			BackgroundColor3 = Colors.PanelRaised,
@@ -1180,6 +1189,29 @@ function GamesHub.Show(app: any)
 
 		local tileScale = Factory.New("UIScale", { Scale = 1, Parent = button })
 		-- Shared outline feedback does not enlarge a tile into its neighbours.
+		local activationLocked = false
+		local function activateTile()
+			if activationLocked then
+				return
+			end
+			activationLocked = true
+			if not reduceMotion then
+				tileScale.Scale = 0.94
+				TweenService
+					:Create(
+						tileScale,
+						TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+						{ Scale = 1 }
+					)
+					:Play()
+			end
+			onActivated()
+			task.delay(0.2, function()
+				if button.Parent then
+					activationLocked = false
+				end
+			end)
+		end
 
 		-- The art's medallion is the game's own colour washed at 20% behind
 		-- its ring, with a white hairline inside -- not a dark disc with a
@@ -1220,6 +1252,7 @@ function GamesHub.Show(app: any)
 		-- figure in the game's colour and a molten GO button.
 		local textX = badgeSize + (if roomy then 26 else 22)
 		Factory.Label(button, title, UDim2.new(1, -(textX + 14), 0, 22), {
+			Name = "GameTitle",
 			Position = UDim2.fromOffset(textX, if roomy then 16 else 14),
 			Font = Theme.Fonts.Black,
 			TextSize = if roomy then 16 else 14,
@@ -1228,6 +1261,7 @@ function GamesHub.Show(app: any)
 			ZIndex = 216,
 		})
 		Factory.Label(button, blurb, UDim2.new(1, -(textX + 14), 0, if roomy then 30 else 20), {
+			Name = "GameDescription",
 			Position = UDim2.fromOffset(textX, if roomy then 38 else 36),
 			Font = Theme.Fonts.Medium,
 			TextSize = if roomy then 11 else 10,
@@ -1256,8 +1290,9 @@ function GamesHub.Show(app: any)
 		play.TextColor3 = Color3.fromRGB(58, 18, 6)
 		play.TextSize = if roomy then 13 else 12
 		play.ZIndex = 216
-		play.Active = false
 		play.Selectable = false
+		app.sounds:Bind(play)
+		play.Activated:Connect(activateTile)
 
 		-- A real personal-best figure, not a fabricated stat -- fetched
 		-- lazily after the tile is already visible so it never blocks the
@@ -1297,7 +1332,9 @@ function GamesHub.Show(app: any)
 					Name = "ChallengeChip",
 					Size = UDim2.fromOffset(102, 22),
 					AnchorPoint = Vector2.new(1, 0),
-					Position = UDim2.new(1, -12, 0, 12),
+					-- Keep the objective in the open middle band. The old
+					-- top-right placement sat directly over every game title.
+					Position = UDim2.new(1, -12, 0, 76),
 					BackgroundColor3 = Colors.Gold,
 					BackgroundTransparency = 0.25,
 					BorderSizePixel = 0,
@@ -1349,19 +1386,7 @@ function GamesHub.Show(app: any)
 
 		app.sounds:Bind(button)
 		button.Selectable = true
-		button.Activated:Connect(function()
-			if not reduceMotion then
-				tileScale.Scale = 0.94
-				TweenService
-					:Create(
-						tileScale,
-						TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{ Scale = 1 }
-					)
-					:Play()
-			end
-			onActivated()
-		end)
+		button.Activated:Connect(activateTile)
 	end
 
 	if app.compact then

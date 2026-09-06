@@ -1,6 +1,8 @@
 --!strict
 
+local GuiService = game:GetService("GuiService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Motion = {}
 local reduced = function(): boolean
@@ -9,6 +11,30 @@ end
 
 function Motion.Configure(isReduced: () -> boolean)
 	reduced = isReduced
+end
+
+local function usesSelectionNavigation(): boolean
+	local success, inputType = pcall(function()
+		return UserInputService:GetLastInputType()
+	end)
+	if not success or not inputType then
+		return false
+	end
+	return inputType == Enum.UserInputType.Keyboard or string.match(inputType.Name, "^Gamepad") ~= nil
+end
+
+-- Mouse/touch players should not receive a persistent keyboard-focus outline
+-- merely because a modal opened. Keyboard and gamepad users still land on a
+-- useful first control and retain the visible focus ring they need.
+function Motion.AutoFocus(target: GuiObject)
+	if not target.Parent then
+		return
+	end
+	if usesSelectionNavigation() then
+		GuiService.SelectedObject = target
+	else
+		GuiService.SelectedObject = nil
+	end
 end
 
 function Motion.Tween(target: Instance, seconds: number, properties: { [string]: any }): Tween?

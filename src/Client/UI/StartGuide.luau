@@ -1,6 +1,5 @@
 --!strict
 
-local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
@@ -237,7 +236,7 @@ function StartGuide.Show(app: any)
 		app:_Track({ event = "VisualTutorialShown" })
 	end
 	app:_AnimateModalIn(overlay, modal)
-	GuiService.SelectedObject = controls[1]
+	Motion.AutoFocus(controls[1])
 end
 
 return StartGuide

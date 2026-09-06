@@ -33,6 +33,8 @@ try {
   // whole Roblox client. Keep the extraction fail-closed if it is renamed.
   const appSource = read('src/Client/UI/App.luau');
   const avatarLabSource = read('src/Client/UI/AvatarLab.luau');
+  const gamesHubSource = read('src/Client/UI/GamesHub.luau');
+  const motionSource = read('src/Client/UI/Motion.luau');
   const commerceSource = read('src/Server/Services/CommerceService.luau');
   const adRewardSource = read('src/Server/Services/AdRewardService.luau');
   const communitySource = read('src/Server/Services/CommunityService.luau');
@@ -65,6 +67,31 @@ try {
   }
   if (!appSource.includes('generate.Active = true')) {
     throw new Error('The standard generation checkout button must remain available for Roblox to adjudicate');
+  }
+  if (gamesHubSource.includes('play.Active = false')) {
+    throw new Error('The visible Arcade GO control must never swallow taps without activating');
+  }
+  if (!gamesHubSource.includes('play.Activated:Connect(activateTile)')
+    || !gamesHubSource.includes('button.Activated:Connect(activateTile)')) {
+    throw new Error('Both the visible Arcade GO control and the full game card must launch the tile');
+  }
+  if (!gamesHubSource.includes('transitionOverlay.Active = false')
+    || !gamesHubSource.includes('transitionOverlay.Visible = false')) {
+    throw new Error('Arcade transitions must remove their full-screen input shield after every switch');
+  }
+  if (!gamesHubSource.includes('Position = UDim2.new(1, -12, 0, 76)')) {
+    throw new Error('Arcade challenge targets must stay out of the title row');
+  }
+  if (!avatarLabSource.includes('Name = "CatalogCategories"')
+    || !/Name = "CatalogCategories"[\s\S]{0,180}ScrollBarThickness = [5-9]/.test(avatarLabSource)) {
+    throw new Error('Catalog categories must expose a touch-friendly overflow scrollbar');
+  }
+  if (!appSource.includes('GuiService:GetGuiInset()') || !appSource.includes('Motion.AutoFocus(leave)')) {
+    throw new Error('The AFK lounge exit must clear Roblox CoreGui and avoid pointer-only focus outlines');
+  }
+  if (!motionSource.includes('function Motion.AutoFocus')
+    || !motionSource.includes('UserInputService:GetLastInputType()')) {
+    throw new Error('Modal focus must be input-aware instead of drawing random pointer focus outlines');
   }
   for (const name of ['FitActions', 'SharingActions', 'TipOptions']) {
     const scrollingRow = new RegExp(`Factory\\.New\\("ScrollingFrame", \\{[\\s\\S]{0,120}Name = "${name}"`);

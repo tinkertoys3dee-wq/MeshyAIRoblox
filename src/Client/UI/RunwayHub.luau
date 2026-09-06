@@ -1115,7 +1115,7 @@ function RunwayHub.Show(app: any)
 			)
 		end
 		if restoreFocus and close.Parent then
-			GuiService.SelectedObject = close
+			Motion.AutoFocus(close)
 		end
 		rendering = false
 	end
@@ -1189,7 +1189,7 @@ function RunwayHub.Show(app: any)
 			end
 		end
 	end)
-	GuiService.SelectedObject = close
+	Motion.AutoFocus(close)
 end
 
 return RunwayHub

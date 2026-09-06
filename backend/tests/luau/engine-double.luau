@@ -372,6 +372,7 @@ local services = {
 		end,
 	},
 	GroupService = {},
+	GuiService = { SelectedObject = nil },
 	MarketplaceService = {},
 	Players = {},
 	PolicyService = {},
@@ -379,6 +380,12 @@ local services = {
 	AvatarCreationService = {},
 	RunService = {},
 	ServerStorage = {},
+	UserInputService = {
+		lastInputType = Enum.UserInputType.MouseButton1,
+		GetLastInputType = function(self)
+			return self.lastInputType
+		end,
+	},
 }
 local game = {
 	GetService = function(_, name)
