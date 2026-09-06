@@ -24,6 +24,22 @@ function Motion.Tween(target: Instance, seconds: number, properties: { [string]:
 	return tween
 end
 
+-- A repeating, reversible emphasis tween for tutorial targets. It shares the
+-- same accessibility gate as every other motion helper, so reduced-motion
+-- players receive the bright static target without continuous animation.
+function Motion.Pulse(target: Instance, seconds: number, properties: { [string]: any }): Tween?
+	if reduced() then
+		return nil
+	end
+	local tween = TweenService:Create(
+		target,
+		TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, -1, true),
+		properties
+	)
+	tween:Play()
+	return tween
+end
+
 function Motion.FitScale(size: Vector2, viewport: Vector2, preferred: number): number
 	return math.max(
 		0.1,

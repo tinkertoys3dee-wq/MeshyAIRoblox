@@ -25,12 +25,12 @@ function StartGuide.Show(app: any)
 		Parent = app.gui,
 	})
 	app.tutorialOverlay = overlay
-	local modal = Factory.ImageCard(overlay, UDim2.new(0.94, 0, 0.92, 0), UDim2.fromScale(0.5, 0.5), "StartGuide")
+	local modal = Factory.ImageCard(overlay, UDim2.new(0.94, 0, 0.82, 0), UDim2.fromScale(0.5, 0.5), "StartGuide")
 	modal.AnchorPoint = Vector2.new(0.5, 0.5)
 	modal.ZIndex = 351
-	Factory.New("UISizeConstraint", { MaxSize = Vector2.new(510, 600), Parent = modal })
+	Factory.New("UISizeConstraint", { MaxSize = Vector2.new(510, 500), Parent = modal })
 	-- Reflow and scroll on phones instead of shrinking text to unreadable
-	-- sizes. Every path and Skip remains reachable in landscape too.
+	-- sizes. Every starting path remains reachable in landscape too.
 	local scroll = Factory.New("ScrollingFrame", {
 		Size = UDim2.new(1, -40, 1, -40),
 		Position = UDim2.fromOffset(20, 20),
@@ -61,13 +61,47 @@ function StartGuide.Show(app: any)
 		})
 		item.LayoutOrder = order
 	end
-	text("MAKE A LOOK IN 90 SECONDS", 42, 1, true)
-	text("Pick a vibe, wear a full catalog look, change one thing, then save it.", 44, 2)
-	text(
-		"1  PICK a ready-made look\n2  TWEAK one item to make it yours\n3  SAVE it, then choose photos, Runway, or custom UGC",
-		76,
-		3
-	)
+	text("YOUR FIRST LOOK, STEP BY STEP", 40, 1, true)
+	text("We'll hide the extra tools and point to exactly one button at a time.", 38, 2)
+	local path = Factory.New("Frame", {
+		Name = "TutorialPath",
+		Size = UDim2.new(1, 0, 0, 66),
+		BackgroundTransparency = 1,
+		LayoutOrder = 3,
+		ZIndex = 353,
+		Parent = content,
+	})
+	for index, caption in { "1\nPICK", "2\nCHANGE", "3\nSAVE" } do
+		local node = Factory.New("Frame", {
+			Size = UDim2.new(0.3, -4, 0, 58),
+			Position = UDim2.new((index - 1) * 0.35, 0, 0, 0),
+			BackgroundColor3 = if index == 1 then Theme.Colors.Gold else Theme.Colors.Panel,
+			BackgroundTransparency = if index == 1 then 0.04 else 0.2,
+			BorderSizePixel = 0,
+			ZIndex = 353,
+			Parent = path,
+		})
+		Factory.Corner(node, 10)
+		Factory.Stroke(node, if index == 1 then Theme.Colors.Gold else Theme.Colors.Line, 0.2, 1.5)
+		Factory.Label(node, caption, UDim2.fromScale(1, 1), {
+			AlignX = Enum.TextXAlignment.Center,
+			Wrapped = true,
+			Font = Theme.Fonts.Black,
+			TextSize = 11,
+			Color = if index == 1 then Theme.Colors.Ink else Theme.Colors.Text,
+			ZIndex = 354,
+		})
+		if index < 3 then
+			Factory.Label(path, "→", UDim2.new(0.05, 0, 0, 58), {
+				Position = UDim2.new(index * 0.35 - 0.05, 0, 0, 0),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = 18,
+				Color = Theme.Colors.Gold,
+				ZIndex = 354,
+			})
+		end
+	end
 	local busy = false
 	local controls = {}
 	local function choose(choice: string, destination: string)
@@ -87,12 +121,22 @@ function StartGuide.Show(app: any)
 				end
 				return
 			end
+			app.makeoverGuideRequested = choice == "START_FREE"
 			if choice == "START_FREE" then
-				local sprintOk, sprint = app:_Invoke(Network.Actions.StartStyleSprint, {})
+				local previous = app.state.makeoverState or {}
+				local sprintOk, sprint = app:_Invoke(Network.Actions.StartStyleSprint, {
+					restart = previous.completed == true or previous.dailyCompleted == true,
+				})
 				if sprintOk then
 					app.state.makeoverState = sprint
 				end
 			end
+			app:_Toast(
+				"info",
+				if choice == "START_FREE"
+					then "Guided makeover ready—follow the gold arrow."
+					else if choice == "MAKE_OWN" then "Opening the custom UGC creator." else "Opening the Arcade."
+			)
 			app.state.profile.tutorialVersion = Config.Tutorial.Version
 			app.state.profile.onboarding.completed = true
 			app:_CloseModal(overlay, modal, function()
@@ -102,43 +146,54 @@ function StartGuide.Show(app: any)
 					GamesHub.Show(app)
 				else
 					app:_SetStudioOpen(true)
-					app.scrollPositions.Create = Vector2.zero
+					app.scrollPositions[if destination == "Avatar Lab" then "AvatarLabWorkspace" else "Create"] =
+						Vector2.zero
 					app:_OpenPage(destination)
 				end
 			end)
 		end)
 	end
-	for index, route in
-		{
-			{ "START MY FREE MAKEOVER", "START_FREE", "Avatar Lab", "primary" },
-			{ "MAKE A CUSTOM UGC ITEM", "MAKE_OWN", "Create", "mint" },
-			{ "PLAY THE ARCADE", "SKIP", "ARCADE", "default" },
-		}
-	do
-		local control = Factory.ImageButton(content, route[1], UDim2.new(1, 0, 0, 46), nil, route[4])
-		control.TextSize = 13
-		control.LayoutOrder = 3 + index
-		control.ZIndex = 353
-		control.Activated:Connect(function()
-			choose(route[2], route[3])
-		end)
-		table.insert(controls, control)
-	end
+	local start = Factory.ImageButton(content, "START GUIDED MAKEOVER", UDim2.new(1, 0, 0, 50), nil, "primary")
+	start.Name = "StartGuidedMakeover"
+	start.TextSize = 14
+	start.LayoutOrder = 4
+	start.ZIndex = 353
+	app:_BindButton(start)
+	start.Activated:Connect(function()
+		choose("START_FREE", "Avatar Lab")
+	end)
+	table.insert(controls, start)
+	local alternatives = Factory.New("Frame", {
+		Size = UDim2.new(1, 0, 0, 42),
+		BackgroundTransparency = 1,
+		LayoutOrder = 5,
+		ZIndex = 353,
+		Parent = content,
+	})
+	local custom = Factory.ImageButton(alternatives, "Custom UGC", UDim2.new(0.5, -5, 1, 0), nil, "mint")
+	custom.TextSize = 11
+	custom.ZIndex = 353
+	app:_BindButton(custom)
+	custom.Activated:Connect(function()
+		choose("MAKE_OWN", "Create")
+	end)
+	table.insert(controls, custom)
+	local arcade = Factory.ImageButton(alternatives, "Arcade", UDim2.new(0.5, -5, 1, 0), UDim2.new(0.5, 5, 0, 0))
+	arcade.TextSize = 11
+	arcade.ZIndex = 353
+	app:_BindButton(arcade)
+	arcade.Activated:Connect(function()
+		choose("SKIP", "ARCADE")
+	end)
+	table.insert(controls, arcade)
 	text(
 		string.format(
-			"The makeover uses Roblox catalog try-ons: free to preview, ownership separate. Custom AI generation starts at R$ %d; there is no free first generation.",
+			"Catalog makeover: free to preview. Custom AI generation starts at R$ %d; there is no free first generation.",
 			app.state.prices.DirectGeneration
 		),
-		62,
-		7
+		48,
+		6
 	)
-	local skip = Factory.Button(content, "Skip guide", UDim2.new(1, 0, 0, 34))
-	skip.LayoutOrder = 8
-	skip.ZIndex = 353
-	skip.Activated:Connect(function()
-		choose("SKIP", "Create")
-	end)
-	table.insert(controls, skip)
 	if not app.visualTutorialShown then
 		app.visualTutorialShown = true
 		app:_Track({ event = "VisualTutorialShown" })

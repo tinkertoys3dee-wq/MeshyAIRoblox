@@ -91,6 +91,8 @@ local FIRST_LOOK_GUIDE_STAGES: { [string]: boolean } = {
 }
 local FIRST_LOOK_GUIDE_ACTIONS: { [string]: boolean } = { IMPRESSION = true, CLICK = true }
 local MAKEOVER_STAGES: { [string]: boolean } = {
+	GUIDE_STAGE_SHOWN = true,
+	GUIDE_DISMISSED = true,
 	LOOKS_DISPLAYED = true,
 	APPLY_CLICKED = true,
 	REQUEST_STARTED = true,
@@ -317,6 +319,13 @@ function AnalyticsService:TrackClient(player: Player, payload: any): (boolean, a
 		fields.stage = stage
 		fields.look = look
 		fields.source = source
+		if stage == "GUIDE_STAGE_SHOWN" or stage == "GUIDE_DISMISSED" then
+			local guideStep = math.floor(tonumber(raw.guideStep) or 0)
+			if guideStep < 1 or guideStep > 3 then
+				return false, "INVALID_ANALYTICS_FIELDS"
+			end
+			fields.guideStep = guideStep
+		end
 		if stage == "REQUEST_FAILED" or stage == "AVATAR_NOT_VISIBLE" then
 			local failure = if type(raw.failure) == "string" and MAKEOVER_FAILURES[raw.failure]
 				then raw.failure
