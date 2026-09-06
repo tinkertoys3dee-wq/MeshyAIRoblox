@@ -4,6 +4,7 @@ local AvatarEditorService = game:GetService("AvatarEditorService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Factory)
@@ -50,6 +51,10 @@ local function state(app: any): any
 			outfitName = "",
 			busy = false,
 			spark = 1,
+			lookRequest = 0,
+			starterLooks = {},
+			starterLookStatus = "IDLE",
+			makeoverEvents = {},
 		}
 	end
 	return app.catalogWorkspace
@@ -195,6 +200,8 @@ local function changed(app: any)
 	render(app)
 end
 
+local trackMakeover: (any, string, string?, string?, string?) -> ()
+
 local function mutate(app: any, action: string, payload: any, message: string)
 	local lab = state(app)
 	if lab.busy then
@@ -203,11 +210,17 @@ local function mutate(app: any, action: string, payload: any, message: string)
 	end
 	lab.busy = true
 	local startedTab = lab.tab
+	if action == Network.Actions.TryCatalogAsset then
+		trackMakeover(app, "PERSONALIZE_CLICKED", "NONE", "CATALOG")
+	end
 	app:_Toast("info", "Updating your look…")
 	task.spawn(function()
 		local ok, result = app:_Invoke(action, payload)
 		lab.busy = false
 		if ok then
+			if type(result.makeoverState) == "table" then
+				app.state.makeoverState = result.makeoverState
+			end
 			if result.equippedItemIds then
 				app.state.profile.equippedItemIds = result.equippedItemIds
 			end
@@ -298,8 +311,634 @@ local function design(app: any)
 	app:_Toast("info", "An idea is ready to edit. Custom generation is paid; nothing starts until you confirm.")
 end
 
+local MAKEOVER_FAILURES: { [string]: boolean } = {
+	AVATAR_BUSY = true,
+	CHARACTER_UNAVAILABLE = true,
+	CATALOG_ITEM_UNAVAILABLE = true,
+	TRY_ON_FAILED = true,
+	NETWORK_ERROR = true,
+	RATE_LIMITED = true,
+}
+
+trackMakeover = function(app: any, stage: string, lookKey: string?, source: string?, failure: string?)
+	app:_Track({
+		event = "MakeoverAction",
+		fields = {
+			stage = stage,
+			look = lookKey or "NONE",
+			source = source or "STARTER",
+			failure = if failure and MAKEOVER_FAILURES[failure] then failure else if failure then "OTHER" else nil,
+		},
+	})
+end
+
+function AvatarLab.StartSprint(app: any)
+	local lab = state(app)
+	if lab.startingSprint or (app.state.makeoverState and app.state.makeoverState.active) then
+		return
+	end
+	lab.startingSprint = true
+	task.spawn(function()
+		local previous = app.state.makeoverState or {}
+		local restarting = previous.completed == true or previous.dailyCompleted == true
+		local ok, sprint = app:_Invoke(Network.Actions.StartStyleSprint, {
+			restart = restarting,
+		})
+		lab.startingSprint = false
+		if ok then
+			app.state.makeoverState = sprint
+			if restarting then
+				lab.makeoverEvents.looksDisplayed = nil
+			end
+			app:_Toast(
+				"info",
+				"Style Sprint started: pick a look, change one item, then save. The timer is only a bonus."
+			)
+			AvatarLab.LoadStarterLooks(app)
+		end
+		render(app)
+	end)
+end
+
+-- Resolve current, on-sale Roblox catalog pieces instead of shipping brittle
+-- hard-coded asset IDs. Three looks load independently, so one throttled
+-- catalog query cannot block every choice.
+function AvatarLab.LoadStarterLooks(app: any)
+	local lab = state(app)
+	if app.catalogAccess ~= true or lab.starterLookStatus == "LOADING" then
+		return
+	end
+	lab.lookRequest += 1
+	local request = lab.lookRequest
+	lab.starterLooks = {}
+	lab.starterLookStatus = "LOADING"
+	local pending = #Config.StyleSprint.StarterLooks
+	local available = 0
+	for _, definition in Config.StyleSprint.StarterLooks do
+		local lookDefinition = definition
+		task.spawn(function()
+			local assets = {}
+			for _, piece in lookDefinition.pieces do
+				local function findFirst(keyword: string): any?
+					local success, page = pcall(function()
+						local params = CatalogSearchParams.new()
+						params.SearchKeyword = keyword
+						params.AssetTypes = { Enum.AvatarAssetType[piece.assetType] }
+						params.SortType = Enum.CatalogSortType.MostFavorited
+						params.IncludeOffSale = false
+						params.Limit = 10
+						return AvatarEditorService:SearchCatalogAsync(params):GetCurrentPage()
+					end)
+					if not success or type(page) ~= "table" then
+						return nil
+					end
+					for _, result in page do
+						local id = math.floor(tonumber(result.Id or result.AssetId) or 0)
+						if id > 0 then
+							return {
+								Id = id,
+								Name = if type(result.Name) == "string" then result.Name else "Catalog piece",
+								forgeCategory = piece.assetType,
+							}
+						end
+					end
+					return nil
+				end
+				-- A broad popular-item fallback keeps all three cards usable if a
+				-- narrow aesthetic phrase happens to have no current result.
+				local asset = findFirst(piece.query) or findFirst("")
+				if asset then
+					table.insert(assets, asset)
+				end
+			end
+			if request ~= lab.lookRequest then
+				return
+			end
+			lab.starterLooks[lookDefinition.key] = {
+				definition = lookDefinition,
+				assets = assets,
+				available = #assets == #lookDefinition.pieces,
+			}
+			if #assets == #lookDefinition.pieces then
+				available += 1
+			end
+			pending -= 1
+			if pending == 0 then
+				lab.starterLookStatus = if available > 0 then "READY" else "ERROR"
+			end
+			render(app)
+		end)
+	end
+	render(app)
+end
+
+local function avatarContains(assetIds: { number }): boolean
+	local humanoid = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return false
+	end
+	local success, description = pcall(function()
+		return humanoid:GetAppliedDescription()
+	end)
+	if not success or not description then
+		return false
+	end
+	local found: { [number]: boolean } = {}
+	for _, worn in description:GetAccessories(true) do
+		found[math.floor(tonumber(worn.AssetId) or 0)] = true
+	end
+	for _, property in { "Shirt", "Pants", "GraphicTShirt", "Face" } do
+		local id = math.floor(tonumber((description :: any)[property]) or 0)
+		if id > 0 then
+			found[id] = true
+		end
+	end
+	description:Destroy()
+	for _, assetId in assetIds do
+		if not found[assetId] then
+			return false
+		end
+	end
+	return true
+end
+
+local function confirmAvatarVisible(app: any, lookKey: string, assetIds: { number })
+	task.spawn(function()
+		for _ = 1, 12 do
+			if avatarContains(assetIds) then
+				trackMakeover(app, "AVATAR_VISIBLE", lookKey, "STARTER")
+				return
+			end
+			task.wait(0.15)
+		end
+		trackMakeover(app, "AVATAR_NOT_VISIBLE", lookKey, "STARTER", "OTHER")
+	end)
+end
+
+function AvatarLab.ShowReveal(app: any, look: any)
+	if app.makeoverReveal and app.makeoverReveal.Parent then
+		return
+	end
+	local overlay = Factory.New("Frame", {
+		Name = "MakeoverReveal",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = C.Ink,
+		BackgroundTransparency = 0.14,
+		BorderSizePixel = 0,
+		Active = true,
+		ZIndex = 330,
+		Parent = app.gui,
+	})
+	app.makeoverReveal = overlay
+	local modal = Factory.ImageCard(overlay, UDim2.new(0.94, 0, 0.88, 0), UDim2.fromScale(0.5, 0.5), "MakeoverReveal")
+	modal.AnchorPoint = Vector2.new(0.5, 0.5)
+	modal.ZIndex = 331
+	Factory.New("UISizeConstraint", { MaxSize = Vector2.new(560, 560), Parent = modal })
+	-- Preserve the full reveal on short landscape phones by scrolling its
+	-- fixed design surface instead of forcing the modal to a minimum height.
+	local revealScroll = Factory.New("ScrollingFrame", {
+		Size = UDim2.new(1, -20, 1, -20),
+		Position = UDim2.fromOffset(10, 10),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		CanvasSize = UDim2.fromOffset(0, 480),
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = C.Gold,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		ZIndex = 332,
+		Parent = modal,
+	})
+	local reveal = Factory.New("Frame", {
+		Size = UDim2.new(1, -8, 0, 480),
+		BackgroundTransparency = 1,
+		ZIndex = 332,
+		Parent = revealScroll,
+	})
+	Factory.Label(reveal, "LOOK UNLOCKED", UDim2.new(1, -40, 0, 30), {
+		Position = UDim2.fromOffset(20, 18),
+		AlignX = Enum.TextXAlignment.Center,
+		Font = Theme.Fonts.Black,
+		TextSize = 23,
+		Color = C.Gold,
+		ZIndex = 333,
+	})
+	Factory.Label(reveal, look.definition.label, UDim2.new(1, -40, 0, 26), {
+		Position = UDim2.fromOffset(20, 50),
+		AlignX = Enum.TextXAlignment.Center,
+		Font = Theme.Fonts.Bold,
+		TextSize = 17,
+		ZIndex = 333,
+	})
+	local before = Factory.New("ImageLabel", {
+		Position = UDim2.new(0, 22, 0, 90),
+		Size = UDim2.new(0.38, -12, 0, 250),
+		BackgroundColor3 = C.Panel,
+		BorderSizePixel = 0,
+		Image = string.format("rbxthumb://type=AvatarBust&id=%d&w=420&h=420", Players.LocalPlayer.UserId),
+		ScaleType = Enum.ScaleType.Fit,
+		ZIndex = 332,
+		Parent = reveal,
+	})
+	Factory.Corner(before, 14)
+	Factory.Label(before, "BEFORE", UDim2.new(1, 0, 0, 24), {
+		Position = UDim2.new(0, 0, 1, -24),
+		AlignX = Enum.TextXAlignment.Center,
+		Font = Theme.Fonts.Bold,
+		TextSize = 11,
+		ZIndex = 334,
+	})
+	Factory.Label(reveal, "→", UDim2.new(0.12, 0, 0, 40), {
+		Position = UDim2.new(0.44, 0, 0, 190),
+		AlignX = Enum.TextXAlignment.Center,
+		Font = Theme.Fonts.Black,
+		TextSize = 28,
+		Color = C.Cyan,
+		ZIndex = 333,
+	})
+	local now = Factory.New("ViewportFrame", {
+		Position = UDim2.new(0.56, 0, 0, 90),
+		Size = UDim2.new(0.44, -22, 0, 250),
+		BackgroundColor3 = C.Panel,
+		BorderSizePixel = 0,
+		ZIndex = 332,
+		Parent = reveal,
+	})
+	Factory.Corner(now, 14)
+	Factory.Label(now, "NOW", UDim2.new(1, 0, 0, 24), {
+		Position = UDim2.new(0, 0, 1, -24),
+		AlignX = Enum.TextXAlignment.Center,
+		Font = Theme.Fonts.Bold,
+		TextSize = 11,
+		Color = C.Mint,
+		ZIndex = 334,
+	})
+	local controller = ViewportController.new(now)
+	Factory.Label(reveal, "Next: swap one item to make it unmistakably yours.", UDim2.new(1, -44, 0, 42), {
+		Position = UDim2.fromOffset(22, 354),
+		AlignX = Enum.TextXAlignment.Center,
+		Wrapped = true,
+		TextSize = 13,
+		Color = C.TextMuted,
+		ZIndex = 333,
+	})
+	local continue = Factory.ImageButton(
+		reveal,
+		"CHANGE ONE ITEM →",
+		UDim2.new(1, -44, 0, 46),
+		UDim2.fromOffset(22, 410),
+		"primary"
+	)
+	continue.ZIndex = 334
+	app:_BindButton(continue)
+	continue.Activated:Connect(function()
+		app:_CloseModal(overlay, modal, function()
+			controller:Destroy()
+			app.makeoverReveal = nil
+		end)
+	end)
+	for index = 1, 12 do
+		local spark = Factory.New("Frame", {
+			Size = UDim2.fromOffset(5 + (index % 3) * 2, 5 + (index % 3) * 2),
+			Position = UDim2.new((index * 0.083) % 1, 0, 0, -12),
+			BackgroundColor3 = if index % 3 == 0 then C.Gold elseif index % 2 == 0 then C.Cyan else C.Rose,
+			BorderSizePixel = 0,
+			ZIndex = 332,
+			Parent = reveal,
+		})
+		Factory.Corner(spark, 10)
+		local target = UDim2.new(spark.Position.X.Scale, (index % 2) * 16 - 8, 1, 12)
+		task.delay(index * 0.025, function()
+			if spark.Parent then
+				app:_Animate(
+					spark,
+					TweenInfo.new(0.8 + (index % 4) * 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{ Position = target, BackgroundTransparency = 1 }
+				)
+			end
+		end)
+	end
+	app:_AnimateModalIn(overlay, modal)
+	task.spawn(function()
+		if app.state.profile.settings.reduceMotion then
+			return
+		end
+		for _ = 1, 28 do
+			if not now.Parent then
+				return
+			end
+			controller.yaw += 5
+			controller:_UpdateCamera()
+			task.wait(0.035)
+		end
+	end)
+end
+
+function AvatarLab.ApplyStarterLook(app: any, look: any)
+	local lab = state(app)
+	if lab.busy or not look or look.available ~= true then
+		app:_Toast("info", "That look is still loading. Pick another or retry in a moment.")
+		return
+	end
+	lab.busy = true
+	trackMakeover(app, "APPLY_CLICKED", look.definition.key, "STARTER")
+	trackMakeover(app, "REQUEST_STARTED", look.definition.key, "STARTER")
+	render(app)
+	task.spawn(function()
+		local requests = {}
+		local ids = {}
+		for _, asset in look.assets do
+			table.insert(requests, { assetId = asset.Id, avatarAssetType = asset.forgeCategory })
+			table.insert(ids, asset.Id)
+		end
+		local ok, result = app:_Invoke(Network.Actions.ApplyCatalogLook, {
+			lookKey = look.definition.key,
+			assets = requests,
+		})
+		lab.busy = false
+		if not ok then
+			trackMakeover(app, "REQUEST_FAILED", look.definition.key, "STARTER", tostring(result))
+			if result == "CATALOG_ITEM_UNAVAILABLE" then
+				lab.starterLookStatus = "IDLE"
+				AvatarLab.LoadStarterLooks(app)
+			end
+			render(app)
+			return
+		end
+		for _, asset in look.assets do
+			app.triedOnAssetIds[asset.Id] = true
+			app.triedOnAssetInfo[asset.Id] = { name = asset.Name, assetType = asset.forgeCategory }
+		end
+		if type(result) == "table" and type(result.makeoverState) == "table" then
+			app.state.makeoverState = result.makeoverState
+		end
+		trackMakeover(app, "REQUEST_SUCCEEDED", look.definition.key, "STARTER")
+		app.sounds:Play("Success")
+		app:_Toast("success", "Full look applied. Free to try, and nothing was purchased.")
+		changed(app)
+		AvatarLab.ShowReveal(app, look)
+		confirmAvatarVisible(app, look.definition.key, ids)
+	end)
+end
+
+local function sprintPanel(app: any, stack: Frame)
+	local lab = state(app)
+	local sprint = app.state.makeoverState or {}
+	local journey = app.state.journeyState or { done = {} }
+	local done = journey.done or {}
+	local completed = sprint.completed == true or (sprint.dailyCompleted == true and sprint.active ~= true)
+	local cardHeight = if completed then 210 else 178
+	local card = Factory.ImageCard(stack, UDim2.new(1, 0, 0, cardHeight), nil, "StyleSprint")
+	card.LayoutOrder = -9
+	Factory.Stroke(card, if completed then C.Mint else C.Cyan, 0.2, 1.5)
+	Factory.Label(
+		card,
+		if completed then "STYLE SPRINT COMPLETE" else "TODAY'S 90-SECOND STYLE SPRINT",
+		UDim2.new(1, -120, 0, 24),
+		{
+			Position = UDim2.fromOffset(16, 14),
+			Font = Theme.Fonts.Black,
+			TextSize = 16,
+			Truncate = Enum.TextTruncate.AtEnd,
+			Color = if completed then C.Mint else C.Gold,
+		}
+	)
+	local timer = Factory.ImagePill(
+		card,
+		completed and string.format("%d / 100", sprint.score or sprint.bestScore or 100) or "1:30",
+		if completed then C.Mint else C.Cyan,
+		86
+	)
+	timer.Position = UDim2.new(1, -102, 0, 10)
+	if not completed and sprint.active then
+		task.spawn(function()
+			local remaining = math.max(0, math.floor(sprint.remainingSeconds or Config.StyleSprint.DurationSeconds))
+			while timer.Parent and remaining >= 0 do
+				timer.Text = string.format("%d:%02d", math.floor(remaining / 60), remaining % 60)
+				if remaining == 0 then
+					timer.Text = "NO RUSH"
+					return
+				end
+				remaining -= 1
+				task.wait(1)
+			end
+		end)
+	end
+	Factory.Label(
+		card,
+		"THEME  ·  " .. tostring(sprint.theme or (app.state.dailyBrief and app.state.dailyBrief.theme) or "Open style"),
+		UDim2.new(1, -32, 0, 22),
+		{
+			Position = UDim2.fromOffset(16, 42),
+			Font = Theme.Fonts.Bold,
+			TextSize = 12,
+			Color = C.TextMuted,
+			Truncate = Enum.TextTruncate.AtEnd,
+		}
+	)
+	local steps = Factory.New("ScrollingFrame", {
+		Name = "MakeoverObjectives",
+		Position = UDim2.fromOffset(16, 72),
+		Size = UDim2.new(1, -32, 0, 43),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 3,
+		ScrollBarImageColor3 = C.Gold,
+		ScrollingDirection = Enum.ScrollingDirection.X,
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(),
+		Parent = card,
+	})
+	Factory.List(steps, Enum.FillDirection.Horizontal, 7)
+	for _, step in Config.Retention.FirstLookJourney do
+		if step.key ~= "OPEN_STUDIO" then
+			local finished = done[step.key] == true
+			local chip = Factory.New("Frame", {
+				Size = UDim2.fromOffset(if step.key == "PERSONALIZE" then 150 else 138, 34),
+				BackgroundColor3 = if finished then C.Mint else C.PanelRaised,
+				BackgroundTransparency = if finished then 0.08 else 0.18,
+				BorderSizePixel = 0,
+				Parent = steps,
+			})
+			Factory.Corner(chip, 10)
+			Factory.Label(chip, (if finished then "✓  " else "○  ") .. step.label, UDim2.new(1, -12, 1, 0), {
+				Position = UDim2.fromOffset(6, 0),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Bold,
+				TextSize = 11,
+				Color = if finished then C.Ink else C.Text,
+				Truncate = Enum.TextTruncate.AtEnd,
+			})
+		end
+	end
+	local breakdown = sprint.breakdown
+	local instruction = if completed
+		then if type(breakdown) == "table"
+			then string.format(
+				"Saved! Completion %d · Variety %d · Personal %d · Theme %d · Speed %d",
+				breakdown.completion or 0,
+				breakdown.variety or 0,
+				breakdown.personalization or 0,
+				breakdown.themeHarmony or 0,
+				breakdown.speed or 0
+			)
+			else "Saved! Choose a next adventure—your makeover is already safe."
+		else if not sprint.starterApplied and not done.TRY_STYLE
+			then "Pick a vibe below. One tap applies the complete look."
+			else if not sprint.personalized and not done.PERSONALIZE
+				then "Now make it yours: try any different catalog item below."
+				else "Great. Open My look, name it, and save your outfit."
+	Factory.Label(card, instruction, UDim2.new(1, if completed then -32 else -186, 0, 42), {
+		Position = UDim2.fromOffset(16, 126),
+		Wrapped = true,
+		TextSize = 12,
+		Color = C.TextMuted,
+		AlignY = Enum.TextYAlignment.Top,
+	})
+	if not completed and (sprint.personalized or done.PERSONALIZE) then
+		local save = button(app, card, "Open My look →", 158, function()
+			trackMakeover(app, "SAVE_CLICKED", "NONE", "CATALOG")
+			lab.tab = "LOOK"
+			app.scrollPositions.AvatarLabWorkspace = Vector2.zero
+			render(app)
+		end, true)
+		save.Position = UDim2.new(1, -174, 0, 124)
+	elseif completed then
+		local choices = row(card, 1, 48)
+		choices.Position = UDim2.fromOffset(16, 154)
+		choices.Size = UDim2.new(1, -32, 0, 48)
+		button(app, choices, "Style again", 122, function()
+			trackMakeover(app, "NEXT_ACTION_CLICKED", "NONE", "CATALOG")
+			AvatarLab.StartSprint(app)
+		end, true)
+		button(app, choices, "Avatar Art", 122, function()
+			trackMakeover(app, "NEXT_ACTION_CLICKED", "NONE", "CATALOG")
+			app:_OpenPage("Avatar Graphics")
+		end)
+		button(app, choices, "Forge Runway", 142, function()
+			trackMakeover(app, "NEXT_ACTION_CLICKED", "NONE", "CATALOG")
+			RunwayHub.Show(app)
+		end)
+		button(app, choices, "Forge a missing piece", 188, function()
+			trackMakeover(app, "NEXT_ACTION_CLICKED", "NONE", "FORGE")
+			design(app)
+		end)
+	end
+
+	label(stack, "PICK A STARTER LOOK", 26, true).LayoutOrder = -8
+	local looks = Factory.New("ScrollingFrame", {
+		Name = "StarterLooks",
+		Size = UDim2.new(1, 0, 0, 232),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = C.Gold,
+		ScrollingDirection = Enum.ScrollingDirection.X,
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(),
+		LayoutOrder = -7,
+		Parent = stack,
+	})
+	Factory.List(looks, Enum.FillDirection.Horizontal, 12)
+	local readyCount = 0
+	for lookIndex, definition in Config.StyleSprint.StarterLooks do
+		local look = lab.starterLooks[definition.key]
+		local available = look and look.available == true
+		local recommended = lookIndex
+			== (((tonumber(sprint.themeIndex) or 1) - 1) % #Config.StyleSprint.StarterLooks) + 1
+		if available then
+			readyCount += 1
+		end
+		local lookCard = Factory.ImageCard(looks, UDim2.fromOffset(218, 214), nil, "StarterLook")
+		local accent = if definition.accent == "ROSE"
+			then C.Rose
+			else if definition.accent == "VIOLET" then C.Violet else C.Cyan
+		Factory.Stroke(lookCard, accent, 0.28, 1.4)
+		Factory.Label(lookCard, definition.label, UDim2.new(1, -24, 0, 24), {
+			Position = UDim2.fromOffset(12, 10),
+			Font = Theme.Fonts.Black,
+			TextSize = 15,
+			AlignX = Enum.TextXAlignment.Center,
+		})
+		Factory.Label(lookCard, definition.tagline, UDim2.new(1, -24, 0, 34), {
+			Position = UDim2.fromOffset(12, 35),
+			Wrapped = true,
+			TextSize = 10,
+			Color = C.TextMuted,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Top,
+		})
+		if available then
+			for index, asset in look.assets do
+				local image = Factory.New("ImageLabel", {
+					Size = UDim2.fromOffset(58, 58),
+					Position = UDim2.fromOffset(12 + (index - 1) * 66, 76),
+					BackgroundColor3 = C.Ink,
+					BorderSizePixel = 0,
+					Image = string.format("rbxthumb://type=Asset&id=%d&w=150&h=150", asset.Id),
+					ScaleType = Enum.ScaleType.Fit,
+					Parent = lookCard,
+				})
+				Factory.Corner(image, 9)
+			end
+		else
+			Factory.Label(
+				lookCard,
+				if lab.starterLookStatus == "LOADING"
+					then "Loading live catalog pieces…"
+					else "This look is unavailable right now.",
+				UDim2.new(1, -24, 0, 58),
+				{
+					Position = UDim2.fromOffset(12, 76),
+					Wrapped = true,
+					AlignX = Enum.TextXAlignment.Center,
+					Color = C.TextMuted,
+					TextSize = 11,
+				}
+			)
+		end
+		local wear = Factory.ImageButton(
+			lookCard,
+			if lab.busy
+				then "Applying…"
+				else if available
+					then if recommended
+						then "★ Wear today's pick"
+						else string.format("Wear %d-piece look", #look.assets)
+					else "Still loading…",
+			UDim2.new(1, -24, 0, 42),
+			UDim2.fromOffset(12, 154),
+			"primary"
+		)
+		app:_BindButton(wear)
+		wear.Active = available and not lab.busy
+		wear.Activated:Connect(function()
+			AvatarLab.ApplyStarterLook(app, look)
+		end)
+	end
+	if readyCount > 0 and not lab.makeoverEvents.looksDisplayed then
+		lab.makeoverEvents.looksDisplayed = true
+		trackMakeover(app, "LOOKS_DISPLAYED", "NONE", "STARTER")
+	end
+	if lab.starterLookStatus == "ERROR" then
+		local retry = button(app, looks, "Retry starter looks", 180, function()
+			lab.starterLookStatus = "IDLE"
+			AvatarLab.LoadStarterLooks(app)
+		end, true)
+		retry.Size = UDim2.fromOffset(180, 42)
+		if app.state.policy.contentSharingAllowed then
+			local community = button(app, looks, "Try community styles", 190, function()
+				app:_OpenPage("Discover")
+			end)
+			community.Size = UDim2.fromOffset(190, 42)
+		end
+	end
+end
+
 local function lookPanel(app: any, stack: Frame)
 	local lab = state(app)
+	if lab.outfitName == "" and app.state.makeoverState and app.state.makeoverState.active then
+		lab.outfitName = tostring(app.state.makeoverState.theme or "Daily") .. " Look"
+	end
 	local preview = Factory.New("ViewportFrame", {
 		Name = "LookPreview",
 		Size = UDim2.new(1, 0, 0, 260),
@@ -357,6 +996,7 @@ local function lookPanel(app: any, stack: Frame)
 			return
 		end
 		lab.saving = true
+		trackMakeover(app, "SAVE_CLICKED", "NONE", "CATALOG")
 		task.spawn(function()
 			local ok, data = app:_Invoke(Network.Actions.SaveOutfit, { name = lab.outfitName })
 			lab.saving = false
@@ -367,6 +1007,20 @@ local function lookPanel(app: any, stack: Frame)
 					"success",
 					"Mixed outfit saved in Forge: catalog clothes, accessories and your equipped custom UGCs."
 				)
+				local styleSprint = data.styleSprint
+				if type(styleSprint) == "table" and type(styleSprint.state) == "table" then
+					app.state.makeoverState = styleSprint.state
+					if styleSprint.needsPersonalize then
+						app:_Toast(
+							"info",
+							"Saved! For the Style Sprint, change one item so the starter look becomes yours."
+						)
+						lab.tab = "BROWSE"
+					elseif styleSprint.score then
+						lab.tab = "BROWSE"
+						app.scrollPositions.AvatarLabWorkspace = Vector2.zero
+					end
+				end
 				render(app)
 			end
 		end)
@@ -753,6 +1407,22 @@ function AvatarLab.Render(app: any)
 			5
 		return
 	end
+	local sprint = app.state.makeoverState or {}
+	if sprint.active ~= true and sprint.dailyCompleted ~= true and not lab.startingSprint then
+		task.defer(function()
+			if app.activePage == "Avatar Lab" then
+				AvatarLab.StartSprint(app)
+			end
+		end)
+	end
+	if lab.starterLookStatus == "IDLE" then
+		task.defer(function()
+			if app.activePage == "Avatar Lab" then
+				AvatarLab.LoadStarterLooks(app)
+			end
+		end)
+	end
+	sprintPanel(app, stack)
 	local searchRow = Factory.New(
 		"Frame",
 		{ BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44), LayoutOrder = 1, Parent = stack }

@@ -5,16 +5,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 
-local THEMES = {
-	"Celestial streetwear",
-	"Bio-luminescent garden",
-	"Retro arcade relic",
-	"Soft cloud fantasy",
-	"Deep-sea explorer",
-	"Prismatic festival",
-	"Ancient tech artifact",
-}
-
 -- The next streak day (7, 14, 30, then every StreakMilestoneRepeatDay after
 -- that) that a check-in will trigger a StreakMilestones bonus -- shared by
 -- CheckIn's brief and GetBrief so the streak-calendar UI can always show how
@@ -97,7 +87,7 @@ end
 
 -- Advances the first-look journey only from allowlisted actions. The caller
 -- owns authority for the action itself: Main only exposes OPEN_STUDIO to the
--- client; try-on, runway ready, and runway completion call this from their
+-- client; try-on, personalization, and outfit-save progress comes from
 -- successful server branches.
 function RetentionService:MarkJourney(player: Player, stepKey: string, persist: boolean?): (boolean, { [string]: any })
 	local definition = JOURNEY_BY_KEY[stepKey]
@@ -180,11 +170,11 @@ function RetentionService:MarkJourney(player: Player, stepKey: string, persist: 
 		tone = "success",
 		message = if journeyFinished
 			then string.format(
-				"First Look complete! +%d bonus tokens and +%d Creator XP",
+				"First makeover complete! +%d bonus tokens and +%d Creator XP",
 				tokensGranted,
 				Config.Retention.FirstLookCompletionXP
 			)
-			else string.format("First Look: %s (+%d bonus tokens)", definition.label, tokensGranted),
+			else string.format("Makeover: %s (+%d bonus tokens)", definition.label, tokensGranted),
 	})
 	return true, state
 end
@@ -278,7 +268,7 @@ function RetentionService:CheckIn(player: Player): { [string]: any }
 		tokensGranted = tokensGranted,
 		winBackTokensGranted = winBackTokensGranted,
 		daysAway = daysAway,
-		theme = THEMES[(day % #THEMES) + 1],
+		theme = Config.StyleSprint.DailyThemes[(day % #Config.StyleSprint.DailyThemes) + 1],
 		nextRewardIn = 3 - (profile.daily.streak % 3),
 		nextDailyTokens = Config.Retention.DailyStreakTokens[(rewardDay % #Config.Retention.DailyStreakTokens) + 1],
 		milestoneReward = milestoneReward,
@@ -299,7 +289,7 @@ function RetentionService:GetBrief(player: Player): { [string]: any }
 		streak = profile.daily.streak,
 		best = profile.daily.best,
 		rewardDay = rewardDay,
-		theme = THEMES[(day % #THEMES) + 1],
+		theme = Config.StyleSprint.DailyThemes[(day % #Config.StyleSprint.DailyThemes) + 1],
 		nextRewardIn = 3 - (profile.daily.streak % 3),
 		nextDailyTokens = Config.Retention.DailyStreakTokens[(rewardDay % #Config.Retention.DailyStreakTokens) + 1],
 		nextMilestoneDay = nextMilestoneDay(profile.daily.streak),

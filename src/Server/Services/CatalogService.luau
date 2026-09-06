@@ -5,6 +5,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local AvatarLook = require(ReplicatedStorage:WaitForChild("AvatarLook"))
+local Config = require(ReplicatedStorage:WaitForChild("Config"))
 
 local CatalogService = {}
 CatalogService.__index = CatalogService
@@ -37,6 +38,10 @@ local LAYERED = {
 local TYPE_NAME_BY_ID: { [number]: string } = {}
 for typeName, avatarAssetType in TYPES do
 	TYPE_NAME_BY_ID[avatarAssetType.Value] = typeName
+end
+local STARTER_LOOK_KEYS: { [string]: boolean } = {}
+for _, look in Config.StyleSprint.StarterLooks do
+	STARTER_LOOK_KEYS[look.key] = true
 end
 
 type CatalogAsset = { assetType: string, name: string }
@@ -297,7 +302,138 @@ function CatalogService:TryOn(player: Player, payload: any): (boolean, any)
 		end)
 		self.analytics:Custom(player, "CatalogItemTried", 1, { assetType = asset.assetType })
 	end
-	return true, {}
+	return true, { changed = appliedOrProblem == true, assetId = assetId, assetType = asset.assetType }
+end
+
+-- Applies a resolved starter outfit in one HumanoidDescription update. That
+-- gives the player one immediate reveal instead of watching three remote
+-- calls pop individual pieces on, and it gives undo one coherent checkpoint.
+-- Every asset is independently resolved on the server; the client-supplied
+-- ID/type pairing is never trusted.
+function CatalogService:ApplyLook(player: Player, payload: any): (boolean, any)
+	if
+		type(payload) ~= "table"
+		or type(payload.lookKey) ~= "string"
+		or not STARTER_LOOK_KEYS[payload.lookKey]
+		or type(payload.assets) ~= "table"
+		or #payload.assets < 2
+		or #payload.assets > 4
+	then
+		return false, "INVALID_REQUEST"
+	end
+
+	local resolved = {}
+	local seen: { [number]: boolean } = {}
+	for _, request in payload.assets do
+		if
+			type(request) ~= "table"
+			or type(request.assetId) ~= "number"
+			or request.assetId <= 0
+			or request.assetId % 1 ~= 0
+			or type(request.avatarAssetType) ~= "string"
+			or not TYPES[request.avatarAssetType]
+		then
+			return false, "INVALID_REQUEST"
+		end
+		local assetId = math.floor(request.assetId)
+		if seen[assetId] then
+			return false, "INVALID_REQUEST"
+		end
+		seen[assetId] = true
+		local asset = self:_ResolveAsset(assetId)
+		if not asset or asset.assetType ~= request.avatarAssetType then
+			return false, "CATALOG_ITEM_UNAVAILABLE"
+		end
+		table.insert(resolved, {
+			assetId = assetId,
+			assetType = asset.assetType,
+			name = asset.name,
+		})
+	end
+
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return false, "CHARACTER_UNAVAILABLE"
+	end
+	local before = nil
+	local description: any = nil
+	local changedCount = 0
+	local success, problem = pcall(function()
+		description = humanoid:GetAppliedDescription()
+		before = AvatarLook.Capture(description)
+		local accessories = description:GetAccessories(true)
+		for _, asset in resolved do
+			local classicProperty = CLASSIC[asset.assetType]
+			if classicProperty then
+				if (description :: any)[classicProperty] ~= asset.assetId then
+					(description :: any)[classicProperty] = asset.assetId
+					changedCount += 1
+				end
+				continue
+			end
+
+			local accessoryType = AvatarEditorService:GetAccessoryType(TYPES[asset.assetType])
+			local matching = {}
+			for _, worn in accessories do
+				if worn.AccessoryType == accessoryType then
+					table.insert(matching, worn)
+				end
+			end
+			if #matching == 1 and matching[1].AssetId == asset.assetId then
+				continue
+			end
+			local filtered = {}
+			for _, worn in accessories do
+				if worn.AccessoryType ~= accessoryType then
+					table.insert(filtered, worn)
+				end
+			end
+			accessories = filtered
+			local accessory: { [string]: any } = {
+				AssetId = asset.assetId,
+				AccessoryType = accessoryType,
+				IsLayered = LAYERED[asset.assetType] == true,
+			}
+			if LAYERED[asset.assetType] then
+				local highestOrder = 0
+				for _, worn in accessories do
+					highestOrder = math.max(highestOrder, tonumber(worn.Order) or 0)
+				end
+				accessory.Order = highestOrder + 1
+			end
+			table.insert(accessories, accessory)
+			changedCount += 1
+		end
+		if changedCount > 0 then
+			description:SetAccessories(accessories, true)
+			applyDescription(humanoid, description)
+		end
+	end)
+	if description then
+		description:Destroy()
+	end
+	if not success then
+		warn(string.format("[CatalogService] Starter look failed: %s", tostring(problem)))
+		return false, "TRY_ON_FAILED"
+	end
+	if character ~= player.Character then
+		return false, "CHARACTER_UNAVAILABLE"
+	end
+	if changedCount > 0 then
+		self:_Remember(player, before)
+		self.profiles:Mutate(player, function(profile)
+			profile.stats.catalogTryOns = (profile.stats.catalogTryOns or 0) + changedCount
+		end)
+		self.analytics:Custom(player, "CatalogStarterLookApplied", changedCount, { look = payload.lookKey })
+	end
+	return true,
+		{
+			changed = changedCount > 0,
+			appliedCount = changedCount,
+			assets = resolved,
+			lookKey = payload.lookKey,
+		}
 end
 
 function CatalogService:Untry(player: Player, payload: any): (boolean, any)

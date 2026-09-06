@@ -61,10 +61,10 @@ function StartGuide.Show(app: any)
 		})
 		item.LayoutOrder = order
 	end
-	text("YOUR LOOK. YOUR CREATION.", 42, 1, true)
-	text("Create a custom item, style an avatar, or play. Pick what you came for.", 44, 2)
+	text("MAKE A LOOK IN 90 SECONDS", 42, 1, true)
+	text("Pick a vibe, wear a full catalog look, change one thing, then save it.", 44, 2)
 	text(
-		"1  Describe an item and confirm the price.\n2  Fit the finished item in My Studio.\n3  Wear it here. Publishing is a separate Roblox step.",
+		"1  PICK a ready-made look\n2  TWEAK one item to make it yours\n3  SAVE it, then choose photos, Runway, or custom UGC",
 		76,
 		3
 	)
@@ -87,6 +87,12 @@ function StartGuide.Show(app: any)
 				end
 				return
 			end
+			if choice == "START_FREE" then
+				local sprintOk, sprint = app:_Invoke(Network.Actions.StartStyleSprint, {})
+				if sprintOk then
+					app.state.makeoverState = sprint
+				end
+			end
 			app.state.profile.tutorialVersion = Config.Tutorial.Version
 			app.state.profile.onboarding.completed = true
 			app:_CloseModal(overlay, modal, function()
@@ -104,8 +110,8 @@ function StartGuide.Show(app: any)
 	end
 	for index, route in
 		{
-			{ "MAKE MY OWN ITEM", "MAKE_OWN", "Create", "primary" },
-			{ "STYLE MY AVATAR · FREE TO TRY", "START_FREE", "Avatar Lab", "mint" },
+			{ "START MY FREE MAKEOVER", "START_FREE", "Avatar Lab", "primary" },
+			{ "MAKE A CUSTOM UGC ITEM", "MAKE_OWN", "Create", "mint" },
 			{ "PLAY THE ARCADE", "SKIP", "ARCADE", "default" },
 		}
 	do
@@ -120,7 +126,7 @@ function StartGuide.Show(app: any)
 	end
 	text(
 		string.format(
-			"Custom generation starts at R$ %d. No free first generation. Roblox asks before charging; catalog try-ons are free, ownership is separate.",
+			"The makeover uses Roblox catalog try-ons: free to preview, ownership separate. Custom AI generation starts at R$ %d; there is no free first generation.",
 			app.state.prices.DirectGeneration
 		),
 		62,

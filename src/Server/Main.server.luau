@@ -54,6 +54,7 @@ local LeaderstatsService = require(script.Parent.Services.LeaderstatsService)
 local AfkRewardService = require(script.Parent.Services.AfkRewardService)
 local ProgressionService = require(script.Parent.Services.ProgressionService)
 local RunwayService = require(script.Parent.Services.RunwayService)
+local MakeoverService = require(script.Parent.Services.MakeoverService)
 
 local function push(player: Player, eventName: string, payload: any)
 	if player.Parent == Players then
@@ -67,6 +68,7 @@ local analytics = AnalyticsService.new()
 local achievements = AchievementService.new(profiles, push, analytics)
 local progression = ProgressionService.new(profiles, push, analytics)
 local retention = RetentionService.new(profiles, analytics, achievements, push, progression)
+local makeover = MakeoverService.new(profiles, analytics, retention, progression, push)
 local backend = BackendService.new()
 local commerce = CommerceService.new(profiles, playerStates, analytics, push)
 local adRewards = AdRewardService.new(profiles, playerStates, commerce, push, analytics, achievements)
@@ -195,6 +197,7 @@ local function bootstrap(player: Player): (boolean, any)
 			dailyBrief = retention:GetBrief(player),
 			questState = retention:GetQuestState(player),
 			journeyState = retention:GetJourneyState(player),
+			makeoverState = makeover:GetState(player),
 			creatorProgress = progression:GetSnapshot(player),
 			runwayState = runway:GetState(player),
 		}
@@ -317,6 +320,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		end
 		return retention:MarkJourney(player, action)
 	end,
+	[Network.Actions.StartStyleSprint] = function(player, payload)
+		return makeover:Start(player, type(payload) == "table" and payload.restart == true)
+	end,
 	-- Roblox requires a rewarded-ad reward product to also be normally
 	-- purchasable with Robux (see AdRewardService), so this is both a real
 	-- purchase path and the way to test token spending in Studio without a
@@ -373,6 +379,9 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		local success, result = items:SaveOutfit(player, payload)
 		if success then
 			analytics:Custom(player, "OutfitSaved", 1, {})
+			if type(result) == "table" then
+				result.styleSprint = makeover:Complete(player)
+			end
 		end
 		return success, result
 	end,
@@ -397,12 +406,23 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 		if type(payload) ~= "table" or type(payload.itemId) ~= "string" then
 			return false, "INVALID_REQUEST"
 		end
+		local profile = profiles:Get(player)
+		local ownedItem = profile and profile.items[payload.itemId]
 		local success, result = items:Equip(player, payload.itemId)
 		if success then
 			analytics:Custom(player, "GeneratedItemEquipped", 1, {})
 			achievements:Unlock(player, "FIRST_EQUIP")
 			retention:MarkJourney(player, "TRY_STYLE")
 			retention:MarkQuest(player, "TRY_STYLE")
+			makeover:RecordChange(
+				player,
+				"forge:" .. payload.itemId,
+				if ownedItem and ownedItem.fit then tostring(ownedItem.fit.accessoryType) else "ForgeAccessory",
+				"FORGE"
+			)
+			if type(result) == "table" then
+				result.makeoverState = makeover:GetState(player)
+			end
 		end
 		return success, result
 	end,
@@ -547,6 +567,15 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			achievements:Unlock(player, "FIRST_TRY_ON")
 			retention:MarkJourney(player, "TRY_STYLE")
 			retention:MarkQuest(player, "TRY_STYLE")
+			makeover:RecordChange(
+				player,
+				"community:" .. tostring(item.id),
+				if item.fit and item.fit.accessoryType then tostring(item.fit.accessoryType) else "CommunityAccessory",
+				"COMMUNITY"
+			)
+			if type(result) == "table" then
+				result.makeoverState = makeover:GetState(player)
+			end
 		else
 			local failure = if type(result) == "string" and string.match(result, "^[A-Z0-9_]+$")
 				then string.sub(result, 1, 32)
@@ -567,15 +596,40 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 	[Network.Actions.PromptPlus] = function(player)
 		return community:PromptPlus(player)
 	end,
+	[Network.Actions.ApplyCatalogLook] = function(player, payload)
+		if runway:IsLookFrozen(player) then
+			return false, "RUNWAY_LOOK_LOCKED"
+		end
+		local success, result = catalog:ApplyLook(player, payload)
+		if success and type(result) == "table" then
+			achievements:Unlock(player, "FIRST_TRY_ON")
+			retention:MarkQuest(player, "TRY_STYLE")
+			makeover:RecordStarterLook(player, result.lookKey or "UNKNOWN", result.assets or {})
+			result.makeoverState = makeover:GetState(player)
+			items:RestoreEquipped(player)
+		end
+		return success, result
+	end,
 	[Network.Actions.TryCatalogAsset] = function(player, payload)
 		if runway:IsLookFrozen(player) then
 			return false, "RUNWAY_LOOK_LOCKED"
 		end
 		local success, result = catalog:TryOn(player, payload)
 		if success then
-			achievements:Unlock(player, "FIRST_TRY_ON")
-			retention:MarkJourney(player, "TRY_STYLE")
-			retention:MarkQuest(player, "TRY_STYLE")
+			if type(result) == "table" and result.changed then
+				achievements:Unlock(player, "FIRST_TRY_ON")
+				retention:MarkJourney(player, "TRY_STYLE")
+				retention:MarkQuest(player, "TRY_STYLE")
+				makeover:RecordChange(
+					player,
+					"catalog:" .. tostring(result.assetId),
+					tostring(result.assetType or "CatalogAccessory"),
+					"CATALOG"
+				)
+			end
+			if type(result) == "table" then
+				result.makeoverState = makeover:GetState(player)
+			end
 			items:RestoreEquipped(player)
 		end
 		return success, result
@@ -701,7 +755,7 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			return false, "SAVE_FAILED"
 		end
 		-- Choosing a path is the only action this request proves. Opening the
-		-- guided First Look and successfully wearing its free item advance
+		-- guided makeover and successfully wearing its starter look advance
 		-- steps 3 and 4 from RetentionService, so analytics reflects behavior
 		-- instead of auto-completing the funnel from one modal click.
 		if previousStep < 2 then
@@ -730,7 +784,7 @@ local handlers: { [string]: (Player, any) -> (boolean, any) } = {
 			previousOnboardingCompleted = profile.onboarding.completed == true
 			profile.tutorialVersion = tutorialVersion
 			-- Every exit lands in a usable studio path, including Skip. Marking
-			-- onboarding complete is also what permits the free First Look's
+			-- onboarding complete is also what permits the free makeover's
 			-- OPEN_STUDIO journey action on the next client call.
 			profile.onboarding.completed = true
 			profile.onboarding.step = math.max(previousOnboardingStep, 2)
@@ -820,6 +874,7 @@ local structuredGenerationActions: { [string]: boolean } = {
 
 local avatarBusy: { [Player]: boolean } = {}
 local avatarActions = {
+	[Network.Actions.ApplyCatalogLook] = true,
 	[Network.Actions.TryCatalogAsset] = true,
 	[Network.Actions.UntryCatalogAsset] = true,
 	[Network.Actions.ResetAvatar] = true,
@@ -896,6 +951,7 @@ end)
 Players.PlayerRemoving:Connect(function(player)
 	avatarBusy[player] = nil
 	catalog:Remove(player)
+	makeover:Remove(player)
 	loaded[player] = nil
 	loading[player] = nil
 	if characterConnections[player] then

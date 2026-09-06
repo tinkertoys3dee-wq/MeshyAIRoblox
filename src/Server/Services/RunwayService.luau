@@ -228,7 +228,6 @@ function RunwayService:_FinishRound()
 			end)
 			xp += encoreXP
 			self.progression:Grant(player, xp, if placement then "RUNWAY_PLACE" else "RUNWAY_COMPLETE", false)
-			self.retention:MarkJourney(player, "COMPLETE_RUNWAY", false)
 			self.retention:MarkQuest(player, "RUNWAY", false)
 			-- All profile mutations above are synchronous and complete before a
 			-- player can leave; persistence can run in parallel across entrants so
@@ -408,7 +407,6 @@ function RunwayService:Ready(player: Player): (boolean, any)
 		entry.readyAt = os.time()
 		self.analytics:Funnel(player, "runway", 2, "Look locked in", { theme = self.theme })
 		self.analytics:Custom(player, "RunwayLookLocked", 1, { theme = self.theme })
-		self.retention:MarkJourney(player, "JOIN_RUNWAY")
 	end
 	self:_Broadcast()
 	return true, self:GetState(player)

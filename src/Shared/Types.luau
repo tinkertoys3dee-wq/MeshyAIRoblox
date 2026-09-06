@@ -221,6 +221,12 @@ export type PlayerProfile = {
 		runwayVotes: number,
 	},
 	firstLookJourney: { done: { [string]: boolean }, completed: boolean, completedAt: number },
+	makeover: {
+		dailyDay: number,
+		dailyCompleted: boolean,
+		bestScore: number,
+		completedCount: number,
+	},
 	runway: {
 		dailyDay: number,
 		dailyCompleted: boolean,
@@ -231,7 +237,13 @@ export type PlayerProfile = {
 		weeklyReward: { week: number, rank: number, xp: number, announced: boolean },
 	},
 	achievements: { [string]: number },
-	settings: { soundsEnabled: boolean, reduceMotion: boolean, highContrast: boolean, uiScale: number },
+	settings: {
+		soundsEnabled: boolean,
+		reduceMotion: boolean,
+		highContrast: boolean,
+		uiScale: number,
+		simpleMode: boolean,
+	},
 	stats: { [string]: number },
 	daily: { lastDay: number, streak: number, best: number },
 	onboarding: { completed: boolean, step: number },

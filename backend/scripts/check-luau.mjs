@@ -17,6 +17,7 @@ try {
   const modules = {
     AvatarLook: 'src/Shared/AvatarLook.luau',
     CatalogService: 'src/Server/Services/CatalogService.luau',
+    MakeoverService: 'src/Server/Services/MakeoverService.luau',
     ItemService: 'src/Server/Services/ItemService.luau',
     Motion: 'src/Client/UI/Motion.luau',
     Factory: 'src/Client/UI/Factory.luau',
@@ -59,6 +60,17 @@ try {
     const source = read(file);
     const hiddenHorizontal = /ScrollBarThickness\s*=\s*0,[\s\S]{0,180}ScrollingDirection\s*=\s*Enum\.ScrollingDirection\.X/;
     if (hiddenHorizontal.test(source)) throw new Error(`${file} hides a horizontal overflow scrollbar`);
+  }
+  const avatarLabSource = read('src/Client/UI/AvatarLab.luau');
+  for (const name of ['MakeoverObjectives', 'StarterLooks']) {
+    const visibleScroller = new RegExp(`Name = "${name}"[\\s\\S]{0,420}ScrollBarThickness = [1-9]`);
+    if (!visibleScroller.test(avatarLabSource)) throw new Error(`${name} must expose a visible scrollbar`);
+  }
+  if (!appSource.includes('catalogAccess = true :: boolean?')) {
+    throw new Error('Catalog search must not be blocked by unrelated inventory-read consent');
+  }
+  if (!read('src/Client/UI/StartGuide.luau').includes('there is no free first generation')) {
+    throw new Error('First-session copy must distinguish free try-on from paid generation');
   }
   const transition = appSource.match(/function App:_SetStudioOpen\(open: boolean\)[\s\S]*?(?=\nfunction App:)/)?.[0];
   if (!transition) throw new Error('Studio transition method not found');

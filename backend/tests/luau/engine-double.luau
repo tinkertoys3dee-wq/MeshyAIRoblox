@@ -403,13 +403,44 @@ fixtures.Theme = {
 	StrokeTransparency = 0.45,
 }
 fixtures.UIAssets = {}
-fixtures.Network = { Actions = setmetatable({}, {
-	__index = function(_, name)
-		return name
-	end,
-}) }
+fixtures.Network = {
+	Actions = setmetatable({}, {
+		__index = function(_, name)
+			return name
+		end,
+	}),
+	PushEvents = setmetatable({}, {
+		__index = function(_, name)
+			return name
+		end,
+	}),
+}
 fixtures.Config = {
 	Generation = { BaseQueueSlots = 1 },
+	Retention = {
+		FirstLookJourney = {
+			{ key = "OPEN_STUDIO", label = "Open your makeover studio" },
+			{ key = "TRY_STYLE", label = "Wear a starter look" },
+			{ key = "PERSONALIZE", label = "Change one item" },
+			{ key = "SAVE_LOOK", label = "Save your outfit" },
+		},
+	},
+	StyleSprint = {
+		DurationSeconds = 90,
+		DailyCompletionXP = 40,
+		DailyThemes = { "Test theme" },
+		StarterLooks = {
+			{
+				key = "SOFT",
+				label = "Soft & Sweet",
+				tagline = "Pastels",
+				pieces = {
+					{ assetType = "HairAccessory", query = "pastel hair" },
+					{ assetType = "Hat", query = "bow" },
+				},
+			},
+		},
+	},
 	Group = {
 		Id = 15575113,
 		Name = "Mundane Studios",

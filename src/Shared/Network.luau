@@ -47,6 +47,8 @@ Network.Actions = table.freeze({
 	RequestPrivateModel = "RequestPrivateModel",
 	TryOnCommunityItem = "TryOnCommunityItem",
 	PromptPlus = "PromptPlus",
+	StartStyleSprint = "StartStyleSprint",
+	ApplyCatalogLook = "ApplyCatalogLook",
 	TryCatalogAsset = "TryCatalogAsset",
 	UntryCatalogAsset = "UntryCatalogAsset",
 	GetEquippedAvatarAccessories = "GetEquippedAvatarAccessories",
@@ -89,6 +91,7 @@ Network.PushEvents = table.freeze({
 	Runway = "Runway",
 	Journey = "Journey",
 	CreatorProgress = "CreatorProgress",
+	Makeover = "Makeover",
 })
 
 return table.freeze(Network)
