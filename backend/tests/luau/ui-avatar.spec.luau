@@ -574,16 +574,25 @@ AvatarLab.Render(app)
 local stepOneNames, stepOneButtons, stepOneTextBoxes = guidedSnapshot()
 check(stepOneNames.GuidedMakeoverCard == 1, "Guided makeover has one clear coach card")
 check(stepOneNames.GuideProgress == 1 and stepOneNames.GuideArrow == 1, "Guide shows progress and an arrow")
+check(stepOneNames.GuideArrowIcon == 2, "Guide uses large arrows in both the coach card and target callout")
+check(stepOneNames.GuideTargetGlow == 1, "The exact tutorial target has a wide outer glow")
 equal(stepOneTextBoxes, 0, "Pick step hides unrelated catalog search controls")
 check(stepOneButtons["My custom UGCs"] == nil, "Pick step hides unrelated Avatar Lab tabs")
-local firstTarget = nil
+local firstTarget, largeArrow = nil, nil
 for _, control in app.content:GetDescendants() do
 	if control:GetAttribute("ForgeGuideTarget") then
 		firstTarget = control
-		break
+	end
+	if control.Name == "GuideArrow" then
+		largeArrow = control
 	end
 end
 check(firstTarget ~= nil, "Pick step highlights one exact Wear button")
+check(
+	largeArrow ~= nil and largeArrow.Size.Y.Offset >= 50,
+	"The main guided arrow is large enough to dominate the card"
+)
+check(firstTarget:FindFirstChild("GuideTargetGlow").Thickness >= 9, "The highlighted action uses a thick outer glow")
 clearPage()
 
 app.state.makeoverState.starterApplied = true

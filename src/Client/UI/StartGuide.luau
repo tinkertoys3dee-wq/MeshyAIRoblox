@@ -7,6 +7,7 @@ local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Factory)
 local GamesHub = require(script.Parent.GamesHub)
+local Motion = require(script.Parent.Motion)
 
 local StartGuide = {}
 
@@ -73,8 +74,8 @@ function StartGuide.Show(app: any)
 	})
 	for index, caption in { "1\nPICK", "2\nCHANGE", "3\nSAVE" } do
 		local node = Factory.New("Frame", {
-			Size = UDim2.new(0.3, -4, 0, 58),
-			Position = UDim2.new((index - 1) * 0.35, 0, 0, 0),
+			Size = UDim2.new(0.28, 0, 0, 58),
+			Position = UDim2.new((index - 1) * 0.36, 0, 0, 0),
 			BackgroundColor3 = if index == 1 then Theme.Colors.Gold else Theme.Colors.Panel,
 			BackgroundTransparency = if index == 1 then 0.04 else 0.2,
 			BorderSizePixel = 0,
@@ -92,14 +93,27 @@ function StartGuide.Show(app: any)
 			ZIndex = 354,
 		})
 		if index < 3 then
-			Factory.Label(path, "→", UDim2.new(0.05, 0, 0, 58), {
-				Position = UDim2.new(index * 0.35 - 0.05, 0, 0, 0),
+			local connectorPosition = UDim2.new((index - 1) * 0.36 + 0.28, 0, 0, 8)
+			local connector = Factory.New("Frame", {
+				Name = "TutorialPathArrow",
+				Size = UDim2.new(0.08, 0, 0, 42),
+				Position = connectorPosition,
+				BackgroundColor3 = Theme.Colors.Gold,
+				BackgroundTransparency = 0.04,
+				BorderSizePixel = 0,
+				ZIndex = 354,
+				Parent = path,
+			})
+			Factory.Corner(connector, 18)
+			Factory.Stroke(connector, Theme.Colors.Text, 0.12, 2)
+			Factory.Label(connector, "→", UDim2.fromScale(1, 1), {
 				AlignX = Enum.TextXAlignment.Center,
 				Font = Theme.Fonts.Black,
-				TextSize = 18,
-				Color = Theme.Colors.Gold,
-				ZIndex = 354,
+				TextSize = 27,
+				Color = Theme.Colors.Ink,
+				ZIndex = 355,
 			})
+			Motion.Pulse(connector, 0.55, { Position = connectorPosition + UDim2.fromOffset(4, 0) })
 		end
 	end
 	local busy = false

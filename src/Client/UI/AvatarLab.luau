@@ -374,33 +374,79 @@ end
 
 local function pulseGuideTarget(target: GuiObject)
 	target:SetAttribute("ForgeGuideTarget", true)
-	local stroke = Factory.Stroke(target, C.Gold, 0.04, 3)
+	local glow = Factory.Stroke(target, C.Gold, 0.55, 9)
+	glow.Name = "GuideTargetGlow"
+	local stroke = Factory.Stroke(target, C.Gold, 0, 5)
 	stroke.Name = "GuideTarget"
-	Motion.Pulse(stroke, 0.62, { Transparency = 0.65 })
+	Motion.Pulse(glow, 0.52, { Transparency = 0.88, Thickness = 13 })
+	Motion.Pulse(stroke, 0.52, { Transparency = 0.32, Thickness = 7 })
+end
+
+local function guideArrowBanner(
+	parent: Instance,
+	name: string,
+	text: string,
+	size: UDim2,
+	position: UDim2,
+	large: boolean?
+): Frame
+	local banner = Factory.New("Frame", {
+		Name = name,
+		Size = size,
+		Position = position,
+		BackgroundColor3 = C.Gold,
+		BackgroundTransparency = 0.02,
+		BorderSizePixel = 0,
+		ZIndex = 6,
+		Parent = parent,
+	})
+	Factory.Corner(banner, if large then 14 else 9)
+	Factory.Stroke(banner, C.Text, 0.15, if large then 3 else 2)
+	local iconWidth = if large then 54 else 38
+	Factory.Label(banner, "↓", UDim2.fromOffset(iconWidth, size.Y.Offset), {
+		Name = "GuideArrowIcon",
+		Position = UDim2.fromOffset(4, 0),
+		AlignX = Enum.TextXAlignment.Center,
+		Font = Theme.Fonts.Black,
+		TextSize = if large then 34 else 23,
+		Color = C.Ink,
+		ZIndex = 7,
+	})
+	Factory.Label(banner, text, UDim2.new(1, -(iconWidth + 12), 1, 0), {
+		Name = "GuideArrowText",
+		Position = UDim2.fromOffset(iconWidth + 4, 0),
+		AlignX = Enum.TextXAlignment.Center,
+		Font = Theme.Fonts.Black,
+		TextSize = if large then 17 else 13,
+		Color = C.Ink,
+		ZIndex = 7,
+	})
+	Motion.Pulse(banner, 0.48, { Position = position + UDim2.fromOffset(0, if large then 7 else 4) })
+	return banner
 end
 
 local GUIDE_COPY = {
 	{
 		title = "Pick the look you like most",
 		body = "Swipe the three looks, then tap the glowing Wear button. You can change everything afterward.",
-		arrow = "↓  TAP A LOOK BELOW",
+		action = "TAP A LOOK BELOW",
 	},
 	{
 		title = "Make one change",
 		body = "Choose a category, then tap the glowing Try on button on any item. One change makes the look yours.",
-		arrow = "↓  TAP ONE ITEM BELOW",
+		action = "TAP ONE ITEM BELOW",
 	},
 	{
 		title = "Save your first look",
 		body = "Keep the suggested name or type your own, then tap the glowing Save in Forge button. Saving is free.",
-		arrow = "↓  SAVE BUTTON BELOW",
+		action = "SAVE BUTTON BELOW",
 	},
 }
 
 local function guidePanel(app: any, stack: Frame, step: number, copyOverride: any?)
 	local lab = state(app)
 	local copy = copyOverride or GUIDE_COPY[step]
-	local card = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 180), nil, "GuidedMakeoverCard")
+	local card = Factory.ImageCard(stack, UDim2.new(1, 0, 0, 224), nil, "GuidedMakeoverCard")
 	card.LayoutOrder = -9
 	Factory.Stroke(card, C.Gold, 0.08, 2)
 	Factory.Label(card, string.format("GUIDED · %d OF 3", step), UDim2.new(1, -126, 0, 22), {
@@ -460,15 +506,7 @@ local function guidePanel(app: any, stack: Frame, step: number, copyOverride: an
 			Color = if finished or active then C.Ink else C.TextMuted,
 		})
 	end
-	local arrow = Factory.Label(card, copy.arrow, UDim2.new(1, -32, 0, 28), {
-		Name = "GuideArrow",
-		Position = UDim2.fromOffset(16, 143),
-		AlignX = Enum.TextXAlignment.Center,
-		Font = Theme.Fonts.Black,
-		TextSize = 14,
-		Color = C.Gold,
-	})
-	Motion.Pulse(arrow, 0.55, { Position = arrow.Position + UDim2.fromOffset(0, 4) })
+	guideArrowBanner(card, "GuideArrow", copy.action, UDim2.new(1, -32, 0, 56), UDim2.fromOffset(16, 151), true)
 	local impressionKey = "guideStage" .. tostring(step)
 	if not lab.makeoverEvents[impressionKey] then
 		lab.makeoverEvents[impressionKey] = true
@@ -977,9 +1015,10 @@ local function sprintPanel(app: any, stack: Frame, guideStep: number?)
 	end
 
 	label(stack, "PICK A STARTER LOOK", 26, true).LayoutOrder = -8
+	local lookCardHeight = if guideStep == 1 then 230 else 214
 	local looks = Factory.New("ScrollingFrame", {
 		Name = "StarterLooks",
-		Size = UDim2.new(1, 0, 0, 232),
+		Size = UDim2.new(1, 0, 0, lookCardHeight + 18),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 4,
@@ -1010,7 +1049,7 @@ local function sprintPanel(app: any, stack: Frame, guideStep: number?)
 		if available then
 			readyCount += 1
 		end
-		local lookCard = Factory.ImageCard(looks, UDim2.fromOffset(218, 214), nil, "StarterLook")
+		local lookCard = Factory.ImageCard(looks, UDim2.fromOffset(218, lookCardHeight), nil, "StarterLook")
 		local accent = if definition.accent == "ROSE"
 			then C.Rose
 			else if definition.accent == "VIOLET" then C.Violet else C.Cyan
@@ -1068,20 +1107,19 @@ local function sprintPanel(app: any, stack: Frame, guideStep: number?)
 						else string.format("Wear %d-piece look", #look.assets)
 					else "Still loading…",
 			UDim2.new(1, -24, 0, 42),
-			UDim2.fromOffset(12, 154),
+			UDim2.fromOffset(12, if guideStep == 1 then 174 else 154),
 			"primary"
 		)
 		app:_BindButton(wear)
 		wear.Active = available and not lab.busy
 		if definition.key == guideTargetLook then
-			Factory.Label(lookCard, "↓  TAP HERE", UDim2.new(1, -24, 0, 18), {
-				Name = "GuideTargetLabel",
-				Position = UDim2.fromOffset(12, 135),
-				AlignX = Enum.TextXAlignment.Center,
-				Font = Theme.Fonts.Black,
-				TextSize = 10,
-				Color = C.Gold,
-			})
+			guideArrowBanner(
+				lookCard,
+				"GuideTargetLabel",
+				"TAP THIS BUTTON",
+				UDim2.new(1, -24, 0, 30),
+				UDim2.fromOffset(12, 137)
+			)
 			pulseGuideTarget(wear)
 		end
 		wear.Activated:Connect(function()
@@ -1329,7 +1367,7 @@ end
 
 local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean?, guided: boolean?)
 	local lab = state(app)
-	local cardHeight = if guided then 290 else 326
+	local cardHeight = if guided then 310 else 326
 	local guideTargetAssigned = false
 	local grid = Factory.New("Frame", {
 		Size = UDim2.new(1, 0, 0, 0),
@@ -1402,21 +1440,20 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 				elseif app.triedOnAssetIds[id] then "Remove"
 				else "Try on · free",
 			UDim2.new(1, -24, 0, 42),
-			UDim2.fromOffset(12, 236),
+			UDim2.fromOffset(12, if guided then 258 else 236),
 			"primary"
 		)
 		try.Active = not lab.busy
 		local guideTarget = guided == true and not guideTargetAssigned and not forge and not app.triedOnAssetIds[id]
 		if guideTarget then
 			guideTargetAssigned = true
-			Factory.Label(card, "↓  TAP TRY ON", UDim2.new(1, -24, 0, 18), {
-				Name = "GuideTargetLabel",
-				Position = UDim2.fromOffset(12, 216),
-				AlignX = Enum.TextXAlignment.Center,
-				Font = Theme.Fonts.Black,
-				TextSize = 10,
-				Color = C.Gold,
-			})
+			guideArrowBanner(
+				card,
+				"GuideTargetLabel",
+				"TAP TRY ON",
+				UDim2.new(1, -24, 0, 30),
+				UDim2.fromOffset(12, 221)
+			)
 			pulseGuideTarget(try)
 		end
 		try.Activated:Connect(function()
@@ -1601,7 +1638,7 @@ function AvatarLab.Render(app: any)
 			guidePanel(app, stack, 1, {
 				title = "First, enable free try-ons",
 				body = "Roblox asks once so Forge can preview catalog items on your avatar. This does not buy anything.",
-				arrow = "↓  TAP ENABLE CATALOG",
+				action = "TAP ENABLE CATALOG",
 			})
 		end
 		label(stack, "READY TO TRY YOUR FIRST LOOK?", 46, true).LayoutOrder = 1
