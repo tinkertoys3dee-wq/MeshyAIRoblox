@@ -422,6 +422,9 @@ function App.new()
 		communityTryOnItem = nil :: { [string]: any }?,
 		makeoverReveal = nil :: Frame?,
 		makeoverGuideRequested = false,
+		customUGCGuideRequested = false,
+		customUGCGuideDismissed = false,
+		customUGCGuideEvents = {} :: { [string]: boolean },
 		-- De-duplicates guide impressions across Discover's frequent re-renders
 		-- while retaining click telemetry for the same stage.
 		firstLookGuideEvents = {} :: { [string]: boolean },
@@ -2056,10 +2059,10 @@ function App:_CloseModal(overlay: GuiObject, modal: GuiObject?, finished: (() ->
 end
 
 -- One short, visual explanation replaces the old multi-page onboarding. The
--- audience skews young, so the hierarchy is circles first, verbs second, and
--- supporting copy last: TRY -> MAKE -> WEAR. It is versioned server-side so a
--- materially clearer edition can reach existing players once without becoming
--- a modal they must dismiss every session.
+-- audience skews young, so it previews both concrete starting paths: the free
+-- PICK -> CHANGE -> SAVE makeover and personal UGC creation. It is versioned
+-- server-side so a materially clearer edition can reach existing players once
+-- without becoming a modal they must dismiss every session.
 function App:_ShowVisualTutorial()
 	StartGuide.Show(self)
 end
@@ -3047,6 +3050,8 @@ function App:_ConnectPush()
 		elseif eventName == Network.PushEvents.Generation then
 			if payload.stage == "QUEUED" and not self.queuedSoundIds[payload.generationId] then
 				self.queuedSoundIds[payload.generationId] = true
+				self.customUGCGuideRequested = false
+				self.customUGCGuideDismissed = true
 				self.sounds:Play("Queue")
 			end
 			local profile = self.state and self.state.profile
@@ -3400,7 +3405,7 @@ end
 
 function App:_PageHeader(title: string, subtitle: string, accent: boolean?)
 	local rightReserve = if self.activePage == "Create"
-		then (if self.compact then 54 else 150)
+		then (if self.compact then 102 else 150)
 		elseif accent then 36
 		else 0
 	Factory.Label(self.content, title, UDim2.new(0.95, -rightReserve, 0, 38), {
@@ -3416,7 +3421,8 @@ function App:_PageHeader(title: string, subtitle: string, accent: boolean?)
 		-- placed. Anchored to the header's own right edge rather than after
 		-- the title text, since a TextLabel's rendered width isn't available
 		-- synchronously here.
-		Factory.Icon(self.content, "FlourishDivider", UDim2.fromOffset(26, 15), UDim2.new(0.95, -26, 0, 32))
+		local flourishOffset = if self.activePage == "Create" then -rightReserve - 26 else -26
+		Factory.Icon(self.content, "FlourishDivider", UDim2.fromOffset(26, 15), UDim2.new(0.95, flourishOffset, 0, 32))
 	end
 	Factory.Label(self.content, subtitle, UDim2.new(0.95, 0, 0, 32), {
 		Position = UDim2.new(0.025, 0, 0, 57),
@@ -3496,6 +3502,9 @@ function App:_RenderCreate()
 	-- never removed, just not the default for an audience that skews young.
 	local simpleMode = self.state.profile.settings.simpleMode ~= false
 	local showAllMethods = not simpleMode
+	local generationsCompleted = self.state.profile.stats.generationsCompleted or 0
+	local customGuideActive = self.customUGCGuideRequested == true
+		or (generationsCompleted == 0 and self.customUGCGuideDismissed ~= true)
 	-- A player can enter Simple Mode after selecting an advanced method in the
 	-- same session. Keep the hidden state honest: the one visible creator is
 	-- always Direct Forge, never a stale image/avatar method with mismatched
@@ -3507,22 +3516,29 @@ function App:_RenderCreate()
 		if showAllMethods
 			then "Create something impossible"
 			else if self.compact then "Describe it." else "Describe it. Wear it.",
-		if showAllMethods
-			then "Three paths, precise art direction, one Roblox-ready accessory. Every input is moderated."
-			else "Describe → confirm price → fit in My Studio → wear here. Publishing is a separate Roblox step.",
+		if customGuideActive
+			then "Make a brand-new accessory: describe it, confirm once, fit it, then wear it."
+			else if showAllMethods
+				then "Three paths, precise art direction, one Roblox-ready accessory. Every input is moderated."
+				else "Describe → confirm price → fit in My Studio → wear here. Publishing is a separate Roblox step.",
 		true
 	)
 	local howToPlay = Factory.ImageButton(
 		self.content,
-		if self.compact then "?" else "?  HOW TO PLAY",
-		UDim2.fromOffset(if self.compact then 34 else 122, 30),
-		UDim2.new(1, if self.compact then -46 else -138, 0, 16),
+		if self.compact then "UGC GUIDE" else "?  CUSTOM UGC GUIDE",
+		UDim2.fromOffset(if self.compact then 82 else 158, 30),
+		UDim2.new(1, if self.compact then -94 else -174, 0, 16),
 		nil
 	)
 	howToPlay.TextSize = if self.compact then 10 else 11
 	self:_BindButton(howToPlay)
 	howToPlay.Activated:Connect(function()
-		self:_ShowVisualTutorial()
+		self.customUGCGuideRequested = true
+		self.customUGCGuideDismissed = false
+		self.scrollPositions.Create = Vector2.zero
+		self:_Track({ event = "CreatorGuide", fields = { action = "OPENED" } })
+		self:_Toast("info", "Custom UGC guide opened. Start with the gold description box.")
+		self:_RenderActivePage()
 	end)
 	local page = Factory.New("ScrollingFrame", {
 		Name = "CreateScroll",
@@ -3575,11 +3591,146 @@ function App:_RenderCreate()
 		Factory.List(rightStack, Enum.FillDirection.Vertical, 14)
 	end
 
+	if customGuideActive then
+		local guideHeight = if self.compact then 324 else 300
+		local explanationHeight = if self.compact then 64 else 50
+		local stepsY = if self.compact then 113 else 99
+		local noteY = if self.compact then 198 else 184
+		local arrowY = if self.compact then 257 else 235
+		local guide = Factory.ImageCard(stack, UDim2.new(1, 0, 0, guideHeight), nil, "CustomUGCGuide")
+		guide.LayoutOrder = -30
+		Factory.Stroke(guide, Colors.Gold, 0.08, 2.5)
+		Factory.Label(guide, "MAKE YOUR OWN UGC", UDim2.new(1, -112, 0, 26), {
+			Position = UDim2.fromOffset(16, 12),
+			Font = Theme.Fonts.Black,
+			TextSize = if self.compact then 15 else 18,
+			Color = Colors.Gold,
+		})
+		local hideGuide = Factory.ImageButton(guide, "Hide for now", UDim2.fromOffset(88, 28), UDim2.new(1, -104, 0, 9))
+		hideGuide.TextSize = 10
+		self:_BindButton(hideGuide)
+		hideGuide.Activated:Connect(function()
+			self.customUGCGuideRequested = false
+			self.customUGCGuideDismissed = true
+			self:_Track({ event = "CreatorGuide", fields = { action = "DISMISSED" } })
+			self:_Toast("info", "Guide hidden for this visit. Reopen Custom UGC Guide whenever you need it.")
+			self:_RenderActivePage()
+		end)
+		Factory.Label(
+			guide,
+			"UGC means an accessory you invent—not a catalog item. Forge builds a private 3D model first. You see the price before it starts, then fit and wear it here.",
+			UDim2.new(1, -32, 0, explanationHeight),
+			{
+				Position = UDim2.fromOffset(16, 43),
+				TextSize = 12,
+				Color = Colors.TextMuted,
+				Wrapped = true,
+				AlignY = Enum.TextYAlignment.Top,
+			}
+		)
+		local steps = Factory.New("ScrollingFrame", {
+			Name = "CustomUGCGuideSteps",
+			Position = UDim2.fromOffset(16, stepsY),
+			Size = UDim2.new(1, -32, 0, 78),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 4,
+			ScrollBarImageColor3 = Colors.Gold,
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			CanvasSize = UDim2.new(),
+			Parent = guide,
+		})
+		Factory.List(steps, Enum.FillDirection.Horizontal, 8)
+		for index, step in
+			{
+				{ "DESCRIBE", "Type the accessory" },
+				{ "CONFIRM", "Price shown first" },
+				{ "FIT", "Size it on avatar" },
+				{ "WEAR", "Wear it inside Forge" },
+			}
+		do
+			local tile = Factory.New("Frame", {
+				Size = UDim2.fromOffset(140, 60),
+				BackgroundColor3 = if index == 1 then Colors.Gold else Colors.Panel,
+				BackgroundTransparency = if index == 1 then 0.04 else 0.16,
+				BorderSizePixel = 0,
+				Parent = steps,
+			})
+			Factory.Corner(tile, 10)
+			Factory.Stroke(tile, if index == 1 then Colors.Gold else Colors.Line, 0.25, 1.5)
+			Factory.Label(tile, string.format("%d  %s", index, step[1]), UDim2.new(1, -12, 0, 24), {
+				Position = UDim2.fromOffset(6, 5),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = 11,
+				Color = if index == 1 then Colors.Ink else Colors.Text,
+			})
+			Factory.Label(tile, step[2], UDim2.new(1, -12, 0, 22), {
+				Position = UDim2.fromOffset(6, 30),
+				AlignX = Enum.TextXAlignment.Center,
+				TextSize = 9,
+				Color = if index == 1 then Colors.Ink else Colors.TextMuted,
+			})
+		end
+		Factory.Label(
+			guide,
+			"Nothing starts until you confirm. Publishing it to Roblox later is optional, separate, and still subject to Roblox validation.",
+			UDim2.new(1, -32, 0, 42),
+			{
+				Position = UDim2.fromOffset(16, noteY),
+				TextSize = 11,
+				Color = Colors.TextMuted,
+				Wrapped = true,
+				AlignY = Enum.TextYAlignment.Top,
+			}
+		)
+		local arrowPosition = UDim2.fromOffset(16, arrowY)
+		local arrow = Factory.New("Frame", {
+			Name = "CustomUGCGuideArrow",
+			Position = arrowPosition,
+			Size = UDim2.new(1, -32, 0, 50),
+			BackgroundColor3 = Colors.Gold,
+			BackgroundTransparency = 0.02,
+			BorderSizePixel = 0,
+			Parent = guide,
+		})
+		Factory.Corner(arrow, 12)
+		Factory.Stroke(arrow, Colors.Text, 0.12, 2.5)
+		Factory.Label(arrow, "↓", UDim2.fromOffset(48, 50), {
+			Position = UDim2.fromOffset(4, 0),
+			AlignX = Enum.TextXAlignment.Center,
+			Font = Theme.Fonts.Black,
+			TextSize = 31,
+			Color = Colors.Ink,
+		})
+		Factory.Label(
+			arrow,
+			if showAllMethods then "CHOOSE A METHOD, THEN TYPE YOUR IDEA" else "TYPE YOUR IDEA IN THE GOLD BOX",
+			UDim2.new(1, -64, 1, 0),
+			{
+				Position = UDim2.fromOffset(56, 0),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = if self.compact then 12 else 14,
+				Color = Colors.Ink,
+			}
+		)
+		Motion.Pulse(arrow, 0.5, { Position = arrowPosition + UDim2.fromOffset(0, 6) })
+		if
+			(tonumber(self.state.profile.tutorialVersion) or 0) >= Config.Tutorial.Version
+			and not self.customUGCGuideEvents.IMPRESSION
+		then
+			self.customUGCGuideEvents.IMPRESSION = true
+			self:_Track({ event = "CreatorGuide", fields = { action = "IMPRESSION" } })
+		end
+	end
+
 	-- The real first-session path, kept visible on Create until completed.
 	-- It produces a satisfying outfit/runway result without requiring a paid
 	-- AI call, then becomes a permanent shortcut back to the social loop.
 	local firstLook = self.state.journeyState
-	if firstLook then
+	if firstLook and not customGuideActive then
 		local complete = firstLook.completed == true
 		local done = firstLook.done or {}
 		local card = Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 158 else 132), nil, "FirstLook")
@@ -4186,7 +4337,20 @@ function App:_RenderCreate()
 			true
 		)
 		prompt.Text = self.draftPrompt
+		prompt.Name = "CustomUGCPrompt"
 		self:_GlowField(prompt, true)
+		if customGuideActive then
+			prompt:SetAttribute("ForgeGuideTarget", true)
+			local promptGlow = Factory.Stroke(prompt, Colors.Gold, 0.3, 6)
+			promptGlow.Name = "CustomUGCPromptGlow"
+			Motion.Pulse(promptGlow, 0.55, { Transparency = 0.7, Thickness = 11 })
+			prompt.Focused:Connect(function()
+				if not self.customUGCGuideEvents.PROMPT_FOCUSED then
+					self.customUGCGuideEvents.PROMPT_FOCUSED = true
+					self:_Track({ event = "CreatorGuide", fields = { action = "PROMPT_FOCUSED" } })
+				end
+			end)
+		end
 		local count = Factory.Label(
 			promptCard,
 			string.format("%d / %d", #self.draftPrompt, Config.Generation.PromptMaxLength),
@@ -4685,11 +4849,11 @@ function App:_RenderCreate()
 		-- taught yet -- always the TEXT_TO_3D case, since that's the only
 		-- method Simple Mode ever leaves selected.
 		local actionText = if hasRetryCredit
-			then if not showAllMethods then "Retry My Accessory · FREE CREDIT" else "Use retry credit · FREE"
+			then if not showAllMethods then "Retry My UGC · FREE CREDIT" else "Use retry credit · FREE"
 			elseif
 				self.state.policy.commerceAllowed ~= true and not isUpload
 			then "Purchases unavailable on this account"
-			elseif not showAllMethods then string.format("Make It!  ·  %s", priceText)
+			elseif not showAllMethods then string.format("Create My UGC  ·  %s", priceText)
 			elseif self.selectedMethod == "TEXT_TO_3D" then string.format("Forge 3D · %s", priceText)
 			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · %s", priceText)
 			elseif self.selectedMethod == "AVATAR_TO_3D" then string.format(
@@ -4710,6 +4874,7 @@ function App:_RenderCreate()
 				else UDim2.new(1, -266, 0, buttonY),
 			"primary"
 		)
+		generate.Name = "CreatePersonalUGCButton"
 		generate.Active = isUpload or hasRetryCredit or self.state.policy.commerceAllowed == true
 		self:_BindButton(generate)
 		-- The concept art's molten CTA has a small gold rivet stud near each
@@ -4766,6 +4931,9 @@ function App:_RenderCreate()
 		end
 		generate.Activated:Connect(function()
 			self.draftPrompt = prompt.Text
+			if customGuideActive then
+				self:_Track({ event = "CreatorGuide", fields = { action = "SUBMITTED" } })
+			end
 			generate.Active = false
 			generate.Text = if isUpload
 				then "Moderating image…"
@@ -4803,6 +4971,13 @@ function App:_RenderCreate()
 				generate.Text = actionText
 				if success then
 					result = self:_GenerationResult(creationAction, result)
+					-- A successful Roblox prompt means only that checkout opened;
+					-- keep the help available if the player cancels. A real queue
+					-- push above retires it after the receipt is granted.
+					if isUpload or result.usedRetryCredit or result.mocked or result.tokensSpent then
+						self.customUGCGuideRequested = false
+						self.customUGCGuideDismissed = true
+					end
 					if isUpload then
 						self:_Toast("success", "Your Roblox image is entering visual moderation at no extra charge.")
 					elseif result.usedRetryCredit then
