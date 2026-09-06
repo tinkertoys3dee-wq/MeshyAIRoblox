@@ -136,6 +136,10 @@ function StartGuide.Show(app: any)
 				return
 			end
 			app.makeoverGuideRequested = choice == "START_FREE"
+			app.customUGCGuideRequested = choice == "MAKE_OWN"
+			if choice == "MAKE_OWN" then
+				app.customUGCGuideDismissed = false
+			end
 			if choice == "START_FREE" then
 				local previous = app.state.makeoverState or {}
 				local sprintOk, sprint = app:_Invoke(Network.Actions.StartStyleSprint, {
@@ -178,13 +182,33 @@ function StartGuide.Show(app: any)
 	end)
 	table.insert(controls, start)
 	local alternatives = Factory.New("Frame", {
-		Size = UDim2.new(1, 0, 0, 42),
+		Size = UDim2.new(1, 0, 0, 108),
 		BackgroundTransparency = 1,
 		LayoutOrder = 5,
 		ZIndex = 353,
 		Parent = content,
 	})
-	local custom = Factory.ImageButton(alternatives, "Custom UGC", UDim2.new(0.5, -5, 1, 0), nil, "mint")
+	Factory.Label(
+		alternatives,
+		"PERSONAL UGC = an accessory you invent. Describe it → confirm its price → AI builds it → fit and wear it in My Studio. Publishing is optional and separate.",
+		UDim2.new(1, 0, 0, 58),
+		{
+			Name = "CustomUGCExplanation",
+			TextSize = 11,
+			Color = Theme.Colors.TextMuted,
+			Wrapped = true,
+			AlignX = Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Top,
+			ZIndex = 353,
+		}
+	)
+	local custom = Factory.ImageButton(
+		alternatives,
+		"CREATE PERSONAL UGC",
+		UDim2.new(0.62, -5, 0, 42),
+		UDim2.fromOffset(0, 66),
+		"mint"
+	)
 	custom.TextSize = 11
 	custom.ZIndex = 353
 	app:_BindButton(custom)
@@ -192,7 +216,7 @@ function StartGuide.Show(app: any)
 		choose("MAKE_OWN", "Create")
 	end)
 	table.insert(controls, custom)
-	local arcade = Factory.ImageButton(alternatives, "Arcade", UDim2.new(0.5, -5, 1, 0), UDim2.new(0.5, 5, 0, 0))
+	local arcade = Factory.ImageButton(alternatives, "Arcade", UDim2.new(0.38, -5, 0, 42), UDim2.new(0.62, 5, 0, 66))
 	arcade.TextSize = 11
 	arcade.ZIndex = 353
 	app:_BindButton(arcade)

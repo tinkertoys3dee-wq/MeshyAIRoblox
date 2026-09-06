@@ -82,6 +82,21 @@ try {
   if (!startGuideSource.includes('TutorialPathArrow') || !startGuideSource.includes('Motion.Pulse(connector')) {
     throw new Error('The opening tutorial path must expose large animated connectors');
   }
+  for (const marker of ['CustomUGCGuide', 'CustomUGCGuideSteps', 'CustomUGCGuideArrow', 'CustomUGCPrompt', 'CreatePersonalUGCButton']) {
+    if (!appSource.includes(marker)) throw new Error(`Personal UGC guide is missing ${marker}`);
+  }
+  if (!/Name = "CustomUGCGuideSteps"[\s\S]{0,420}ScrollBarThickness = [1-9]/.test(appSource)) {
+    throw new Error('Personal UGC steps must expose a visible horizontal scrollbar');
+  }
+  if (!startGuideSource.includes('CustomUGCExplanation') || !startGuideSource.includes('CREATE PERSONAL UGC')) {
+    throw new Error('The opening tutorial must explain and clearly route personal UGC creation');
+  }
+  if (!appSource.includes('UGC means an accessory you invent') || !startGuideSource.includes('PERSONAL UGC = an accessory you invent')) {
+    throw new Error('Personal UGC must be defined in plain language before checkout');
+  }
+  if (!appSource.includes('Publishing it to Roblox later is optional, separate')) {
+    throw new Error('The personal UGC guide must separate in-game wear from optional Roblox publishing');
+  }
   const transition = appSource.match(/function App:_SetStudioOpen\(open: boolean\)[\s\S]*?(?=\nfunction App:)/)?.[0];
   if (!transition) throw new Error('Studio transition method not found');
   const transitionModule = `modules.StudioTransition = function() local App = {}; local Motion = require("Motion"); ${transition}; return App end`;

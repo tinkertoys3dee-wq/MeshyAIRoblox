@@ -25,6 +25,7 @@ local CLIENT_EVENTS = {
 	ArcadeGameStarted = true,
 	FirstLookGuide = true,
 	MakeoverAction = true,
+	CreatorGuide = true,
 	VisualTutorialShown = true,
 	GenerationOfferShown = true,
 }
@@ -90,6 +91,13 @@ local FIRST_LOOK_GUIDE_STAGES: { [string]: boolean } = {
 	NEXT_ACTION = true,
 }
 local FIRST_LOOK_GUIDE_ACTIONS: { [string]: boolean } = { IMPRESSION = true, CLICK = true }
+local CREATOR_GUIDE_ACTIONS: { [string]: boolean } = {
+	IMPRESSION = true,
+	OPENED = true,
+	DISMISSED = true,
+	PROMPT_FOCUSED = true,
+	SUBMITTED = true,
+}
 local MAKEOVER_STAGES: { [string]: boolean } = {
 	GUIDE_STAGE_SHOWN = true,
 	GUIDE_DISMISSED = true,
@@ -332,6 +340,12 @@ function AnalyticsService:TrackClient(player: Player, payload: any): (boolean, a
 				else "OTHER"
 			fields.failure = failure
 		end
+	elseif payload.event == "CreatorGuide" then
+		local action = type(payload.fields) == "table" and payload.fields.action or nil
+		if type(action) ~= "string" or not CREATOR_GUIDE_ACTIONS[action] then
+			return false, "INVALID_ANALYTICS_FIELDS"
+		end
+		fields.action = action
 	elseif payload.event == "GenerationOfferShown" then
 		local productKey = type(payload.fields) == "table" and payload.fields.productKey or nil
 		local paymentMethod = type(payload.fields) == "table" and payload.fields.paymentMethod or nil

@@ -15,6 +15,8 @@ All three paths include allowlisted style presets (`Auto`, `Anime`, `Realistic`,
 
 Outside paid generation, the experience has a free 90-second Style Sprint makeover with one-control-at-a-time coach marks, three live-catalog starter looks, a saved-outfit journey, server-synchronized six-minute Forge Runway rounds, a visible two-round Daily Encore, Creator XP/levels/titles, a cross-server weekly spotlight, daily style/runway/arcade quests, Roblox catalog try-on, an arcade, and an AFK token lounge. These systems are designed to improve qualified play-through and repeat sessions without subsidizing provider-backed AI jobs; routine free rewards use the Priority-Pass-only `bonusTokens` balance.
 
+First-time personal UGC creation has its own contextual `DESCRIBE → CONFIRM → FIT → WEAR` guide. It explains that UGC is a new accessory the player invents, generation creates a private Forge model first, checkout confirms the selected price before work starts, and publishing is an optional separate Roblox step rather than an automatic result of generation.
+
 Generated item metadata, ownership, fit transforms, likes, favorites, purchase receipts, and non-resellable licenses are stored under the individual player's DataStore key. Shared stores contain only discovery indexes and idempotency records; they are not the source of truth for player content.
 
 ## Non-negotiable safety properties
