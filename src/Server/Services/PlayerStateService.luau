@@ -35,11 +35,13 @@ function PlayerStateService:Initialize(player: Player): { [string]: any }
 		local success, result = pcall(function()
 			return PolicyService:GetPolicyInfoForPlayerAsync(player)
 		end)
-		policySuccess = success
 		if success and type(result) == "table" then
+			policySuccess = true
 			policy = result
 		elseif not success then
 			warn(`[PlayerStateService] Policy lookup failed for {player.UserId}: {tostring(result)}`)
+		else
+			warn(`[PlayerStateService] Policy lookup returned an invalid result for {player.UserId}`)
 		end
 		policyDone = true
 	end)
@@ -63,8 +65,14 @@ function PlayerStateService:Initialize(player: Player): { [string]: any }
 
 	local studioFallback = RunService:IsStudio()
 	local state = {
+		policyLookupSucceeded = policySuccess,
 		contentSharingAllowed = if policySuccess then policy.IsContentSharingAllowed == true else studioFallback,
-		commerceAllowed = if policySuccess then policy.IsEligibleToPurchaseCommerceProduct == true else studioFallback,
+		-- Roblox "commerce products" are physical/real-world Shopify goods,
+		-- not developer products, passes, catalog assets, or Robux transfers.
+		-- Keep the narrowly-scoped result for future real-world commerce only.
+		commerceProductAllowed = if policySuccess
+			then policy.IsEligibleToPurchaseCommerceProduct == true
+			else studioFallback,
 		subscriptionAllowed = if policySuccess then policy.IsEligibleToPurchaseSubscription == true else studioFallback,
 		paidTradingAllowed = if policySuccess then policy.IsPaidItemTradingAllowed == true else studioFallback,
 		groupMember = groupMember,

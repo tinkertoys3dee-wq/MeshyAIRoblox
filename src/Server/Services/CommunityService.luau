@@ -30,6 +30,16 @@ local function deepCopy<T>(value: T): T
 	return result :: T
 end
 
+local function tradingPolicyProblem(state: { [string]: any }): string?
+	if state.contentSharingAllowed ~= true then
+		return "CONTENT_SHARING_DISABLED"
+	end
+	if state.paidTradingAllowed ~= true then
+		return "PAID_TRADING_NOT_ALLOWED"
+	end
+	return nil
+end
+
 local function score(entry: { [string]: any }): number
 	local ageHours = math.max(0, (os.time() - (entry.updatedAt or os.time())) / 3600)
 	local engagement = (entry.likes or 0) * 5 + (entry.favorites or 0) * 8 + (entry.views or 0) * 0.35
@@ -528,8 +538,9 @@ function CommunityService:SetListing(player: Player, payload: any): (boolean, an
 		return false, "INVALID_REQUEST"
 	end
 	local state = self.playerStates:Get(player)
-	if not state.contentSharingAllowed or not state.paidTradingAllowed then
-		return false, "COMMERCE_NOT_ALLOWED"
+	local policyProblem = tradingPolicyProblem(state)
+	if policyProblem then
+		return false, policyProblem
 	end
 	local profile = self.profiles:Get(player)
 	local item = profile and profile.items[payload.itemId]
@@ -658,8 +669,9 @@ function CommunityService:SetGraphicListing(player: Player, payload: any): (bool
 		return false, "INVALID_REQUEST"
 	end
 	local state = self.playerStates:Get(player)
-	if not state.contentSharingAllowed or not state.paidTradingAllowed then
-		return false, "COMMERCE_NOT_ALLOWED"
+	local policyProblem = tradingPolicyProblem(state)
+	if policyProblem then
+		return false, policyProblem
 	end
 	local profile = self.profiles:Get(player)
 	local graphic = profile and profile.graphics[payload.graphicId]
@@ -923,8 +935,9 @@ function CommunityService:BeginPurchase(player: Player, payload: any): (boolean,
 	if not state.plusSubscriber and not studioMock then
 		return false, "PLUS_REQUIRED"
 	end
-	if not state.contentSharingAllowed or not state.paidTradingAllowed then
-		return false, "COMMERCE_NOT_ALLOWED"
+	local policyProblem = tradingPolicyProblem(state)
+	if policyProblem then
+		return false, policyProblem
 	end
 	local item = self:_ResolvePublic(payload.itemId, true)
 	if not item or not item.isListed or item.ownerUserId == player.UserId then
@@ -1060,8 +1073,9 @@ function CommunityService:BeginGraphicPurchase(player: Player, payload: any): (b
 	if not state.plusSubscriber and not studioMock then
 		return false, "PLUS_REQUIRED"
 	end
-	if not state.contentSharingAllowed or not state.paidTradingAllowed then
-		return false, "COMMERCE_NOT_ALLOWED"
+	local policyProblem = tradingPolicyProblem(state)
+	if policyProblem then
+		return false, policyProblem
 	end
 	local graphic = self:_ResolvePublicGraphic(payload.graphicId, true)
 	if not graphic or not graphic.isListed or graphic.ownerUserId == player.UserId then
@@ -1209,8 +1223,9 @@ function CommunityService:BeginTip(player: Player, payload: any): (boolean, any)
 	if not state.plusSubscriber and not studioMock then
 		return false, "PLUS_REQUIRED"
 	end
-	if not state.contentSharingAllowed or not state.paidTradingAllowed then
-		return false, "COMMERCE_NOT_ALLOWED"
+	local policyProblem = tradingPolicyProblem(state)
+	if policyProblem then
+		return false, policyProblem
 	end
 	local content = if payload.contentType == "ITEM"
 		then self:_ResolvePublic(payload.contentId, true)

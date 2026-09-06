@@ -17,13 +17,13 @@ local C = Theme.Colors
 local CATEGORIES = {
 	{ "Hat", "Hats" },
 	{ "HairAccessory", "Hair" },
-	{ "FaceAccessory", "Face extras" },
-	{ "Shirt", "Classic shirts" },
-	{ "Pants", "Classic pants" },
+	{ "FaceAccessory", "Face items" },
+	{ "Shirt", "Shirts" },
+	{ "Pants", "Pants" },
 	{ "TShirt", "T-shirts" },
 	{ "JacketAccessory", "Jackets" },
 	{ "SweaterAccessory", "Sweaters" },
-	{ "ShirtAccessory", "Layered tops" },
+	{ "ShirtAccessory", "Tops" },
 	{ "PantsAccessory", "Layered pants" },
 	{ "Face", "Faces" },
 	{ "NeckAccessory", "Neck" },
@@ -1513,10 +1513,6 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 				Parent = card,
 			})
 			buy.Activated:Connect(function()
-				if not app.state.policy.commerceAllowed then
-					app:_Toast("info", "Purchases are unavailable for this account. You can still try items.")
-					return
-				end
 				local ok = pcall(function()
 					MarketplaceService:PromptPurchase(Players.LocalPlayer, id)
 				end)
@@ -1766,9 +1762,13 @@ function AvatarLab.Render(app: any)
 			AvatarLab.Search(app, search.Text)
 		end
 	end)
-	local categories = row(stack, 2)
+	local categories = row(stack, 2, 54)
+	categories.Name = "CatalogCategories"
+	categories.ScrollBarThickness = 6
+	categories.HorizontalScrollBarInset = Enum.ScrollBarInset.Always
+	app:_TrackScroll(categories, "AvatarLabCatalogCategories")
 	for _, category in CATEGORIES do
-		button(app, categories, category[2], math.max(100, #category[2] * 8 + 26), function()
+		button(app, categories, category[2], math.clamp(#category[2] * 7 + 22, 72, 108), function()
 			app.catalogType = category[1]
 			AvatarLab.Search(app, app.catalogQuery)
 		end, app.catalogType == category[1])

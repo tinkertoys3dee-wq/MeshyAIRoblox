@@ -72,6 +72,15 @@ equal(mirrored.TextSize, 18, "Reduced motion still applies final state")
 Motion.Pulse(button, 1, { TextSize = 20 })
 equal(tweenCount, before, "Reduced motion also disables repeating tutorial pulses")
 equal(mirrored.TextSize, 18, "Disabled pulse preserves the bright static tutorial target")
+local focusTarget = Instance.new("TextButton")
+focusTarget.Parent = parent
+services.GuiService.SelectedObject = focusTarget
+services.UserInputService.lastInputType = Enum.UserInputType.MouseButton1
+Motion.AutoFocus(focusTarget)
+equal(services.GuiService.SelectedObject, nil, "Opening a modal by pointer clears any random focus outline")
+services.UserInputService.lastInputType = Enum.UserInputType.Gamepad1
+Motion.AutoFocus(focusTarget)
+equal(services.GuiService.SelectedObject, focusTarget, "Gamepad users still receive useful modal focus")
 for _, viewport in { Vector2.new(320, 568), Vector2.new(844, 390), Vector2.new(768, 1024), Vector2.new(1920, 1080) } do
 	local modalSize = Vector2.new(560, 702)
 	local scale = Motion.FitScale(modalSize, viewport, 1.4)
@@ -400,6 +409,11 @@ end
 services.MarketplaceService.GetProductInfoAsync = function(_, id)
 	return { AssetTypeId = assetTypes[id] or 8, Name = "Catalog item " .. id }
 end
+local promptedCatalogId = nil
+services.MarketplaceService.PromptPurchase = function(_, promptedPlayer, id)
+	equal(promptedPlayer, player, "Catalog purchase prompt targets the local player")
+	promptedCatalogId = id
+end
 check(not catalog:TryOn(player, { assetId = 1 / 0, avatarAssetType = "Hat" }), "Non-finite IDs are rejected")
 check(not catalog:TryOn(player, { assetId = 101, avatarAssetType = "Hat" }), "Server checks actual asset type")
 check(catalog:TryOn(player, { assetId = 101, avatarAssetType = "Shirt" }), "Classic shirt can be tried on")
@@ -501,7 +515,9 @@ app.uiScaleInstance = Instance.new("UIScale")
 app.pageConnections = {}
 app.state = {
 	profile = profile,
-	policy = { commerceAllowed = true },
+	-- This Roblox policy is only about real-world Commerce Products. Keeping it
+	-- false here proves it cannot disable ordinary Robux catalog purchases.
+	policy = { commerceProductAllowed = false },
 	dailyBrief = { theme = "Test theme" },
 	journeyState = { done = { OPEN_STUDIO = true }, completed = false },
 	makeoverState = {
@@ -636,8 +652,11 @@ for _, tab in { "BROWSE", "LOOK", "SAVED", "FORGE" } do
 end
 app.catalogWorkspace.tab = "BROWSE"
 AvatarLab.Render(app)
-local tryButton, saveButton
+local tryButton, saveButton, buyButton, categoryScroller, jacketsButton, sweatersButton
 for _, control in app.content:GetDescendants() do
+	if control.Name == "CatalogCategories" then
+		categoryScroller = control
+	end
 	if control:IsA("TextButton") then
 		if control.Text == "Try on · free" then
 			tryButton = control
@@ -645,9 +664,32 @@ for _, control in app.content:GetDescendants() do
 		if control.Text == "Save" then
 			saveButton = control
 		end
+		if control.Text == "Buy / view in Roblox" then
+			buyButton = control
+		end
+		if control.Text == "Jackets" then
+			jacketsButton = control
+		end
+		if control.Text == "Sweaters" then
+			sweatersButton = control
+		end
 	end
 end
-check(tryButton ~= nil and saveButton ~= nil, "Catalog cards expose try and bookmark controls")
+check(
+	tryButton ~= nil and saveButton ~= nil and buyButton ~= nil,
+	"Catalog cards expose try, bookmark, and buy controls"
+)
+buyButton.Activated:Fire()
+equal(promptedCatalogId, 201, "Real-world commerce policy never blocks a catalog purchase prompt")
+check(
+	categoryScroller ~= nil and categoryScroller.ScrollBarThickness >= 5,
+	"Catalog categories expose a visible scrollbar"
+)
+check(jacketsButton ~= nil and sweatersButton ~= nil, "Common layered-clothing categories remain available")
+check(
+	jacketsButton.Size.X.Offset + sweatersButton.Size.X.Offset + 8 <= 166,
+	"Jackets and Sweaters fit side by side in the narrow catalog column"
+)
 -- Style Sprint's display-only countdown owns background scheduler entries;
 -- interaction assertions below advance only the task created by the tap.
 table.clear(spawned)

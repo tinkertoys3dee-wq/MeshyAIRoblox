@@ -70,8 +70,8 @@ local progression = ProgressionService.new(profiles, push, analytics)
 local retention = RetentionService.new(profiles, analytics, achievements, push, progression)
 local makeover = MakeoverService.new(profiles, analytics, retention, progression, push)
 local backend = BackendService.new()
-local commerce = CommerceService.new(profiles, playerStates, analytics, push)
-local adRewards = AdRewardService.new(profiles, playerStates, commerce, push, analytics, achievements)
+local commerce = CommerceService.new(profiles, analytics, push)
+local adRewards = AdRewardService.new(profiles, commerce, push, analytics, achievements)
 local items = ItemService.new(profiles, playerStates, push)
 local generations =
 	GenerationService.new(profiles, playerStates, backend, commerce, push, analytics, achievements, items, progression)
@@ -145,8 +145,9 @@ local function initializePlayer(player: Player)
 	analytics:Custom(player, "ForgeEligibilitySnapshot", 1, {
 		groupMember = playerStates:Get(player).groupMember,
 		plusSubscriber = playerStates:Get(player).plusSubscriber,
+		policyLookupSucceeded = playerStates:Get(player).policyLookupSucceeded,
 		contentSharingAllowed = playerStates:Get(player).contentSharingAllowed,
-		commerceAllowed = playerStates:Get(player).commerceAllowed,
+		commerceProductAllowed = playerStates:Get(player).commerceProductAllowed,
 	})
 	if playerStates:Get(player).groupMember then
 		achievements:Unlock(player, "GROUP_JOINED")
@@ -181,8 +182,9 @@ local function bootstrap(player: Player): (boolean, any)
 		{
 			profile = profile,
 			policy = {
+				policyLookupSucceeded = state.policyLookupSucceeded,
 				contentSharingAllowed = state.contentSharingAllowed,
-				commerceAllowed = state.commerceAllowed,
+				commerceProductAllowed = state.commerceProductAllowed,
 				subscriptionAllowed = state.subscriptionAllowed,
 				paidTradingAllowed = state.paidTradingAllowed,
 			},

@@ -54,6 +54,8 @@ The Art-Directed reference image has three purchasable quality tiers (`LOW`/`MED
 
 Developer-product intent data is saved before Roblox is prompted. Receipt grants use deterministic generation IDs, write the durable benefit and receipt marker to the player's profile before acknowledging Roblox, and submit the same backend request ID on every retry. Plus transfers likewise persist a source snapshot and transfer request ID before a sender receipt can grant a deterministic personal copy.
 
+Standard Roblox purchase paths deliberately do not consult `PolicyService.IsEligibleToPurchaseCommerceProduct`: that flag is for real-world Commerce Products, not Robux developer products, game passes, catalog assets, creator transfers, or rewarded ads. `MarketplaceService`, `AdService`, and `PromptRobuxTransferAsync` own eligibility for their respective prompts. The server still enforces the directly relevant content-sharing and paid-trading flags for creator marketplace transfers.
+
 ## Forge Tokens and rewarded ads
 
 Generation products and Priority Pass can be bought with Robux (`BeginIntent`) or Forge Tokens (`BeginIntentWithTokens`); token-currency products and the permanent game pass cannot buy themselves. The server recomputes the token price and eligible balance pool. `BeginIntentWithTokens` calls the same registered `GrantHandler` as a real receipt or Studio mock purchase, so benefit logic never trusts a client-supplied grant.

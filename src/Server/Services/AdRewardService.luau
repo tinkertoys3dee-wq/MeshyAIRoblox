@@ -29,7 +29,6 @@ end
 
 function AdRewardService.new(
 	profileService: any,
-	playerStateService: any,
 	commerceService: any,
 	push: (Player, string, any) -> (),
 	analyticsService: any,
@@ -37,7 +36,6 @@ function AdRewardService.new(
 )
 	local self = setmetatable({
 		profiles = profileService,
-		playerStates = playerStateService,
 		commerce = commerceService,
 		push = push,
 		analytics = analyticsService,
@@ -104,9 +102,10 @@ function AdRewardService:WatchesToday(player: Player): number
 end
 
 function AdRewardService:RequestAd(player: Player): (boolean, any)
-	if not self.playerStates:Get(player).commerceAllowed then
-		return false, "COMMERCE_NOT_ALLOWED"
-	end
+	-- The client checks RewardedVideo availability immediately before this
+	-- request, and ShowRewardedVideoAdAsync returns AdNotReady/ineligible
+	-- results itself. The unrelated real-world Commerce Products policy must
+	-- never suppress Roblox's rewarded-ad eligibility path.
 	local product = Config.Products.AdRewardTokens
 	if type(product.Id) ~= "number" or product.Id <= 0 then
 		return false, "PRODUCT_ID_NOT_CONFIGURED"

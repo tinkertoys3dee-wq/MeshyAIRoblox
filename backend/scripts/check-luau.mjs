@@ -32,6 +32,67 @@ try {
   // Exercise the actual studio transition method without bootstrapping the
   // whole Roblox client. Keep the extraction fail-closed if it is renamed.
   const appSource = read('src/Client/UI/App.luau');
+  const avatarLabSource = read('src/Client/UI/AvatarLab.luau');
+  const gamesHubSource = read('src/Client/UI/GamesHub.luau');
+  const motionSource = read('src/Client/UI/Motion.luau');
+  const commerceSource = read('src/Server/Services/CommerceService.luau');
+  const adRewardSource = read('src/Server/Services/AdRewardService.luau');
+  const communitySource = read('src/Server/Services/CommunityService.luau');
+  const playerStateSource = read('src/Server/Services/PlayerStateService.luau');
+  const deprecatedCommerceGates = files
+    .filter((file) => /\bcommerceAllowed\b|COMMERCE_NOT_ALLOWED/.test(fs.readFileSync(file, 'utf8')))
+    .map((file) => path.relative(root, file));
+  if (deprecatedCommerceGates.length > 0) {
+    throw new Error(`Obsolete Commerce Products gate remains in ${deprecatedCommerceGates.join(', ')}`);
+  }
+  for (const [name, source] of [
+    ['CommerceService', commerceSource],
+    ['AdRewardService', adRewardSource],
+    ['AvatarLab', avatarLabSource],
+  ]) {
+    if (source.includes('commerceProductAllowed')) {
+      throw new Error(`${name} must not gate standard Roblox purchases with real-world commerce policy`);
+    }
+  }
+  if (!playerStateSource.includes('commerceProductAllowed')
+    || !playerStateSource.includes('IsEligibleToPurchaseCommerceProduct')
+    || !playerStateSource.includes('policyLookupSucceeded')) {
+    throw new Error('Player policy state must retain a narrowly named, diagnostic Commerce Products result');
+  }
+  if (commerceSource.includes('playerStates') || adRewardSource.includes('playerStates')) {
+    throw new Error('Standard purchase and rewarded-ad services must not depend on broad player policy state');
+  }
+  if (!communitySource.includes('PAID_TRADING_NOT_ALLOWED')) {
+    throw new Error('Paid creator transfers must retain their exact policy failure reason');
+  }
+  if (!appSource.includes('generate.Active = true')) {
+    throw new Error('The standard generation checkout button must remain available for Roblox to adjudicate');
+  }
+  if (gamesHubSource.includes('play.Active = false')) {
+    throw new Error('The visible Arcade GO control must never swallow taps without activating');
+  }
+  if (!gamesHubSource.includes('play.Activated:Connect(activateTile)')
+    || !gamesHubSource.includes('button.Activated:Connect(activateTile)')) {
+    throw new Error('Both the visible Arcade GO control and the full game card must launch the tile');
+  }
+  if (!gamesHubSource.includes('transitionOverlay.Active = false')
+    || !gamesHubSource.includes('transitionOverlay.Visible = false')) {
+    throw new Error('Arcade transitions must remove their full-screen input shield after every switch');
+  }
+  if (!gamesHubSource.includes('Position = UDim2.new(1, -12, 0, 76)')) {
+    throw new Error('Arcade challenge targets must stay out of the title row');
+  }
+  if (!avatarLabSource.includes('Name = "CatalogCategories"')
+    || !/Name = "CatalogCategories"[\s\S]{0,180}ScrollBarThickness = [5-9]/.test(avatarLabSource)) {
+    throw new Error('Catalog categories must expose a touch-friendly overflow scrollbar');
+  }
+  if (!appSource.includes('GuiService:GetGuiInset()') || !appSource.includes('Motion.AutoFocus(leave)')) {
+    throw new Error('The AFK lounge exit must clear Roblox CoreGui and avoid pointer-only focus outlines');
+  }
+  if (!motionSource.includes('function Motion.AutoFocus')
+    || !motionSource.includes('UserInputService:GetLastInputType()')) {
+    throw new Error('Modal focus must be input-aware instead of drawing random pointer focus outlines');
+  }
   for (const name of ['FitActions', 'SharingActions', 'TipOptions']) {
     const scrollingRow = new RegExp(`Factory\\.New\\("ScrollingFrame", \\{[\\s\\S]{0,120}Name = "${name}"`);
     if (!scrollingRow.test(appSource)) throw new Error(`${name} must remain an overflow-safe ScrollingFrame`);
@@ -61,7 +122,6 @@ try {
     const hiddenHorizontal = /ScrollBarThickness\s*=\s*0,[\s\S]{0,180}ScrollingDirection\s*=\s*Enum\.ScrollingDirection\.X/;
     if (hiddenHorizontal.test(source)) throw new Error(`${file} hides a horizontal overflow scrollbar`);
   }
-  const avatarLabSource = read('src/Client/UI/AvatarLab.luau');
   for (const name of ['MakeoverObjectives', 'StarterLooks']) {
     const visibleScroller = new RegExp(`Name = "${name}"[\\s\\S]{0,420}ScrollBarThickness = [1-9]`);
     if (!visibleScroller.test(avatarLabSource)) throw new Error(`${name} must expose a visible scrollbar`);
@@ -96,6 +156,10 @@ try {
   }
   if (!appSource.includes('Publishing it to Roblox later is optional, separate')) {
     throw new Error('The personal UGC guide must separate in-game wear from optional Roblox publishing');
+  }
+  if (!appSource.includes('not hasCreatedPersonalUGC(self.state.profile)')
+    || !appSource.includes('item.license == "ORIGINAL"')) {
+    throw new Error('Personal UGC guidance must use original accessory ownership, not the shared graphic/model counter');
   }
   const transition = appSource.match(/function App:_SetStudioOpen\(open: boolean\)[\s\S]*?(?=\nfunction App:)/)?.[0];
   if (!transition) throw new Error('Studio transition method not found');
