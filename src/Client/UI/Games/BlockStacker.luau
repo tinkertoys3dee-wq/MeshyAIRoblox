@@ -42,14 +42,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local running = true
 	local score = 0
 	local combo = 0
+	local fallbackSize = Vector2.new(504, 270)
 
 	local function widthPx(): number
-		local w = math.floor(canvas.AbsoluteSize.X)
-		return if w > 40 then w else 504
+		return GameShell.CanvasSize(canvas, fallbackSize).X
 	end
 	local function heightPx(): number
-		local h = math.floor(canvas.AbsoluteSize.Y)
-		return if h > 40 then h else 270
+		return GameShell.CanvasSize(canvas, fallbackSize).Y
 	end
 
 	local canvasWidth = widthPx()
@@ -438,7 +437,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		movingX += movingSpeed * movingDirection * dt
 		-- Live width, not the canvasWidth captured once at Game.Start -- a
 		-- player resizing their window mid-run (unlike FlappyBird/DinoRunner/
-		-- ColorSwitch, which all already re-read canvas.AbsoluteSize on every
+		-- ColorSwitch, which all already re-read the logical canvas size on every
 		-- use) used to leave the moving block oscillating against bounds from
 		-- whatever size the canvas happened to be when the game began.
 		local maxX = math.max(0, widthPx() - movingWidth)

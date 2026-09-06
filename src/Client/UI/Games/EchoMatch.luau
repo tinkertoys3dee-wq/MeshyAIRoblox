@@ -76,14 +76,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local stepDeadline = 0
 	local showTimerBar = false
 	local runToken = 0 -- bumped on cleanup so a stray delayed coroutine can't act after teardown
+	local fallbackSize = Vector2.new(504, 270)
 
 	local function width(): number
-		local w = math.floor(canvas.AbsoluteSize.X)
-		return if w > 40 then w else 504
+		return GameShell.CanvasSize(canvas, fallbackSize).X
 	end
 	local function height(): number
-		local h = math.floor(canvas.AbsoluteSize.Y)
-		return if h > 40 then h else 270
+		return GameShell.CanvasSize(canvas, fallbackSize).Y
 	end
 
 	local function flashDuration(): number

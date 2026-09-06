@@ -129,14 +129,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local lastCoinTime = 0
 	local lastStatusText = ""
 	local dragTargetX: number? = nil
+	local fallbackSize = Vector2.new(480, 320)
 
 	local function width(): number
-		local w = math.floor(canvas.AbsoluteSize.X)
-		return if w > 40 then w else 480
+		return GameShell.CanvasSize(canvas, fallbackSize).X
 	end
 	local function height(): number
-		local h = math.floor(canvas.AbsoluteSize.Y)
-		return if h > 40 then h else 320
+		return GameShell.CanvasSize(canvas, fallbackSize).Y
 	end
 	local function ceiling(): number
 		return height() * CEILING_FRACTION
@@ -168,8 +167,8 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			Parent = canvas,
 		})
 		Factory.Corner(instance, cloudSize)
-		local x = math.random(0, 480)
-		local y = math.random(10, 300)
+		local x = math.random(0, math.max(1, width() - math.ceil(cloudSize)))
+		local y = math.random(10, math.max(11, height() - math.ceil(cloudSize * 0.5)))
 		instance.Position = UDim2.fromOffset(x, y)
 		table.insert(clouds, { instance = instance, x = x, y = y })
 	end
@@ -478,7 +477,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			input.UserInputType == Enum.UserInputType.MouseButton1
 			or input.UserInputType == Enum.UserInputType.Touch
 		then
-			dragTargetX = input.Position.X - canvas.AbsolutePosition.X - HOPPER_SIZE / 2
+			dragTargetX = GameShell.CanvasPoint(canvas, input.Position.X, input.Position.Y).X - HOPPER_SIZE / 2
 		end
 	end)
 	local dragChangedConn = UserInputService.InputChanged:Connect(function(input)
@@ -489,7 +488,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			input.UserInputType == Enum.UserInputType.MouseMovement
 			or input.UserInputType == Enum.UserInputType.Touch
 		then
-			dragTargetX = input.Position.X - canvas.AbsolutePosition.X - HOPPER_SIZE / 2
+			dragTargetX = GameShell.CanvasPoint(canvas, input.Position.X, input.Position.Y).X - HOPPER_SIZE / 2
 		end
 	end)
 	local dragEndedConn = UserInputService.InputEnded:Connect(function(input)

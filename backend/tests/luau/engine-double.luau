@@ -12,11 +12,15 @@ local function require(name)
 	cache[name] = modules[name]()
 	return cache[name]
 end
-local script = { Parent = setmetatable({}, {
-	__index = function(_, key)
-		return key
+local scriptParent = {}
+setmetatable(scriptParent, {
+	__index = function(parent, key)
+		-- Module paths can walk up more than one folder before selecting a
+		-- sibling (for example Games/GameShell -> UI/Factory).
+		return if key == "Parent" then parent else key
 	end,
-}) }
+})
+local script = { Parent = scriptParent }
 local function signal()
 	local callbacks = {}
 	return {
@@ -260,6 +264,7 @@ function Instance.new(class)
 			Size = UDim2.new(),
 			Position = UDim2.new(),
 			AbsoluteSize = Vector2.new(1000, 800),
+			AbsolutePosition = Vector2.zero,
 			BackgroundTransparency = 0,
 			TextTransparency = 0,
 			Text = "",

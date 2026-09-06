@@ -55,14 +55,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local hotIndex: number? = nil
 	local hotStartedAt = 0
 	local hotWindow = BASE_WINDOW
+	local fallbackSize = Vector2.new(480, 300)
 
 	local function widthPx(): number
-		local w = math.floor(canvas.AbsoluteSize.X)
-		return if w > 40 then w else 480
+		return GameShell.CanvasSize(canvas, fallbackSize).X
 	end
 	local function heightPx(): number
-		local h = math.floor(canvas.AbsoluteSize.Y)
-		return if h > 40 then h else 300
+		return GameShell.CanvasSize(canvas, fallbackSize).Y
 	end
 
 	local backdrop = Factory.New("Frame", {

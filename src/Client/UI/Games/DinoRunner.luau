@@ -117,19 +117,15 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local coinComboExpire = 0
 	local speedLines: { SpeedLine } = {}
 	local timeSinceSpeedLine = 0
+	local fallbackSize = Vector2.new(520, 260)
 
-	-- Floored: AbsoluteSize can be fractional (UI scaling), and math.random
-	-- errors on a non-integer argument -- spawnObstacle's width() feeds it.
+	-- Floored logical dimensions keep math.random bounds integral without
+	-- feeding UIScale-multiplied screen pixels back into child offsets.
 	local function groundY(): number
-		local h = math.floor(canvas.AbsoluteSize.Y)
-		if h <= 40 then
-			h = 260
-		end
-		return h - GROUND_MARGIN
+		return GameShell.CanvasSize(canvas, fallbackSize).Y - GROUND_MARGIN
 	end
 	local function width(): number
-		local w = math.floor(canvas.AbsoluteSize.X)
-		return if w > 40 then w else 520
+		return GameShell.CanvasSize(canvas, fallbackSize).X
 	end
 
 	local sky = Factory.New("Frame", {

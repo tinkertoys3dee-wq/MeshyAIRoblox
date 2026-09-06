@@ -48,6 +48,59 @@ export type WeeklyResult = { standings: { WeeklyStanding }, self: PersonalStandi
 local GameShell = {}
 GameShell.__index = GameShell
 
+-- UIScale multiplies a GuiObject's AbsoluteSize. Arcade games draw their
+-- actors with offset coordinates under that same scaler, so feeding the
+-- already-scaled AbsoluteSize back into UDim2.fromOffset scales the board a
+-- second time and pushes its right/bottom edges outside the visible canvas.
+-- Keep every game in the canvas's logical coordinate space instead.
+local function effectiveScale(instance: Instance): number
+	local scale = 1
+	local current: Instance? = instance
+	while current do
+		local modifier = current:FindFirstChildOfClass("UIScale")
+		if modifier then
+			local value = (modifier :: UIScale).Scale
+			if value == value and value > 0 then
+				scale *= value
+			end
+		end
+		current = current.Parent
+	end
+	return math.max(0.01, scale)
+end
+
+function GameShell.CanvasSize(canvas: GuiObject, fallback: Vector2): Vector2
+	local scale = effectiveScale(canvas)
+	local width = math.floor(canvas.AbsoluteSize.X / scale)
+	local height = math.floor(canvas.AbsoluteSize.Y / scale)
+	-- Hidden panels can report zero for one layout pass. Derive the canvas
+	-- from its already-laid-out parent before falling back to a desktop-sized
+	-- board, otherwise the first game frame can still overflow a small phone.
+	local parent = canvas.Parent
+	if (width <= 40 or height <= 40) and parent and parent:IsA("GuiObject") then
+		local parentGui = parent :: GuiObject
+		local parentScale = effectiveScale(parentGui)
+		local parentWidth = parentGui.AbsoluteSize.X / parentScale
+		local parentHeight = parentGui.AbsoluteSize.Y / parentScale
+		if width <= 40 then
+			width = math.floor(parentWidth * canvas.Size.X.Scale + canvas.Size.X.Offset)
+		end
+		if height <= 40 then
+			height = math.floor(parentHeight * canvas.Size.Y.Scale + canvas.Size.Y.Offset)
+		end
+	end
+	return Vector2.new(if width > 40 then width else fallback.X, if height > 40 then height else fallback.Y)
+end
+
+-- InputObject.Position is in screen pixels; physics and UDim2 offsets are in
+-- the logical space returned by CanvasSize. Drag/tap games must convert both
+-- through the same scale or the avatar/paddle runs ahead of the player's
+-- finger whenever interface scale is above 1x.
+function GameShell.CanvasPoint(canvas: GuiObject, screenX: number, screenY: number): Vector2
+	local scale = effectiveScale(canvas)
+	return Vector2.new((screenX - canvas.AbsolutePosition.X) / scale, (screenY - canvas.AbsolutePosition.Y) / scale)
+end
+
 -- Small radial particle puff shared by every game (gate passed, pipe
 -- cleared, obstacle jumped, brick broken, tile tapped, ...) so the effect
 -- only has to be built once. A no-op under reduceMotion -- it's pure

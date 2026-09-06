@@ -21,6 +21,7 @@ try {
     ItemService: 'src/Server/Services/ItemService.luau',
     Motion: 'src/Client/UI/Motion.luau',
     Factory: 'src/Client/UI/Factory.luau',
+    GameShell: 'src/Client/UI/Games/GameShell.luau',
     NotificationService: 'src/Client/UI/NotificationService.luau',
     GroupJoin: 'src/Client/UI/GroupJoin.luau',
     AvatarLab: 'src/Client/UI/AvatarLab.luau',
@@ -39,6 +40,27 @@ try {
   const adRewardSource = read('src/Server/Services/AdRewardService.luau');
   const communitySource = read('src/Server/Services/CommunityService.luau');
   const playerStateSource = read('src/Server/Services/PlayerStateService.luau');
+  const gameShellSource = read('src/Client/UI/Games/GameShell.luau');
+  const arcadeGameFiles = files.filter((file) => {
+    const relative = path.relative(root, file).split(path.sep).join('/');
+    return relative.startsWith('src/Client/UI/Games/') && path.basename(file) !== 'GameShell.luau';
+  });
+  const scaledCanvasReaders = arcadeGameFiles
+    .filter((file) => /canvas\.AbsoluteSize/.test(fs.readFileSync(file, 'utf8')))
+    .map((file) => path.relative(root, file));
+  if (scaledCanvasReaders.length > 0) {
+    throw new Error(`Arcade games must use logical CanvasSize, not UIScale-multiplied AbsoluteSize: ${scaledCanvasReaders.join(', ')}`);
+  }
+  const unscaledPointerReaders = arcadeGameFiles
+    .filter((file) => /(?:input\.Position|finish)\.[XY]\s*-\s*canvas\.AbsolutePosition\.[XY]/.test(fs.readFileSync(file, 'utf8')))
+    .map((file) => path.relative(root, file));
+  if (unscaledPointerReaders.length > 0) {
+    throw new Error(`Arcade pointer input must use logical CanvasPoint coordinates: ${unscaledPointerReaders.join(', ')}`);
+  }
+  if (!gameShellSource.includes('function GameShell.CanvasSize')
+    || !gameShellSource.includes('function GameShell.CanvasPoint')) {
+    throw new Error('Arcade shell must retain shared scale-aware canvas and pointer helpers');
+  }
   const deprecatedCommerceGates = files
     .filter((file) => /\bcommerceAllowed\b|COMMERCE_NOT_ALLOWED/.test(fs.readFileSync(file, 'utf8')))
     .map((file) => path.relative(root, file));

@@ -143,14 +143,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local ambientSparks: { AmbientSpark } = {}
 	local timeSinceSpark = 0
 	local ringSpawnCount = 0
+	local fallbackSize = Vector2.new(480, 320)
 
 	local function width(): number
-		local w = math.floor(canvas.AbsoluteSize.X)
-		return if w > 40 then w else 480
+		return GameShell.CanvasSize(canvas, fallbackSize).X
 	end
 	local function height(): number
-		local h = math.floor(canvas.AbsoluteSize.Y)
-		return if h > 40 then h else 320
+		return GameShell.CanvasSize(canvas, fallbackSize).Y
 	end
 	local function centerX(): number
 		return width() / 2

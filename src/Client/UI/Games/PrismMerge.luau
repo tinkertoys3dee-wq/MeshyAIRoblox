@@ -70,15 +70,14 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local chain = 0
 	local board: { number } = table.create(CELL_COUNT, 0)
 	local swipeStart: Vector2? = nil
+	local fallbackSize = Vector2.new(504, 300)
 
 	local function widthPx(): number
-		local width = math.floor(canvas.AbsoluteSize.X)
-		return if width > 80 then width else 504
+		return GameShell.CanvasSize(canvas, fallbackSize).X
 	end
 
 	local function heightPx(): number
-		local height = math.floor(canvas.AbsoluteSize.Y)
-		return if height > 100 then height else 300
+		return GameShell.CanvasSize(canvas, fallbackSize).Y
 	end
 
 	local root = Factory.New("Frame", {

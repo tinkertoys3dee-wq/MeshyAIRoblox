@@ -6,7 +6,7 @@ end
 local function equal(actual, expected, message)
 	check(actual == expected, message .. ": " .. tostring(actual) .. " ~= " .. tostring(expected))
 end
-local Motion, Factory = require("Motion"), require("Factory")
+local Motion, Factory, GameShell = require("Motion"), require("Factory"), require("GameShell")
 equal(
 	Factory.New("TextButton", { Selectable = false }).Selectable,
 	false,
@@ -87,6 +87,26 @@ for _, viewport in { Vector2.new(320, 568), Vector2.new(844, 390), Vector2.new(7
 	check(modalSize.X * scale <= viewport.X - 24 + 0.01, "Modal fits width")
 	check(modalSize.Y * scale <= viewport.Y - 24 + 0.01, "Modal fits height")
 end
+local scaledGameHost = Instance.new("Frame")
+scaledGameHost.AbsoluteSize = Vector2.new(840, 540)
+scaledGameHost.Parent = parent
+Factory.New("UIScale", { Scale = 1.5, Parent = scaledGameHost })
+local scaledGameCanvas = Factory.New("Frame", {
+	Size = UDim2.new(1, 0, 1, -40),
+	AbsoluteSize = Vector2.new(804, 480),
+	AbsolutePosition = Vector2.new(30, 60),
+	Parent = scaledGameHost,
+})
+local logicalGameSize = GameShell.CanvasSize(scaledGameCanvas, Vector2.new(520, 320))
+equal(logicalGameSize.X, 536, "Arcade width removes ancestor UIScale before placing actors")
+equal(logicalGameSize.Y, 320, "Arcade height removes ancestor UIScale before placing actors")
+local logicalPointer = GameShell.CanvasPoint(scaledGameCanvas, 432, 300)
+equal(logicalPointer.X, 268, "Arcade drag X matches its logical canvas")
+equal(logicalPointer.Y, 160, "Arcade drag Y matches its logical canvas")
+scaledGameCanvas.AbsoluteSize = Vector2.zero
+local preLayoutGameSize = GameShell.CanvasSize(scaledGameCanvas, Vector2.new(520, 320))
+equal(preLayoutGameSize.X, 560, "Pre-layout Arcade width derives from the visible scaled parent")
+equal(preLayoutGameSize.Y, 320, "Pre-layout Arcade height derives from the visible scaled parent")
 local overlay = Instance.new("Frame")
 overlay.Parent = parent
 local panel = Instance.new("Frame")

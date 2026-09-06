@@ -49,6 +49,20 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local timeSincePipe = PIPE_INTERVAL -- spawn the first pipe immediately
 	local comboCount = 0
 	local lastScoreTime = 0
+	local fallbackSize = Vector2.new(520, 320)
+
+	-- Logical dimensions are AbsoluteSize with every ancestor UIScale removed;
+	-- otherwise a larger accessibility scale makes pipes/clouds spawn beyond
+	-- the visible right and bottom edges.
+	local function size(): Vector2
+		return GameShell.CanvasSize(canvas, fallbackSize)
+	end
+	local function height(): number
+		return size().Y
+	end
+	local function width(): number
+		return size().X
+	end
 
 	-- A soft sky gradient plus a handful of slow-drifting "clouds" well
 	-- behind the pipes (ZIndex 1-2, pipes are 3) -- pure background texture,
@@ -77,8 +91,8 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			Parent = canvas,
 		})
 		Factory.Corner(instance, cloudSize)
-		local x = math.random(0, 520)
-		local y = 20 + math.random() * 180
+		local x = math.random(0, math.max(1, width() - math.ceil(cloudSize)))
+		local y = math.random(20, math.max(21, height() - 40))
 		instance.Position = UDim2.fromOffset(x, y)
 		table.insert(clouds, { instance = instance, x = x, y = y })
 	end
@@ -252,18 +266,6 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 		task.delay(0.65, function()
 			popup:Destroy()
 		end)
-	end
-
-	-- Floored: AbsoluteSize can be fractional (UI scaling), and math.random
-	-- errors on a non-integer argument -- every caller below feeds these
-	-- straight into math.random bounds.
-	local function height(): number
-		local h = math.floor(canvas.AbsoluteSize.Y)
-		return if h > 40 then h else 320
-	end
-	local function width(): number
-		local w = math.floor(canvas.AbsoluteSize.X)
-		return if w > 40 then w else 520
 	end
 
 	local function flap()

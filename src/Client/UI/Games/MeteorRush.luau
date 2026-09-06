@@ -74,15 +74,14 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local stars: { Star } = {}
 	local swipeStart: Vector2? = nil
 	local shipTween: Tween? = nil
+	local fallbackSize = Vector2.new(504, 300)
 
 	local function widthPx(): number
-		local width = math.floor(canvas.AbsoluteSize.X)
-		return if width > 100 then width else 504
+		return GameShell.CanvasSize(canvas, fallbackSize).X
 	end
 
 	local function heightPx(): number
-		local height = math.floor(canvas.AbsoluteSize.Y)
-		return if height > 100 then height else 300
+		return GameShell.CanvasSize(canvas, fallbackSize).Y
 	end
 
 	local function laneWidth(): number
@@ -624,8 +623,9 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			input.UserInputType == Enum.UserInputType.Touch
 			or input.UserInputType == Enum.UserInputType.MouseButton1
 		then
-			local localX = input.Position.X - canvas.AbsolutePosition.X
-			local localY = input.Position.Y - canvas.AbsolutePosition.Y
+			local localPoint = GameShell.CanvasPoint(canvas, input.Position.X, input.Position.Y)
+			local localX = localPoint.X
+			local localY = localPoint.Y
 			-- The visible arrow buttons already handle their own Activated
 			-- event. Do not reinterpret the same short press as a tap on lane
 			-- one/five when Gui input also reaches the canvas underneath.
@@ -654,7 +654,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			setShipLane(shipLane + if delta.X > 0 then 1 else -1)
 			return
 		end
-		local localX = finish.X - canvas.AbsolutePosition.X
+		local localX = GameShell.CanvasPoint(canvas, finish.X, finish.Y).X
 		local tappedLane = math.clamp(math.floor((localX - PLAYFIELD_MARGIN) / laneWidth()) + 1, 1, LANE_COUNT)
 		setShipLane(tappedLane)
 	end)

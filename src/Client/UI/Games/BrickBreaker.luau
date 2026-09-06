@@ -139,14 +139,13 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local laserCooldownUntil = 0
 	local slowUntil = 0
 	local lastEffectsText = ""
+	local fallbackSize = Vector2.new(520, 320)
 
 	local function widthPx(): number
-		local w = math.floor(canvas.AbsoluteSize.X)
-		return if w > 40 then w else 520
+		return GameShell.CanvasSize(canvas, fallbackSize).X
 	end
 	local function heightPx(): number
-		local h = math.floor(canvas.AbsoluteSize.Y)
-		return if h > 40 then h else 320
+		return GameShell.CanvasSize(canvas, fallbackSize).Y
 	end
 
 	local backdrop = Factory.New("Frame", {
@@ -519,7 +518,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			input.UserInputType == Enum.UserInputType.MouseMovement
 			or input.UserInputType == Enum.UserInputType.Touch
 		then
-			dragTargetX = input.Position.X - canvas.AbsolutePosition.X - paddleWidth / 2
+			dragTargetX = GameShell.CanvasPoint(canvas, input.Position.X, input.Position.Y).X - paddleWidth / 2
 		end
 	end)
 	local dragBeganConn = canvas.InputBegan:Connect(function(input: InputObject)
@@ -527,7 +526,7 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 			input.UserInputType == Enum.UserInputType.MouseButton1
 			or input.UserInputType == Enum.UserInputType.Touch
 		then
-			dragTargetX = input.Position.X - canvas.AbsolutePosition.X - paddleWidth / 2
+			dragTargetX = GameShell.CanvasPoint(canvas, input.Position.X, input.Position.Y).X - paddleWidth / 2
 			-- A no-op outside the LASER window/cooldown -- tap/click doubles
 			-- as "fire" too so touch/mouse players get the power-up without
 			-- a second dedicated control.

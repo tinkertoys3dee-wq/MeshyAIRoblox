@@ -65,17 +65,15 @@ function Game.Start(canvas: Frame, api: GameShell.GameApi): () -> ()
 	local regularFoodCount = 0
 	local bonusFood: BonusFood? = nil
 	local bonusFoodTokenCounter = 0
+	local fallbackSize = Vector2.new(504, 270)
 
-	-- Floored + defaulted the same way DinoRunner's width()/groundY() are:
-	-- AbsoluteSize can be fractional or briefly zero before layout settles,
-	-- and math.random errors on a non-integer/zero-range argument.
+	-- Floored + defaulted the same way DinoRunner's width()/groundY() are;
+	-- the shared helper also removes ancestor UIScale before sizing the grid.
 	local function widthPx(): number
-		local w = math.floor(canvas.AbsoluteSize.X)
-		return if w > 40 then w else 504
+		return GameShell.CanvasSize(canvas, fallbackSize).X
 	end
 	local function heightPx(): number
-		local h = math.floor(canvas.AbsoluteSize.Y)
-		return if h > 40 then h else 270
+		return GameShell.CanvasSize(canvas, fallbackSize).Y
 	end
 
 	local cols = math.clamp(math.floor(widthPx() / CELL), 10, MAX_COLS)
