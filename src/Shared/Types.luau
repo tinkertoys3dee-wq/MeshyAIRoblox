@@ -67,6 +67,9 @@ export type GenerationRecord = {
 	id: string,
 	method: GenerationMethod,
 	productKey: string,
+	-- Server-authored proof of why this job was allowed to start. Older
+	-- persisted records predate this audit field, so it remains optional.
+	entitlementSource: ("ROBUX_RECEIPT" | "TOKENS" | "RETRY_CREDIT" | "STUDIO_MOCK" | "UPLOAD_PASS")?,
 	priority: boolean,
 	stage: string,
 	stageText: string,

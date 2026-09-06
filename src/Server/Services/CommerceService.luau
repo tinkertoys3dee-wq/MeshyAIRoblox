@@ -14,7 +14,8 @@ CommerceService.__index = CommerceService
 local PASS_CACHE_SECONDS = 60
 
 export type PostCommit = () -> ()
-export type GrantHandler = (Player, { [string]: any }, string) -> PostCommit?
+export type EntitlementSource = "ROBUX_RECEIPT" | "TOKENS" | "STUDIO_MOCK"
+export type GrantHandler = (Player, { [string]: any }, string, EntitlementSource) -> PostCommit?
 
 local function validateProductConfiguration()
 	local ownersById = {} :: { [number]: string }
@@ -311,7 +312,7 @@ function CommerceService:BeginIntent(
 
 	if product.Id <= 0 then
 		if RunService:IsStudio() and Config.Studio.AllowMockPurchases then
-			local grantSuccess, postCommit = pcall(handler, player, payload, intentId)
+			local grantSuccess, postCommit = pcall(handler, player, payload, intentId, "STUDIO_MOCK")
 			if not grantSuccess then
 				warn(string.format("[CommerceService] Mock grant failed: %s", tostring(postCommit)))
 				return false, "GRANT_FAILED"
@@ -444,7 +445,7 @@ function CommerceService:BeginIntentWithTokens(
 	if not mutateSuccess then
 		return false, "PROFILE_UNAVAILABLE"
 	end
-	local grantSuccess, postCommit = pcall(handler, player, payload, intentId)
+	local grantSuccess, postCommit = pcall(handler, player, payload, intentId, "TOKENS")
 	if not grantSuccess then
 		warn(string.format("[CommerceService] Token-funded grant failed for %s: %s", productKey, tostring(postCommit)))
 		self.profiles:Mutate(player, function(mutableProfile)
@@ -529,7 +530,7 @@ function CommerceService:_ProcessReceipt(receiptInfo: { [string]: any }): Enum.P
 		then chosenIntent.payload
 		else { recoveryCredit = true }
 	local intentId = chosenIntentId or ("receipt_" .. purchaseId)
-	local grantSuccess, postCommit = pcall(handler, player, payload, intentId)
+	local grantSuccess, postCommit = pcall(handler, player, payload, intentId, "ROBUX_RECEIPT")
 	if not grantSuccess then
 		warn(string.format("[CommerceService] Grant failed for %s: %s", purchaseId, tostring(postCommit)))
 		return Enum.ProductPurchaseDecision.NotProcessedYet

@@ -134,6 +134,19 @@ local MODEL_PRODUCING_METHODS = {
 	AVATAR_TO_3D = true,
 }
 
+-- Never infer a generation entitlement from onboarding, account age, or a
+-- player's generation counters. This value is supplied only by trusted
+-- server call sites after they have consumed a receipt, eligible tokens, a
+-- paid-job retry credit, or the permanent upload pass. Keeping it outside the
+-- client payload means an exploiter cannot claim one of these sources.
+local GENERATION_ENTITLEMENT_SOURCES = {
+	ROBUX_RECEIPT = true,
+	TOKENS = true,
+	RETRY_CREDIT = true,
+	STUDIO_MOCK = true,
+	UPLOAD_PASS = true,
+}
+
 -- See Config.Generation.ModelQueueSeconds for why this exists. Returns nil
 -- for methods that don't produce a model (IMAGE_PREVIEW/IMAGE_UPLOAD reach
 -- their terminal IMAGE_READY status through a different _Poll branch that
@@ -192,21 +205,21 @@ function GenerationService.new(
 		launching = {} :: { [string]: boolean },
 	}, GenerationService)
 
-	commerceService:Register("DirectGeneration", function(player, payload, intentId)
-		return self:_Grant(player, "DirectGeneration", payload, intentId)
+	commerceService:Register("DirectGeneration", function(player, payload, intentId, entitlementSource)
+		return self:_Grant(player, "DirectGeneration", payload, intentId, entitlementSource)
 	end)
 	for _, tier in IMAGE_QUALITY_TIERS do
-		commerceService:Register(tier.ProductKey, function(player, payload, intentId)
-			return self:_Grant(player, tier.ProductKey, payload, intentId)
+		commerceService:Register(tier.ProductKey, function(player, payload, intentId, entitlementSource)
+			return self:_Grant(player, tier.ProductKey, payload, intentId, entitlementSource)
 		end)
 	end
-	commerceService:Register("ImageConversion", function(player, payload, intentId)
-		return self:_Grant(player, "ImageConversion", payload, intentId)
+	commerceService:Register("ImageConversion", function(player, payload, intentId, entitlementSource)
+		return self:_Grant(player, "ImageConversion", payload, intentId, entitlementSource)
 	end)
-	commerceService:Register("AvatarConversion", function(player, payload, intentId)
-		return self:_Grant(player, "AvatarConversion", payload, intentId)
+	commerceService:Register("AvatarConversion", function(player, payload, intentId, entitlementSource)
+		return self:_Grant(player, "AvatarConversion", payload, intentId, entitlementSource)
 	end)
-	commerceService:Register("PriorityPass", function(player, _payload, intentId)
+	commerceService:Register("PriorityPass", function(player, _payload, intentId, _entitlementSource)
 		local granted = false
 		local mutateSuccess = self.profiles:Mutate(player, function(profile)
 			if not profile.grantedIntents[intentId] then
@@ -379,7 +392,7 @@ function GenerationService:CreateUploadedImage(player: Player, payload: any): (b
 		detailLevel = detailLevel,
 		sourceImageAssetId = sourceImageAssetId,
 		usePriority = payload.usePriority == true,
-	}, intentId)
+	}, intentId, "UPLOAD_PASS")
 	if type(postCommit) ~= "function" then
 		return false, "PROFILE_UNAVAILABLE"
 	end
@@ -627,7 +640,7 @@ function GenerationService:_UseCreditOrPrompt(
 	if usedCredit then
 		local intentId = self.profiles:GenerateId("credit")
 		local grantSuccess, postCommit = pcall(function()
-			return self:_Grant(player, productKey, payload, intentId)
+			return self:_Grant(player, productKey, payload, intentId, "RETRY_CREDIT")
 		end)
 		if not grantSuccess or type(postCommit) ~= "function" then
 			self.profiles:Mutate(player, function(profile)
@@ -651,7 +664,8 @@ function GenerationService:_Grant(
 	player: Player,
 	productKey: string,
 	payload: { [string]: any },
-	intentId: string
+	intentId: string,
+	entitlementSource: string
 ): (() -> ())?
 	local profile = self.profiles:Get(player)
 	if not profile then
@@ -698,15 +712,28 @@ function GenerationService:_Grant(
 		end
 		return nil
 	end
-	return self:_Prepare(player, productKey, payload, intentId)
+	return self:_Prepare(player, productKey, payload, intentId, entitlementSource)
 end
 
 function GenerationService:_Prepare(
 	player: Player,
 	productKey: string,
 	payload: { [string]: any },
-	intentId: string
+	intentId: string,
+	entitlementSource: string
 ): (() -> ())?
+	if not GENERATION_ENTITLEMENT_SOURCES[entitlementSource] then
+		error("GENERATION_ENTITLEMENT_REQUIRED")
+	end
+	if entitlementSource == "STUDIO_MOCK" and not (RunService:IsStudio() and Config.Studio.AllowMockPurchases) then
+		error("GENERATION_ENTITLEMENT_REQUIRED")
+	end
+	if entitlementSource == "UPLOAD_PASS" and (productKey ~= "CustomImageUpload" or payload.kind ~= "IMAGE_UPLOAD") then
+		error("GENERATION_ENTITLEMENT_REQUIRED")
+	end
+	if entitlementSource ~= "UPLOAD_PASS" and productKey == "CustomImageUpload" then
+		error("GENERATION_ENTITLEMENT_REQUIRED")
+	end
 	local profile = self.profiles:Get(player)
 	if not profile then
 		return nil
@@ -745,14 +772,16 @@ function GenerationService:_Prepare(
 	end
 
 	local now = os.time()
-	-- Time-to-first-wow: a brand new player's first model rides the same
+	-- Time-to-first-wow: a brand new player's first *paid* model rides the same
 	-- fast queue lane as a group member or Priority Pass, until they've
 	-- actually received one completed model -- not just made their first
 	-- attempt, since a common first session is a reference-image step
 	-- before ever converting one. Roblox's own new-player retention
 	-- weighting (and, by extension, discovery/recommendation) is most
 	-- sensitive to exactly this window, so it's worth the same fast lane a
-	-- paying/group player gets, free, without touching pricing at all.
+	-- paying/group player gets. This changes queue timing only; the explicit
+	-- entitlement check above has already required payment, a paid-job retry,
+	-- or another allowlisted server entitlement before this point.
 	local isFirstModel = MODEL_PRODUCING_METHODS[payload.kind] == true
 		and (profile.stats.generationsCompleted or 0) == 0
 	local priority = self.playerStates:Get(player).groupMember or isFirstModel
@@ -774,6 +803,7 @@ function GenerationService:_Prepare(
 			id = generationId,
 			method = payload.kind,
 			productKey = productKey,
+			entitlementSource = entitlementSource,
 			priority = priority,
 			stage = "QUEUED",
 			stageText = "Joining the generation queue",

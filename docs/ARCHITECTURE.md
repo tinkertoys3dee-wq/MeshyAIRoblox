@@ -54,6 +54,8 @@ The Art-Directed reference image has three purchasable quality tiers (`LOW`/`MED
 
 Developer-product intent data is saved before Roblox is prompted. Receipt grants use deterministic generation IDs, write the durable benefit and receipt marker to the player's profile before acknowledging Roblox, and submit the same backend request ID on every retry. Plus transfers likewise persist a source snapshot and transfer request ID before a sender receipt can grant a deterministic personal copy.
 
+Every generation record also carries a server-authored `entitlementSource`. The low-level preparer fails closed unless it receives one of the trusted sources supplied by the commerce/recovery paths (`ROBUX_RECEIPT`, eligible `TOKENS`, `RETRY_CREDIT`, Studio-only `STUDIO_MOCK`, or the already-owned `UPLOAD_PASS` for reference validation). This value is a function argument, never part of the client payload. Account age, onboarding state, and zero completed generations are deliberately not entitlement sources: a first-time player receives no free AI generation. The first-model fast lane changes queue timing only after one of the same paid or recovered entitlements has already been validated.
+
 ## Forge Tokens and rewarded ads
 
 Generation products and Priority Pass can be bought with Robux (`BeginIntent`) or Forge Tokens (`BeginIntentWithTokens`); token-currency products and the permanent game pass cannot buy themselves. The server recomputes the token price and eligible balance pool. `BeginIntentWithTokens` calls the same registered `GrantHandler` as a real receipt or Studio mock purchase, so benefit logic never trusts a client-supplied grant.
@@ -97,6 +99,8 @@ The raw GLB/PNG bytes are never placed in a DataStore. Roblox DataStores are met
 4. Railway uploads the GLB as a group-owned Model using the Open Cloud Assets API.
 5. The Roblox server loads the owned model with `AssetService:LoadAssetAsync()` for private fitting and in-game equip.
 6. Final platform-wide creation uses `AvatarCreationService:PromptCreateAvatarAssetAsync()` and an Avatar Creation Token matching the selected accessory type.
+
+Rigid-accessory readiness is evaluated in the same attachment-oriented coordinate space Roblox documents, not as a size-only comparison. `AccessoryBounds` models all six faces of the Rthro Normal envelope, including Hair/Back/Waist's asymmetric up/down or front/behind limits, and reserves a 0.02-stud inset on every face for platform rounding. Position, rotation, non-uniform scale, and an off-center mesh origin all contribute to the fitted bounds. `RequestPrivateModel` returns an exact EditableMesh vertex-space center/size when Roblox exposes it; otherwise the client labels its display as an estimate instead of showing a green pass. The publish path always rebuilds and measures the final EditableMesh-backed Handle after applying scale, fails closed if exact measurement is unavailable, and blocks locally with the precise crossed edge and overage before opening Roblox's creation prompt.
 
 Equipping and unequipping are both server-authoritative (`ItemService:Equip`/`Unequip`). The player's `equippedItemIds` list is the durable record; the live `Accessory` instance is tagged with a `ForgeItemId` attribute so the server can find and remove the exact accessory on unequip, or skip re-adding one `RestoreEquipped` already finds present after a respawn.
 
