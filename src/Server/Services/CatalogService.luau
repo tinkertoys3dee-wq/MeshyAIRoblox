@@ -115,7 +115,10 @@ local function applyDescription(humanoid: Humanoid, description: HumanoidDescrip
 	-- Forge accessories are attached directly with Humanoid:AddAccessory().
 	-- Roblox documents incremental ApplyDescription as undefined after external
 	-- character changes; ResetAsync reliably reconciles the complete look.
-	humanoid:ApplyDescriptionResetAsync(description)
+	-- None of CatalogService's own edits (clothes/accessories) ever change body
+	-- scale, so ApplyDescriptionSafely's HipHeight guard is unconditionally
+	-- correct here -- see AvatarLook.ApplyDescriptionSafely for what it fixes.
+	AvatarLook.ApplyDescriptionSafely(humanoid, description, true)
 end
 
 function CatalogService:_Remember(player: Player, snapshot: any)

@@ -842,4 +842,33 @@ check(not WindowFocus.CanCelebrate(focus), "A closed editor is not reopened by a
 focus.shell.Visible = true
 Factory.New("Frame", { Name = "CreationComplete", ZIndex = 300, Parent = focus.gui })
 check(not WindowFocus.CanCelebrate(focus), "A second completion never covers the first")
+
+-- Regression: Roblox's ApplyDescription(Reset)Async can zero out
+-- Humanoid.HipHeight (devforum.roblox.com/t/4200195), which visibly breaks
+-- default walk/run/idle animations even though nothing about the equipped
+-- look actually changed size. Fresh mocks are used here instead of the
+-- `humanoid` fixture above so this can't affect the CatalogService/ItemService
+-- assertions that already depend on its state.
+local blankDescription = Instance.new("HumanoidDescription")
+local zeroedByBug = { HipHeight = 2.05 }
+function zeroedByBug:ApplyDescriptionResetAsync()
+	self.HipHeight = 0
+end
+AvatarLook.ApplyDescriptionSafely(zeroedByBug, blankDescription, true)
+equal(zeroedByBug.HipHeight, 2.05, "A HipHeight zeroed by ApplyDescriptionReset is restored")
+
+local legitimatelyZero = { HipHeight = 0 }
+function legitimatelyZero:ApplyDescriptionResetAsync()
+	self.HipHeight = 0
+end
+AvatarLook.ApplyDescriptionSafely(legitimatelyZero, blankDescription, true)
+equal(legitimatelyZero.HipHeight, 0, "An R6 rig's legitimate zero HipHeight is left alone")
+
+local realRescale = { HipHeight = 2 }
+function realRescale:ApplyDescriptionResetAsync()
+	self.HipHeight = 2.6
+end
+AvatarLook.ApplyDescriptionSafely(realRescale, blankDescription, true)
+equal(realRescale.HipHeight, 2.6, "A genuine body-scale change to a new HipHeight is never clobbered")
+
 return checks

@@ -597,7 +597,9 @@ function ItemService:EquipOutfit(player: Player, payload: any): (boolean, any)
 			local ok, problem = pcall(function()
 				-- Forge pieces are attached outside HumanoidDescription, so Roblox's
 				-- reset-safe path is required before the outfit pieces are restored.
-				humanoid:ApplyDescriptionResetAsync(description)
+				-- ApplyDescriptionSafely additionally guards against Roblox zeroing
+				-- Humanoid.HipHeight on this reset -- see AvatarLook for why.
+				AvatarLook.ApplyDescriptionSafely(humanoid, description, true)
 			end)
 			description:Destroy()
 			if not ok then
