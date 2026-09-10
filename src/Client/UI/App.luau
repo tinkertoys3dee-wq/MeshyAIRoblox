@@ -209,7 +209,28 @@ local ERROR_MESSAGES = {
 -- stay exactly as every other part of the app refers to them. The concept
 -- art's own sidebar reads "Avatar Art" for the same reason.
 local NAV_LABELS: { [string]: string } = {
+	Home = "Home",
+	Create = "Make Item",
+	["Avatar Lab"] = "Style Avatar",
+	["My Studio"] = "My Items",
 	["Avatar Graphics"] = "Avatar Art",
+}
+
+-- Four permanent destinations are enough to explain the whole product.
+-- Community, image creation, settings, and the three play modes remain one
+-- tap away from Home, but no longer compete with the player's first decision.
+local PRIMARY_NAV = {
+	{ page = "Home", symbol = "⌂", icon = nil },
+	{ page = "Create", symbol = "✦", icon = "NavCreate" },
+	{ page = "Avatar Lab", symbol = "◇", icon = "NavAvatarLab" },
+	{ page = "My Studio", symbol = "◈", icon = "NavStudio" },
+}
+
+local HOME_ALIASES: { [string]: boolean } = {
+	Discover = true,
+	["Avatar Graphics"] = true,
+	Settings = true,
+	Play = true,
 }
 
 local ACCESSORY_LABELS = {
@@ -355,7 +376,7 @@ function App.new()
 	local self = setmetatable({
 		sounds = SoundController.new(),
 		state = nil :: { [string]: any }?,
-		activePage = "Create",
+		activePage = "Home",
 		selectedMethod = "TEXT_TO_3D",
 		selectedAccessoryType = "Hat",
 		selectedStylePreset = "AUTO",
@@ -459,6 +480,8 @@ function App.new()
 		completionShownIds = {} :: { [string]: boolean },
 		tutorialOverlay = nil :: Frame?,
 		visualTutorialShown = false,
+		homeMoreOpen = false,
+		studioMobileView = "LIST",
 		generationOfferEvents = {} :: { [string]: boolean },
 		navButtons = {} :: { [string]: TextButton },
 		navHasIcon = {} :: { [string]: boolean },
@@ -477,13 +500,10 @@ function App.new()
 		return self.state ~= nil and self.state.profile.settings.reduceMotion == true
 	end)
 	self:_BuildChrome()
-	-- Nothing opens before Bootstrap resolves -- self.state doesn't exist
-	-- yet, so there's nothing to decide a first-timer vs. returning player
-	-- with. The base view (Forge Studio / Arcade / Runway / AFK launchers)
-	-- is the safe default until then; Bootstrap itself immediately reopens
-	-- the shell to Create for anyone who's never finished a generation (see
-	-- the Bootstrap success handler below), so this stays closed only for
-	-- returning creators.
+	-- Nothing opens before Bootstrap resolves -- self.state doesn't exist yet.
+	-- The base-world launchers are the safe default. First-time players then
+	-- enter the three-choice Home screen; returning players may keep exploring
+	-- the world and open the same Home screen whenever they want.
 	self:_SetStudioOpen(false)
 	AvatarEditorService.PromptAllowInventoryReadAccessCompleted:Connect(function(result)
 		self.catalogAccessPrompting = false
@@ -565,7 +585,7 @@ function App.new()
 		end
 		if input.KeyCode == Enum.KeyCode.Tab or input.KeyCode == Enum.KeyCode.ButtonY then
 			if not GuiService.SelectedObject or not GuiService.SelectedObject:IsDescendantOf(self.shell) then
-				local target = self.navButtons[self.activePage] or self.navButtons["Create"]
+				local target = self.navButtons[self.activePage] or self.navButtons.Home
 				if target then
 					GuiService.SelectedObject = target
 				end
@@ -952,18 +972,15 @@ function App:_BuildChrome()
 	Factory.Corner(navIndicator, 2)
 	self.navIndicator = navIndicator
 
-	for index, page in { "Create", "My Studio", "Discover", "Avatar Lab", "Avatar Graphics", "Settings" } do
-		local symbols = { "✦", "◈", "◎", "◇", "❑", "⚙" }
-		-- One id per nav row: NavCreate, NavStudio, NavDiscover, NavAvatarLab,
-		-- NavAvatarArt, NavSettings -- see design/export_ui_assets.py.
-		local iconKeys = { "NavCreate", "NavStudio", "NavDiscover", "NavAvatarLab", "NavAvatarArt", "NavSettings" }
+	for index, destination in PRIMARY_NAV do
+		local page = destination.page
 		local label = NAV_LABELS[page] or page
 		-- A nav row is the one control the art does NOT draw as the notched
 		-- hexagon: every rail row is a rounded rect ("rect ... rx=17", 204x54
 		-- in the mockups), with the active one the same rect filled molten.
 		-- So this stays Factory.Button rather than ImageButton -- a code-drawn
 		-- rounded rect is exactly the shape, and no decal has to exist for it.
-		local button = Factory.Button(navStack, symbols[index] .. "   " .. label, UDim2.new(1, 0, 0, 48), nil, nil)
+		local button = Factory.Button(navStack, destination.symbol .. "   " .. label, UDim2.new(1, 0, 0, 48), nil, nil)
 		button.Name = page
 		-- The art's active row is molten with a heavier gold edge, and the
 		-- rest sit dim behind a thin one. Both live on the row from the start
@@ -985,7 +1002,9 @@ function App:_BuildChrome()
 		-- Only swap the unicode symbol for the decal icon once it's actually
 		-- uploaded (Factory.Icon returns nil until then) -- otherwise the
 		-- symbol stays exactly as it always has.
-		local icon = Factory.Icon(button, iconKeys[index], UDim2.fromOffset(20, 20), UDim2.new(0, 11, 0.5, -10))
+		local icon = if destination.icon
+			then Factory.Icon(button, destination.icon, UDim2.fromOffset(20, 20), UDim2.new(0, 11, 0.5, -10))
+			else nil
 		if icon then
 			icon.ZIndex = 2
 			-- One stable name, so _ApplyResponsiveLayout can find it without
@@ -1042,7 +1061,7 @@ function App:_BuildChrome()
 		self.navButtons[page] = button
 	end
 
-	-- Sidebar extras below the 6 nav rows -- the concept art's creator-rank
+	-- Sidebar extras below the primary nav rows -- the concept art's creator-rank
 	-- crest and Simple/Advanced switch, plus the pre-existing group-boost
 	-- reminder -- share a scrolling stack instead of fixed pixel offsets.
 	-- The floating Shell window's own height is clamped between 450 and
@@ -1894,27 +1913,23 @@ function App:_ApplyResponsiveLayout(scaleOverride: number?)
 	self.navLayout.FillDirection = if compact then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical
 	self.navLayout.Padding = UDim.new(0, if compact then 2 else 9)
 	local shortLabels = {
-		Create = "Create",
-		["My Studio"] = "Studio",
-		Discover = "Explore",
+		Home = "Home",
+		Create = "Make",
 		["Avatar Lab"] = "Style",
-		["Avatar Graphics"] = "Art",
-		Settings = "Settings",
+		["My Studio"] = "Items",
 	}
 	for page, button in self.navButtons do
-		local symbol = if page == "Create"
-			then "✦"
-			elseif page == "My Studio" then "◈"
-			elseif page == "Discover" then "◎"
+		local symbol = if page == "Home"
+			then "⌂"
+			elseif page == "Create" then "✦"
 			elseif page == "Avatar Lab" then "◇"
-			elseif page == "Avatar Graphics" then "❑"
-			else "⚙"
+			else "◈"
 		-- Once the decal icon is in place it *is* the glyph for this row --
 		-- prefixing the unicode symbol as well double-draws it (and the
 		-- extra width is what wrapped these rows onto a second line).
 		local hasIcon = self.navHasIcon[page] == true
 		local label = NAV_LABELS[page] or page
-		button.Size = if compact then UDim2.new(1 / 6, -2, 1, 0) else UDim2.new(1, 0, 0, 48)
+		button.Size = if compact then UDim2.new(1 / #PRIMARY_NAV, -2, 1, 0) else UDim2.new(1, 0, 0, 48)
 		button.TextSize = if compact then 10 else 13
 		button.TextWrapped = compact and not hasIcon
 		button.TextYAlignment = if compact and hasIcon then Enum.TextYAlignment.Bottom else Enum.TextYAlignment.Center
@@ -1951,10 +1966,14 @@ function App:_ApplyResponsiveLayout(scaleOverride: number?)
 	self:_UpdateSoundButton()
 	-- Desktop extras stay in the rail. The labelled mobile bottom bar keeps
 	-- its full width for navigation; these settings remain in Settings.
+	local simpleMode = self.state == nil
+		or self.state.profile == nil
+		or self.state.profile.settings == nil
+		or self.state.profile.settings.simpleMode ~= false
 	if self.navExtras then
-		self.navExtras.Visible = not compact
+		self.navExtras.Visible = not compact and not simpleMode
 	end
-	self.statusArea.Visible = self.shell.AbsoluteSize.X / self.fittedUiScale >= 1020
+	self.statusArea.Visible = not simpleMode and self.shell.AbsoluteSize.X / self.fittedUiScale >= 1020
 	self.navIndicator.Visible = not compact and self.navStack.AbsoluteSize.Y / self.fittedUiScale >= 330
 	-- Belt-and-suspenders alongside the AbsoluteSize/AbsolutePosition signals
 	-- wired up in _BuildAvatarPreviewPanel: those cover shell's rect actually
@@ -2707,13 +2726,12 @@ function App:_Bootstrap()
 		self.loading:Destroy()
 		self:_RenderStatus()
 		self:_ConnectPush()
-		self:_OpenPage("Create")
+		self:_OpenPage("Home")
 		self:_RefreshLocalizedPrices()
 		if (data.profile.stats.generationsCompleted or 0) == 0 then
-			-- Open the useful destination immediately, but do not silently
-			-- complete onboarding. The visual tutorial records the path the
-			-- player actually chooses and then repeats OPEN_STUDIO after the
-			-- server permits the free First Look journey.
+			-- Open the simple Home destination immediately, but do not silently
+			-- complete onboarding. The start choice records the path the player
+			-- actually chooses before the related tool is shown.
 			self:_SetStudioOpen(true)
 			self:_RenderActivePage()
 		elseif
@@ -3281,8 +3299,9 @@ function App:_OpenPage(page: string)
 end
 
 function App:_HighlightNavigation()
+	local highlightedPage = if HOME_ALIASES[self.activePage] then "Home" else self.activePage
 	for page, button in self.navButtons do
-		local active = page == self.activePage
+		local active = page == highlightedPage
 		self:_Animate(
 			button,
 			TweenInfo.new(0.16, Enum.EasingStyle.Quad),
@@ -3331,7 +3350,7 @@ function App:_HighlightNavigation()
 			})
 		end
 		if active and self.navIndicator then
-			-- Computed from the known navStack layout (18px offset, 48px
+			-- Computed from the known navStack layout (26px offset, 48px
 			-- buttons, 9px gaps) rather than read off AbsolutePosition,
 			-- which isn't guaranteed to already reflect a UIListLayout pass
 			-- on the very frame a button was created.
@@ -3399,7 +3418,9 @@ function App:_RenderActivePage()
 		self:_SyncAvatarPreviewPanel()
 		return
 	end
-	if self.activePage == "Create" then
+	if self.activePage == "Home" then
+		self:_RenderHome()
+	elseif self.activePage == "Create" then
 		self:_RenderCreate()
 	elseif self.activePage == "My Studio" then
 		self:_RenderStudio()
@@ -3409,6 +3430,8 @@ function App:_RenderActivePage()
 		self:_RenderAvatarLab()
 	elseif self.activePage == "Avatar Graphics" then
 		self:_RenderAvatarGraphics()
+	elseif self.activePage == "Play" then
+		self:_RenderPlay()
 	else
 		self:_RenderSettings()
 	end
@@ -3421,8 +3444,10 @@ function App:_RenderActivePage()
 end
 
 function App:_PageHeader(title: string, subtitle: string, accent: boolean?)
+	local isSecondaryPage = HOME_ALIASES[self.activePage] == true
 	local rightReserve = if self.activePage == "Create"
-		then (if self.compact then 102 else 150)
+		then (if self.compact then 124 else 150)
+		elseif isSecondaryPage then (if self.compact then 80 else 104)
 		elseif accent then 36
 		else 0
 	Factory.Label(self.content, title, UDim2.new(0.95, -rightReserve, 0, 38), {
@@ -3438,7 +3463,7 @@ function App:_PageHeader(title: string, subtitle: string, accent: boolean?)
 		-- placed. Anchored to the header's own right edge rather than after
 		-- the title text, since a TextLabel's rendered width isn't available
 		-- synchronously here.
-		local flourishOffset = if self.activePage == "Create" then -rightReserve - 26 else -26
+		local flourishOffset = if self.activePage == "Create" or isSecondaryPage then -rightReserve - 26 else -26
 		Factory.Icon(self.content, "FlourishDivider", UDim2.fromOffset(26, 15), UDim2.new(0.95, flourishOffset, 0, 32))
 	end
 	Factory.Label(self.content, subtitle, UDim2.new(0.95, 0, 0, 32), {
@@ -3448,6 +3473,20 @@ function App:_PageHeader(title: string, subtitle: string, accent: boolean?)
 		Wrapped = true,
 		AlignY = Enum.TextYAlignment.Top,
 	})
+	if isSecondaryPage then
+		local home = Factory.ImageButton(
+			self.content,
+			if self.compact then "HOME" else "←  HOME",
+			UDim2.fromOffset(if self.compact then 68 else 92, 30),
+			UDim2.new(1, if self.compact then -80 else -108, 0, 18),
+			nil
+		)
+		home.TextSize = 11
+		self:_BindButton(home)
+		home.Activated:Connect(function()
+			self:_OpenPage("Home")
+		end)
+	end
 end
 
 function App:_TextBox(parent: Instance, placeholder: string, size: UDim2, position: UDim2, multiline: boolean?): TextBox
@@ -3507,13 +3546,292 @@ function App:_GlowField(box: TextBox, studCorners: boolean?)
 	end
 end
 
-local function hasCreatedPersonalUGC(profile: { [string]: any }): boolean
-	for _, item in profile.items or {} do
-		if type(item) == "table" and item.license == "ORIGINAL" and item.originalOwnerUserId == profile.userId then
-			return true
+-- Home is the product map. It intentionally answers one question only:
+-- "what do you want to do?" The deeper tools still exist, but are revealed
+-- after the player chooses a job instead of appearing as six equal tabs.
+function App:_RenderHome()
+	self:_PageHeader("What do you want to do?", "Pick one. You can come back here at any time.", true)
+	local page = Factory.New("ScrollingFrame", {
+		Name = "HomeScroll",
+		Position = UDim2.new(0.02, 0, 0, 96),
+		Size = UDim2.new(0.96, 0, 1, -112),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = Colors.Gold,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		Parent = self.content,
+	})
+	self:_TrackScroll(page, "Home")
+	Factory.ScalePadding(page, 0.012, 0.012)
+	local stack = Factory.New("Frame", {
+		Size = UDim2.new(1, -8, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		Parent = page,
+	})
+	Factory.List(stack, Enum.FillDirection.Vertical, 14)
+
+	local choicesHeight = if self.compact then 594 else 220
+	local choices = Factory.New("Frame", {
+		Name = "MainChoices",
+		Size = UDim2.new(1, 0, 0, choicesHeight),
+		BackgroundTransparency = 1,
+		LayoutOrder = 1,
+		Parent = stack,
+	})
+	local choiceData = {
+		{
+			name = "Create my own item",
+			body = string.format(
+				"Describe an accessory. Roblox shows R$ %d before anything starts.",
+				self.state.prices.DirectGeneration
+			),
+			tag = "AI · PAID",
+			symbol = "✦",
+			accent = Colors.Gold,
+			button = "MAKE AN ITEM",
+			action = function()
+				self:_Track({ event = "HomeChoice", fields = { choice = "CREATE" } })
+				self:_Toast("info", "Start by typing one idea. You will see the price before Roblox asks you to pay.")
+				self:_OpenPage("Create")
+			end,
+		},
+		{
+			name = "Style my avatar",
+			body = "Try Roblox catalog items on your avatar for free. Buy only if you want to own one.",
+			tag = "FREE TO TRY",
+			symbol = "◇",
+			accent = Colors.Cyan,
+			button = "STYLE MY AVATAR",
+			action = function()
+				self:_Track({ event = "HomeChoice", fields = { choice = "STYLE" } })
+				self:_Toast("info", "Catalog try-ons are free. Nothing is purchased unless you choose Buy in Roblox.")
+				self:_OpenPage("Avatar Lab")
+			end,
+		},
+		{
+			name = "Play",
+			body = "Open the Arcade, enter a Runway battle, or earn tokens while you hang out.",
+			tag = "FREE",
+			symbol = "🎮",
+			accent = Colors.Mint,
+			button = "PICK A GAME",
+			action = function()
+				self:_Track({ event = "HomeChoice", fields = { choice = "PLAY" } })
+				self:_OpenPage("Play")
+			end,
+		},
+	}
+	for index, choice in choiceData do
+		local card = Factory.ImageCard(
+			choices,
+			if self.compact then UDim2.new(1, 0, 0, 190) else UDim2.new(1 / 3, -8, 1, 0),
+			if self.compact
+				then UDim2.fromOffset(0, (index - 1) * 202)
+				else UDim2.new((index - 1) / 3, (index - 1) * 4, 0, 0),
+			"HomeChoice"
+		)
+		Factory.Stroke(card, choice.accent, 0.28, 1.6)
+		local symbol = Factory.New("Frame", {
+			Size = UDim2.fromOffset(if self.compact then 42 else 48, if self.compact then 42 else 48),
+			Position = if self.compact then UDim2.fromOffset(14, 14) else UDim2.new(0.5, -24, 0, 14),
+			BackgroundColor3 = choice.accent,
+			BackgroundTransparency = 0.08,
+			BorderSizePixel = 0,
+			Parent = card,
+		})
+		Factory.Corner(symbol, 15)
+		Factory.Label(symbol, choice.symbol, UDim2.fromScale(1, 1), {
+			AlignX = Enum.TextXAlignment.Center,
+			Font = Theme.Fonts.Black,
+			TextSize = 22,
+			Color = Colors.Ink,
+		})
+		local pill = Factory.ImagePill(card, choice.tag, choice.accent, if self.compact then 92 else 104)
+		pill.Position = if self.compact then UDim2.fromOffset(70, 18) else UDim2.new(0.5, -52, 0, 66)
+		Factory.Label(card, choice.name, UDim2.new(1, if self.compact then -28 else -24, 0, 28), {
+			Position = if self.compact then UDim2.fromOffset(14, 60) else UDim2.fromOffset(12, 93),
+			Font = Theme.Fonts.Black,
+			TextSize = if self.compact then 17 else 18,
+			AlignX = if self.compact then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center,
+		})
+		Factory.Label(card, choice.body, UDim2.new(1, -28, 0, if self.compact then 42 else 40), {
+			Position = if self.compact then UDim2.fromOffset(14, 92) else UDim2.fromOffset(14, 121),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Wrapped = true,
+			AlignX = if self.compact then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center,
+			AlignY = Enum.TextYAlignment.Top,
+		})
+		local action = Factory.ImageButton(
+			card,
+			choice.button,
+			if self.compact then UDim2.new(1, -28, 0, 42) else UDim2.new(1, -28, 0, 42),
+			if self.compact then UDim2.fromOffset(14, 138) else UDim2.new(0, 14, 1, -56),
+			"primary"
+		)
+		action.TextSize = 12
+		self:_BindButton(action)
+		action.Activated:Connect(choice.action)
+	end
+
+	local library =
+		Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 122 else 76), nil, "LibraryShortcut")
+	library.LayoutOrder = 2
+	Factory.Label(library, "Already made something?", UDim2.new(1, if self.compact then -32 else -210, 0, 22), {
+		Position = UDim2.fromOffset(16, 14),
+		Font = Theme.Fonts.Bold,
+		TextSize = 13,
+	})
+	Factory.Label(
+		library,
+		"Open your saved models, equip them, or publish them.",
+		UDim2.new(1, if self.compact then -32 else -210, 0, 20),
+		{
+			Position = UDim2.fromOffset(16, 39),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+		}
+	)
+	local openLibrary = Factory.ImageButton(
+		library,
+		"OPEN MY ITEMS",
+		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.fromOffset(172, 42),
+		if self.compact then UDim2.fromOffset(16, 70) else UDim2.new(1, -188, 0, 17),
+		nil
+	)
+	self:_BindButton(openLibrary)
+	openLibrary.Activated:Connect(function()
+		self:_OpenPage("My Studio")
+	end)
+
+	local more = Factory.ImageButton(
+		stack,
+		if self.homeMoreOpen then "HIDE EXTRA TOOLS" else "MORE TOOLS",
+		UDim2.new(1, 0, 0, 42),
+		nil,
+		nil
+	)
+	more.LayoutOrder = 3
+	self:_BindButton(more)
+	more.Activated:Connect(function()
+		self.homeMoreOpen = not self.homeMoreOpen
+		self:_RenderActivePage()
+	end)
+	if self.homeMoreOpen then
+		local extras = Factory.New("ScrollingFrame", {
+			Name = "ExtraTools",
+			Size = UDim2.new(1, 0, 0, 50),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ScrollBarThickness = 3,
+			ScrollBarImageColor3 = Colors.Violet,
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			CanvasSize = UDim2.new(),
+			LayoutOrder = 4,
+			Parent = stack,
+		})
+		Factory.List(extras, Enum.FillDirection.Horizontal, 10)
+		for _, extra in
+			{
+				{ "COMMUNITY ITEMS", "Discover" },
+				{ "MAKE AVATAR ART", "Avatar Graphics" },
+				{ "SETTINGS", "Settings" },
+				{ "SHOW START HELP", "HELP" },
+			}
+		do
+			local control = Factory.ImageButton(extras, extra[1], UDim2.fromOffset(180, 42), nil, nil)
+			self:_BindButton(control)
+			control.Activated:Connect(function()
+				if extra[2] == "HELP" then
+					self:_ShowVisualTutorial()
+				else
+					self:_OpenPage(extra[2])
+				end
+			end)
 		end
 	end
-	return false
+end
+
+function App:_RenderPlay()
+	self:_PageHeader("Pick a way to play", "All three are free. Your creations keep building while you play.", true)
+	local page = Factory.New("ScrollingFrame", {
+		Name = "PlayScroll",
+		Position = UDim2.new(0.02, 0, 0, 96),
+		Size = UDim2.new(0.96, 0, 1, -112),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = Colors.Mint,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		Parent = self.content,
+	})
+	self:_TrackScroll(page, "Play")
+	Factory.ScalePadding(page, 0.012, 0.012)
+	local stack = Factory.New("Frame", {
+		Size = UDim2.new(1, -8, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		Parent = page,
+	})
+	Factory.List(stack, Enum.FillDirection.Vertical, 14)
+	local options = {
+		{
+			title = "Arcade",
+			body = string.format("%d quick mini-games with weekly leaderboard prizes.", #Config.Arcade.Games),
+			action = function()
+				self:_SetStudioOpen(false)
+				GamesHub.Show(self)
+			end,
+		},
+		{
+			title = "Forge Runway",
+			body = "Build a look, vote for other players, and compete in live style rounds.",
+			action = function()
+				self:_SetStudioOpen(false)
+				RunwayHub.Show(self)
+			end,
+		},
+		{
+			title = "AFK Token Lounge",
+			body = "Stay in the lounge for passive tokens. Rewarded ads are always optional.",
+			action = function()
+				self:_SetStudioOpen(false)
+				task.spawn(function()
+					self:_OpenAfkLounge()
+				end)
+			end,
+		},
+	}
+	for index, option in options do
+		local card = Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 164 else 116), nil, "PlayChoice")
+		card.LayoutOrder = index
+		Factory.Label(card, option.title, UDim2.new(1, if self.compact then -36 else -220, 0, 26), {
+			Position = UDim2.fromOffset(18, 16),
+			Font = Theme.Fonts.Black,
+			TextSize = 18,
+		})
+		Factory.Label(card, option.body, UDim2.new(1, if self.compact then -36 else -220, 0, 44), {
+			Position = UDim2.fromOffset(18, 48),
+			Color = Colors.TextMuted,
+			TextSize = 11,
+			Wrapped = true,
+			AlignY = Enum.TextYAlignment.Top,
+		})
+		local open = Factory.ImageButton(
+			card,
+			"OPEN",
+			if self.compact then UDim2.new(1, -36, 0, 42) else UDim2.fromOffset(168, 44),
+			if self.compact then UDim2.fromOffset(18, 106) else UDim2.new(1, -186, 0.5, -22),
+			"primary"
+		)
+		self:_BindButton(open)
+		open.Activated:Connect(option.action)
+	end
 end
 
 function App:_RenderCreate()
@@ -3529,13 +3847,14 @@ function App:_RenderCreate()
 	local simpleMode = self.state.profile.settings.simpleMode ~= false
 	local showAllMethods = not simpleMode
 	local customGuideActive = self.customUGCGuideRequested == true
-		or (not hasCreatedPersonalUGC(self.state.profile) and self.customUGCGuideDismissed ~= true)
 	-- A player can enter Simple Mode after selecting an advanced method in the
 	-- same session. Keep the hidden state honest: the one visible creator is
 	-- always Direct Forge, never a stale image/avatar method with mismatched
 	-- copy and price.
 	if simpleMode then
 		self.selectedMethod = "TEXT_TO_3D"
+		self.paymentMethod = "ROBUX"
+		self.usePriority = false
 	end
 	self:_PageHeader(
 		if showAllMethods
@@ -3545,14 +3864,14 @@ function App:_RenderCreate()
 			then "Make a brand-new accessory: describe it, confirm once, fit it, then wear it."
 			else if showAllMethods
 				then "Three paths, precise art direction, one Roblox-ready accessory. Every input is moderated."
-				else "Describe → confirm price → fit in My Studio → wear here. Publishing is a separate Roblox step.",
+				else "Type one idea. Roblox shows the price before anything starts.",
 		true
 	)
 	local howToPlay = Factory.ImageButton(
 		self.content,
-		if self.compact then "UGC GUIDE" else "?  CUSTOM UGC GUIDE",
-		UDim2.fromOffset(if self.compact then 82 else 158, 30),
-		UDim2.new(1, if self.compact then -94 else -174, 0, 16),
+		if simpleMode then "HOW IT WORKS" elseif self.compact then "UGC GUIDE" else "?  CUSTOM UGC GUIDE",
+		UDim2.fromOffset(if simpleMode then 116 elseif self.compact then 82 else 158, 30),
+		UDim2.new(1, if simpleMode then -128 elseif self.compact then -94 else -174, 0, 16),
 		nil
 	)
 	howToPlay.TextSize = if self.compact then 10 else 11
@@ -3586,7 +3905,7 @@ function App:_RenderCreate()
 	-- since a ~37%-width rail would be unreadable at phone-ish widths.
 	-- `rightStack` collapsing back to the same `stack` in compact mode
 	-- means every card below just keeps working unchanged there.
-	local columns = if self.compact
+	local columns = if self.compact or simpleMode
 		then nil
 		else Factory.New("Frame", {
 			Size = UDim2.new(1, -8, 0, 0),
@@ -3598,13 +3917,13 @@ function App:_RenderCreate()
 		Factory.List(columns, Enum.FillDirection.Horizontal, 20)
 	end
 	local stack = Factory.New("Frame", {
-		Size = if self.compact then UDim2.new(1, -8, 0, 0) else UDim2.new(0.63, -10, 0, 0),
+		Size = if self.compact or simpleMode then UDim2.new(1, -8, 0, 0) else UDim2.new(0.63, -10, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
-		Parent = if self.compact then page else columns,
+		Parent = if self.compact or simpleMode then page else columns,
 	})
 	Factory.List(stack, Enum.FillDirection.Vertical, 14)
-	local rightStack = if self.compact
+	local rightStack = if self.compact or simpleMode
 		then stack
 		else Factory.New("Frame", {
 			Size = UDim2.new(0.37, -10, 0, 0),
@@ -3612,7 +3931,7 @@ function App:_RenderCreate()
 			BackgroundTransparency = 1,
 			Parent = columns,
 		})
-	if not self.compact then
+	if not self.compact and not simpleMode then
 		Factory.List(rightStack, Enum.FillDirection.Vertical, 14)
 	end
 
@@ -3755,7 +4074,7 @@ function App:_RenderCreate()
 	-- It produces a satisfying outfit/runway result without requiring a paid
 	-- AI call, then becomes a permanent shortcut back to the social loop.
 	local firstLook = self.state.journeyState
-	if firstLook and not customGuideActive then
+	if firstLook and not customGuideActive and showAllMethods then
 		local complete = firstLook.completed == true
 		local done = firstLook.done or {}
 		local card = Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 158 else 132), nil, "FirstLook")
@@ -3837,7 +4156,7 @@ function App:_RenderCreate()
 		end)
 	end
 
-	if self.adAvailable == nil and not self.adAvailabilityChecking then
+	if showAllMethods and self.adAvailable == nil and not self.adAvailabilityChecking then
 		self:_RefreshAdAvailability()
 	end
 	-- Two pools shown as one combined balance (see ProfileService.
@@ -3883,6 +4202,7 @@ function App:_RenderCreate()
 	local tokensCardHeight = buyTokensY + 30 + 16
 	local tokensCard = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, tokensCardHeight), nil, "TokensCard")
 	tokensCard.LayoutOrder = 0
+	tokensCard.Visible = showAllMethods
 	Factory.Label(tokensCard, "FORGE TOKENS", UDim2.new(0.42, -16, 0, 18), {
 		Position = UDim2.fromOffset(16, 12),
 		Font = Theme.Fonts.Bold,
@@ -4073,9 +4393,9 @@ function App:_RenderCreate()
 	-- "Show more ways to create" below reveals the rest on demand, and
 	-- self.selectedMethod already defaults to TEXT_TO_3D, so nothing about
 	-- the actual generation call changes for someone who never expands it.
-	local visibleMethods = if showAllMethods then allMethods else { allMethods[1] }
+	local visibleMethods = if showAllMethods then allMethods else {}
 	local methodRow = Factory.New("Frame", {
-		Size = UDim2.new(1, 0, 0, if showAllMethods then (if self.compact then 656 else 364) else 210),
+		Size = UDim2.new(1, 0, 0, if showAllMethods then (if self.compact then 656 else 364) else 42),
 		BackgroundTransparency = 1,
 		LayoutOrder = if simpleMode then -10 else 1,
 		Parent = stack,
@@ -4262,19 +4582,13 @@ function App:_RenderCreate()
 			self:_UpdateSetting("simpleMode", true)
 		end)
 	else
-		local expand = Factory.ImageButton(
-			methodRow,
-			"Switch to Advanced Mode ✦",
-			UDim2.new(1, 0, 0, 34),
-			UDim2.fromOffset(0, 168)
-		)
+		local expand =
+			Factory.ImageButton(methodRow, "MORE CREATION OPTIONS", UDim2.new(1, 0, 0, 34), UDim2.fromOffset(0, 0))
 		self:_BindButton(expand)
 		expand.Activated:Connect(function()
 			self:_UpdateSetting("simpleMode", false)
 		end)
-		-- The concept art flanks this exact link with a small flourish on
-		-- each side.
-		Factory.FlourishFlank(methodRow, 182, 108)
+		expand.TextSize = 11
 	end
 
 	local isUpload = self.selectedMethod == "IMAGE_UPLOAD"
@@ -4870,8 +5184,8 @@ function App:_RenderCreate()
 		-- taught yet -- always the TEXT_TO_3D case, since that's the only
 		-- method Simple Mode ever leaves selected.
 		local actionText = if hasRetryCredit
-			then if not showAllMethods then "Retry My UGC · FREE CREDIT" else "Use retry credit · FREE"
-			elseif not showAllMethods then string.format("Create My UGC  ·  %s", priceText)
+			then if not showAllMethods then "RETRY MY ITEM · FREE" else "Use retry credit · FREE"
+			elseif not showAllMethods then string.format("MAKE MY ITEM  ·  %s", priceText)
 			elseif self.selectedMethod == "TEXT_TO_3D" then string.format("Forge 3D · %s", priceText)
 			elseif self.selectedMethod == "IMAGE_PREVIEW" then string.format("Create reference · %s", priceText)
 			elseif self.selectedMethod == "AVATAR_TO_3D" then string.format(
@@ -5191,8 +5505,9 @@ function App:_RenderCreate()
 	local availablePasses = self.state.profile.retryCredits.PriorityPass or 0
 	local hasQueuedRow = false
 	local rowCount = 0
+	local activityLimit = if simpleMode then 1 else 3
 	for _, generationId in self.state.profile.generationOrder do
-		if rowCount >= 3 then
+		if rowCount >= activityLimit then
 			break
 		end
 		local generation = self.state.profile.generations[generationId]
@@ -5207,17 +5522,18 @@ function App:_RenderCreate()
 	local activityHeight = (if rowCount == 0 then 144 else 49 + rowCount * 50 + 14) + (if showUpsell then 46 else 0)
 	local activity = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, activityHeight), nil, "Activity")
 	activity.LayoutOrder = 2
+	activity.Visible = showAllMethods or rowCount > 0
 	-- Concept art labels this panel "IN THE FORGE" and shows a global feed
 	-- of OTHER creators' in-progress items -- an aspirational social feed
 	-- with no server support (no broadcast of anonymized generation events
 	-- exists). This keeps the real, honest data (the player's own queue)
 	-- under the concept art's label, rather than fabricating other players'
 	-- activity.
-	Factory.SectionBanner(activity, "In the Forge")
+	Factory.SectionBanner(activity, if simpleMode then "Latest creation" else "In the Forge")
 	local y = 49
 	local shown = 0
 	for _, generationId in self.state.profile.generationOrder do
-		if shown >= 3 then
+		if shown >= activityLimit then
 			break
 		end
 		local generation = self.state.profile.generations[generationId]
@@ -5403,6 +5719,7 @@ function App:_RenderCreate()
 		LayoutOrder = 3,
 		Parent = rightStack,
 	})
+	queueCard.Visible = showAllMethods
 	Factory.Corner(queueCard, 20)
 	Factory.Stroke(queueCard, Colors.Cyan, 0.6, 1.4)
 	local queueBadge = Factory.New("Frame", {
@@ -5454,6 +5771,7 @@ function App:_RenderCreate()
 		-- lines each at this card's real width in the right rail.
 		local cardHeight = 250 + (if hasMilestoneBanner then 36 else 0)
 		local daily = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyBrief")
+		daily.Visible = showAllMethods
 		-- Extra content beyond the concept art (which has no streak-calendar
 		-- panel) -- kept, but after every panel the mockup does show.
 		daily.LayoutOrder = 4
@@ -5668,6 +5986,7 @@ function App:_RenderCreate()
 		-- counted line under its label, rather than a single row.
 		local cardHeight = #quests * 62 + (if allDone then 126 else 50)
 		local questCard = Factory.ImageCard(rightStack, UDim2.new(1, 0, 0, cardHeight), nil, "DailyQuests")
+		questCard.Visible = showAllMethods
 		questCard.LayoutOrder = 1
 		-- Titled by the concept art's notched banner tab across the card's
 		-- top edge, with the progress count folded into the caption the same
@@ -5805,33 +6124,49 @@ function App:_RenderStudio()
 	local profile = self.state.profile
 	local simpleMode = profile.settings.simpleMode ~= false
 	local showAllMethods = not simpleMode
-	self:_PageHeader(
-		"My Studio",
-		if showAllMethods
-			then "Fit, equip, share, list, or publish every original and personal copy you own."
-			else "Tap an item below, then equip it or publish it as a real Roblox wearable.",
-		true
-	)
+	local mobileDetail = self.compact and self.studioMobileView == "DETAIL"
+	if #profile.itemOrder == 0 and mobileDetail then
+		self.studioMobileView = "LIST"
+		mobileDetail = false
+	end
+	if not mobileDetail then
+		self:_PageHeader(
+			if showAllMethods then "My Studio" else "My Items",
+			if showAllMethods
+				then "Fit, equip, share, list, or publish every original and personal copy you own."
+				else "Tap an item below, then equip it or publish it as a real Roblox wearable.",
+			true
+		)
+	end
 	if #profile.itemOrder == 0 then
-		local empty = Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, 260), UDim2.new(0.025, 0, 0, 112))
-		Factory.Label(empty, "◇", UDim2.new(1, 0, 0, 70), {
-			Position = UDim2.fromOffset(0, 34),
+		local empty = Factory.ImageCard(
+			self.content,
+			if self.compact then UDim2.new(0.95, 0, 1, -116) else UDim2.new(0.95, 0, 0, 260),
+			UDim2.new(0.025, 0, 0, if self.compact then 100 else 112)
+		)
+		Factory.Label(empty, "◇", UDim2.new(1, 0, 0, if self.compact then 50 else 70), {
+			Position = UDim2.fromOffset(0, if self.compact then 10 else 34),
 			AlignX = Enum.TextXAlignment.Center,
 			Font = Theme.Fonts.Black,
 			TextSize = 50,
 			Color = Colors.Violet,
 		})
-		Factory.Label(empty, "Your collection starts with an idea.", UDim2.new(1, -40, 0, 34), {
-			Position = UDim2.fromOffset(20, 112),
-			AlignX = Enum.TextXAlignment.Center,
-			Font = Theme.Fonts.Black,
-			TextSize = 20,
-		})
+		Factory.Label(
+			empty,
+			"Your collection starts with an idea.",
+			UDim2.new(1, -40, 0, if self.compact then 52 else 34),
+			{
+				Position = UDim2.fromOffset(20, if self.compact then 62 else 112),
+				AlignX = Enum.TextXAlignment.Center,
+				Font = Theme.Fonts.Black,
+				TextSize = 20,
+			}
+		)
 		local create = Factory.ImageButton(
 			empty,
 			"Create your first accessory",
 			UDim2.fromOffset(220, 44),
-			UDim2.new(0.5, -110, 0, 170),
+			if self.compact then UDim2.new(0.5, -110, 1, -58) else UDim2.new(0.5, -110, 0, 170),
 			"primary"
 		)
 		self:_BindButton(create)
@@ -5857,6 +6192,7 @@ function App:_RenderStudio()
 	local outfitsHeight = if self.compact then 100 else 86
 	local outfits =
 		Factory.ImageCard(self.content, UDim2.new(0.95, 0, 0, outfitsHeight), UDim2.new(0.025, 0, 0, 100), "Outfits")
+	outfits.Visible = showAllMethods
 	Factory.Label(outfits, "OUTFITS", UDim2.new(0.4, 0, 0, 24), {
 		Position = UDim2.fromOffset(if self.compact then 14 else 16, if self.compact then 10 else 20),
 		Font = Theme.Fonts.Bold,
@@ -6007,11 +6343,11 @@ function App:_RenderStudio()
 		end
 	end
 
-	local topOffset = 100 + outfitsHeight + 14
+	local topOffset = if simpleMode then 100 else 100 + outfitsHeight + 14
 	local collection = if self.compact
 		then Factory.ImageCard(
 			self.content,
-			UDim2.new(0.95, 0, 0, 164),
+			UDim2.new(0.95, 0, 1, -(topOffset + 12)),
 			UDim2.new(0.025, 0, 0, topOffset),
 			"Collection"
 		)
@@ -6021,6 +6357,7 @@ function App:_RenderStudio()
 			UDim2.new(0.02, 0, 0, topOffset),
 			"Collection"
 		)
+	collection.Visible = not mobileDetail
 	Factory.SectionBanner(collection, string.format("Collection · %d", #profile.itemOrder))
 	local itemScroll = Factory.New("ScrollingFrame", {
 		Position = UDim2.fromOffset(12, 48),
@@ -6129,24 +6466,26 @@ function App:_RenderStudio()
 			self:_BindButton(row)
 			row.Activated:Connect(function()
 				self.selectedItemId = itemId
+				if self.compact then
+					self.studioMobileView = "DETAIL"
+				end
 				self:_RenderActivePage()
 			end)
 		end
 	end
+	if self.compact and not mobileDetail then
+		return
+	end
 
 	local inspector = if self.compact
-		then Factory.ImageCard(
-			self.content,
-			UDim2.new(0.95, 0, 1, -10 - (topOffset + 164 + 10)),
-			UDim2.new(0.025, 0, 0, topOffset + 164 + 10),
-			"Inspector"
-		)
+		then Factory.ImageCard(self.content, UDim2.new(0.95, 0, 1, -16), UDim2.new(0.025, 0, 0, 8), "Inspector")
 		else Factory.ImageCard(
 			self.content,
 			UDim2.new(0.56, 0, 1, -18 - topOffset),
 			UDim2.new(0.42, 0, 0, topOffset),
 			"Inspector"
 		)
+	inspector.Visible = not self.compact or mobileDetail
 
 	-- Name, pills, and the viewport live in a fixed header that never
 	-- scrolls, separate from the controls/presets/actions below -- they used
@@ -6157,26 +6496,37 @@ function App:_RenderStudio()
 	-- nothing of the FIT CONTROLS card below visible before the player
 	-- scrolled at all. A smaller viewport here buys back room for the
 	-- sliders to actually show up front.
+	local inspectorHeaderHeight = if self.compact then 218 else 298
 	local header = Factory.New("Frame", {
-		Size = UDim2.new(1, -12, 0, 298),
+		Size = UDim2.new(1, -12, 0, inspectorHeaderHeight),
 		Position = UDim2.fromOffset(6, 6),
 		BackgroundTransparency = 1,
 		Parent = inspector,
 	})
-	Factory.Label(header, selected.name, UDim2.new(1, -32, 0, 32), {
+	Factory.Label(header, selected.name, UDim2.new(1, if self.compact then -132 else -32, 0, 32), {
 		Position = UDim2.fromOffset(16, 10),
 		Font = Theme.Fonts.Black,
 		TextSize = 20,
 		Truncate = Enum.TextTruncate.AtEnd,
 	})
-	Factory.ImagePill(
+	if self.compact then
+		local backToItems =
+			Factory.ImageButton(header, "← ITEMS", UDim2.fromOffset(104, 32), UDim2.new(1, -120, 0, 10), "secondary")
+		backToItems.TextSize = 11
+		self:_BindButton(backToItems)
+		backToItems.Activated:Connect(function()
+			self.studioMobileView = "LIST"
+			self:_RenderActivePage()
+		end)
+	end
+	local licensePill = Factory.ImagePill(
 		header,
 		if selected.license == "PERSONAL_COPY" then "PERSONAL COPY" else "ORIGINAL",
 		if selected.license == "PERSONAL_COPY" then Colors.Gold else Colors.Mint,
 		106
-	).Position =
-		UDim2.fromOffset(16, 47)
-	Factory.ImagePill(
+	)
+	licensePill.Position = UDim2.fromOffset(16, 47)
+	local stylePill = Factory.ImagePill(
 		header,
 		string.format(
 			"%s · %s",
@@ -6185,11 +6535,12 @@ function App:_RenderStudio()
 		),
 		Colors.Violet,
 		164
-	).Position =
-		UDim2.fromOffset(132, 47)
+	)
+	stylePill.Position = UDim2.fromOffset(132, 47)
+	stylePill.Visible = not self.compact
 	local viewport = Factory.New("ViewportFrame", {
-		Position = UDim2.fromOffset(16, 84),
-		Size = UDim2.new(1, -32, 0, 210),
+		Position = UDim2.fromOffset(16, if self.compact then 78 else 84),
+		Size = UDim2.new(1, -32, 0, if self.compact then 136 else 210),
 		BackgroundColor3 = Color3.fromRGB(58, 40, 104),
 		BorderSizePixel = 0,
 		Parent = header,
@@ -6251,8 +6602,8 @@ function App:_RenderStudio()
 	local meshStats = nil :: { [string]: any }?
 
 	local inspectScroll = Factory.New("ScrollingFrame", {
-		Size = UDim2.new(1, -12, 1, -310),
-		Position = UDim2.fromOffset(6, 310),
+		Size = UDim2.new(1, -12, 1, -(inspectorHeaderHeight + 12)),
+		Position = UDim2.fromOffset(6, inspectorHeaderHeight + 12),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -9322,7 +9673,7 @@ function App:_UpdateSetting(key: string, value: any)
 			end
 			self:_RefreshModeToggle()
 		end
-		if key == "uiScale" then
+		if key == "uiScale" or key == "simpleMode" then
 			self:_ApplyResponsiveLayout()
 		end
 		self:_RenderActivePage()

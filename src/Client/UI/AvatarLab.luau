@@ -44,6 +44,15 @@ local GUIDED_CATEGORIES = {
 	{ "FaceAccessory", "Face" },
 	{ "BackAccessory", "Back" },
 }
+local SIMPLE_CATEGORIES = {
+	{ "HairAccessory", "Hair" },
+	{ "Hat", "Hats" },
+	{ "FaceAccessory", "Face" },
+	{ "Shirt", "Shirts" },
+	{ "Pants", "Pants" },
+	{ "JacketAccessory", "Jackets" },
+	{ "BackAccessory", "Back" },
+}
 
 local function state(app: any): any
 	if not app.catalogWorkspace then
@@ -62,6 +71,8 @@ local function state(app: any): any
 			starterLooks = {},
 			starterLookStatus = "IDLE",
 			makeoverEvents = {},
+			moreTabs = false,
+			showChallenge = false,
 		}
 	end
 	return app.catalogWorkspace
@@ -1530,16 +1541,18 @@ end
 function AvatarLab.Render(app: any)
 	local lab = state(app)
 	local guideStep = currentGuideStep(app, lab)
+	local profileSettings = app.state.profile.settings or {}
+	local simpleMode = profileSettings.simpleMode ~= false
 	if guideStep == 1 or guideStep == 2 then
 		lab.tab = "BROWSE"
 	elseif guideStep == 3 then
 		lab.tab = "LOOK"
 	end
 	app:_PageHeader(
-		"Avatar Lab",
+		if simpleMode then "Style My Avatar" else "Avatar Lab",
 		if guideStep
-			then "Follow the gold glow—only the control you need right now is shown."
-			else "Try it free. Make it yours. Mix catalog fashion with your custom Forge UGCs.",
+			then "Follow the gold glow. Tap the one highlighted button."
+			else "Try items for free. Buy only when you want to own one.",
 		true
 	)
 	local page = Factory.New("ScrollingFrame", {
@@ -1564,19 +1577,30 @@ function AvatarLab.Render(app: any)
 	Factory.List(stack, Enum.FillDirection.Vertical, 12)
 	if not guideStep then
 		local tabs = row(stack, -10)
-		for _, tab in
-			{
-				{ "BROWSE", "Browse" },
-				{ "LOOK", "My look" },
-				{ "SAVED", "Saved this visit" },
-				{ "FORGE", "My custom UGCs" },
-			}
-		do
+		local visibleTabs = {
+			{ "BROWSE", "Find items" },
+			{ "LOOK", "My avatar" },
+		}
+		local showingMore = not simpleMode or lab.moreTabs or lab.tab == "SAVED" or lab.tab == "FORGE"
+		if showingMore then
+			table.insert(visibleTabs, { "SAVED", "Bookmarks" })
+			table.insert(visibleTabs, { "FORGE", "My custom items" })
+		end
+		for _, tab in visibleTabs do
 			button(app, tabs, tab[2], if #tab[2] > 9 then 148 else 100, function()
 				lab.tab = tab[1]
 				app.scrollPositions.AvatarLabWorkspace = Vector2.zero
 				render(app)
 			end, lab.tab == tab[1])
+		end
+		if simpleMode then
+			button(app, tabs, if showingMore then "Less" else "More", 82, function()
+				lab.moreTabs = not showingMore
+				if showingMore and (lab.tab == "SAVED" or lab.tab == "FORGE") then
+					lab.tab = "BROWSE"
+				end
+				render(app)
+			end)
 		end
 	end
 	if lab.tab == "LOOK" then
@@ -1678,21 +1702,30 @@ function AvatarLab.Render(app: any)
 		return
 	end
 	local sprint = app.state.makeoverState or {}
-	if sprint.active ~= true and sprint.dailyCompleted ~= true and not lab.startingSprint then
+	local showChallenge = guideStep ~= nil or not simpleMode or lab.showChallenge == true or sprint.active == true
+	if showChallenge and sprint.active ~= true and sprint.dailyCompleted ~= true and not lab.startingSprint then
 		task.defer(function()
 			if app.activePage == "Avatar Lab" then
 				AvatarLab.StartSprint(app)
 			end
 		end)
 	end
-	if lab.starterLookStatus == "IDLE" then
+	if showChallenge and lab.starterLookStatus == "IDLE" then
 		task.defer(function()
 			if app.activePage == "Avatar Lab" then
 				AvatarLab.LoadStarterLooks(app)
 			end
 		end)
 	end
-	sprintPanel(app, stack, guideStep)
+	if showChallenge then
+		sprintPanel(app, stack, guideStep)
+	else
+		local challenge = row(stack, -8)
+		button(app, challenge, "Try today's 90-second style challenge", 278, function()
+			lab.showChallenge = true
+			AvatarLab.StartSprint(app)
+		end)
+	end
 	if guideStep == 1 then
 		return
 	end
@@ -1767,22 +1800,24 @@ function AvatarLab.Render(app: any)
 	categories.ScrollBarThickness = 6
 	categories.HorizontalScrollBarInset = Enum.ScrollBarInset.Always
 	app:_TrackScroll(categories, "AvatarLabCatalogCategories")
-	for _, category in CATEGORIES do
+	for _, category in if simpleMode then SIMPLE_CATEGORIES else CATEGORIES do
 		button(app, categories, category[2], math.clamp(#category[2] * 7 + 22, 72, 108), function()
 			app.catalogType = category[1]
 			AvatarLab.Search(app, app.catalogQuery)
 		end, app.catalogType == category[1])
 	end
 	local filters = row(stack, 3)
-	button(app, filters, if lab.filters then "Hide filters" else "Price & sort", 138, function()
+	button(app, filters, if lab.filters then "Hide filters" else "More filters", 138, function()
 		lab.filters = not lab.filters
 		render(app)
 	end)
-	button(app, filters, if lab.sparkOpen then "Hide Style Sparks" else "Style Sparks", 164, function()
-		lab.sparkOpen = not lab.sparkOpen
-		render(app)
-	end)
-	if lab.sparkOpen then
+	if not simpleMode then
+		button(app, filters, if lab.sparkOpen then "Hide Style Sparks" else "Style Sparks", 164, function()
+			lab.sparkOpen = not lab.sparkOpen
+			render(app)
+		end)
+	end
+	if lab.sparkOpen and not simpleMode then
 		local sparks = row(stack, 4)
 		for index, spark in SPARKS do
 			button(app, sparks, spark[1], 120, function()

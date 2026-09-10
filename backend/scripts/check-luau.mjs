@@ -155,14 +155,35 @@ try {
     throw new Error('Catalog search must not be blocked by unrelated inventory-read consent');
   }
   const startGuideSource = read('src/Client/UI/StartGuide.luau');
-  if (!startGuideSource.includes('there is no free first generation')) {
-    throw new Error('First-session copy must distinguish free try-on from paid generation');
+  for (const marker of [
+    'WHAT DO YOU WANT TO DO?',
+    'STYLE MY AVATAR · FREE',
+    'MAKE MY OWN ITEM',
+    'PLAY GAMES · FREE',
+  ]) {
+    if (!startGuideSource.includes(marker)) throw new Error(`First-session choice is missing ${marker}`);
   }
-  if (!startGuideSource.includes('START GUIDED MAKEOVER') || !startGuideSource.includes('TutorialPath')) {
-    throw new Error('First-session tutorial must promise and preview the guided three-step path');
+  if (!startGuideSource.includes('see the R$ %d price') || !startGuideSource.includes('Try catalog clothes and accessories')) {
+    throw new Error('First-session choices must distinguish free try-on from paid generation');
   }
-  if (!startGuideSource.includes('TutorialPathArrow') || !startGuideSource.includes('Motion.Pulse(connector')) {
-    throw new Error('The opening tutorial path must expose large animated connectors');
+  if (!startGuideSource.includes('app.customUGCGuideRequested = false')) {
+    throw new Error('Choosing a start path must not open a second tutorial automatically');
+  }
+  const primaryNav = appSource.match(/local PRIMARY_NAV = \{([\s\S]*?)\n\}/)?.[1];
+  if (!primaryNav || (primaryNav.match(/\{ page =/g) || []).length !== 4) {
+    throw new Error('Primary navigation must remain limited to four destinations');
+  }
+  for (const marker of ['page = "Home"', 'page = "Create"', 'page = "Avatar Lab"', 'page = "My Studio"']) {
+    if (!primaryNav.includes(marker)) throw new Error(`Primary navigation is missing ${marker}`);
+  }
+  for (const marker of [
+    'tokensCard.Visible = showAllMethods',
+    'queueCard.Visible = showAllMethods',
+    'daily.Visible = showAllMethods',
+    'questCard.Visible = showAllMethods',
+    'local visibleMethods = if showAllMethods then allMethods else {}',
+  ]) {
+    if (!appSource.includes(marker)) throw new Error(`Simple Create disclosure is missing ${marker}`);
   }
   for (const marker of ['CustomUGCGuide', 'CustomUGCGuideSteps', 'CustomUGCGuideArrow', 'CustomUGCPrompt', 'CreatePersonalUGCButton']) {
     if (!appSource.includes(marker)) throw new Error(`Personal UGC guide is missing ${marker}`);
@@ -170,18 +191,11 @@ try {
   if (!/Name = "CustomUGCGuideSteps"[\s\S]{0,420}ScrollBarThickness = [1-9]/.test(appSource)) {
     throw new Error('Personal UGC steps must expose a visible horizontal scrollbar');
   }
-  if (!startGuideSource.includes('CustomUGCExplanation') || !startGuideSource.includes('CREATE PERSONAL UGC')) {
-    throw new Error('The opening tutorial must explain and clearly route personal UGC creation');
-  }
-  if (!appSource.includes('UGC means an accessory you invent') || !startGuideSource.includes('PERSONAL UGC = an accessory you invent')) {
-    throw new Error('Personal UGC must be defined in plain language before checkout');
+  if (!appSource.includes('UGC means an accessory you invent')) {
+    throw new Error('The optional personal UGC guide must define UGC in plain language');
   }
   if (!appSource.includes('Publishing it to Roblox later is optional, separate')) {
     throw new Error('The personal UGC guide must separate in-game wear from optional Roblox publishing');
-  }
-  if (!appSource.includes('not hasCreatedPersonalUGC(self.state.profile)')
-    || !appSource.includes('item.license == "ORIGINAL"')) {
-    throw new Error('Personal UGC guidance must use original accessory ownership, not the shared graphic/model counter');
   }
   const transition = appSource.match(/function App:_SetStudioOpen\(open: boolean\)[\s\S]*?(?=\nfunction App:)/)?.[0];
   if (!transition) throw new Error('Studio transition method not found');

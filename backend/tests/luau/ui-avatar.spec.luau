@@ -394,7 +394,14 @@ local character = {
 	end,
 }
 local player = { Character = character, UserId = 7 }
-local profile = { stats = {}, equippedItemIds = {}, outfits = {}, outfitOrder = {}, items = {} }
+local profile = {
+	stats = {},
+	settings = { simpleMode = false },
+	equippedItemIds = {},
+	outfits = {},
+	outfitOrder = {},
+	items = {},
+}
 local profiles = { saves = true, serial = 0 }
 function profiles:Get()
 	return profile
@@ -736,6 +743,21 @@ app.activePage = "Create"
 runSpawn()
 equal(app.catalogWorkspace.tab, "BROWSE", "Late try-on never hijacks navigation away from styling")
 app.activePage = "Avatar Lab"
+clearPage()
+profile.settings.simpleMode = true
+app.catalogWorkspace.tab = "BROWSE"
+AvatarLab.Render(app)
+local simpleButtons = {}
+for _, control in app.content:GetDescendants() do
+	if control:IsA("TextButton") then
+		simpleButtons[control.Text] = true
+	end
+end
+check(simpleButtons["Find items"] and simpleButtons["My avatar"], "Simple Avatar Lab keeps its two core destinations")
+check(simpleButtons.More, "Simple Avatar Lab progressively reveals specialist destinations")
+check(simpleButtons.Jackets and simpleButtons.Back, "Simple Avatar Lab keeps common item categories")
+check(not simpleButtons.Sweaters and not simpleButtons["Style Sparks"], "Simple Avatar Lab hides specialist controls")
+clearPage()
 for _, child in app.content:GetChildren() do
 	child:Destroy()
 end

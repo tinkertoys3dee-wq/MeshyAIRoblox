@@ -28,6 +28,7 @@ local CLIENT_EVENTS = {
 	CreatorGuide = true,
 	VisualTutorialShown = true,
 	GenerationOfferShown = true,
+	HomeChoice = true,
 }
 
 local GENERATION_PRODUCT_VALUES: { [string]: boolean } = {
@@ -48,7 +49,17 @@ end
 -- "Settings" was missing here for a while: every Settings-page visit was
 -- silently rejected by TrackClient below (INVALID_ANALYTICS_FIELDS) and
 -- never reached Roblox analytics at all.
-local PAGE_VALUES = { Create = true, ["My Studio"] = true, Discover = true, ["Avatar Lab"] = true, Settings = true }
+local PAGE_VALUES = {
+	Home = true,
+	Create = true,
+	["My Studio"] = true,
+	Discover = true,
+	["Avatar Lab"] = true,
+	["Avatar Graphics"] = true,
+	Play = true,
+	Settings = true,
+}
+local HOME_CHOICE_VALUES = { CREATE = true, STYLE = true, PLAY = true }
 local CATALOG_SORT_VALUES = {
 	Relevance = true,
 	Bestselling = true,
@@ -275,6 +286,12 @@ function AnalyticsService:TrackClient(player: Player, payload: any): (boolean, a
 		if page == "Discover" then
 			self:BeginFunnel(player, "marketplace", "Discover opened", {})
 		end
+	elseif payload.event == "HomeChoice" then
+		local choice = type(payload.fields) == "table" and payload.fields.choice or nil
+		if type(choice) ~= "string" or not HOME_CHOICE_VALUES[choice] then
+			return false, "INVALID_ANALYTICS_FIELDS"
+		end
+		fields.choice = choice
 	elseif payload.event == "CatalogSearch" then
 		local assetType = type(payload.fields) == "table" and payload.fields.assetType or nil
 		if type(assetType) ~= "string" or not ASSET_TYPE_VALUES[assetType] then
