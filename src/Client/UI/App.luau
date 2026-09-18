@@ -7519,6 +7519,43 @@ function App:_RenderStudio()
 				)
 			end)
 		end
+
+		-- Same reasoning as the graphic's download link in _RenderAvatarGraphics:
+		-- Roblox gives an experience no API to save a file to the player's
+		-- device, so the already-uploaded, validated GLB is served back with
+		-- no auth needed at GET /v1/models/{backendJobId}/download (see
+		-- server.ts) specifically so this link works from a plain browser
+		-- outside Roblox. A personal copy never has a backend job of its own
+		-- (see the license branch above), so a bought item can never reach
+		-- this block or get a link.
+		if selected.license ~= "PERSONAL_COPY" and selected.backendJobId then
+			local downloadY = socialY + 154 + 16
+			Factory.Label(
+				body,
+				"MODEL DOWNLOAD LINK · COPY INTO BROWSER",
+				UDim2.new(1, -32, 0, 12),
+				{ Position = UDim2.fromOffset(16, downloadY), Color = Colors.TextMuted, TextSize = 8 }
+			)
+			local modelLinkBox = Factory.New("TextBox", {
+				Size = UDim2.new(1, -32, 0, 34),
+				Position = UDim2.fromOffset(16, downloadY + 13),
+				BackgroundColor3 = Colors.Ink,
+				BackgroundTransparency = 0.12,
+				BorderSizePixel = 0,
+				Text = string.format("%s/v1/models/%s/download", Config.Backend.BaseUrl, selected.backendJobId),
+				TextColor3 = Colors.Text,
+				Font = Theme.Fonts.Regular,
+				TextSize = 9,
+				TextWrapped = true,
+				TextEditable = true,
+				ClearTextOnFocus = false,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextYAlignment = Enum.TextYAlignment.Top,
+				Parent = body,
+			})
+			Factory.Corner(modelLinkBox, 8)
+			Factory.Padding(modelLinkBox, 6, 4)
+		end
 	else
 		-- Independent short body: no sliders, no presets, no title/pricing --
 		-- just try it on or send it to Roblox. Reuses EquipItem/UnequipItem/
