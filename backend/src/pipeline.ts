@@ -467,6 +467,9 @@ export class JobRunner {
       stage: "Ready to fit",
       progress: 100,
       output: { ...output, modelAssetId, ...(thumbnailAssetId ? { thumbnailAssetId } : {}) },
+      // Kept so the player can pull down their own private creation from a
+      // plain browser link -- see GET /v1/models/:jobId/download.
+      modelArtifact: validated.glb,
     });
   }
 
