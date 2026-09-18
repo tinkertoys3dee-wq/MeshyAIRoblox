@@ -243,10 +243,11 @@ function rowToJob(row: JobRow): Job {
 }
 
 function cloneJob(job: Job): Job {
-  const { imageArtifact, ...withoutArtifact } = job;
+  const { imageArtifact, modelArtifact, ...withoutArtifact } = job;
   return {
     ...structuredClone(withoutArtifact),
     ...(imageArtifact ? { imageArtifact: Buffer.from(imageArtifact) } : {}),
+    ...(modelArtifact ? { modelArtifact: Buffer.from(modelArtifact) } : {}),
     createdAt: new Date(job.createdAt),
     updatedAt: new Date(job.updatedAt),
   };
