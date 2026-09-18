@@ -187,7 +187,7 @@ export type Job = {
   updatedAt: Date;
 };
 
-export type JobPatch = Partial
+export type JobPatch = Partial<
   Pick<Job, "status" | "stage" | "progress" | "output" | "error" | "imageArtifact" | "modelArtifact" | "updatedAt">
 >;
 export function publicJob(job: Job) {
