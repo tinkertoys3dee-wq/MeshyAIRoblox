@@ -103,6 +103,7 @@ type JobRow = {
   output: JobOutput;
   error: JobError | null;
   image_artifact: Buffer | null;
+  model_artifact: Buffer | null;
   created_at: Date;
   updated_at: Date;
 };
