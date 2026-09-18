@@ -190,7 +190,6 @@ export type Job = {
 export type JobPatch = Partial
   Pick<Job, "status" | "stage" | "progress" | "output" | "error" | "imageArtifact" | "modelArtifact" | "updatedAt">
 >;
-
 export function publicJob(job: Job) {
   return {
     id: job.id,
