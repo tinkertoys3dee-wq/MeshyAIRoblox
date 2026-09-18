@@ -27,6 +27,9 @@ ALTER TABLE forge_jobs ADD COLUMN IF NOT EXISTS detail_level TEXT NOT NULL DEFAU
 ALTER TABLE forge_jobs ADD COLUMN IF NOT EXISTS source_image_asset_id BIGINT NULL;
 ALTER TABLE forge_jobs ADD COLUMN IF NOT EXISTS image_quality TEXT NULL;
 ALTER TABLE forge_jobs ADD COLUMN IF NOT EXISTS avatar_view TEXT NULL;
+-- Validated GLB kept alongside the Roblox upload so the private-download
+-- link (GET /v1/models/:jobId/download) can serve it back to the player.
+ALTER TABLE forge_jobs ADD COLUMN IF NOT EXISTS model_artifact BYTEA NULL;
 -- AVATAR_GRAPHIC jobs produce a standalone image and never an accessory, so
 -- they have no accessory slot to record here.
 ALTER TABLE forge_jobs ALTER COLUMN accessory_type DROP NOT NULL;
