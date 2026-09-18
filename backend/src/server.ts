@@ -114,6 +114,27 @@ export async function buildServer(config: AppConfig, repository: JobRepository):
     return reply.type("image/png").send(job.imageArtifact);
   });
 
+  // Same unauthenticated share-link model as /v1/graphics/:jobId/image above,
+  // for the validated GLB behind an accessory job. A backend job only ever
+  // exists for a model the player generated themselves -- a bought
+  // marketplace copy (ItemRecord.license == "PERSONAL_COPY") is a separate
+  // record in src/Shared and never gets a backendJobId of its own -- so this
+  // path can never hand out a purchased item's file, only the requester's
+  // own private creation.
+  app.get<{ Params: { jobId: string } }>("/v1/models/:jobId/download", async (request, reply) => {
+    if (!consumeRateLimit(modelWindows, request.ip, 60, 5 * 60_000)) {
+      return reply.code(429).send({ error: "RATE_LIMITED" });
+    }
+    const job = await repository.get(request.params.jobId);
+    const isModelKind = job?.kind === "TEXT_TO_3D" || job?.kind === "IMAGE_TO_3D" || job?.kind === "AVATAR_TO_3D";
+    if (!job || !isModelKind || job.status !== "SUCCEEDED" || !job.modelArtifact) {
+      return reply.code(404).send({ error: "NOT_FOUND" });
+    }
+    reply.header("Content-Disposition", `attachment; filename="forge-${job.id}.glb"`);
+    reply.header("Cache-Control", "private, max-age=31536000, immutable");
+    return reply.type("model/gltf-binary").send(job.modelArtifact);
+  });
+
   app.addHook("onClose", async () => {
     runner.close();
   });
