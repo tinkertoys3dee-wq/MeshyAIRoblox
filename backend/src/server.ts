@@ -26,6 +26,7 @@ export async function buildServer(config: AppConfig, repository: JobRepository):
   const jobWindows = new Map<number, number[]>();
   const uploadWindows = new Map<number, number[]>();
   const imageWindows = new Map<string, number[]>();
+  const modelWindows = new Map<string, number[]>();
 
   app.get("/health", async () => ({
     ok: true,
