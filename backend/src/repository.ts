@@ -175,9 +175,9 @@ export class PostgresJobRepository implements JobRepository {
     if (!current) throw new Error(`Job ${id} not found`);
     const next: Job = { ...current, ...patch, updatedAt: patch.updatedAt ?? new Date() };
     const result = await this.#pool.query<JobRow>(
-      `UPDATE forge_jobs SET
+        `UPDATE forge_jobs SET
          status = $2, stage = $3, progress = $4, output = $5, error = $6,
-         image_artifact = $7, updated_at = $8
+         image_artifact = $7, model_artifact = $8, updated_at = $9
        WHERE id = $1 RETURNING *`,
       [
         id,
@@ -187,6 +187,7 @@ export class PostgresJobRepository implements JobRepository {
         next.output,
         next.error ?? null,
         next.imageArtifact ?? null,
+        next.modelArtifact ?? null,
         next.updatedAt,
       ],
     );
