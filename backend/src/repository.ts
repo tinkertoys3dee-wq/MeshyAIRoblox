@@ -236,6 +236,7 @@ function rowToJob(row: JobRow): Job {
     output: row.output ?? {},
     ...(row.error ? { error: row.error } : {}),
     ...(row.image_artifact ? { imageArtifact: Buffer.from(row.image_artifact) } : {}),
+    ...(row.model_artifact ? { modelArtifact: Buffer.from(row.model_artifact) } : {}),
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
