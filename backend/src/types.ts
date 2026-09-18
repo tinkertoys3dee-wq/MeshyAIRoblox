@@ -175,12 +175,20 @@ export type Job = {
   output: JobOutput;
   error?: JobError;
   imageArtifact?: Buffer;
+  // The validated GLB produced by #finishModel, kept alongside the Roblox
+  // upload so the player can pull down their own private creation from a
+  // plain browser link (Roblox gives an experience no API to save a file to
+  // the player's device) -- see GET /v1/models/:jobId/download in server.ts.
+  // Only ever set for a job the player generated themselves: marketplace
+  // copies are a separate ItemRecord/GraphicRecord concept in src/Shared and
+  // never create or own a backend job of their own.
+  modelArtifact?: Buffer;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type JobPatch = Partial<
-  Pick<Job, "status" | "stage" | "progress" | "output" | "error" | "imageArtifact" | "updatedAt">
+export type JobPatch = Partial
+  Pick<Job, "status" | "stage" | "progress" | "output" | "error" | "imageArtifact" | "modelArtifact" | "updatedAt">
 >;
 
 export function publicJob(job: Job) {
