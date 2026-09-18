@@ -6626,7 +6626,14 @@ function App:_RenderStudio()
 			1,
 			-8,
 			0,
-			if not showAllMethods then 246 elseif selected.license == "PERSONAL_COPY" then 1240 else 1424
+			if not showAllMethods
+				then 246
+			elseif selected.license == "PERSONAL_COPY" then 1240
+			-- +80 for the model download link box appended after SHARING & SALES
+			-- below -- only present for an original with a backend job (a
+			-- personal copy has none of its own, see that block for why).
+			elseif selected.backendJobId then 1424 + 80
+			else 1424
 		),
 		BackgroundTransparency = 1,
 		Parent = inspectScroll,
