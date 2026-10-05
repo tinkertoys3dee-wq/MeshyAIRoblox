@@ -13,6 +13,10 @@ function Motion.Configure(isReduced: () -> boolean)
 	reduced = isReduced
 end
 
+function Motion.IsReduced(): boolean
+	return reduced()
+end
+
 local function usesSelectionNavigation(): boolean
 	local success, inputType = pcall(function()
 		return UserInputService:GetLastInputType()
@@ -37,7 +41,7 @@ function Motion.AutoFocus(target: GuiObject)
 	end
 end
 
-function Motion.Tween(target: Instance, seconds: number, properties: { [string]: any }): Tween?
+function Motion.Tween(target: Instance, seconds: number, properties: { [string]: any }, easing: Enum.EasingStyle?): Tween?
 	if reduced() then
 		for key, value in properties do
 			(target :: any)[key] = value
@@ -45,7 +49,7 @@ function Motion.Tween(target: Instance, seconds: number, properties: { [string]:
 		return nil
 	end
 	local tween =
-		TweenService:Create(target, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), properties)
+		TweenService:Create(target, TweenInfo.new(seconds, easing or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), properties)
 	tween:Play()
 	return tween
 end

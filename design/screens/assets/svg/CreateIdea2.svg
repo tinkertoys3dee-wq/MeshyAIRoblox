@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="358" height="122" viewBox="291.0 622.0 179.0 61.0">
+  <defs>
+    <linearGradient id="footer-card" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#103554" stop-opacity=".8" />
+      <stop offset=".4" stop-color="#0d1b32" stop-opacity=".75" />
+      <stop offset="1" stop-color="#1e2545" stop-opacity=".7" />
+    </linearGradient>
+    <linearGradient id="cyan-icon" x1="0" y1="0" x2=".6" y2="1">
+      <stop stop-color="#bcffff" />
+      <stop offset=".22" stop-color="#3affff" />
+      <stop offset=".63" stop-color="#00d5ff" />
+      <stop offset="1" stop-color="#0089ee" />
+    </linearGradient>
+    <linearGradient id="purple-icon" x1="0" y1="0" x2=".4" y2="1">
+      <stop stop-color="#ffceff" />
+      <stop offset=".32" stop-color="#e179ff" />
+      <stop offset="1" stop-color="#891fff" />
+    </linearGradient>
+    <linearGradient id="purple-dark" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#a927fa" />
+      <stop offset="1" stop-color="#640ac8" />
+    </linearGradient>
+    <symbol id="screen-crown" viewBox="0 0 64 64">
+      <path d="M9 45 4 18 22 31 31 10 42 31 60 18 54 45Z" fill="url(#purple-icon)" stroke="#e2bdff" stroke-width="2.5" />
+      <path d="M10 45H54V55Q31 62 10 55Z" fill="url(#purple-dark)" stroke="#c47aff" stroke-width="2" />
+      <circle cx="8" cy="19" r="3" fill="#f4ddff" />
+      <circle cx="31" cy="11" r="3" fill="#f4ddff" />
+      <circle cx="58" cy="19" r="3" fill="#f4ddff" />
+      <path d="m31 35 6 7-6 7-6-7Z" fill="url(#cyan-icon)" stroke="#c2ffff" />
+    </symbol>
+  </defs>
+  <g id="CreateIdea2">
+    <rect x="294" y="626" width="176" height="52" rx="14" fill="url(#footer-card)" stroke="#345578" stroke-width="2" />
+    <use href="#screen-crown" x="304" y="637" width="29" height="29" />
+  </g>
+</svg>

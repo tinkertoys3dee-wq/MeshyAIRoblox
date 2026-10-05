@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="930" height="136" viewBox="569.0 381.0 465.0 68.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+  </defs>
+  <g id="GraphicsTextSourceButton">
+    <rect x="577" y="389" width="449" height="48" rx="20" fill="#14223b" filter="url(#small-shadow)" stroke="#345278" stroke-width="2" />
+  </g>
+</svg>

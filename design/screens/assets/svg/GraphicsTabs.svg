@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="688" height="128" viewBox="1267.0 255.0 344.0 64.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+    <linearGradient id="purple-button" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#d27bff" />
+      <stop offset=".15" stop-color="#b33ff6" />
+      <stop offset=".6" stop-color="#8120f0" />
+      <stop offset="1" stop-color="#5506d7" />
+    </linearGradient>
+  </defs>
+  <g id="GraphicsTabs">
+    <rect x="1271" y="259" width="336" height="52" rx="17" fill="#101c31" stroke="#345173" stroke-width="2" />
+    <rect x="1274" y="262" width="160" height="46" rx="14" fill="url(#purple-button)" filter="url(#small-shadow)" stroke="#bf67ff" stroke-width="2" />
+  </g>
+</svg>

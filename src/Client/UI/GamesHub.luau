@@ -25,6 +25,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local DailyChallenge = require(ReplicatedStorage:WaitForChild("DailyChallenge"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Factory = require(script.Parent.Factory)
+local ModernPageLayouts = require(script.Parent.ModernPageLayouts)
 local GameShell = require(script.Parent.Games.GameShell)
 local FlappyBird = require(script.Parent.Games.FlappyBird)
 local DinoRunner = require(script.Parent.Games.DinoRunner)
@@ -201,19 +202,12 @@ function GamesHub.Show(app: any)
 	modal.AnchorPoint = Vector2.new(0.5, 0.5)
 	modal.ZIndex = 211
 	modal.ClipsDescendants = true
-	-- MaxSize width matches the compact breakpoint (App.luau: width < 760 is
-	-- compact) so `useWide` below and this modal's actual rendered width
-	-- agree: whenever tiles render in wide mode, the screen is already wide
-	-- enough that this 560 cap -- not the screen -- is what's actually
-	-- limiting the modal, so its width is reliably exactly 560px, not just
-	-- "usually about that". The tile grid below is sized against that fixed
-	-- number, not a guess. MinSize keeps the modal from shrinking past a
-	-- usable floor on a genuinely tiny viewport -- GameShell's own game-over
-	-- card needs at least this much canvas height to avoid clipping (see its
-	-- own comment), and hubView's scrolling picks up whatever room is left.
+	-- Set the final desktop bounds before fitting its scale, so larger
+	-- accessibility scales keep the close control inside the viewport.
+	-- Compact screens retain the original scrolling tile stack.
 	Factory.New("UISizeConstraint", {
 		MinSize = Vector2.new(300, 420),
-		MaxSize = Vector2.new(560, 702),
+		MaxSize = if app.compact then Vector2.new(560, 702) else Vector2.new(1672, 941),
 		Parent = modal,
 	})
 	-- A console-style accent strip along the very top edge -- a small frame
@@ -1429,6 +1423,7 @@ function GamesHub.Show(app: any)
 			showLeaderboardTab
 		)
 	end
+	ModernPageLayouts.Modal(app, modal, "Arcade")
 end
 
 return GamesHub

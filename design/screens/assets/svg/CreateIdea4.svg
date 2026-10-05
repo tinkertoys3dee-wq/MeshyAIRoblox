@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="358" height="122" viewBox="657.0 622.0 179.0 61.0">
+  <defs>
+    <linearGradient id="footer-card" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#103554" stop-opacity=".8" />
+      <stop offset=".4" stop-color="#0d1b32" stop-opacity=".75" />
+      <stop offset="1" stop-color="#1e2545" stop-opacity=".7" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2=".4" y2="1">
+      <stop stop-color="#ffffb7" />
+      <stop offset=".22" stop-color="#ffe051" />
+      <stop offset=".7" stop-color="#ffb21a" />
+      <stop offset="1" stop-color="#ed8706" />
+    </linearGradient>
+    <symbol id="screen-hat" viewBox="0 0 64 64">
+      <path d="M15 39 13 12Q31 4 49 12L47 39Z" fill="url(#gold)" stroke="#ffe9a3" stroke-width="2" />
+      <ellipse cx="32" cy="42" rx="29" ry="9" fill="url(#gold)" stroke="#ffe9a3" stroke-width="2" />
+      <path d="M15 30Q31 37 49 30V37Q31 44 15 37Z" fill="#6a3218" />
+      <circle cx="35" cy="34" r="6" fill="#ffe4a1" stroke="#9c4a13" stroke-width="2" />
+    </symbol>
+  </defs>
+  <g id="CreateIdea4">
+    <rect x="660" y="626" width="176" height="52" rx="14" fill="url(#footer-card)" stroke="#345578" stroke-width="2" />
+    <use href="#screen-hat" x="670" y="637" width="29" height="29" />
+  </g>
+</svg>

@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="842" height="500" viewBox="1164.0 428.0 421.0 250.0">
+  <defs>
+    </defs>
+  <g id="AvatarLabPreviewWell">
+    <rect x="1168" y="432" width="413" height="242" rx="18" fill="#0a1a31" stroke="#2e6183" stroke-width="2" />
+    <ellipse cx="1374" cy="652" rx="119" ry="13" fill="#0787ba" opacity=".21" />
+    <ellipse cx="1374" cy="652" rx="141" ry="18" fill="none" stroke="#0b80ab" stroke-opacity=".3" />
+  </g>
+</svg>

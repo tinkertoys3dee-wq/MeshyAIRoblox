@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="946" height="128" viewBox="1138.0 255.0 473.0 64.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+    <linearGradient id="blue-button" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#0fe4f4" />
+      <stop offset=".16" stop-color="#00caff" />
+      <stop offset=".56" stop-color="#0094ff" />
+      <stop offset="1" stop-color="#0063f4" />
+    </linearGradient>
+  </defs>
+  <g id="AvatarLabTabs">
+    <rect x="1142" y="259" width="465" height="52" rx="17" fill="#101c31" stroke="#345173" stroke-width="2" />
+    <rect x="1145" y="262" width="180" height="46" rx="14" fill="url(#blue-button)" filter="url(#small-shadow)" stroke="#00caff" stroke-width="2" />
+    <path d="M1508 270V300" stroke="#324762" stroke-width="1.2" />
+  </g>
+</svg>

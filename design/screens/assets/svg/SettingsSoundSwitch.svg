@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="154" height="76" viewBox="727.0 782.0 77.0 38.0">
+  <defs>
+    <linearGradient id="cyan-icon" x1="0" y1="0" x2=".6" y2="1">
+      <stop stop-color="#bcffff" />
+      <stop offset=".22" stop-color="#3affff" />
+      <stop offset=".63" stop-color="#00d5ff" />
+      <stop offset="1" stop-color="#0089ee" />
+    </linearGradient>
+  </defs>
+  <g id="SettingsSoundSwitch">
+    <rect x="730" y="785" width="71" height="32" rx="16" fill="#205069" stroke="#00caff" stroke-width="2" />
+    <circle cx="784" cy="801" r="11" fill="url(#cyan-icon)" stroke="#bdedff" stroke-width="1" />
+  </g>
+</svg>

@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="358" height="122" viewBox="108.0 622.0 179.0 61.0">
+  <defs>
+    <linearGradient id="footer-card" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#103554" stop-opacity=".8" />
+      <stop offset=".4" stop-color="#0d1b32" stop-opacity=".75" />
+      <stop offset="1" stop-color="#1e2545" stop-opacity=".7" />
+    </linearGradient>
+    <linearGradient id="cyan-dark" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#00aee5" />
+      <stop offset="1" stop-color="#0052af" />
+    </linearGradient>
+    <symbol id="screen-wings" viewBox="0 0 64 64">
+      <path d="M30 51Q10 51 3 13Q22 18 30 35L32 18 34 35Q45 18 61 13Q57 48 34 51L32 59Z" fill="url(#cyan-dark)" stroke="#66efff" stroke-width="2" />
+      <path d="m6 17 21 22-15-1 16 9M58 17 37 39l15-1-16 9M32 24V56" fill="none" stroke="#a4ffff" stroke-width="1.7" />
+    </symbol>
+  </defs>
+  <g id="CreateIdea1">
+    <rect x="111" y="626" width="176" height="52" rx="14" fill="url(#footer-card)" stroke="#345578" stroke-width="2" />
+    <use href="#screen-wings" x="121" y="637" width="29" height="29" />
+  </g>
+</svg>

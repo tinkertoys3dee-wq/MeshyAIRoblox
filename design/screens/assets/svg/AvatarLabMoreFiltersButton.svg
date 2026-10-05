@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="100" viewBox="892.0 407.0 230.0 50.0">
+  <defs>
+    </defs>
+  <g id="AvatarLabMoreFiltersButton">
+    <rect x="896" y="411" width="222" height="42" rx="13" fill="#14223a" stroke="#456887" stroke-width="2" />
+    <path d="M908 423H932" stroke="#9acfe6" stroke-width="1.6" stroke-linecap="round" />
+    <circle cx="913" cy="423" r="2.6" fill="#b5ebff" />
+    <path d="M908 431H932" stroke="#9acfe6" stroke-width="1.6" stroke-linecap="round" />
+    <circle cx="922" cy="431" r="2.6" fill="#b5ebff" />
+    <path d="M908 439H932" stroke="#9acfe6" stroke-width="1.6" stroke-linecap="round" />
+    <circle cx="916" cy="439" r="2.6" fill="#b5ebff" />
+  </g>
+</svg>

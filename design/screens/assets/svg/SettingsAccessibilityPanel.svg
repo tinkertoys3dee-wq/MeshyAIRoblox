@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1538" height="510" viewBox="69.0 492.0 769.0 255.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+    <linearGradient id="screen-purple" x1="0" y1="0" x2=".3" y2="1">
+      <stop offset="0" stop-color="#322052" />
+      <stop offset=".55" stop-color="#23183c" />
+      <stop offset="1" stop-color="#141a30" />
+    </linearGradient>
+    <linearGradient id="screen-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff" stop-opacity=".16" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g id="SettingsAccessibilityPanel">
+    <rect x="77" y="500" width="753" height="235" rx="26" fill="url(#screen-purple)" filter="url(#small-shadow)" stroke="#bf67ff" stroke-width="2" />
+    <rect x="79" y="502" width="749" height="231" rx="25" fill="none" stroke-opacity=".08" stroke="#ffffff" stroke-width="2" />
+    <rect x="86" y="506" width="735" height="66" rx="20" fill="url(#screen-sheen)" />
+    <path d="M468.56 502L739.64 502L468.56 733L197.48000000000002 733Z" fill="#ffffff" opacity=".025" />
+  </g>
+</svg>

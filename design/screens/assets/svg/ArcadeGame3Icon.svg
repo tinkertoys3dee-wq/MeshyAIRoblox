@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="866.0 420.0 75.0 75.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+    <symbol id="arcade-icon-color" viewBox="0 0 64 64">
+      <path d="M32 9A23 23 0 0 1 55 32" fill="none" stroke="#ec70a8" stroke-width="9" />
+      <path d="M55 32A23 23 0 0 1 32 55" fill="none" stroke="#ffd052" stroke-width="9" />
+      <path d="M32 55A23 23 0 0 1 9 32" fill="none" stroke="#62e2ff" stroke-width="9" />
+      <path d="M9 32A23 23 0 0 1 32 9" fill="none" stroke="#bd79ff" stroke-width="9" />
+      <circle cx="32" cy="32" r="6" fill="#fff" filter="url(#small-shadow)" />
+    </symbol>
+  </defs>
+  <g id="ArcadeGame3Icon">
+    <rect x="869" y="423" width="69" height="69" rx="17" fill="#14223a" stroke="#4c6181" stroke-width="2" />
+    <use href="#arcade-icon-color" x="876" y="430" width="55" height="55" />
+  </g>
+</svg>

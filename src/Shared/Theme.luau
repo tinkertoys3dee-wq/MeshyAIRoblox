@@ -1,44 +1,36 @@
 --!strict
 
--- The concept art's own surface ramp, read straight off its panelGlass
--- gradient (#33205E / #241645 / #1A1035) and its lettering (#EBDCFF over
--- #CDBBEE). The app had been slate/navy against art that is unmistakably
--- purple -- and since the PanelFrame decal carries the art's purple, every
--- code-drawn frame inside a card was reading a different colour from the
--- card around it.
---
--- Darker panels under the same lettering means every pairing gained
--- contrast rather than losing it: muted text on the softest panel goes
--- 4.77 to 6.15, and borders clear the 3.0 non-text threshold for the first
--- time (2.29 to 3.05). Accent hues are untouched.
+-- Shared native surfaces match the approved SVG screens. The uploaded
+-- artwork supplies their detail; these colors keep fields, live viewports,
+-- loading states and accessibility mode in the same palette.
 local DEFAULT_COLORS = {
-	Ink = Color3.fromRGB(26, 16, 53),
-	Panel = Color3.fromRGB(36, 22, 69),
-	PanelRaised = Color3.fromRGB(51, 32, 94),
-	PanelSoft = Color3.fromRGB(68, 48, 120),
-	Line = Color3.fromRGB(126, 108, 168),
-	Text = Color3.fromRGB(243, 236, 255),
-	TextMuted = Color3.fromRGB(205, 187, 238),
-	Violet = Color3.fromRGB(135, 94, 255),
-	Cyan = Color3.fromRGB(55, 220, 255),
-	Mint = Color3.fromRGB(76, 239, 175),
-	Rose = Color3.fromRGB(255, 91, 151),
-	Gold = Color3.fromRGB(255, 196, 82),
-	Danger = Color3.fromRGB(255, 91, 106),
+	Ink = Color3.fromRGB(11, 19, 35),
+	Panel = Color3.fromRGB(17, 29, 51),
+	PanelRaised = Color3.fromRGB(29, 48, 79),
+	PanelSoft = Color3.fromRGB(38, 61, 95),
+	Line = Color3.fromRGB(79, 111, 154),
+	Text = Color3.fromRGB(246, 250, 255),
+	TextMuted = Color3.fromRGB(176, 190, 217),
+	Violet = Color3.fromRGB(191, 103, 255),
+	Cyan = Color3.fromRGB(0, 202, 255),
+	Mint = Color3.fromRGB(73, 228, 182),
+	Rose = Color3.fromRGB(255, 112, 186),
+	Gold = Color3.fromRGB(255, 208, 78),
+	Danger = Color3.fromRGB(255, 101, 119),
 }
 
 -- A brighter, higher-contrast palette for the optional accessibility toggle.
 -- Backgrounds go darker and near-black, borders and muted text go lighter,
 -- so every WCAG-relevant pairing (text-on-panel, line-on-panel) widens.
 local HIGH_CONTRAST_COLORS = {
-	Ink = Color3.fromRGB(4, 2, 12),
-	Panel = Color3.fromRGB(10, 6, 20),
-	PanelRaised = Color3.fromRGB(18, 12, 34),
-	PanelSoft = Color3.fromRGB(30, 22, 52),
-	Line = Color3.fromRGB(176, 160, 214),
+	Ink = Color3.fromRGB(3, 7, 14),
+	Panel = Color3.fromRGB(7, 14, 25),
+	PanelRaised = Color3.fromRGB(12, 23, 39),
+	PanelSoft = Color3.fromRGB(19, 34, 54),
+	Line = Color3.fromRGB(178, 211, 247),
 	Text = Color3.fromRGB(255, 255, 255),
-	TextMuted = Color3.fromRGB(226, 216, 244),
-	Violet = Color3.fromRGB(184, 152, 255),
+	TextMuted = Color3.fromRGB(223, 234, 250),
+	Violet = Color3.fromRGB(216, 173, 255),
 	Cyan = Color3.fromRGB(130, 238, 255),
 	Mint = Color3.fromRGB(140, 255, 210),
 	Rose = Color3.fromRGB(255, 150, 190),
@@ -57,43 +49,18 @@ local Colors = table.clone(DEFAULT_COLORS)
 local Theme = {
 	Colors = Colors,
 	IsHighContrast = false,
-	Corner = 16,
-	SmallCorner = 10,
-	StrokeTransparency = 0.45,
-	-- The concept art runs two type registers, and only two. A classical
-	-- serif carries every NAMEPLATE -- page titles, panel captions, item and
-	-- setting names, button labels, big figures -- and a plain sans carries
-	-- everything EXPLANATORY: descriptions, helper prose, and the small caps
-	-- metadata beside a control ("LEVEL", "YOUR BEST", "ON"/"OFF").
-	--
-	-- The art is set in Cinzel, which Roblox does not ship. Merriweather is
-	-- the closest face Roblox does have that survives this app's real size
-	-- range: the captions run as small as 9px, where Garamond's and Bodoni's
-	-- thin strokes break up on screen.
+	Corner = 20,
+	SmallCorner = 16,
+	StrokeTransparency = 0.32,
+	-- Native text stays editable and uses the same clean sans register as
+	-- the SVGs. Existing Display/Black callers retain their stronger weight.
 	Fonts = table.freeze({
 		Regular = Enum.Font.Gotham,
 		Medium = Enum.Font.GothamMedium,
 		Bold = Enum.Font.GothamBold,
-		Display = Enum.Font.Merriweather,
-		-- The older name for the same register. Every existing call site
-		-- reaching for "Black" is already a nameplate -- a page title, a card
-		-- name, a score -- exactly where the art sets its serif, so they all
-		-- keep working unchanged.
-		Black = Enum.Font.Merriweather,
+		Display = Enum.Font.GothamBold,
+		Black = Enum.Font.GothamBlack,
 	}),
-	-- Enum.Font exposes Merriweather at one (regular) weight; the art sets
-	-- its serif at 700 throughout. A FontFace carries a weight and overrides
-	-- the Font property, so Factory applies this to anything asking for the
-	-- display face. Built through pcall because a family path Roblox has
-	-- since moved would otherwise throw at require time and take the whole
-	-- client's UI down with it -- without the face, text simply renders at
-	-- Merriweather's regular weight.
-	DisplayFace = (function(): Font?
-		local success, face = pcall(function()
-			return Font.new("rbxasset://fonts/families/Merriweather.json", Enum.FontWeight.Bold)
-		end)
-		return if success then face else nil
-	end)(),
 }
 
 function Theme.SetHighContrast(enabled: boolean)

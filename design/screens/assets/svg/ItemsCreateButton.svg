@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="562" height="146" viewBox="1334.0 243.0 281.0 73.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+    <linearGradient id="blue-button" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#0fe4f4" />
+      <stop offset=".16" stop-color="#00caff" />
+      <stop offset=".56" stop-color="#0094ff" />
+      <stop offset="1" stop-color="#0063f4" />
+    </linearGradient>
+    <linearGradient id="screen-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff" stop-opacity=".16" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g id="ItemsCreateButton">
+    <rect x="1342" y="251" width="265" height="53" rx="20" fill="url(#blue-button)" filter="url(#small-shadow)" stroke="#00caff" stroke-width="2" />
+    <rect x="1350" y="256" width="249" height="19.61" rx="12" fill="url(#screen-sheen)" />
+    <path d="M1360 253H1589" stroke="#ffffff" stroke-opacity=".45" />
+  </g>
+</svg>

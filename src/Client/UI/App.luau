@@ -30,6 +30,9 @@ local NotificationService = require(script.Parent.NotificationService)
 local WindowFocus = require(script.Parent.WindowFocus)
 local AvatarLab = require(script.Parent.AvatarLab)
 local StartGuide = require(script.Parent.StartGuide)
+local HomeScreen = require(script.Parent.HomeScreen)
+local ModernChrome = require(script.Parent.ModernChrome)
+local ModernLayouts = require(script.Parent.ModernLayouts)
 
 local Colors = Theme.Colors
 local player = Players.LocalPlayer
@@ -585,7 +588,9 @@ function App.new()
 		end
 		if input.KeyCode == Enum.KeyCode.Tab or input.KeyCode == Enum.KeyCode.ButtonY then
 			if not GuiService.SelectedObject or not GuiService.SelectedObject:IsDescendantOf(self.shell) then
-				local target = self.navButtons[self.activePage] or self.navButtons.Home
+				local target = if self.homeNavButtons
+					then self.homeNavButtons[self.activePage] or self.homeNavButtons.Home
+					else self.navButtons[self.activePage] or self.navButtons.Home
 				if target then
 					GuiService.SelectedObject = target
 				end
@@ -1357,21 +1362,14 @@ end
 -- mannequin and the list rows) is filled in later by _SyncAvatarPreviewPanel,
 -- called once per _RenderActivePage rather than here.
 function App:_BuildAvatarPreviewPanel(backdrop: Frame)
-	local panel = Factory.New("Frame", {
-		Name = "AvatarPreviewPanel",
-		BackgroundColor3 = Colors.Panel,
-		BackgroundTransparency = 0.03,
-		BorderSizePixel = 0,
-		ClipsDescendants = true,
-		Visible = false,
-		ZIndex = 2,
-		Parent = backdrop,
-	})
-	Factory.Corner(panel, 22)
-	Factory.Stroke(panel, Color3.fromRGB(101, 113, 170), 0.35, 1.2)
+	local panel = Factory.ImageCard(backdrop, UDim2.fromOffset(465, 516), nil, "AvatarPreviewPanel")
+	panel.ClipsDescendants = true
+	panel.Visible = false
+	panel.ZIndex = 2
 	self.avatarPreviewPanel = panel
 
 	Factory.Label(panel, "YOUR AVATAR", UDim2.new(1, -28, 0, 18), {
+		Name = "PreviewTitle",
 		Position = UDim2.fromOffset(16, 14),
 		Font = Theme.Fonts.Bold,
 		TextSize = 12,
@@ -1416,6 +1414,7 @@ function App:_BuildAvatarPreviewPanel(backdrop: Frame)
 		Parent = panel,
 	})
 	Factory.Label(panel, "WORN NOW", UDim2.new(1, -32, 0, 16), {
+		Name = "PreviewWornHeading",
 		Position = UDim2.new(0, 16, 0.5, 14),
 		Font = Theme.Fonts.Bold,
 		TextSize = 11,
@@ -1474,6 +1473,7 @@ local PANEL_WIDTH = 280
 local PANEL_GAP = 16
 local MIN_VIEWPORT_FOR_PANEL = 1180
 function App:_LayoutAvatarPreviewPanel()
+	if ModernChrome.LayoutPreview(self) then return end
 	local panel = self.avatarPreviewPanel
 	if not panel then
 		return
@@ -1975,6 +1975,7 @@ function App:_ApplyResponsiveLayout(scaleOverride: number?)
 	end
 	self.statusArea.Visible = not simpleMode and self.shell.AbsoluteSize.X / self.fittedUiScale >= 1020
 	self.navIndicator.Visible = not compact and self.navStack.AbsoluteSize.Y / self.fittedUiScale >= 330
+	self:_ApplyHomeChrome()
 	-- Belt-and-suspenders alongside the AbsoluteSize/AbsolutePosition signals
 	-- wired up in _BuildAvatarPreviewPanel: those cover shell's rect actually
 	-- moving/resizing, but self.compact (read by _LayoutAvatarPreviewPanel)
@@ -3208,6 +3209,7 @@ function App:_ConnectPush()
 end
 
 function App:_RenderStatus()
+	HomeScreen.Refresh(self)
 	clear(self.statusArea)
 	Factory.New("UIListLayout", {
 		FillDirection = Enum.FillDirection.Horizontal,
@@ -3403,6 +3405,10 @@ function App:_TrackScroll(scrollingFrame: ScrollingFrame, key: string)
 	)
 end
 
+function App:_ApplyHomeChrome()
+	ModernChrome.Apply(self)
+end
+
 function App:_RenderActivePage()
 	self.pageVersion += 1
 	for _, connection in self.pageConnections do
@@ -3414,6 +3420,10 @@ function App:_RenderActivePage()
 		self.activeViewport = nil
 	end
 	clear(self.content)
+	if self.homeModal then self.homeModal:Destroy(); self.homeModal = nil end
+	self.homeBalanceLabels = nil
+	self.homeNavButtons = nil
+	self:_ApplyHomeChrome()
 	if not self.state then
 		self:_SyncAvatarPreviewPanel()
 		return
@@ -3435,6 +3445,8 @@ function App:_RenderActivePage()
 	else
 		self:_RenderSettings()
 	end
+	ModernLayouts.Apply(self)
+	ModernChrome.Finish(self)
 	self:_SyncAvatarPreviewPanel()
 	if self.animateNextPage then
 		self.animateNextPage = false
@@ -3450,11 +3462,13 @@ function App:_PageHeader(title: string, subtitle: string, accent: boolean?)
 		elseif isSecondaryPage then (if self.compact then 80 else 104)
 		elseif accent then 36
 		else 0
-	Factory.Label(self.content, title, UDim2.new(0.95, -rightReserve, 0, 38), {
+	local heading = Factory.Label(self.content, title, UDim2.new(0.95, -rightReserve, 0, 44), {
+		Name = "PageTitle",
 		Position = UDim2.new(0.025, 0, 0, 18),
 		Font = Theme.Fonts.Black,
-		TextSize = if self.compact then 22 else 28,
+		TextSize = if self.compact then 22 else 39,
 	})
+	heading:SetAttribute("ForgeSized", true)
 	if accent then
 		-- The concept art's small flourish ornament next to the page title.
 		-- All six studio pages opt in now, each having been checked against
@@ -3466,13 +3480,15 @@ function App:_PageHeader(title: string, subtitle: string, accent: boolean?)
 		local flourishOffset = if self.activePage == "Create" or isSecondaryPage then -rightReserve - 26 else -26
 		Factory.Icon(self.content, "FlourishDivider", UDim2.fromOffset(26, 15), UDim2.new(0.95, flourishOffset, 0, 32))
 	end
-	Factory.Label(self.content, subtitle, UDim2.new(0.95, 0, 0, 32), {
+	local description = Factory.Label(self.content, subtitle, UDim2.new(0.95, 0, 0, 32), {
+		Name = "PageSubtitle",
 		Position = UDim2.new(0.025, 0, 0, 57),
 		Color = Colors.TextMuted,
-		TextSize = if self.compact then 12 else 13,
+		TextSize = if self.compact then 12 else 21,
 		Wrapped = true,
 		AlignY = Enum.TextYAlignment.Top,
 	})
+	description:SetAttribute("ForgeSized", true)
 	if isSecondaryPage then
 		local home = Factory.ImageButton(
 			self.content,
@@ -3550,210 +3566,7 @@ end
 -- "what do you want to do?" The deeper tools still exist, but are revealed
 -- after the player chooses a job instead of appearing as six equal tabs.
 function App:_RenderHome()
-	self:_PageHeader("What do you want to do?", "Pick one. You can come back here at any time.", true)
-	local page = Factory.New("ScrollingFrame", {
-		Name = "HomeScroll",
-		Position = UDim2.new(0.02, 0, 0, 96),
-		Size = UDim2.new(0.96, 0, 1, -112),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		ScrollBarThickness = 4,
-		ScrollBarImageColor3 = Colors.Gold,
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		CanvasSize = UDim2.new(),
-		Parent = self.content,
-	})
-	self:_TrackScroll(page, "Home")
-	Factory.ScalePadding(page, 0.012, 0.012)
-	local stack = Factory.New("Frame", {
-		Size = UDim2.new(1, -8, 0, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundTransparency = 1,
-		Parent = page,
-	})
-	Factory.List(stack, Enum.FillDirection.Vertical, 14)
-
-	local choicesHeight = if self.compact then 594 else 220
-	local choices = Factory.New("Frame", {
-		Name = "MainChoices",
-		Size = UDim2.new(1, 0, 0, choicesHeight),
-		BackgroundTransparency = 1,
-		LayoutOrder = 1,
-		Parent = stack,
-	})
-	local choiceData = {
-		{
-			name = "Create my own item",
-			body = string.format(
-				"Describe an accessory. Roblox shows R$ %d before anything starts.",
-				self.state.prices.DirectGeneration
-			),
-			tag = "AI · PAID",
-			symbol = "✦",
-			accent = Colors.Gold,
-			button = "MAKE AN ITEM",
-			action = function()
-				self:_Track({ event = "HomeChoice", fields = { choice = "CREATE" } })
-				self:_Toast("info", "Start by typing one idea. You will see the price before Roblox asks you to pay.")
-				self:_OpenPage("Create")
-			end,
-		},
-		{
-			name = "Style my avatar",
-			body = "Try Roblox catalog items on your avatar for free. Buy only if you want to own one.",
-			tag = "FREE TO TRY",
-			symbol = "◇",
-			accent = Colors.Cyan,
-			button = "STYLE MY AVATAR",
-			action = function()
-				self:_Track({ event = "HomeChoice", fields = { choice = "STYLE" } })
-				self:_Toast("info", "Catalog try-ons are free. Nothing is purchased unless you choose Buy in Roblox.")
-				self:_OpenPage("Avatar Lab")
-			end,
-		},
-		{
-			name = "Play",
-			body = "Open the Arcade, enter a Runway battle, or earn tokens while you hang out.",
-			tag = "FREE",
-			symbol = "🎮",
-			accent = Colors.Mint,
-			button = "PICK A GAME",
-			action = function()
-				self:_Track({ event = "HomeChoice", fields = { choice = "PLAY" } })
-				self:_OpenPage("Play")
-			end,
-		},
-	}
-	for index, choice in choiceData do
-		local card = Factory.ImageCard(
-			choices,
-			if self.compact then UDim2.new(1, 0, 0, 190) else UDim2.new(1 / 3, -8, 1, 0),
-			if self.compact
-				then UDim2.fromOffset(0, (index - 1) * 202)
-				else UDim2.new((index - 1) / 3, (index - 1) * 4, 0, 0),
-			"HomeChoice"
-		)
-		Factory.Stroke(card, choice.accent, 0.28, 1.6)
-		local symbol = Factory.New("Frame", {
-			Size = UDim2.fromOffset(if self.compact then 42 else 48, if self.compact then 42 else 48),
-			Position = if self.compact then UDim2.fromOffset(14, 14) else UDim2.new(0.5, -24, 0, 14),
-			BackgroundColor3 = choice.accent,
-			BackgroundTransparency = 0.08,
-			BorderSizePixel = 0,
-			Parent = card,
-		})
-		Factory.Corner(symbol, 15)
-		Factory.Label(symbol, choice.symbol, UDim2.fromScale(1, 1), {
-			AlignX = Enum.TextXAlignment.Center,
-			Font = Theme.Fonts.Black,
-			TextSize = 22,
-			Color = Colors.Ink,
-		})
-		local pill = Factory.ImagePill(card, choice.tag, choice.accent, if self.compact then 92 else 104)
-		pill.Position = if self.compact then UDim2.fromOffset(70, 18) else UDim2.new(0.5, -52, 0, 66)
-		Factory.Label(card, choice.name, UDim2.new(1, if self.compact then -28 else -24, 0, 28), {
-			Position = if self.compact then UDim2.fromOffset(14, 60) else UDim2.fromOffset(12, 93),
-			Font = Theme.Fonts.Black,
-			TextSize = if self.compact then 17 else 18,
-			AlignX = if self.compact then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center,
-		})
-		Factory.Label(card, choice.body, UDim2.new(1, -28, 0, if self.compact then 42 else 40), {
-			Position = if self.compact then UDim2.fromOffset(14, 92) else UDim2.fromOffset(14, 121),
-			Color = Colors.TextMuted,
-			TextSize = 11,
-			Wrapped = true,
-			AlignX = if self.compact then Enum.TextXAlignment.Left else Enum.TextXAlignment.Center,
-			AlignY = Enum.TextYAlignment.Top,
-		})
-		local action = Factory.ImageButton(
-			card,
-			choice.button,
-			if self.compact then UDim2.new(1, -28, 0, 42) else UDim2.new(1, -28, 0, 42),
-			if self.compact then UDim2.fromOffset(14, 138) else UDim2.new(0, 14, 1, -56),
-			"primary"
-		)
-		action.TextSize = 12
-		self:_BindButton(action)
-		action.Activated:Connect(choice.action)
-	end
-
-	local library =
-		Factory.ImageCard(stack, UDim2.new(1, 0, 0, if self.compact then 122 else 76), nil, "LibraryShortcut")
-	library.LayoutOrder = 2
-	Factory.Label(library, "Already made something?", UDim2.new(1, if self.compact then -32 else -210, 0, 22), {
-		Position = UDim2.fromOffset(16, 14),
-		Font = Theme.Fonts.Bold,
-		TextSize = 13,
-	})
-	Factory.Label(
-		library,
-		"Open your saved models, equip them, or publish them.",
-		UDim2.new(1, if self.compact then -32 else -210, 0, 20),
-		{
-			Position = UDim2.fromOffset(16, 39),
-			Color = Colors.TextMuted,
-			TextSize = 11,
-		}
-	)
-	local openLibrary = Factory.ImageButton(
-		library,
-		"OPEN MY ITEMS",
-		if self.compact then UDim2.new(1, -32, 0, 40) else UDim2.fromOffset(172, 42),
-		if self.compact then UDim2.fromOffset(16, 70) else UDim2.new(1, -188, 0, 17),
-		nil
-	)
-	self:_BindButton(openLibrary)
-	openLibrary.Activated:Connect(function()
-		self:_OpenPage("My Studio")
-	end)
-
-	local more = Factory.ImageButton(
-		stack,
-		if self.homeMoreOpen then "HIDE EXTRA TOOLS" else "MORE TOOLS",
-		UDim2.new(1, 0, 0, 42),
-		nil,
-		nil
-	)
-	more.LayoutOrder = 3
-	self:_BindButton(more)
-	more.Activated:Connect(function()
-		self.homeMoreOpen = not self.homeMoreOpen
-		self:_RenderActivePage()
-	end)
-	if self.homeMoreOpen then
-		local extras = Factory.New("ScrollingFrame", {
-			Name = "ExtraTools",
-			Size = UDim2.new(1, 0, 0, 50),
-			BackgroundTransparency = 1,
-			BorderSizePixel = 0,
-			ScrollBarThickness = 3,
-			ScrollBarImageColor3 = Colors.Violet,
-			ScrollingDirection = Enum.ScrollingDirection.X,
-			AutomaticCanvasSize = Enum.AutomaticSize.X,
-			CanvasSize = UDim2.new(),
-			LayoutOrder = 4,
-			Parent = stack,
-		})
-		Factory.List(extras, Enum.FillDirection.Horizontal, 10)
-		for _, extra in
-			{
-				{ "COMMUNITY ITEMS", "Discover" },
-				{ "MAKE AVATAR ART", "Avatar Graphics" },
-				{ "SETTINGS", "Settings" },
-				{ "SHOW START HELP", "HELP" },
-			}
-		do
-			local control = Factory.ImageButton(extras, extra[1], UDim2.fromOffset(180, 42), nil, nil)
-			self:_BindButton(control)
-			control.Activated:Connect(function()
-				if extra[2] == "HELP" then
-					self:_ShowVisualTutorial()
-				else
-					self:_OpenPage(extra[2])
-				end
-			end)
-		end
-	end
+	HomeScreen.Render(self)
 end
 
 function App:_RenderPlay()
@@ -5128,6 +4941,7 @@ function App:_RenderCreate()
 				else "Roblox TextService + provider moderation · 3,600 triangle target · 2K texture",
 			UDim2.new(1, -32, 0, 34),
 			{
+				Name = "CreateSafetyNote",
 				Position = UDim2.fromOffset(16, safetyY),
 				Color = Colors.TextMuted,
 				TextSize = 11,

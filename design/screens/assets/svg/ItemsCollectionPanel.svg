@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1078" height="1072" viewBox="69.0 329.0 539.0 536.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+    <linearGradient id="screen-purple" x1="0" y1="0" x2=".3" y2="1">
+      <stop offset="0" stop-color="#322052" />
+      <stop offset=".55" stop-color="#23183c" />
+      <stop offset="1" stop-color="#141a30" />
+    </linearGradient>
+    <linearGradient id="screen-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff" stop-opacity=".16" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g id="ItemsCollectionPanel">
+    <rect x="77" y="337" width="523" height="516" rx="26" fill="url(#screen-purple)" filter="url(#small-shadow)" stroke="#bf67ff" stroke-width="2" />
+    <rect x="79" y="339" width="519" height="512" rx="25" fill="none" stroke-opacity=".08" stroke="#ffffff" stroke-width="2" />
+    <rect x="86" y="343" width="505" height="66" rx="20" fill="url(#screen-sheen)" />
+    <path d="M348.96000000000004 339L537.24 339L348.96000000000004 851L160.68 851Z" fill="#ffffff" opacity=".025" />
+  </g>
+</svg>

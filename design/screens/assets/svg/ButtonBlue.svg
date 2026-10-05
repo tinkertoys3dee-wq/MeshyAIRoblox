@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="64" viewBox="0 0 240 64">
+  <defs>
+    <linearGradient id="blue-button" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#0fe4f4" />
+      <stop offset=".16" stop-color="#00caff" />
+      <stop offset=".56" stop-color="#0094ff" />
+      <stop offset="1" stop-color="#0063f4" />
+    </linearGradient>
+    <linearGradient id="screen-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff" stop-opacity=".16" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g>
+    <rect x="1" y="1" width="238" height="62" rx="20" fill="url(#blue-button)" stroke="#00caff" stroke-width="2" />
+    <rect x="8" y="5" width="224" height="23.5" rx="12" fill="url(#screen-sheen)" stroke="none" stroke-width="2" />
+    <path d="M18 3H222" stroke="#ffffff" stroke-opacity=".45" />
+  </g>
+</svg>

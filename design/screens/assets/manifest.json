@@ -1,0 +1,3550 @@
+[
+  {
+    "name": "PanelBlue",
+    "file": "png/PanelBlue.png",
+    "svg": "svg/PanelBlue.svg",
+    "rect": [
+      0,
+      0,
+      240,
+      240
+    ],
+    "scale": 1,
+    "screen": "shared",
+    "width": 240,
+    "height": 240,
+    "sliceCenter": [
+      30,
+      30,
+      210,
+      210
+    ],
+    "pixelHash": "2fdbc26cceff0f4d6885552770518052aecba4906b3447c53530595d0987f1dc",
+    "uploadName": "PanelBlue"
+  },
+  {
+    "name": "PanelPurple",
+    "file": "png/PanelPurple.png",
+    "svg": "svg/PanelPurple.svg",
+    "rect": [
+      0,
+      0,
+      240,
+      240
+    ],
+    "scale": 1,
+    "screen": "shared",
+    "width": 240,
+    "height": 240,
+    "sliceCenter": [
+      30,
+      30,
+      210,
+      210
+    ],
+    "pixelHash": "a7b651c23910236ecbba75e93664986e6c892ff36305f80d26f257da9640f5a0",
+    "uploadName": "PanelPurple"
+  },
+  {
+    "name": "PanelGold",
+    "file": "png/PanelGold.png",
+    "svg": "svg/PanelGold.svg",
+    "rect": [
+      0,
+      0,
+      240,
+      240
+    ],
+    "scale": 1,
+    "screen": "shared",
+    "width": 240,
+    "height": 240,
+    "sliceCenter": [
+      30,
+      30,
+      210,
+      210
+    ],
+    "pixelHash": "b36701598bae8d81e4e74b35417bcf1a3a5af7d88b584882e387360aabb60e8a",
+    "uploadName": "PanelGold"
+  },
+  {
+    "name": "ButtonBlue",
+    "file": "png/ButtonBlue.png",
+    "svg": "svg/ButtonBlue.svg",
+    "rect": [
+      0,
+      0,
+      240,
+      64
+    ],
+    "scale": 1,
+    "screen": "shared",
+    "width": 240,
+    "height": 64,
+    "sliceCenter": [
+      30,
+      30,
+      210,
+      34
+    ],
+    "pixelHash": "4867316a40e58cc584e47d9675d449d7f6241ea9b0d0959b8e698b58da1639a0",
+    "uploadName": "ButtonBlue"
+  },
+  {
+    "name": "ButtonPurple",
+    "file": "png/ButtonPurple.png",
+    "svg": "svg/ButtonPurple.svg",
+    "rect": [
+      0,
+      0,
+      240,
+      64
+    ],
+    "scale": 1,
+    "screen": "shared",
+    "width": 240,
+    "height": 64,
+    "sliceCenter": [
+      30,
+      30,
+      210,
+      34
+    ],
+    "pixelHash": "106064d60f63691db694c00b568bd573545b818289d0b0e9aad66d099ec2f6e0",
+    "uploadName": "ButtonPurple"
+  },
+  {
+    "name": "ButtonGold",
+    "file": "png/ButtonGold.png",
+    "svg": "svg/ButtonGold.svg",
+    "rect": [
+      0,
+      0,
+      240,
+      64
+    ],
+    "scale": 1,
+    "screen": "shared",
+    "width": 240,
+    "height": 64,
+    "sliceCenter": [
+      30,
+      30,
+      210,
+      34
+    ],
+    "pixelHash": "8f8930936bc5755c395cb09fd177c2ce6f54e73c03985e17efd4e2a4dce2962c",
+    "uploadName": "ButtonGold"
+  },
+  {
+    "name": "ButtonQuiet",
+    "file": "png/ButtonQuiet.png",
+    "svg": "svg/ButtonQuiet.svg",
+    "rect": [
+      0,
+      0,
+      240,
+      64
+    ],
+    "scale": 1,
+    "screen": "shared",
+    "width": 240,
+    "height": 64,
+    "sliceCenter": [
+      30,
+      30,
+      210,
+      34
+    ],
+    "pixelHash": "9f53ae5330e6dc0550ec6e428de01c68902cc94fd4e778758715b7804d98c3a6",
+    "uploadName": "ButtonQuiet"
+  },
+  {
+    "name": "ButtonDanger",
+    "file": "png/ButtonDanger.png",
+    "svg": "svg/ButtonDanger.svg",
+    "rect": [
+      0,
+      0,
+      240,
+      64
+    ],
+    "scale": 1,
+    "screen": "shared",
+    "width": 240,
+    "height": 64,
+    "sliceCenter": [
+      30,
+      30,
+      210,
+      34
+    ],
+    "pixelHash": "051529b36b69563f655627fc64160dac9e59c72e17210dc914f1184ed26eb232",
+    "uploadName": "ButtonDanger"
+  },
+  {
+    "name": "SearchField",
+    "file": "png/SearchField.png",
+    "svg": "svg/SearchField.svg",
+    "rect": [
+      0,
+      0,
+      240,
+      64
+    ],
+    "scale": 1,
+    "screen": "shared",
+    "width": 240,
+    "height": 64,
+    "sliceCenter": [
+      30,
+      30,
+      210,
+      34
+    ],
+    "pixelHash": "2f556690695d8310952e1c5b7a2c2d31b3c65e6cca50ef2c4b0371fbe0399209",
+    "uploadName": "SearchField"
+  },
+  {
+    "name": "SectionHeader",
+    "file": "png/SectionHeader.png",
+    "svg": "svg/SectionHeader.svg",
+    "rect": [
+      0,
+      0,
+      240,
+      64
+    ],
+    "scale": 1,
+    "screen": "shared",
+    "width": 240,
+    "height": 64,
+    "sliceCenter": [
+      30,
+      30,
+      210,
+      34
+    ],
+    "pixelHash": "16bfb811e4c17478a65d0b03bb210a05ffa25b199ccb57655d33aaa8f067dd1d",
+    "uploadName": "SectionHeader"
+  },
+  {
+    "name": "ArcadeWeeklyPrizeBanner",
+    "file": "png/ArcadeWeeklyPrizeBanner.png",
+    "svg": "svg/ArcadeWeeklyPrizeBanner.svg",
+    "rect": [
+      73,
+      333,
+      1538,
+      57
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 3076,
+    "height": 114,
+    "pixelHash": "ecec6ce69bfd2abbbef33a6b69395d3eacb48dd9d44a5e9a0c825c3ed7c56974",
+    "uploadName": "ArcadeWeeklyPrizeBanner"
+  },
+  {
+    "name": "ArcadeGame1Panel",
+    "file": "png/ArcadeGame1Panel.png",
+    "svg": "svg/ArcadeGame1Panel.svg",
+    "rect": [
+      69,
+      398,
+      382,
+      159
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 764,
+    "height": 318,
+    "pixelHash": "b7ecbfacc4fa646518ed285c19cfa71e70ab6dfddebe76af931b624c588d9222",
+    "uploadName": "ArcadeGame1Panel"
+  },
+  {
+    "name": "ArcadeGame1Icon",
+    "file": "png/ArcadeGame1Icon.png",
+    "svg": "svg/ArcadeGame1Icon.svg",
+    "rect": [
+      90,
+      420,
+      75,
+      75
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 150,
+    "height": 150,
+    "pixelHash": "334f984059194dafb2e3c996ec6e1c88850b8a8ab8573253b9be6c2a7e48adf4",
+    "uploadName": "ArcadeGame1Icon"
+  },
+  {
+    "name": "ArcadeGame1PlayButton",
+    "file": "png/ArcadeGame1PlayButton.png",
+    "svg": "svg/ArcadeGame1PlayButton.svg",
+    "rect": [
+      258,
+      492,
+      174,
+      50
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 348,
+    "height": 100,
+    "pixelHash": "e0f97a0aa838ce294c39b8f8381131cecda8c26956e5bbee6a431c4a17ba2f0e",
+    "uploadName": "ArcadeGame1PlayButton"
+  },
+  {
+    "name": "ArcadeGame2Panel",
+    "file": "png/ArcadeGame1Panel.png",
+    "svg": "svg/ArcadeGame2Panel.svg",
+    "rect": [
+      457,
+      398,
+      382,
+      159
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 764,
+    "height": 318,
+    "pixelHash": "b7ecbfacc4fa646518ed285c19cfa71e70ab6dfddebe76af931b624c588d9222",
+    "uploadName": "ArcadeGame1Panel"
+  },
+  {
+    "name": "ArcadeGame2Icon",
+    "file": "png/ArcadeGame2Icon.png",
+    "svg": "svg/ArcadeGame2Icon.svg",
+    "rect": [
+      478,
+      420,
+      75,
+      75
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 150,
+    "height": 150,
+    "pixelHash": "a24306d65e9706223953f52448b0f470eb0fd355d1ff6f324e846a3d5e4f2448",
+    "uploadName": "ArcadeGame2Icon"
+  },
+  {
+    "name": "ArcadeGame2PlayButton",
+    "file": "png/ArcadeGame1PlayButton.png",
+    "svg": "svg/ArcadeGame2PlayButton.svg",
+    "rect": [
+      646,
+      492,
+      174,
+      50
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 348,
+    "height": 100,
+    "pixelHash": "e0f97a0aa838ce294c39b8f8381131cecda8c26956e5bbee6a431c4a17ba2f0e",
+    "uploadName": "ArcadeGame1PlayButton"
+  },
+  {
+    "name": "ArcadeGame3Panel",
+    "file": "png/ArcadeGame3Panel.png",
+    "svg": "svg/ArcadeGame3Panel.svg",
+    "rect": [
+      845,
+      398,
+      382,
+      159
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 764,
+    "height": 318,
+    "pixelHash": "66e898f732eaf7191fe0c963c58ec4a053f68622caabea4a47945030f4463d36",
+    "uploadName": "ArcadeGame3Panel"
+  },
+  {
+    "name": "ArcadeGame3Icon",
+    "file": "png/ArcadeGame3Icon.png",
+    "svg": "svg/ArcadeGame3Icon.svg",
+    "rect": [
+      866,
+      420,
+      75,
+      75
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 150,
+    "height": 150,
+    "pixelHash": "e4e95136e6df9b5dd9131f7a9d01ce7d2b0956a12c3120c70a8ec3726e324126",
+    "uploadName": "ArcadeGame3Icon"
+  },
+  {
+    "name": "ArcadeGame3PlayButton",
+    "file": "png/ArcadeGame3PlayButton.png",
+    "svg": "svg/ArcadeGame3PlayButton.svg",
+    "rect": [
+      1034,
+      492,
+      174,
+      50
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 348,
+    "height": 100,
+    "pixelHash": "fd0bb3d26a984400c98b244cf976503afc1c352871b925b96dc4dc64f2273d1e",
+    "uploadName": "ArcadeGame3PlayButton"
+  },
+  {
+    "name": "ArcadeGame4Panel",
+    "file": "png/ArcadeGame3Panel.png",
+    "svg": "svg/ArcadeGame4Panel.svg",
+    "rect": [
+      1233,
+      398,
+      382,
+      159
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 764,
+    "height": 318,
+    "pixelHash": "66e898f732eaf7191fe0c963c58ec4a053f68622caabea4a47945030f4463d36",
+    "uploadName": "ArcadeGame3Panel"
+  },
+  {
+    "name": "ArcadeGame4Icon",
+    "file": "png/ArcadeGame4Icon.png",
+    "svg": "svg/ArcadeGame4Icon.svg",
+    "rect": [
+      1254,
+      420,
+      75,
+      75
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 150,
+    "height": 150,
+    "pixelHash": "fe2100789a96140be298c195ca18a454fbfeac4057fb863fc7eff0d70a794da1",
+    "uploadName": "ArcadeGame4Icon"
+  },
+  {
+    "name": "ArcadeGame4PlayButton",
+    "file": "png/ArcadeGame3PlayButton.png",
+    "svg": "svg/ArcadeGame4PlayButton.svg",
+    "rect": [
+      1422,
+      492,
+      174,
+      50
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 348,
+    "height": 100,
+    "pixelHash": "fd0bb3d26a984400c98b244cf976503afc1c352871b925b96dc4dc64f2273d1e",
+    "uploadName": "ArcadeGame3PlayButton"
+  },
+  {
+    "name": "ArcadeGame5Panel",
+    "file": "png/ArcadeGame1Panel.png",
+    "svg": "svg/ArcadeGame5Panel.svg",
+    "rect": [
+      69,
+      552,
+      382,
+      159
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 764,
+    "height": 318,
+    "pixelHash": "b7ecbfacc4fa646518ed285c19cfa71e70ab6dfddebe76af931b624c588d9222",
+    "uploadName": "ArcadeGame1Panel"
+  },
+  {
+    "name": "ArcadeGame5Icon",
+    "file": "png/ArcadeGame5Icon.png",
+    "svg": "svg/ArcadeGame5Icon.svg",
+    "rect": [
+      90,
+      574,
+      75,
+      75
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 150,
+    "height": 150,
+    "pixelHash": "0ef4d451ed98b53228e9d4ab63e9bd140c9c052fb8cf44843c53189e7a26433d",
+    "uploadName": "ArcadeGame5Icon"
+  },
+  {
+    "name": "ArcadeGame5PlayButton",
+    "file": "png/ArcadeGame1PlayButton.png",
+    "svg": "svg/ArcadeGame5PlayButton.svg",
+    "rect": [
+      258,
+      646,
+      174,
+      50
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 348,
+    "height": 100,
+    "pixelHash": "e0f97a0aa838ce294c39b8f8381131cecda8c26956e5bbee6a431c4a17ba2f0e",
+    "uploadName": "ArcadeGame1PlayButton"
+  },
+  {
+    "name": "ArcadeGame6Panel",
+    "file": "png/ArcadeGame6Panel.png",
+    "svg": "svg/ArcadeGame6Panel.svg",
+    "rect": [
+      457,
+      552,
+      382,
+      159
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 764,
+    "height": 318,
+    "pixelHash": "6967d3fe756f416e4cd8939739df708bd6876e14b89328505fffb57602f7fd97",
+    "uploadName": "ArcadeGame6Panel"
+  },
+  {
+    "name": "ArcadeGame6Icon",
+    "file": "png/ArcadeGame6Icon.png",
+    "svg": "svg/ArcadeGame6Icon.svg",
+    "rect": [
+      478,
+      574,
+      75,
+      75
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 150,
+    "height": 150,
+    "pixelHash": "c7ac1fba3f8f345701afde8934d0cae5f44c8fb963b34da95f24ab139a9e2bd3",
+    "uploadName": "ArcadeGame6Icon"
+  },
+  {
+    "name": "ArcadeGame6PlayButton",
+    "file": "png/ArcadeGame6PlayButton.png",
+    "svg": "svg/ArcadeGame6PlayButton.svg",
+    "rect": [
+      646,
+      646,
+      174,
+      50
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 348,
+    "height": 100,
+    "pixelHash": "a9b9aa47b62b1ce250db3b7fe09c7841565b4bd3889f2427c9cc6875f2d67268",
+    "uploadName": "ArcadeGame6PlayButton"
+  },
+  {
+    "name": "ArcadeGame7Panel",
+    "file": "png/ArcadeGame1Panel.png",
+    "svg": "svg/ArcadeGame7Panel.svg",
+    "rect": [
+      845,
+      552,
+      382,
+      159
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 764,
+    "height": 318,
+    "pixelHash": "b7ecbfacc4fa646518ed285c19cfa71e70ab6dfddebe76af931b624c588d9222",
+    "uploadName": "ArcadeGame1Panel"
+  },
+  {
+    "name": "ArcadeGame7Icon",
+    "file": "png/ArcadeGame7Icon.png",
+    "svg": "svg/ArcadeGame7Icon.svg",
+    "rect": [
+      866,
+      574,
+      75,
+      75
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 150,
+    "height": 150,
+    "pixelHash": "d5817c4ab0d578d63361f5a219eb67fbad1bdb29e623eaa0586191be190f384d",
+    "uploadName": "ArcadeGame7Icon"
+  },
+  {
+    "name": "ArcadeGame7PlayButton",
+    "file": "png/ArcadeGame1PlayButton.png",
+    "svg": "svg/ArcadeGame7PlayButton.svg",
+    "rect": [
+      1034,
+      646,
+      174,
+      50
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 348,
+    "height": 100,
+    "pixelHash": "e0f97a0aa838ce294c39b8f8381131cecda8c26956e5bbee6a431c4a17ba2f0e",
+    "uploadName": "ArcadeGame1PlayButton"
+  },
+  {
+    "name": "ArcadeGame8Panel",
+    "file": "png/ArcadeGame3Panel.png",
+    "svg": "svg/ArcadeGame8Panel.svg",
+    "rect": [
+      1233,
+      552,
+      382,
+      159
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 764,
+    "height": 318,
+    "pixelHash": "66e898f732eaf7191fe0c963c58ec4a053f68622caabea4a47945030f4463d36",
+    "uploadName": "ArcadeGame3Panel"
+  },
+  {
+    "name": "ArcadeGame8Icon",
+    "file": "png/ArcadeGame8Icon.png",
+    "svg": "svg/ArcadeGame8Icon.svg",
+    "rect": [
+      1254,
+      574,
+      75,
+      75
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 150,
+    "height": 150,
+    "pixelHash": "74732bda51326ebeb4f5adab3e03f1eee57df30cb18b4dd337ec1c42bf1e3a48",
+    "uploadName": "ArcadeGame8Icon"
+  },
+  {
+    "name": "ArcadeGame8PlayButton",
+    "file": "png/ArcadeGame3PlayButton.png",
+    "svg": "svg/ArcadeGame8PlayButton.svg",
+    "rect": [
+      1422,
+      646,
+      174,
+      50
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 348,
+    "height": 100,
+    "pixelHash": "fd0bb3d26a984400c98b244cf976503afc1c352871b925b96dc4dc64f2273d1e",
+    "uploadName": "ArcadeGame3PlayButton"
+  },
+  {
+    "name": "ArcadeGame9Panel",
+    "file": "png/ArcadeGame1Panel.png",
+    "svg": "svg/ArcadeGame9Panel.svg",
+    "rect": [
+      69,
+      706,
+      382,
+      159
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 764,
+    "height": 318,
+    "pixelHash": "b7ecbfacc4fa646518ed285c19cfa71e70ab6dfddebe76af931b624c588d9222",
+    "uploadName": "ArcadeGame1Panel"
+  },
+  {
+    "name": "ArcadeGame9Icon",
+    "file": "png/ArcadeGame9Icon.png",
+    "svg": "svg/ArcadeGame9Icon.svg",
+    "rect": [
+      90,
+      728,
+      75,
+      75
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 150,
+    "height": 150,
+    "pixelHash": "527c9be09329e356cd231605ac1545a87fc3ae2f76b8a2aab9c0b39799d1c9ff",
+    "uploadName": "ArcadeGame9Icon"
+  },
+  {
+    "name": "ArcadeGame9PlayButton",
+    "file": "png/ArcadeGame1PlayButton.png",
+    "svg": "svg/ArcadeGame9PlayButton.svg",
+    "rect": [
+      258,
+      800,
+      174,
+      50
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 348,
+    "height": 100,
+    "pixelHash": "e0f97a0aa838ce294c39b8f8381131cecda8c26956e5bbee6a431c4a17ba2f0e",
+    "uploadName": "ArcadeGame1PlayButton"
+  },
+  {
+    "name": "ArcadeGame10Panel",
+    "file": "png/ArcadeGame1Panel.png",
+    "svg": "svg/ArcadeGame10Panel.svg",
+    "rect": [
+      457,
+      706,
+      382,
+      159
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 764,
+    "height": 318,
+    "pixelHash": "b7ecbfacc4fa646518ed285c19cfa71e70ab6dfddebe76af931b624c588d9222",
+    "uploadName": "ArcadeGame1Panel"
+  },
+  {
+    "name": "ArcadeGame10Icon",
+    "file": "png/ArcadeGame10Icon.png",
+    "svg": "svg/ArcadeGame10Icon.svg",
+    "rect": [
+      478,
+      728,
+      75,
+      75
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 150,
+    "height": 150,
+    "pixelHash": "f9949449b095d7557e478553ba80df4448b87b165cffc00008b026d060088056",
+    "uploadName": "ArcadeGame10Icon"
+  },
+  {
+    "name": "ArcadeGame10PlayButton",
+    "file": "png/ArcadeGame1PlayButton.png",
+    "svg": "svg/ArcadeGame10PlayButton.svg",
+    "rect": [
+      646,
+      800,
+      174,
+      50
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 348,
+    "height": 100,
+    "pixelHash": "e0f97a0aa838ce294c39b8f8381131cecda8c26956e5bbee6a431c4a17ba2f0e",
+    "uploadName": "ArcadeGame1PlayButton"
+  },
+  {
+    "name": "ArcadeGame11Panel",
+    "file": "png/ArcadeGame6Panel.png",
+    "svg": "svg/ArcadeGame11Panel.svg",
+    "rect": [
+      845,
+      706,
+      382,
+      159
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 764,
+    "height": 318,
+    "pixelHash": "6967d3fe756f416e4cd8939739df708bd6876e14b89328505fffb57602f7fd97",
+    "uploadName": "ArcadeGame6Panel"
+  },
+  {
+    "name": "ArcadeGame11Icon",
+    "file": "png/ArcadeGame11Icon.png",
+    "svg": "svg/ArcadeGame11Icon.svg",
+    "rect": [
+      866,
+      728,
+      75,
+      75
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 150,
+    "height": 150,
+    "pixelHash": "b839db348fff2c012a6c27fcd86de05238da0b9d1cc381070b4bd9562f42e89c",
+    "uploadName": "ArcadeGame11Icon"
+  },
+  {
+    "name": "ArcadeGame11PlayButton",
+    "file": "png/ArcadeGame6PlayButton.png",
+    "svg": "svg/ArcadeGame11PlayButton.svg",
+    "rect": [
+      1034,
+      800,
+      174,
+      50
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 348,
+    "height": 100,
+    "pixelHash": "a9b9aa47b62b1ce250db3b7fe09c7841565b4bd3889f2427c9cc6875f2d67268",
+    "uploadName": "ArcadeGame6PlayButton"
+  },
+  {
+    "name": "ArcadeGame12Panel",
+    "file": "png/ArcadeGame6Panel.png",
+    "svg": "svg/ArcadeGame12Panel.svg",
+    "rect": [
+      1233,
+      706,
+      382,
+      159
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 764,
+    "height": 318,
+    "pixelHash": "6967d3fe756f416e4cd8939739df708bd6876e14b89328505fffb57602f7fd97",
+    "uploadName": "ArcadeGame6Panel"
+  },
+  {
+    "name": "ArcadeGame12Icon",
+    "file": "png/ArcadeGame12Icon.png",
+    "svg": "svg/ArcadeGame12Icon.svg",
+    "rect": [
+      1254,
+      728,
+      75,
+      75
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 150,
+    "height": 150,
+    "pixelHash": "f045a40e2e38cff639e504541974700460b2e6a5f89197572864b8ed1120de5d",
+    "uploadName": "ArcadeGame12Icon"
+  },
+  {
+    "name": "ArcadeGame12PlayButton",
+    "file": "png/ArcadeGame6PlayButton.png",
+    "svg": "svg/ArcadeGame12PlayButton.svg",
+    "rect": [
+      1422,
+      800,
+      174,
+      50
+    ],
+    "scale": 2,
+    "screen": "arcade",
+    "width": 348,
+    "height": 100,
+    "pixelHash": "a9b9aa47b62b1ce250db3b7fe09c7841565b4bd3889f2427c9cc6875f2d67268",
+    "uploadName": "ArcadeGame6PlayButton"
+  },
+  {
+    "name": "GraphicsTabs",
+    "file": "png/GraphicsTabs.png",
+    "svg": "svg/GraphicsTabs.svg",
+    "rect": [
+      1267,
+      255,
+      344,
+      64
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 688,
+    "height": 128,
+    "pixelHash": "1ecaf74486b216bd4edec913320eee68a3759b58ead55bf688b6f78d43c448ed",
+    "uploadName": "GraphicsTabs"
+  },
+  {
+    "name": "GraphicsComposerPanel",
+    "file": "png/GraphicsComposerPanel.png",
+    "svg": "svg/GraphicsComposerPanel.svg",
+    "rect": [
+      69,
+      329,
+      992,
+      536
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 1984,
+    "height": 1072,
+    "pixelHash": "00e58bf8a808402a3ca976b13421ecef1b6f2e138258b54cf43ad05784863fa4",
+    "uploadName": "GraphicsComposerPanel"
+  },
+  {
+    "name": "GraphicsAvatarSourceButton",
+    "file": "png/GraphicsAvatarSourceButton.png",
+    "svg": "svg/GraphicsAvatarSourceButton.svg",
+    "rect": [
+      96,
+      381,
+      465,
+      68
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 930,
+    "height": 136,
+    "pixelHash": "9d7375fb4c15eb1ea6da30d5ac2a0a1cbe1699b463e5d4e53466f013616295ff",
+    "uploadName": "GraphicsAvatarSourceButton"
+  },
+  {
+    "name": "GraphicsTextSourceButton",
+    "file": "png/GraphicsTextSourceButton.png",
+    "svg": "svg/GraphicsTextSourceButton.svg",
+    "rect": [
+      569,
+      381,
+      465,
+      68
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 930,
+    "height": 136,
+    "pixelHash": "3754cd716593c28adfd5467276c97dc06a1a2a89bde6ee67e4e68d08aaae5912",
+    "uploadName": "GraphicsTextSourceButton"
+  },
+  {
+    "name": "GraphicsViewHeadshot",
+    "file": "png/GraphicsViewHeadshot.png",
+    "svg": "svg/GraphicsViewHeadshot.svg",
+    "rect": [
+      100,
+      481,
+      186,
+      48
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 372,
+    "height": 96,
+    "pixelHash": "edb49c5a253b5ad8f9bfe071e157a81561159e7dcc6ec69e60dd2062e5625362",
+    "uploadName": "GraphicsViewHeadshot"
+  },
+  {
+    "name": "GraphicsViewBust",
+    "file": "png/GraphicsViewBust.png",
+    "svg": "svg/GraphicsViewBust.svg",
+    "rect": [
+      293,
+      481,
+      162,
+      48
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 324,
+    "height": 96,
+    "pixelHash": "bf6b2c5336829b6012c6cd8ba615d9756a47d23df20e082d6c43051c8a99d8b1",
+    "uploadName": "GraphicsViewBust"
+  },
+  {
+    "name": "GraphicsViewFullbody",
+    "file": "png/GraphicsViewFullbody.png",
+    "svg": "svg/GraphicsViewFullbody.svg",
+    "rect": [
+      462,
+      481,
+      186,
+      48
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 372,
+    "height": 96,
+    "pixelHash": "76f30fb39275676a3ea7011c884b268761f64b3bd91444367871d2866afda7d8",
+    "uploadName": "GraphicsViewFullbody"
+  },
+  {
+    "name": "GraphicsSourceAvatarWell",
+    "file": "png/GraphicsSourceAvatarWell.png",
+    "svg": "svg/GraphicsSourceAvatarWell.svg",
+    "rect": [
+      100,
+      537,
+      106,
+      90
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 212,
+    "height": 180,
+    "pixelHash": "45a48ba646f94fb48d46a26f110ce297ef979597e17c1a91e085080a2dcc7e6b",
+    "uploadName": "GraphicsSourceAvatarWell"
+  },
+  {
+    "name": "GraphicsPromptField",
+    "file": "png/GraphicsPromptField.png",
+    "svg": "svg/GraphicsPromptField.svg",
+    "rect": [
+      100,
+      666,
+      930,
+      78
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 1860,
+    "height": 156,
+    "pixelHash": "44f8aef95e18d1d254214c59a9fa103119afc156ac4e537a0b99cfab937eeec1",
+    "uploadName": "GraphicsPromptField"
+  },
+  {
+    "name": "GraphicsAdvancedButton",
+    "file": "png/GraphicsAdvancedButton.png",
+    "svg": "svg/GraphicsAdvancedButton.svg",
+    "rect": [
+      96,
+      774,
+      441,
+      66
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 882,
+    "height": 132,
+    "pixelHash": "fba5a87e9a3c56844d01e95579162ace040633da5d9eb8e0cc2205607af39a6a",
+    "uploadName": "GraphicsAdvancedButton"
+  },
+  {
+    "name": "GraphicsCreateButton",
+    "file": "png/GraphicsCreateButton.png",
+    "svg": "svg/GraphicsCreateButton.svg",
+    "rect": [
+      728,
+      769,
+      306,
+      74
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 612,
+    "height": 148,
+    "pixelHash": "4012404ca771286f24a359555c501ab77c8618f9f3276c03b102d332d16bab30",
+    "uploadName": "GraphicsCreateButton"
+  },
+  {
+    "name": "GraphicsActivityPanel",
+    "file": "png/GraphicsActivityPanel.png",
+    "svg": "svg/GraphicsActivityPanel.svg",
+    "rect": [
+      1070,
+      329,
+      545,
+      176
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 1090,
+    "height": 352,
+    "pixelHash": "65fd490f93d9804ac1e0f7e86819b809acbadfd33b7e14b391dac8dd754b81f6",
+    "uploadName": "GraphicsActivityPanel"
+  },
+  {
+    "name": "GraphicsActivityIcon",
+    "file": "png/GraphicsActivityIcon.png",
+    "svg": "svg/GraphicsActivityIcon.svg",
+    "rect": [
+      1106,
+      398,
+      32,
+      32
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 64,
+    "height": 64,
+    "pixelHash": "450c2664ce17e6069c2c55f31dcbcc4786d8c0e13ce422a13a7318939ed4d2c8",
+    "uploadName": "GraphicsActivityIcon"
+  },
+  {
+    "name": "GraphicsProgressTrack",
+    "file": "png/GraphicsProgressTrack.png",
+    "svg": "svg/GraphicsProgressTrack.svg",
+    "rect": [
+      1147,
+      434,
+      435,
+      18
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 870,
+    "height": 36,
+    "pixelHash": "63924ca6fd7403318c3cbcb943ee75b756a6ce50bee5151477aedd16213157c3",
+    "uploadName": "GraphicsProgressTrack"
+  },
+  {
+    "name": "GraphicsGalleryPanel",
+    "file": "png/GraphicsGalleryPanel.png",
+    "svg": "svg/GraphicsGalleryPanel.svg",
+    "rect": [
+      1070,
+      508,
+      545,
+      357
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 1090,
+    "height": 714,
+    "pixelHash": "98b27289e807ecbbad57d53f2342738f92815bf1cda26d6248bdd7031f76dfb7",
+    "uploadName": "GraphicsGalleryPanel"
+  },
+  {
+    "name": "GraphicsGalleryCard1PreviewFrame",
+    "file": "png/GraphicsGalleryCard1PreviewFrame.png",
+    "svg": "svg/GraphicsGalleryCard1PreviewFrame.svg",
+    "rect": [
+      1095,
+      571,
+      245,
+      138
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 490,
+    "height": 276,
+    "pixelHash": "5b3baa87a4956030861637b368b65a35458bcc6d8a74fac5aa37f72dcb1d08f3",
+    "uploadName": "GraphicsGalleryCard1PreviewFrame"
+  },
+  {
+    "name": "GraphicsGalleryCard1DownloadLinkField",
+    "file": "png/GraphicsGalleryCard1DownloadLinkField.png",
+    "svg": "svg/GraphicsGalleryCard1DownloadLinkField.svg",
+    "rect": [
+      1096,
+      776,
+      243,
+      30
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 486,
+    "height": 60,
+    "pixelHash": "93e1d2dfa32bced8beaf498fa88fed2b76964b3472ce2b9c6ab10a5accadb993",
+    "uploadName": "GraphicsGalleryCard1DownloadLinkField"
+  },
+  {
+    "name": "GraphicsGalleryCard1DeleteButton",
+    "file": "png/GraphicsGalleryCard1DeleteButton.png",
+    "svg": "svg/GraphicsGalleryCard1DeleteButton.svg",
+    "rect": [
+      1096,
+      812,
+      243,
+      32
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 486,
+    "height": 64,
+    "pixelHash": "1678be838a49f30777bcdda4e4e20bbd8c8af9eefba3e37b8a6ab0597a2248b1",
+    "uploadName": "GraphicsGalleryCard1DeleteButton"
+  },
+  {
+    "name": "GraphicsGalleryCard2PreviewFrame",
+    "file": "png/GraphicsGalleryCard1PreviewFrame.png",
+    "svg": "svg/GraphicsGalleryCard2PreviewFrame.svg",
+    "rect": [
+      1345,
+      571,
+      245,
+      138
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 490,
+    "height": 276,
+    "pixelHash": "5b3baa87a4956030861637b368b65a35458bcc6d8a74fac5aa37f72dcb1d08f3",
+    "uploadName": "GraphicsGalleryCard1PreviewFrame"
+  },
+  {
+    "name": "GraphicsGalleryCard2DownloadLinkField",
+    "file": "png/GraphicsGalleryCard1DownloadLinkField.png",
+    "svg": "svg/GraphicsGalleryCard2DownloadLinkField.svg",
+    "rect": [
+      1346,
+      776,
+      243,
+      30
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 486,
+    "height": 60,
+    "pixelHash": "93e1d2dfa32bced8beaf498fa88fed2b76964b3472ce2b9c6ab10a5accadb993",
+    "uploadName": "GraphicsGalleryCard1DownloadLinkField"
+  },
+  {
+    "name": "GraphicsGalleryCard2DeleteButton",
+    "file": "png/GraphicsGalleryCard1DeleteButton.png",
+    "svg": "svg/GraphicsGalleryCard2DeleteButton.svg",
+    "rect": [
+      1346,
+      812,
+      243,
+      32
+    ],
+    "scale": 2,
+    "screen": "avatar-graphics",
+    "width": 486,
+    "height": 64,
+    "pixelHash": "1678be838a49f30777bcdda4e4e20bbd8c8af9eefba3e37b8a6ab0597a2248b1",
+    "uploadName": "GraphicsGalleryCard1DeleteButton"
+  },
+  {
+    "name": "AvatarLabTabs",
+    "file": "png/AvatarLabTabs.png",
+    "svg": "svg/AvatarLabTabs.svg",
+    "rect": [
+      1138,
+      255,
+      473,
+      64
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 946,
+    "height": 128,
+    "pixelHash": "a9aada89715a3881199f893b1f224d21a7033be383dcf5e382bab35941f7359f",
+    "uploadName": "AvatarLabTabs"
+  },
+  {
+    "name": "AvatarLabSearchField",
+    "file": "png/AvatarLabSearchField.png",
+    "svg": "svg/AvatarLabSearchField.svg",
+    "rect": [
+      72,
+      332,
+      862,
+      64
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 1724,
+    "height": 128,
+    "pixelHash": "57015b18cd0c62f2a9bca395cb746336ecf21880e12661ed61752aa40eb9eace",
+    "uploadName": "AvatarLabSearchField"
+  },
+  {
+    "name": "AvatarLabSearchButton",
+    "file": "png/AvatarLabSearchButton.png",
+    "svg": "svg/AvatarLabSearchButton.svg",
+    "rect": [
+      943,
+      329,
+      183,
+      74
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 366,
+    "height": 148,
+    "pixelHash": "548d863bf2d2f6db3960d4733179f15abfce6409307b0ba06500186ebeb6f99e",
+    "uploadName": "AvatarLabSearchButton"
+  },
+  {
+    "name": "AvatarLabCategoryHair",
+    "file": "png/AvatarLabCategoryHair.png",
+    "svg": "svg/AvatarLabCategoryHair.svg",
+    "rect": [
+      74,
+      408,
+      101,
+      48
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 202,
+    "height": 96,
+    "pixelHash": "7b09ba0898d55370bb66b5029102415969a7d93f8cdea4a56a71f51573f29785",
+    "uploadName": "AvatarLabCategoryHair"
+  },
+  {
+    "name": "AvatarLabCategoryHats",
+    "file": "png/AvatarLabCategoryHats.png",
+    "svg": "svg/AvatarLabCategoryHats.svg",
+    "rect": [
+      181,
+      408,
+      101,
+      48
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 202,
+    "height": 96,
+    "pixelHash": "8c41470af359a333f675968e3e442a9038b0a417d717b415b47a81ecac7dc65f",
+    "uploadName": "AvatarLabCategoryHats"
+  },
+  {
+    "name": "AvatarLabCategoryFace",
+    "file": "png/AvatarLabCategoryHair.png",
+    "svg": "svg/AvatarLabCategoryFace.svg",
+    "rect": [
+      288,
+      408,
+      101,
+      48
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 202,
+    "height": 96,
+    "pixelHash": "7b09ba0898d55370bb66b5029102415969a7d93f8cdea4a56a71f51573f29785",
+    "uploadName": "AvatarLabCategoryHair"
+  },
+  {
+    "name": "AvatarLabCategoryShirts",
+    "file": "png/AvatarLabCategoryShirts.png",
+    "svg": "svg/AvatarLabCategoryShirts.svg",
+    "rect": [
+      395,
+      408,
+      118,
+      48
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 236,
+    "height": 96,
+    "pixelHash": "71d90e3309a11e8a731b71d505d107e58bc6bb4ecb94bd432edb32638971b7f2",
+    "uploadName": "AvatarLabCategoryShirts"
+  },
+  {
+    "name": "AvatarLabCategoryPants",
+    "file": "png/AvatarLabCategoryPants.png",
+    "svg": "svg/AvatarLabCategoryPants.svg",
+    "rect": [
+      519,
+      408,
+      111,
+      48
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 222,
+    "height": 96,
+    "pixelHash": "4fd8a18b0c53280526410777754ff770d8f8461f596bb66f3d37604e0b43d792",
+    "uploadName": "AvatarLabCategoryPants"
+  },
+  {
+    "name": "AvatarLabCategoryJackets",
+    "file": "png/AvatarLabCategoryJackets.png",
+    "svg": "svg/AvatarLabCategoryJackets.svg",
+    "rect": [
+      636,
+      408,
+      127,
+      48
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 254,
+    "height": 96,
+    "pixelHash": "66d2854fb93fff98e1918b09db930795364dbd0118805ab0004764cc1aaf5922",
+    "uploadName": "AvatarLabCategoryJackets"
+  },
+  {
+    "name": "AvatarLabCategoryBack",
+    "file": "png/AvatarLabCategoryBack.png",
+    "svg": "svg/AvatarLabCategoryBack.svg",
+    "rect": [
+      769,
+      408,
+      106,
+      48
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 212,
+    "height": 96,
+    "pixelHash": "c2721798b3e79d1700bc655be7dba15f307c4cb3a94c677b41b7f48fac85306f",
+    "uploadName": "AvatarLabCategoryBack"
+  },
+  {
+    "name": "AvatarLabMoreFiltersButton",
+    "file": "png/AvatarLabMoreFiltersButton.png",
+    "svg": "svg/AvatarLabMoreFiltersButton.svg",
+    "rect": [
+      892,
+      407,
+      230,
+      50
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 460,
+    "height": 100,
+    "pixelHash": "5e57e42ebf0ee66b6629455d225c0c76e2fb3ce70f9c23d108f9bdc8eeac0e54",
+    "uploadName": "AvatarLabMoreFiltersButton"
+  },
+  {
+    "name": "AvatarLabCard1Panel",
+    "file": "png/AvatarLabCard1Panel.png",
+    "svg": "svg/AvatarLabCard1Panel.svg",
+    "rect": [
+      69,
+      501,
+      349,
+      364
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 698,
+    "height": 728,
+    "pixelHash": "183430497fcc7975601b1b03380d402697076c73a7010f7ee838532652413c3b",
+    "uploadName": "AvatarLabCard1Panel"
+  },
+  {
+    "name": "AvatarLabCard1PreviewWell",
+    "file": "png/AvatarLabCard1PreviewWell.png",
+    "svg": "svg/AvatarLabCard1PreviewWell.svg",
+    "rect": [
+      89,
+      521,
+      309,
+      150
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 618,
+    "height": 300,
+    "pixelHash": "95e6002c2f0fe129be8d5857942f5772dfd148bcf754e3cab4c8df48bef25094",
+    "uploadName": "AvatarLabCard1PreviewWell"
+  },
+  {
+    "name": "AvatarLabCard1SaveButton",
+    "file": "png/AvatarLabCard1SaveButton.png",
+    "svg": "svg/AvatarLabCard1SaveButton.svg",
+    "rect": [
+      321,
+      531,
+      64,
+      34
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 128,
+    "height": 68,
+    "pixelHash": "b4298d3f362b140890cfc4e7cf91025ab9a2389b68bfb04243596f7afcacb287",
+    "uploadName": "AvatarLabCard1SaveButton"
+  },
+  {
+    "name": "AvatarLabCard1TryOnButton",
+    "file": "png/AvatarLabCard1TryOnButton.png",
+    "svg": "svg/AvatarLabCard1TryOnButton.svg",
+    "rect": [
+      85,
+      738,
+      317,
+      70
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 634,
+    "height": 140,
+    "pixelHash": "f4f88418a2691497b1ff6bbc9525c2e8e30b31d421d2b79246c94b9dccfdf0b3",
+    "uploadName": "AvatarLabCard1TryOnButton"
+  },
+  {
+    "name": "AvatarLabCard2Panel",
+    "file": "png/AvatarLabCard1Panel.png",
+    "svg": "svg/AvatarLabCard2Panel.svg",
+    "rect": [
+      423,
+      501,
+      349,
+      364
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 698,
+    "height": 728,
+    "pixelHash": "183430497fcc7975601b1b03380d402697076c73a7010f7ee838532652413c3b",
+    "uploadName": "AvatarLabCard1Panel"
+  },
+  {
+    "name": "AvatarLabCard2PreviewWell",
+    "file": "png/AvatarLabCard1PreviewWell.png",
+    "svg": "svg/AvatarLabCard2PreviewWell.svg",
+    "rect": [
+      443,
+      521,
+      309,
+      150
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 618,
+    "height": 300,
+    "pixelHash": "95e6002c2f0fe129be8d5857942f5772dfd148bcf754e3cab4c8df48bef25094",
+    "uploadName": "AvatarLabCard1PreviewWell"
+  },
+  {
+    "name": "AvatarLabCard2SaveButton",
+    "file": "png/AvatarLabCard1SaveButton.png",
+    "svg": "svg/AvatarLabCard2SaveButton.svg",
+    "rect": [
+      675,
+      531,
+      64,
+      34
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 128,
+    "height": 68,
+    "pixelHash": "b4298d3f362b140890cfc4e7cf91025ab9a2389b68bfb04243596f7afcacb287",
+    "uploadName": "AvatarLabCard1SaveButton"
+  },
+  {
+    "name": "AvatarLabCard2TryOnButton",
+    "file": "png/AvatarLabCard1TryOnButton.png",
+    "svg": "svg/AvatarLabCard2TryOnButton.svg",
+    "rect": [
+      439,
+      738,
+      317,
+      70
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 634,
+    "height": 140,
+    "pixelHash": "f4f88418a2691497b1ff6bbc9525c2e8e30b31d421d2b79246c94b9dccfdf0b3",
+    "uploadName": "AvatarLabCard1TryOnButton"
+  },
+  {
+    "name": "AvatarLabCard3Panel",
+    "file": "png/AvatarLabCard1Panel.png",
+    "svg": "svg/AvatarLabCard3Panel.svg",
+    "rect": [
+      777,
+      501,
+      349,
+      364
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 698,
+    "height": 728,
+    "pixelHash": "183430497fcc7975601b1b03380d402697076c73a7010f7ee838532652413c3b",
+    "uploadName": "AvatarLabCard1Panel"
+  },
+  {
+    "name": "AvatarLabCard3PreviewWell",
+    "file": "png/AvatarLabCard1PreviewWell.png",
+    "svg": "svg/AvatarLabCard3PreviewWell.svg",
+    "rect": [
+      797,
+      521,
+      309,
+      150
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 618,
+    "height": 300,
+    "pixelHash": "95e6002c2f0fe129be8d5857942f5772dfd148bcf754e3cab4c8df48bef25094",
+    "uploadName": "AvatarLabCard1PreviewWell"
+  },
+  {
+    "name": "AvatarLabCard3SaveButton",
+    "file": "png/AvatarLabCard1SaveButton.png",
+    "svg": "svg/AvatarLabCard3SaveButton.svg",
+    "rect": [
+      1029,
+      531,
+      64,
+      34
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 128,
+    "height": 68,
+    "pixelHash": "b4298d3f362b140890cfc4e7cf91025ab9a2389b68bfb04243596f7afcacb287",
+    "uploadName": "AvatarLabCard1SaveButton"
+  },
+  {
+    "name": "AvatarLabCard3TryOnButton",
+    "file": "png/AvatarLabCard1TryOnButton.png",
+    "svg": "svg/AvatarLabCard3TryOnButton.svg",
+    "rect": [
+      793,
+      738,
+      317,
+      70
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 634,
+    "height": 140,
+    "pixelHash": "f4f88418a2691497b1ff6bbc9525c2e8e30b31d421d2b79246c94b9dccfdf0b3",
+    "uploadName": "AvatarLabCard1TryOnButton"
+  },
+  {
+    "name": "AvatarLabPreviewPanel",
+    "file": "png/AvatarLabPreviewPanel.png",
+    "svg": "svg/AvatarLabPreviewPanel.svg",
+    "rect": [
+      1134,
+      329,
+      481,
+      536
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 962,
+    "height": 1072,
+    "pixelHash": "eb567908bb3b0bd2e22601ab8d5dfb0bc97ddc98d26b764c7fddd7f80b736055",
+    "uploadName": "AvatarLabPreviewPanel"
+  },
+  {
+    "name": "AvatarLabPreviewWell",
+    "file": "png/AvatarLabPreviewWell.png",
+    "svg": "svg/AvatarLabPreviewWell.svg",
+    "rect": [
+      1164,
+      428,
+      421,
+      250
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 842,
+    "height": 500,
+    "pixelHash": "d27c0da7996d27aefae2e27313c4d5b861fe0da8e8d75939d6fa6a2f0d4d5976",
+    "uploadName": "AvatarLabPreviewWell"
+  },
+  {
+    "name": "AvatarLabOrbitHint",
+    "file": "png/AvatarLabOrbitHint.png",
+    "svg": "svg/AvatarLabOrbitHint.svg",
+    "rect": [
+      1177,
+      443,
+      109,
+      27
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 218,
+    "height": 54,
+    "pixelHash": "98807924d02fdb637ba8560c2b13d4151575b74dcb7d9772391cee8afc9cb2af",
+    "uploadName": "AvatarLabOrbitHint"
+  },
+  {
+    "name": "AvatarLabResetCamera",
+    "file": "png/AvatarLabResetCamera.png",
+    "svg": "svg/AvatarLabResetCamera.svg",
+    "rect": [
+      1525,
+      440,
+      43,
+      43
+    ],
+    "scale": 2,
+    "screen": "avatar-lab",
+    "width": 86,
+    "height": 86,
+    "pixelHash": "4f9d988bb3c6942db01a828de2329e37300486a0b70970bb8d076c2a5b86727a",
+    "uploadName": "AvatarLabResetCamera"
+  },
+  {
+    "name": "CreateSimpleMode",
+    "file": "png/CreateSimpleMode.png",
+    "svg": "svg/CreateSimpleMode.svg",
+    "rect": [
+      1254,
+      248,
+      179,
+      63
+    ],
+    "scale": 2,
+    "screen": "create",
+    "width": 358,
+    "height": 126,
+    "pixelHash": "d21f663b2a734d0653951100f90ca551d089160c3137a3b0a56c3185581f2115",
+    "uploadName": "CreateSimpleMode"
+  },
+  {
+    "name": "CreatePromptPanel",
+    "file": "png/CreatePromptPanel.png",
+    "svg": "svg/CreatePromptPanel.svg",
+    "rect": [
+      69,
+      329,
+      992,
+      536
+    ],
+    "scale": 2,
+    "screen": "create",
+    "width": 1984,
+    "height": 1072,
+    "pixelHash": "24815720cc38303660d3de2e28853d20bf9b991a356040bf98335bb4ec1edbe1",
+    "uploadName": "CreatePromptPanel"
+  },
+  {
+    "name": "CreatePromptField",
+    "file": "png/CreatePromptField.png",
+    "svg": "svg/CreatePromptField.svg",
+    "rect": [
+      107,
+      441,
+      917,
+      131
+    ],
+    "scale": 2,
+    "screen": "create",
+    "width": 1834,
+    "height": 262,
+    "pixelHash": "aac8804723746b9b729af3af82a0a6247ec1686ecaa56d34e02a1b2f22f34899",
+    "uploadName": "CreatePromptField"
+  },
+  {
+    "name": "CreateIdea1",
+    "file": "png/CreateIdea1.png",
+    "svg": "svg/CreateIdea1.svg",
+    "rect": [
+      108,
+      622,
+      179,
+      61
+    ],
+    "scale": 2,
+    "screen": "create",
+    "width": 358,
+    "height": 122,
+    "pixelHash": "b99977c8685bcc9e042c1b9d6e9a1d2868193341691eb84679bbedca7ec21b79",
+    "uploadName": "CreateIdea1"
+  },
+  {
+    "name": "CreateIdea2",
+    "file": "png/CreateIdea2.png",
+    "svg": "svg/CreateIdea2.svg",
+    "rect": [
+      291,
+      622,
+      179,
+      61
+    ],
+    "scale": 2,
+    "screen": "create",
+    "width": 358,
+    "height": 122,
+    "pixelHash": "03741f21d36603674bdecdfb9c966eb3bc8318f33e5c711cbdeb8a1778f5f31d",
+    "uploadName": "CreateIdea2"
+  },
+  {
+    "name": "CreateIdea3",
+    "file": "png/CreateIdea3.png",
+    "svg": "svg/CreateIdea3.svg",
+    "rect": [
+      474,
+      622,
+      179,
+      61
+    ],
+    "scale": 2,
+    "screen": "create",
+    "width": 358,
+    "height": 122,
+    "pixelHash": "c852916551fd56eeacf32be53c73d71846eadb484030e1edcc0bacae9fb10385",
+    "uploadName": "CreateIdea3"
+  },
+  {
+    "name": "CreateIdea4",
+    "file": "png/CreateIdea4.png",
+    "svg": "svg/CreateIdea4.svg",
+    "rect": [
+      657,
+      622,
+      179,
+      61
+    ],
+    "scale": 2,
+    "screen": "create",
+    "width": 358,
+    "height": 122,
+    "pixelHash": "4067c82097fe20ef91fdbc19be180d7196402458634b4207d64f6dc2bd2761a9",
+    "uploadName": "CreateIdea4"
+  },
+  {
+    "name": "CreateIdea5",
+    "file": "png/CreateIdea5.png",
+    "svg": "svg/CreateIdea5.svg",
+    "rect": [
+      840,
+      622,
+      179,
+      61
+    ],
+    "scale": 2,
+    "screen": "create",
+    "width": 358,
+    "height": 122,
+    "pixelHash": "5ee3fbc660feb72dd7f569941cd723c71f61490507d898115e15ede9e89697c7",
+    "uploadName": "CreateIdea5"
+  },
+  {
+    "name": "CreateGenerateButton",
+    "file": "png/CreateGenerateButton.png",
+    "svg": "svg/CreateGenerateButton.svg",
+    "rect": [
+      103,
+      703,
+      924,
+      96
+    ],
+    "scale": 2,
+    "screen": "create",
+    "width": 1848,
+    "height": 192,
+    "pixelHash": "19e7bba07d17b9d1bec57f654f049882e1537b66fe34d999ed65ae5278a583c7",
+    "uploadName": "CreateGenerateButton"
+  },
+  {
+    "name": "CreatePreviewPanel",
+    "file": "png/CreatePreviewPanel.png",
+    "svg": "svg/CreatePreviewPanel.svg",
+    "rect": [
+      1070,
+      329,
+      545,
+      536
+    ],
+    "scale": 2,
+    "screen": "create",
+    "width": 1090,
+    "height": 1072,
+    "pixelHash": "aeffdf4af30e2ed4c001bb712df803800ba7ee2e741413c06a32f59d33258b7b",
+    "uploadName": "CreatePreviewPanel"
+  },
+  {
+    "name": "CreatePreviewArtwork",
+    "file": "png/CreatePreviewArtwork.png",
+    "svg": "svg/CreatePreviewArtwork.svg",
+    "rect": [
+      1090,
+      407,
+      505,
+      382
+    ],
+    "scale": 2,
+    "screen": "create",
+    "width": 1010,
+    "height": 764,
+    "pixelHash": "0b6ab153909f1cb7253e201ae08bff077f0a92343f64b89f1b4da66465d198fc",
+    "uploadName": "CreatePreviewArtwork"
+  },
+  {
+    "name": "GamesFreeBadge",
+    "file": "png/GamesFreeBadge.png",
+    "svg": "svg/GamesFreeBadge.svg",
+    "rect": [
+      1372,
+      254,
+      235,
+      52
+    ],
+    "scale": 2,
+    "screen": "games",
+    "width": 470,
+    "height": 104,
+    "pixelHash": "5af689391ad23e0f4e00d0e4d80096bb97704cdb0fed84adb1de36599d022ba5",
+    "uploadName": "GamesFreeBadge"
+  },
+  {
+    "name": "GamesChoice1Panel",
+    "file": "png/GamesChoice1Panel.png",
+    "svg": "svg/GamesChoice1Panel.svg",
+    "rect": [
+      69,
+      329,
+      512,
+      536
+    ],
+    "scale": 2,
+    "screen": "games",
+    "width": 1024,
+    "height": 1072,
+    "pixelHash": "a755c8f0ea24768a161ba5d1ad2ccef37ca96069abd9ea8c6b7697eb9c42e85e",
+    "uploadName": "GamesChoice1Panel"
+  },
+  {
+    "name": "GamesChoice1ArtworkWell",
+    "file": "png/GamesChoice1ArtworkWell.png",
+    "svg": "svg/GamesChoice1ArtworkWell.svg",
+    "rect": [
+      97,
+      438,
+      456,
+      238
+    ],
+    "scale": 2,
+    "screen": "games",
+    "width": 912,
+    "height": 476,
+    "pixelHash": "4bfe5b38946f458e1a026ea9b1cb71658655fdabf0d47f9b2ab99276cfb80c88",
+    "uploadName": "GamesChoice1ArtworkWell"
+  },
+  {
+    "name": "GamesChoice1Artwork",
+    "file": "png/GamesChoice1Artwork.png",
+    "svg": "svg/GamesChoice1Artwork.svg",
+    "rect": [
+      103,
+      444,
+      444,
+      226
+    ],
+    "scale": 2,
+    "screen": "games",
+    "width": 888,
+    "height": 452,
+    "pixelHash": "e84b06b22ebf15cb4efaf4860a1b96e18725eeaeaecce410089bac4099475dc1",
+    "uploadName": "GamesChoice1Artwork"
+  },
+  {
+    "name": "GamesChoice1OpenButton",
+    "file": "png/GamesChoice1OpenButton.png",
+    "svg": "svg/GamesChoice1OpenButton.svg",
+    "rect": [
+      94,
+      761,
+      462,
+      78
+    ],
+    "scale": 2,
+    "screen": "games",
+    "width": 924,
+    "height": 156,
+    "pixelHash": "29393510c9e166de10b48a8c0102a4e863f86dab74d5b195185ddfc36be90772",
+    "uploadName": "GamesChoice1OpenButton"
+  },
+  {
+    "name": "GamesChoice2Panel",
+    "file": "png/GamesChoice2Panel.png",
+    "svg": "svg/GamesChoice2Panel.svg",
+    "rect": [
+      586,
+      329,
+      512,
+      536
+    ],
+    "scale": 2,
+    "screen": "games",
+    "width": 1024,
+    "height": 1072,
+    "pixelHash": "6e1498aed9ab973340ba6968595b9a561c5cea77601cbaac87150a086fbb0a8b",
+    "uploadName": "GamesChoice2Panel"
+  },
+  {
+    "name": "GamesChoice2ArtworkWell",
+    "file": "png/GamesChoice1ArtworkWell.png",
+    "svg": "svg/GamesChoice2ArtworkWell.svg",
+    "rect": [
+      614,
+      438,
+      456,
+      238
+    ],
+    "scale": 2,
+    "screen": "games",
+    "width": 912,
+    "height": 476,
+    "pixelHash": "4bfe5b38946f458e1a026ea9b1cb71658655fdabf0d47f9b2ab99276cfb80c88",
+    "uploadName": "GamesChoice1ArtworkWell"
+  },
+  {
+    "name": "GamesChoice2Artwork",
+    "file": "png/GamesChoice2Artwork.png",
+    "svg": "svg/GamesChoice2Artwork.svg",
+    "rect": [
+      620,
+      444,
+      444,
+      226
+    ],
+    "scale": 2,
+    "screen": "games",
+    "width": 888,
+    "height": 452,
+    "pixelHash": "0e330a6ae7c7874105c0b0bc157331294792235f37df6abeeca04b2e73c96b60",
+    "uploadName": "GamesChoice2Artwork"
+  },
+  {
+    "name": "GamesChoice2OpenButton",
+    "file": "png/GamesChoice2OpenButton.png",
+    "svg": "svg/GamesChoice2OpenButton.svg",
+    "rect": [
+      611,
+      761,
+      462,
+      78
+    ],
+    "scale": 2,
+    "screen": "games",
+    "width": 924,
+    "height": 156,
+    "pixelHash": "a30aaac673f0a37fa0f741293bb19dfd40120d0784225b1169d6d13650684c27",
+    "uploadName": "GamesChoice2OpenButton"
+  },
+  {
+    "name": "GamesChoice3Panel",
+    "file": "png/GamesChoice3Panel.png",
+    "svg": "svg/GamesChoice3Panel.svg",
+    "rect": [
+      1103,
+      329,
+      512,
+      536
+    ],
+    "scale": 2,
+    "screen": "games",
+    "width": 1024,
+    "height": 1072,
+    "pixelHash": "6c74a605a3723bf4ea1bb235a212ac959f3f883a3364ef7b6cc935b6f5458ec4",
+    "uploadName": "GamesChoice3Panel"
+  },
+  {
+    "name": "GamesChoice3ArtworkWell",
+    "file": "png/GamesChoice1ArtworkWell.png",
+    "svg": "svg/GamesChoice3ArtworkWell.svg",
+    "rect": [
+      1131,
+      438,
+      456,
+      238
+    ],
+    "scale": 2,
+    "screen": "games",
+    "width": 912,
+    "height": 476,
+    "pixelHash": "4bfe5b38946f458e1a026ea9b1cb71658655fdabf0d47f9b2ab99276cfb80c88",
+    "uploadName": "GamesChoice1ArtworkWell"
+  },
+  {
+    "name": "GamesChoice3Artwork",
+    "file": "png/GamesChoice3Artwork.png",
+    "svg": "svg/GamesChoice3Artwork.svg",
+    "rect": [
+      1137,
+      444,
+      444,
+      226
+    ],
+    "scale": 2,
+    "screen": "games",
+    "width": 888,
+    "height": 452,
+    "pixelHash": "52a951807c68692695f5bf2b3b96f15afaa094ebb77f0a8f67aef01e1a31d49b",
+    "uploadName": "GamesChoice3Artwork"
+  },
+  {
+    "name": "GamesChoice3OpenButton",
+    "file": "png/GamesChoice3OpenButton.png",
+    "svg": "svg/GamesChoice3OpenButton.svg",
+    "rect": [
+      1128,
+      761,
+      462,
+      78
+    ],
+    "scale": 2,
+    "screen": "games",
+    "width": 924,
+    "height": 156,
+    "pixelHash": "a941471dcdf4b9b8e11643974b57a4416da5d30e55d8fe151081772a37430905",
+    "uploadName": "GamesChoice3OpenButton"
+  },
+  {
+    "name": "MarketFreeTryOnBadge",
+    "file": "png/MarketFreeTryOnBadge.png",
+    "svg": "svg/MarketFreeTryOnBadge.svg",
+    "rect": [
+      1371,
+      256,
+      236,
+      38
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 472,
+    "height": 76,
+    "pixelHash": "44744bd9c18e3a7719cea09ec54aec1a7ddedf4a9b3766047ea15f95b0a49c0b",
+    "uploadName": "MarketFreeTryOnBadge"
+  },
+  {
+    "name": "MarketSearchField",
+    "file": "png/AvatarLabSearchField.png",
+    "svg": "svg/MarketSearchField.svg",
+    "rect": [
+      72,
+      332,
+      862,
+      64
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 1724,
+    "height": 128,
+    "pixelHash": "57015b18cd0c62f2a9bca395cb746336ecf21880e12661ed61752aa40eb9eace",
+    "uploadName": "AvatarLabSearchField"
+  },
+  {
+    "name": "MarketSearchButton",
+    "file": "png/AvatarLabSearchButton.png",
+    "svg": "svg/MarketSearchButton.svg",
+    "rect": [
+      943,
+      329,
+      183,
+      74
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 366,
+    "height": 148,
+    "pixelHash": "548d863bf2d2f6db3960d4733179f15abfce6409307b0ba06500186ebeb6f99e",
+    "uploadName": "AvatarLabSearchButton"
+  },
+  {
+    "name": "MarketCard1Panel",
+    "file": "png/MarketCard1Panel.png",
+    "svg": "svg/MarketCard1Panel.svg",
+    "rect": [
+      69,
+      437,
+      349,
+      428
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 698,
+    "height": 856,
+    "pixelHash": "c1ef3bc8f070afb755144402f97d1346f0f564f075f1be0e92cddc39590ace0f",
+    "uploadName": "MarketCard1Panel"
+  },
+  {
+    "name": "MarketCard1PreviewWell",
+    "file": "png/MarketCard1PreviewWell.png",
+    "svg": "svg/MarketCard1PreviewWell.svg",
+    "rect": [
+      89,
+      457,
+      309,
+      194
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 618,
+    "height": 388,
+    "pixelHash": "e7ef0812c3ba8de859cdf9e7528297fca8310b7f632d8eacc612be39c3e2d1e3",
+    "uploadName": "MarketCard1PreviewWell"
+  },
+  {
+    "name": "MarketCard1TryOnButton",
+    "file": "png/MarketCard1TryOnButton.png",
+    "svg": "svg/MarketCard1TryOnButton.svg",
+    "rect": [
+      85,
+      726,
+      317,
+      74
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 634,
+    "height": 148,
+    "pixelHash": "14cae0455acf7ddd5323e22da44385f39b8541717304e28397437c8f138e756a",
+    "uploadName": "MarketCard1TryOnButton"
+  },
+  {
+    "name": "MarketCard1LikeButton",
+    "file": "png/MarketCard1LikeButton.png",
+    "svg": "svg/MarketCard1LikeButton.svg",
+    "rect": [
+      93,
+      802,
+      144,
+      35
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 288,
+    "height": 70,
+    "pixelHash": "ad6b788e180e85a90213ffb67e87f74f21ec91a04d3dd4bb9ac203e5691713e0",
+    "uploadName": "MarketCard1LikeButton"
+  },
+  {
+    "name": "MarketCard1FavoriteButton",
+    "file": "png/MarketCard1FavoriteButton.png",
+    "svg": "svg/MarketCard1FavoriteButton.svg",
+    "rect": [
+      250,
+      802,
+      144,
+      35
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 288,
+    "height": 70,
+    "pixelHash": "06e5d182a74423f42020256169797862eaad1fcc9c3484150d2bd895be94f3e5",
+    "uploadName": "MarketCard1FavoriteButton"
+  },
+  {
+    "name": "MarketCard2Panel",
+    "file": "png/MarketCard1Panel.png",
+    "svg": "svg/MarketCard2Panel.svg",
+    "rect": [
+      423,
+      437,
+      349,
+      428
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 698,
+    "height": 856,
+    "pixelHash": "c1ef3bc8f070afb755144402f97d1346f0f564f075f1be0e92cddc39590ace0f",
+    "uploadName": "MarketCard1Panel"
+  },
+  {
+    "name": "MarketCard2PreviewWell",
+    "file": "png/MarketCard1PreviewWell.png",
+    "svg": "svg/MarketCard2PreviewWell.svg",
+    "rect": [
+      443,
+      457,
+      309,
+      194
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 618,
+    "height": 388,
+    "pixelHash": "e7ef0812c3ba8de859cdf9e7528297fca8310b7f632d8eacc612be39c3e2d1e3",
+    "uploadName": "MarketCard1PreviewWell"
+  },
+  {
+    "name": "MarketCard2TryOnButton",
+    "file": "png/MarketCard1TryOnButton.png",
+    "svg": "svg/MarketCard2TryOnButton.svg",
+    "rect": [
+      439,
+      726,
+      317,
+      74
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 634,
+    "height": 148,
+    "pixelHash": "14cae0455acf7ddd5323e22da44385f39b8541717304e28397437c8f138e756a",
+    "uploadName": "MarketCard1TryOnButton"
+  },
+  {
+    "name": "MarketCard2LikeButton",
+    "file": "png/MarketCard1LikeButton.png",
+    "svg": "svg/MarketCard2LikeButton.svg",
+    "rect": [
+      447,
+      802,
+      144,
+      35
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 288,
+    "height": 70,
+    "pixelHash": "ad6b788e180e85a90213ffb67e87f74f21ec91a04d3dd4bb9ac203e5691713e0",
+    "uploadName": "MarketCard1LikeButton"
+  },
+  {
+    "name": "MarketCard2FavoriteButton",
+    "file": "png/MarketCard1FavoriteButton.png",
+    "svg": "svg/MarketCard2FavoriteButton.svg",
+    "rect": [
+      604,
+      802,
+      144,
+      35
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 288,
+    "height": 70,
+    "pixelHash": "06e5d182a74423f42020256169797862eaad1fcc9c3484150d2bd895be94f3e5",
+    "uploadName": "MarketCard1FavoriteButton"
+  },
+  {
+    "name": "MarketCard3Panel",
+    "file": "png/MarketCard1Panel.png",
+    "svg": "svg/MarketCard3Panel.svg",
+    "rect": [
+      777,
+      437,
+      349,
+      428
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 698,
+    "height": 856,
+    "pixelHash": "c1ef3bc8f070afb755144402f97d1346f0f564f075f1be0e92cddc39590ace0f",
+    "uploadName": "MarketCard1Panel"
+  },
+  {
+    "name": "MarketCard3PreviewWell",
+    "file": "png/MarketCard1PreviewWell.png",
+    "svg": "svg/MarketCard3PreviewWell.svg",
+    "rect": [
+      797,
+      457,
+      309,
+      194
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 618,
+    "height": 388,
+    "pixelHash": "e7ef0812c3ba8de859cdf9e7528297fca8310b7f632d8eacc612be39c3e2d1e3",
+    "uploadName": "MarketCard1PreviewWell"
+  },
+  {
+    "name": "MarketCard3TryOnButton",
+    "file": "png/MarketCard1TryOnButton.png",
+    "svg": "svg/MarketCard3TryOnButton.svg",
+    "rect": [
+      793,
+      726,
+      317,
+      74
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 634,
+    "height": 148,
+    "pixelHash": "14cae0455acf7ddd5323e22da44385f39b8541717304e28397437c8f138e756a",
+    "uploadName": "MarketCard1TryOnButton"
+  },
+  {
+    "name": "MarketCard3LikeButton",
+    "file": "png/MarketCard1LikeButton.png",
+    "svg": "svg/MarketCard3LikeButton.svg",
+    "rect": [
+      801,
+      802,
+      144,
+      35
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 288,
+    "height": 70,
+    "pixelHash": "ad6b788e180e85a90213ffb67e87f74f21ec91a04d3dd4bb9ac203e5691713e0",
+    "uploadName": "MarketCard1LikeButton"
+  },
+  {
+    "name": "MarketCard3FavoriteButton",
+    "file": "png/MarketCard1FavoriteButton.png",
+    "svg": "svg/MarketCard3FavoriteButton.svg",
+    "rect": [
+      958,
+      802,
+      144,
+      35
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 288,
+    "height": 70,
+    "pixelHash": "06e5d182a74423f42020256169797862eaad1fcc9c3484150d2bd895be94f3e5",
+    "uploadName": "MarketCard1FavoriteButton"
+  },
+  {
+    "name": "MarketAvatarPanel",
+    "file": "png/AvatarLabPreviewPanel.png",
+    "svg": "svg/MarketAvatarPanel.svg",
+    "rect": [
+      1134,
+      329,
+      481,
+      536
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 962,
+    "height": 1072,
+    "pixelHash": "eb567908bb3b0bd2e22601ab8d5dfb0bc97ddc98d26b764c7fddd7f80b736055",
+    "uploadName": "AvatarLabPreviewPanel"
+  },
+  {
+    "name": "MarketAvatarWell",
+    "file": "png/AvatarLabPreviewWell.png",
+    "svg": "svg/MarketAvatarWell.svg",
+    "rect": [
+      1164,
+      428,
+      421,
+      250
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 842,
+    "height": 500,
+    "pixelHash": "d27c0da7996d27aefae2e27313c4d5b861fe0da8e8d75939d6fa6a2f0d4d5976",
+    "uploadName": "AvatarLabPreviewWell"
+  },
+  {
+    "name": "MarketResetCamera",
+    "file": "png/AvatarLabResetCamera.png",
+    "svg": "svg/MarketResetCamera.svg",
+    "rect": [
+      1525,
+      440,
+      43,
+      43
+    ],
+    "scale": 2,
+    "screen": "market",
+    "width": 86,
+    "height": 86,
+    "pixelHash": "4f9d988bb3c6942db01a828de2329e37300486a0b70970bb8d076c2a5b86727a",
+    "uploadName": "AvatarLabResetCamera"
+  },
+  {
+    "name": "ItemsCreateButton",
+    "file": "png/ItemsCreateButton.png",
+    "svg": "svg/ItemsCreateButton.svg",
+    "rect": [
+      1334,
+      243,
+      281,
+      73
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 562,
+    "height": 146,
+    "pixelHash": "c6b20b495fc5227e151c539015aab4e54b3f84fe073c3aefafe72ca51a2038ba",
+    "uploadName": "ItemsCreateButton"
+  },
+  {
+    "name": "ItemsCollectionPanel",
+    "file": "png/ItemsCollectionPanel.png",
+    "svg": "svg/ItemsCollectionPanel.svg",
+    "rect": [
+      69,
+      329,
+      539,
+      536
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 1078,
+    "height": 1072,
+    "pixelHash": "e45217d4005cffcfeec49586aa590da3603cd71b39d3e620abd7df1d884bbca7",
+    "uploadName": "ItemsCollectionPanel"
+  },
+  {
+    "name": "ItemsCollectionRow1",
+    "file": "png/ItemsCollectionRow1.png",
+    "svg": "svg/ItemsCollectionRow1.svg",
+    "rect": [
+      100,
+      428,
+      477,
+      82
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 954,
+    "height": 164,
+    "pixelHash": "2c78da57de19f5b976121ab8496068aad170bc4fdc081c45175c8a1886c79ba8",
+    "uploadName": "ItemsCollectionRow1"
+  },
+  {
+    "name": "ItemsCollectionRow2",
+    "file": "png/ItemsCollectionRow2.png",
+    "svg": "svg/ItemsCollectionRow2.svg",
+    "rect": [
+      100,
+      506,
+      477,
+      82
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 954,
+    "height": 164,
+    "pixelHash": "6c5dde07b5a6e4dab33c3f825458a0d91b20f89dbac19d370d16d703d4741f32",
+    "uploadName": "ItemsCollectionRow2"
+  },
+  {
+    "name": "ItemsCollectionRow3",
+    "file": "png/ItemsCollectionRow3.png",
+    "svg": "svg/ItemsCollectionRow3.svg",
+    "rect": [
+      100,
+      584,
+      477,
+      82
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 954,
+    "height": 164,
+    "pixelHash": "32f77b65f93e499a59f7f90b6848805be8b0aa942fed4540ca7f1d27ccafb099",
+    "uploadName": "ItemsCollectionRow3"
+  },
+  {
+    "name": "ItemsCollectionRow4",
+    "file": "png/ItemsCollectionRow4.png",
+    "svg": "svg/ItemsCollectionRow4.svg",
+    "rect": [
+      100,
+      662,
+      477,
+      82
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 954,
+    "height": 164,
+    "pixelHash": "4cb6e0357eed925d671b1a168ff1882bd198da1551a367e71a7740a9e20fccae",
+    "uploadName": "ItemsCollectionRow4"
+  },
+  {
+    "name": "ItemsCollectionRow5",
+    "file": "png/ItemsCollectionRow2.png",
+    "svg": "svg/ItemsCollectionRow5.svg",
+    "rect": [
+      100,
+      740,
+      477,
+      82
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 954,
+    "height": 164,
+    "pixelHash": "6c5dde07b5a6e4dab33c3f825458a0d91b20f89dbac19d370d16d703d4741f32",
+    "uploadName": "ItemsCollectionRow2"
+  },
+  {
+    "name": "ItemsInspectorPanel",
+    "file": "png/ItemsInspectorPanel.png",
+    "svg": "svg/ItemsInspectorPanel.svg",
+    "rect": [
+      616,
+      329,
+      999,
+      536
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 1998,
+    "height": 1072,
+    "pixelHash": "d5a7f7ae1c5e4e97ad5d0b2fece39d16d3e03955c80f4520ed61482b2a3eccb7",
+    "uploadName": "ItemsInspectorPanel"
+  },
+  {
+    "name": "ItemsPreviewWell",
+    "file": "png/ItemsPreviewWell.png",
+    "svg": "svg/ItemsPreviewWell.svg",
+    "rect": [
+      648,
+      447,
+      935,
+      250
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 1870,
+    "height": 500,
+    "pixelHash": "dbbb9db799b0ea688e69bfe92ab77985b6315aaa423391b71bf6cd1d18aec824",
+    "uploadName": "ItemsPreviewWell"
+  },
+  {
+    "name": "ItemsOrbitHint",
+    "file": "png/ItemsOrbitHint.png",
+    "svg": "svg/ItemsOrbitHint.svg",
+    "rect": [
+      670,
+      467,
+      141,
+      30
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 282,
+    "height": 60,
+    "pixelHash": "1331b35f0a97810122572b1451ae76326d29ebe96f281f38f6ac6c743f40dcb9",
+    "uploadName": "ItemsOrbitHint"
+  },
+  {
+    "name": "ItemsResetCamera",
+    "file": "png/AvatarLabResetCamera.png",
+    "svg": "svg/ItemsResetCamera.svg",
+    "rect": [
+      1522,
+      460,
+      43,
+      43
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 86,
+    "height": 86,
+    "pixelHash": "4f9d988bb3c6942db01a828de2329e37300486a0b70970bb8d076c2a5b86727a",
+    "uploadName": "AvatarLabResetCamera"
+  },
+  {
+    "name": "ItemsReadyStrip",
+    "file": "png/ItemsReadyStrip.png",
+    "svg": "svg/ItemsReadyStrip.svg",
+    "rect": [
+      650,
+      710,
+      931,
+      43
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 1862,
+    "height": 86,
+    "pixelHash": "9ab7f59b2fe08fe9bb60bd9f6df23e498c1da71f3ee3f36ab6ed90b995ce9eef",
+    "uploadName": "ItemsReadyStrip"
+  },
+  {
+    "name": "ItemsEquipButton",
+    "file": "png/ItemsEquipButton.png",
+    "svg": "svg/ItemsEquipButton.svg",
+    "rect": [
+      644,
+      758,
+      468,
+      75
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 936,
+    "height": 150,
+    "pixelHash": "61d3983c7bf2f8422955f49bc99943edd5a04596add44779d6d76ccb6b24cf6e",
+    "uploadName": "ItemsEquipButton"
+  },
+  {
+    "name": "ItemsPublishButton",
+    "file": "png/ItemsPublishButton.png",
+    "svg": "svg/ItemsPublishButton.svg",
+    "rect": [
+      1119,
+      758,
+      468,
+      75
+    ],
+    "scale": 2,
+    "screen": "my-items",
+    "width": 936,
+    "height": 150,
+    "pixelHash": "aa1d8c5b61901eb4529969968ff60581fde85d4e0377f79fec2a749de00fa5e5",
+    "uploadName": "ItemsPublishButton"
+  },
+  {
+    "name": "RunwayPhasePill",
+    "file": "png/RunwayPhasePill.png",
+    "svg": "svg/RunwayPhasePill.svg",
+    "rect": [
+      1244,
+      254,
+      234,
+      51
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 468,
+    "height": 102,
+    "pixelHash": "f0d2ec0f5e50e31bfd99113fa2e11d96ee227b9e6b0175966e8648c958def0ef",
+    "uploadName": "RunwayPhasePill"
+  },
+  {
+    "name": "RunwayTimerRing",
+    "file": "png/RunwayTimerRing.png",
+    "svg": "svg/RunwayTimerRing.svg",
+    "rect": [
+      1501,
+      237,
+      96,
+      96
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 192,
+    "height": 192,
+    "pixelHash": "3d5cd9fcac7f5fdf21fe21acd44460a567077fdf77e037b4513f2bd1bcaba7fd",
+    "uploadName": "RunwayTimerRing"
+  },
+  {
+    "name": "RunwayLineupPanel",
+    "file": "png/RunwayLineupPanel.png",
+    "svg": "svg/RunwayLineupPanel.svg",
+    "rect": [
+      69,
+      329,
+      576,
+      536
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 1152,
+    "height": 1072,
+    "pixelHash": "9779c751882bba1c60e3db0f53ea397d6f536f7ce16911a3eed4e66c3f42a949",
+    "uploadName": "RunwayLineupPanel"
+  },
+  {
+    "name": "RunwayLineupRow1",
+    "file": "png/RunwayLineupRow1.png",
+    "svg": "svg/RunwayLineupRow1.svg",
+    "rect": [
+      98,
+      434,
+      517,
+      76
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 1034,
+    "height": 152,
+    "pixelHash": "46e373825d079d13a64c142c2faaa229d33ac26f888ac45dca4de0c470b0308b",
+    "uploadName": "RunwayLineupRow1"
+  },
+  {
+    "name": "RunwayLineupAction1",
+    "file": "png/RunwayLineupAction1.png",
+    "svg": "svg/RunwayLineupAction1.svg",
+    "rect": [
+      466,
+      445,
+      138,
+      58
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 276,
+    "height": 116,
+    "pixelHash": "1611c20f570ff6bbd30e3dd57406aa7f79a0e5acb81313d1a1622f4bf276298b",
+    "uploadName": "RunwayLineupAction1"
+  },
+  {
+    "name": "RunwayLineupRow2",
+    "file": "png/RunwayLineupRow2.png",
+    "svg": "svg/RunwayLineupRow2.svg",
+    "rect": [
+      98,
+      512,
+      517,
+      76
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 1034,
+    "height": 152,
+    "pixelHash": "e8a823d1983d3354f0763e7c4eee369c5b5cd8ffd7973040f0003315862fbe12",
+    "uploadName": "RunwayLineupRow2"
+  },
+  {
+    "name": "RunwayLineupAction2",
+    "file": "png/RunwayLineupAction1.png",
+    "svg": "svg/RunwayLineupAction2.svg",
+    "rect": [
+      466,
+      523,
+      138,
+      58
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 276,
+    "height": 116,
+    "pixelHash": "1611c20f570ff6bbd30e3dd57406aa7f79a0e5acb81313d1a1622f4bf276298b",
+    "uploadName": "RunwayLineupAction1"
+  },
+  {
+    "name": "RunwayLineupRow3",
+    "file": "png/RunwayLineupRow2.png",
+    "svg": "svg/RunwayLineupRow3.svg",
+    "rect": [
+      98,
+      590,
+      517,
+      76
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 1034,
+    "height": 152,
+    "pixelHash": "e8a823d1983d3354f0763e7c4eee369c5b5cd8ffd7973040f0003315862fbe12",
+    "uploadName": "RunwayLineupRow2"
+  },
+  {
+    "name": "RunwayLineupAction3",
+    "file": "png/RunwayLineupAction1.png",
+    "svg": "svg/RunwayLineupAction3.svg",
+    "rect": [
+      466,
+      601,
+      138,
+      58
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 276,
+    "height": 116,
+    "pixelHash": "1611c20f570ff6bbd30e3dd57406aa7f79a0e5acb81313d1a1622f4bf276298b",
+    "uploadName": "RunwayLineupAction1"
+  },
+  {
+    "name": "RunwayLineupRow4",
+    "file": "png/RunwayLineupRow2.png",
+    "svg": "svg/RunwayLineupRow4.svg",
+    "rect": [
+      98,
+      668,
+      517,
+      76
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 1034,
+    "height": 152,
+    "pixelHash": "e8a823d1983d3354f0763e7c4eee369c5b5cd8ffd7973040f0003315862fbe12",
+    "uploadName": "RunwayLineupRow2"
+  },
+  {
+    "name": "RunwayLineupAction4",
+    "file": "png/RunwayLineupAction1.png",
+    "svg": "svg/RunwayLineupAction4.svg",
+    "rect": [
+      466,
+      679,
+      138,
+      58
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 276,
+    "height": 116,
+    "pixelHash": "1611c20f570ff6bbd30e3dd57406aa7f79a0e5acb81313d1a1622f4bf276298b",
+    "uploadName": "RunwayLineupAction1"
+  },
+  {
+    "name": "RunwayYourLookPanel",
+    "file": "png/RunwayYourLookPanel.png",
+    "svg": "svg/RunwayYourLookPanel.svg",
+    "rect": [
+      651,
+      329,
+      534,
+      536
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 1068,
+    "height": 1072,
+    "pixelHash": "f59423b2d988e1fa2c0845aaa9eed9e1f4c61b3d9d69d3e759fb93485dfab784",
+    "uploadName": "RunwayYourLookPanel"
+  },
+  {
+    "name": "RunwayLookViewportWell",
+    "file": "png/RunwayLookViewportWell.png",
+    "svg": "svg/RunwayLookViewportWell.svg",
+    "rect": [
+      681,
+      400,
+      474,
+      226
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 948,
+    "height": 452,
+    "pixelHash": "e74e24020cc3b4eaa19de4a43ef2d8d9f71aa9aad56712857cb9884f7233b02d",
+    "uploadName": "RunwayLookViewportWell"
+  },
+  {
+    "name": "RunwayResetCameraButton",
+    "file": "png/RunwayResetCameraButton.png",
+    "svg": "svg/RunwayResetCameraButton.svg",
+    "rect": [
+      1106,
+      410,
+      35,
+      34
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 70,
+    "height": 68,
+    "pixelHash": "b85b5d99bc5f80b8f505dd5bad4363fad85158a3c17cd428e830a3f009b44f27",
+    "uploadName": "RunwayResetCameraButton"
+  },
+  {
+    "name": "RunwayXPTrack",
+    "file": "png/RunwayXPTrack.png",
+    "svg": "svg/RunwayXPTrack.svg",
+    "rect": [
+      681,
+      659,
+      474,
+      14
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 948,
+    "height": 28,
+    "pixelHash": "910d1b1fd14eaecea2853a9cd7690b4863f715f84520610e5da9c9c9af663fb9",
+    "uploadName": "RunwayXPTrack"
+  },
+  {
+    "name": "RunwayLockLookButton",
+    "file": "png/RunwayLockLookButton.png",
+    "svg": "svg/RunwayLockLookButton.svg",
+    "rect": [
+      677,
+      729,
+      482,
+      71
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 964,
+    "height": 142,
+    "pixelHash": "6b447b5ba2b83c8e69fd33f8a2412533211f9dd59e290dfa414690958fa736ca",
+    "uploadName": "RunwayLockLookButton"
+  },
+  {
+    "name": "RunwayAvatarLabButton",
+    "file": "png/RunwayAvatarLabButton.png",
+    "svg": "svg/RunwayAvatarLabButton.svg",
+    "rect": [
+      677,
+      795,
+      242,
+      52
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 484,
+    "height": 104,
+    "pixelHash": "51fa55e99b61c5f50ba20e5528a7c2e820ac45473a7de6aae3c28fdf5518b3d9",
+    "uploadName": "RunwayAvatarLabButton"
+  },
+  {
+    "name": "RunwayInviteButton",
+    "file": "png/RunwayAvatarLabButton.png",
+    "svg": "svg/RunwayInviteButton.svg",
+    "rect": [
+      917,
+      795,
+      242,
+      52
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 484,
+    "height": 104,
+    "pixelHash": "51fa55e99b61c5f50ba20e5528a7c2e820ac45473a7de6aae3c28fdf5518b3d9",
+    "uploadName": "RunwayAvatarLabButton"
+  },
+  {
+    "name": "RunwayWeeklyPanel",
+    "file": "png/RunwayWeeklyPanel.png",
+    "svg": "svg/RunwayWeeklyPanel.svg",
+    "rect": [
+      1191,
+      329,
+      424,
+      536
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 848,
+    "height": 1072,
+    "pixelHash": "79d2720d3a8394e2e7d1312a73c6ac52c976abc8a890e9a37e03c9cc83151679",
+    "uploadName": "RunwayWeeklyPanel"
+  },
+  {
+    "name": "RunwayWeeklyRow1",
+    "file": "png/RunwayWeeklyRow1.png",
+    "svg": "svg/RunwayWeeklyRow1.svg",
+    "rect": [
+      1220,
+      436,
+      361,
+      61
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 722,
+    "height": 122,
+    "pixelHash": "d54e62324ed09ba1740556ff72e4d8669c98edab241e360b5c5a41a651d968d8",
+    "uploadName": "RunwayWeeklyRow1"
+  },
+  {
+    "name": "RunwayWeeklyRow2",
+    "file": "png/RunwayWeeklyRow2.png",
+    "svg": "svg/RunwayWeeklyRow2.svg",
+    "rect": [
+      1220,
+      501,
+      361,
+      61
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 722,
+    "height": 122,
+    "pixelHash": "d23f52a3d5fbb8c61d4fd8ac9bc2c1685f49706aa125a39dc83d62882f755154",
+    "uploadName": "RunwayWeeklyRow2"
+  },
+  {
+    "name": "RunwayWeeklyRow3",
+    "file": "png/RunwayWeeklyRow3.png",
+    "svg": "svg/RunwayWeeklyRow3.svg",
+    "rect": [
+      1220,
+      566,
+      361,
+      61
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 722,
+    "height": 122,
+    "pixelHash": "6345f62842aa61b6942678194738f308581e8978662c9559223857baf591c3f0",
+    "uploadName": "RunwayWeeklyRow3"
+  },
+  {
+    "name": "RunwayWeeklyRow4",
+    "file": "png/RunwayWeeklyRow2.png",
+    "svg": "svg/RunwayWeeklyRow4.svg",
+    "rect": [
+      1220,
+      631,
+      361,
+      61
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 722,
+    "height": 122,
+    "pixelHash": "d23f52a3d5fbb8c61d4fd8ac9bc2c1685f49706aa125a39dc83d62882f755154",
+    "uploadName": "RunwayWeeklyRow2"
+  },
+  {
+    "name": "RunwayWeeklyRow5",
+    "file": "png/RunwayWeeklyRow2.png",
+    "svg": "svg/RunwayWeeklyRow5.svg",
+    "rect": [
+      1220,
+      696,
+      361,
+      61
+    ],
+    "scale": 2,
+    "screen": "runway",
+    "width": 722,
+    "height": 122,
+    "pixelHash": "d23f52a3d5fbb8c61d4fd8ac9bc2c1685f49706aa125a39dc83d62882f755154",
+    "uploadName": "RunwayWeeklyRow2"
+  },
+  {
+    "name": "SettingsSavedBadge",
+    "file": "png/SettingsSavedBadge.png",
+    "svg": "svg/SettingsSavedBadge.svg",
+    "rect": [
+      1324,
+      253,
+      287,
+      53
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 574,
+    "height": 106,
+    "pixelHash": "a08b95df63e4dd69b862369fb437f11b8834108ac27b9a2b9ab3c70a0a254289",
+    "uploadName": "SettingsSavedBadge"
+  },
+  {
+    "name": "SettingsCreateModePanel",
+    "file": "png/SettingsCreateModePanel.png",
+    "svg": "svg/SettingsCreateModePanel.svg",
+    "rect": [
+      69,
+      329,
+      769,
+      163
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 1538,
+    "height": 326,
+    "pixelHash": "7b9acd6839a953e6dc6e1610c5b8fe0c1ed9ea2390e3b794d3f1764d62b9012a",
+    "uploadName": "SettingsCreateModePanel"
+  },
+  {
+    "name": "SettingsSimpleModeButton",
+    "file": "png/SettingsSimpleModeButton.png",
+    "svg": "svg/SettingsSimpleModeButton.svg",
+    "rect": [
+      97,
+      422,
+      349,
+      53
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 698,
+    "height": 106,
+    "pixelHash": "f691cba31f8b3dc1b74e6ef5c7a08d80c87bfdcab35a76d80fe9cf4f2ffdf072",
+    "uploadName": "SettingsSimpleModeButton"
+  },
+  {
+    "name": "SettingsAdvancedModeButton",
+    "file": "png/SettingsAdvancedModeButton.png",
+    "svg": "svg/SettingsAdvancedModeButton.svg",
+    "rect": [
+      457,
+      422,
+      353,
+      53
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 706,
+    "height": 106,
+    "pixelHash": "9d0906d9a00304dbc094204985c1e5068678f6a5fdf742f81bb05234f892e981",
+    "uploadName": "SettingsAdvancedModeButton"
+  },
+  {
+    "name": "SettingsAccessibilityPanel",
+    "file": "png/SettingsAccessibilityPanel.png",
+    "svg": "svg/SettingsAccessibilityPanel.svg",
+    "rect": [
+      69,
+      492,
+      769,
+      255
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 1538,
+    "height": 510,
+    "pixelHash": "23462ade6af7d2c6abe5a6961610f7320793871b4e9a3434fea120a7ad8fb74a",
+    "uploadName": "SettingsAccessibilityPanel"
+  },
+  {
+    "name": "SettingsReduceMotionSwitch",
+    "file": "png/SettingsReduceMotionSwitch.png",
+    "svg": "svg/SettingsReduceMotionSwitch.svg",
+    "rect": [
+      727,
+      563,
+      77,
+      38
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 154,
+    "height": 76,
+    "pixelHash": "a637359d0834a02e8f09c72aa5d723120ac0cdee36fb2bea6ba5cf941b4b3aa5",
+    "uploadName": "SettingsReduceMotionSwitch"
+  },
+  {
+    "name": "SettingsHighContrastSwitch",
+    "file": "png/SettingsReduceMotionSwitch.png",
+    "svg": "svg/SettingsHighContrastSwitch.svg",
+    "rect": [
+      727,
+      620,
+      77,
+      38
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 154,
+    "height": 76,
+    "pixelHash": "a637359d0834a02e8f09c72aa5d723120ac0cdee36fb2bea6ba5cf941b4b3aa5",
+    "uploadName": "SettingsReduceMotionSwitch"
+  },
+  {
+    "name": "SettingsUIScaleTrack",
+    "file": "png/SettingsUIScaleTrack.png",
+    "svg": "svg/SettingsUIScaleTrack.svg",
+    "rect": [
+      302,
+      682,
+      415,
+      24
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 830,
+    "height": 48,
+    "pixelHash": "c00e8bee9574c4e8414247541d20576fddc096984b6b81161cb5f38f10b478bb",
+    "uploadName": "SettingsUIScaleTrack"
+  },
+  {
+    "name": "SettingsAudioPanel",
+    "file": "png/SettingsAudioPanel.png",
+    "svg": "svg/SettingsAudioPanel.svg",
+    "rect": [
+      69,
+      747,
+      769,
+      118
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 1538,
+    "height": 236,
+    "pixelHash": "6b08a79e982acf89d5cf3ed563e50a9c81837b31280be2040212c21404f954b0",
+    "uploadName": "SettingsAudioPanel"
+  },
+  {
+    "name": "SettingsSoundSwitch",
+    "file": "png/SettingsSoundSwitch.png",
+    "svg": "svg/SettingsSoundSwitch.svg",
+    "rect": [
+      727,
+      782,
+      77,
+      38
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 154,
+    "height": 76,
+    "pixelHash": "2a05ce4cb56e799f1d73dd736d9e9a4d987b2f1f21a22c1df3caded33be06a4d",
+    "uploadName": "SettingsSoundSwitch"
+  },
+  {
+    "name": "SettingsEquippedPanel",
+    "file": "png/SettingsEquippedPanel.png",
+    "svg": "svg/SettingsEquippedPanel.svg",
+    "rect": [
+      844,
+      329,
+      771,
+      163
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 1542,
+    "height": 326,
+    "pixelHash": "734df3f16bbc35da66e038d5b2ed3c9809edcf8afde9ff7b5f52ae82103ad43b",
+    "uploadName": "SettingsEquippedPanel"
+  },
+  {
+    "name": "SettingsEquippedRow",
+    "file": "png/SettingsEquippedRow.png",
+    "svg": "svg/SettingsEquippedRow.svg",
+    "rect": [
+      876,
+      394,
+      707,
+      66
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 1414,
+    "height": 132,
+    "pixelHash": "aa3106924629046469ef9eca6a7617d1f580f1c4388942090683711a1ae357bb",
+    "uploadName": "SettingsEquippedRow"
+  },
+  {
+    "name": "SettingsRemoveItemButton",
+    "file": "png/SettingsRemoveItemButton.png",
+    "svg": "svg/SettingsRemoveItemButton.svg",
+    "rect": [
+      1430,
+      401,
+      139,
+      55
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 278,
+    "height": 110,
+    "pixelHash": "20b0ee5ebb122bf62a2faf7409f682729f753b6a3477e21c6cf6c38b3696afca",
+    "uploadName": "SettingsRemoveItemButton"
+  },
+  {
+    "name": "SettingsAchievementsPanel",
+    "file": "png/SettingsAchievementsPanel.png",
+    "svg": "svg/SettingsAchievementsPanel.svg",
+    "rect": [
+      844,
+      492,
+      771,
+      255
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 1542,
+    "height": 510,
+    "pixelHash": "34c39ddb02584a12d76d709cfdf93df659233a2406e29a2bfc46bf16467f2fa2",
+    "uploadName": "SettingsAchievementsPanel"
+  },
+  {
+    "name": "SettingsAchievementMedal1",
+    "file": "png/SettingsAchievementMedal1.png",
+    "svg": "svg/SettingsAchievementMedal1.svg",
+    "rect": [
+      926,
+      554,
+      68,
+      70
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 136,
+    "height": 140,
+    "pixelHash": "6604b87cd59aa812e75b4f3dc963ecabfd9c4cefcc96112bfb09a106918469e4",
+    "uploadName": "SettingsAchievementMedal1"
+  },
+  {
+    "name": "SettingsAchievementMedal2",
+    "file": "png/SettingsAchievementMedal2.png",
+    "svg": "svg/SettingsAchievementMedal2.svg",
+    "rect": [
+      1104,
+      554,
+      68,
+      70
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 136,
+    "height": 140,
+    "pixelHash": "9af83196f0d1f41f025cc2047ed7b1fe2eff68f494e1f88ec98d538bc12fb6f9",
+    "uploadName": "SettingsAchievementMedal2"
+  },
+  {
+    "name": "SettingsAchievementMedal3",
+    "file": "png/SettingsAchievementMedal3.png",
+    "svg": "svg/SettingsAchievementMedal3.svg",
+    "rect": [
+      1282,
+      554,
+      68,
+      70
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 136,
+    "height": 140,
+    "pixelHash": "29dd3772fff11cffb35cafd52ada05702c46d44ebdcba609ae17ed24c3a6c9b6",
+    "uploadName": "SettingsAchievementMedal3"
+  },
+  {
+    "name": "SettingsAchievementMedal4",
+    "file": "png/SettingsAchievementMedal4.png",
+    "svg": "svg/SettingsAchievementMedal4.svg",
+    "rect": [
+      1460,
+      554,
+      68,
+      70
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 136,
+    "height": 140,
+    "pixelHash": "b094abb5f5c3d81e6c58c2ddbbcef940045c1b19fe3800e7f4a1029b13ba86a2",
+    "uploadName": "SettingsAchievementMedal4"
+  },
+  {
+    "name": "SettingsCommunityPanel",
+    "file": "png/SettingsCommunityPanel.png",
+    "svg": "svg/SettingsCommunityPanel.svg",
+    "rect": [
+      844,
+      747,
+      771,
+      118
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 1542,
+    "height": 236,
+    "pixelHash": "348d443a068ecf2284b7cad1694428c4fb05ab705ed4cc862653dfeb994aeba8",
+    "uploadName": "SettingsCommunityPanel"
+  },
+  {
+    "name": "SettingsInviteFriendButton",
+    "file": "png/SettingsInviteFriendButton.png",
+    "svg": "svg/SettingsInviteFriendButton.svg",
+    "rect": [
+      1288,
+      764,
+      299,
+      49
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 598,
+    "height": 98,
+    "pixelHash": "6657303a2e6e39808a521669559661fa4f608c1ac04c59f5bf4b93dd2b25b872",
+    "uploadName": "SettingsInviteFriendButton"
+  },
+  {
+    "name": "SettingsJoinGroupButton",
+    "file": "png/SettingsJoinGroupButton.png",
+    "svg": "svg/SettingsJoinGroupButton.svg",
+    "rect": [
+      1288,
+      803,
+      299,
+      49
+    ],
+    "scale": 2,
+    "screen": "settings",
+    "width": 598,
+    "height": 98,
+    "pixelHash": "cb0cbe37eadcc93a1e916de15083d02bd7aaa7f6fa663b329bbd2bc6ba4b060e",
+    "uploadName": "SettingsJoinGroupButton"
+  },
+  {
+    "name": "Backdrop",
+    "homeAsset": "Backdrop",
+    "screen": "home"
+  },
+  {
+    "name": "Dashboard",
+    "homeAsset": "Dashboard",
+    "screen": "home"
+  },
+  {
+    "name": "LogoMark",
+    "homeAsset": "LogoMark",
+    "screen": "home"
+  },
+  {
+    "name": "NavBar",
+    "homeAsset": "NavBar",
+    "screen": "home"
+  },
+  {
+    "name": "NavActive",
+    "homeAsset": "NavActive",
+    "screen": "home"
+  },
+  {
+    "name": "NavHome",
+    "homeAsset": "NavHome",
+    "screen": "home"
+  },
+  {
+    "name": "NavCreate",
+    "homeAsset": "NavCreate",
+    "screen": "home"
+  },
+  {
+    "name": "NavMarket",
+    "homeAsset": "NavMarket",
+    "screen": "home"
+  },
+  {
+    "name": "NavGames",
+    "homeAsset": "NavGames",
+    "screen": "home"
+  },
+  {
+    "name": "ResourcePill",
+    "homeAsset": "ResourcePill",
+    "screen": "home"
+  },
+  {
+    "name": "TokenIcon",
+    "homeAsset": "TokenIcon",
+    "screen": "home"
+  },
+  {
+    "name": "TicketIcon",
+    "homeAsset": "TicketIcon",
+    "screen": "home"
+  },
+  {
+    "name": "PlusButton",
+    "homeAsset": "PlusButton",
+    "screen": "home"
+  },
+  {
+    "name": "SettingsButton",
+    "homeAsset": "SettingsButton",
+    "screen": "home"
+  },
+  {
+    "name": "Arrow",
+    "homeAsset": "Arrow",
+    "screen": "home"
+  },
+  {
+    "name": "QuickLink",
+    "homeAsset": "QuickLink",
+    "screen": "home"
+  },
+  {
+    "name": "TutorialIcon",
+    "homeAsset": "TutorialIcon",
+    "screen": "home"
+  },
+  {
+    "name": "MissionsIcon",
+    "homeAsset": "MissionsIcon",
+    "screen": "home"
+  },
+  {
+    "name": "RewardsIcon",
+    "homeAsset": "RewardsIcon",
+    "screen": "home"
+  },
+  {
+    "name": "CodesIcon",
+    "homeAsset": "CodesIcon",
+    "screen": "home"
+  },
+  {
+    "name": "PremiumIcon",
+    "homeAsset": "PremiumIcon",
+    "screen": "home"
+  }
+]

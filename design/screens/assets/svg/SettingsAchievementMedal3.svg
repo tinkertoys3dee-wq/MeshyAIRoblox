@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="136" height="140" viewBox="1282.0 554.0 68.0 70.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+  </defs>
+  <g id="SettingsAchievementMedal3">
+    <circle cx="1316" cy="589" r="29" fill="#24223c" stroke="#ffd04e" stroke-width="2" stroke-dasharray="none" />
+    <circle cx="1316" cy="589" r="23" fill="none" stroke="#bdad8c" stroke-width="1" opacity=".45" />
+    <path d="M1303 589 1311 584 1316 571 1321 584 1329 589 1321 594 1316 607 1311 594Z" fill="#ffd04e" filter="url(#small-shadow)" />
+  </g>
+</svg>

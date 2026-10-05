@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="348" height="100" viewBox="1034.0 800.0 174.0 50.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+    <linearGradient id="gold-button" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffe66d" />
+      <stop offset=".17" stop-color="#ffd23b" />
+      <stop offset=".57" stop-color="#ff9f1b" />
+      <stop offset="1" stop-color="#e76b09" />
+    </linearGradient>
+    <linearGradient id="screen-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff" stop-opacity=".16" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g id="ArcadeGame11PlayButton">
+    <rect x="1042" y="808" width="158" height="30" rx="15.0" fill="url(#gold-button)" filter="url(#small-shadow)" stroke="#ffd04e" stroke-width="2" />
+    <rect x="1050" y="813" width="142" height="11.1" rx="12" fill="url(#screen-sheen)" />
+    <path d="M1060 810H1182" stroke="#ffffff" stroke-opacity=".45" />
+  </g>
+</svg>

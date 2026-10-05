@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="3076" height="114" viewBox="73.0 333.0 1538.0 57.0">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2=".4" y2="1">
+      <stop stop-color="#ffffb7" />
+      <stop offset=".22" stop-color="#ffe051" />
+      <stop offset=".7" stop-color="#ffb21a" />
+      <stop offset="1" stop-color="#ed8706" />
+    </linearGradient>
+    <symbol id="star-icon" viewBox="0 0 70 70">
+      <path d="M33 5Q35 0 38 6L46 22 64 25Q71 26 66 32L53 44 56 62Q58 69 51 66L35 57 18 66Q12 69 14 62L17 44 4 32Q-1 26 6 25L25 22Z" fill="url(#gold)" stroke="#ffe896" stroke-width="2.4" stroke-linejoin="round" />
+      <path d="M35 7 43 25 63 28 48 40 52 59 35 51 18 60 22 40 7 28 28 25Z" fill="#ffe579" opacity=".24" />
+    </symbol>
+    <linearGradient id="screen-gold" x1="0" y1="0" x2=".3" y2="1">
+      <stop offset="0" stop-color="#553514" />
+      <stop offset=".55" stop-color="#352718" />
+      <stop offset="1" stop-color="#172033" />
+    </linearGradient>
+  </defs>
+  <g id="ArcadeWeeklyPrizeBanner">
+    <rect x="77" y="337" width="1530" height="49" rx="16" fill="url(#screen-gold)" stroke="#ffd04e" stroke-width="2" />
+    <use href="#star-icon" x="97" y="348" width="27" height="27" />
+  </g>
+</svg>

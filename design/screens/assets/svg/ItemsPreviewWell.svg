@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1870" height="500" viewBox="648.0 447.0 935.0 250.0">
+  <defs>
+    <radialGradient id="items-preview-glow">
+      <stop stop-color="#057efc" stop-opacity=".38" />
+      <stop offset="1" stop-color="#057efc" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <g id="ItemsPreviewWell">
+    <rect x="652" y="451" width="927" height="242" rx="18" fill="#0a1830" stroke="#2c6284" stroke-width="2" />
+    <rect x="659" y="458" width="913" height="228" rx="13" fill="none" stroke-opacity=".05" stroke="#c5f7ff" stroke-width="2" />
+    <ellipse cx="1115" cy="599" rx="360" ry="89" fill="url(#items-preview-glow)" />
+    <ellipse cx="1115" cy="656" rx="201" ry="10" fill="none" stroke="#0d82c2" stroke-opacity=".33" />
+    <ellipse cx="1115" cy="672" rx="269" ry="10" fill="none" stroke="#0d82c2" stroke-opacity=".33" />
+    <path d="M1115 602L836 686" stroke="#175587" stroke-opacity=".4" />
+    <path d="M1115 602L944 686" stroke="#175587" stroke-opacity=".4" />
+    <path d="M1115 602L1115 686" stroke="#175587" stroke-opacity=".4" />
+    <path d="M1115 602L1286 686" stroke="#175587" stroke-opacity=".4" />
+    <path d="M1115 602L1394 686" stroke="#175587" stroke-opacity=".4" />
+  </g>
+</svg>

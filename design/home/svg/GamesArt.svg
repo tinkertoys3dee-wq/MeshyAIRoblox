@@ -1,0 +1,223 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="944" height="980" viewBox="1135 244 472 490"><defs>
+<filter id="soft-blur" x="-25%" y="-25%" width="150%" height="150%"><feGaussianBlur stdDeviation="10" /></filter>
+<filter id="bokeh-blur"><feGaussianBlur stdDeviation="20" /></filter>
+<filter id="shadow" x="-25%" y="-25%" width="150%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#030617" flood-opacity=".65" /></filter>
+<filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%"><feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" /></filter>
+<filter id="cyan-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="8" result="g" /><feFlood flood-color="#00cfff" flood-opacity=".7" /><feComposite in2="g" operator="in" /><feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+<filter id="purple-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="8" result="g" /><feFlood flood-color="#b62dff" flood-opacity=".5" /><feComposite in2="g" operator="in" /><feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+<filter id="gold-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7" result="g" /><feFlood flood-color="#ffbb28" flood-opacity=".65" /><feComposite in2="g" operator="in" /><feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+<filter id="text-shadow" x="-10%" y="-30%" width="120%" height="180%"><feDropShadow dx="0" dy="3" stdDeviation="1.4" flood-color="#00194e" flood-opacity=".7" /></filter>
+<radialGradient id="city-sky" cx=".23" cy="0" r="1"><stop stop-color="#19c6ff" /><stop offset=".43" stop-color="#4e78a7" /><stop offset="1" stop-color="#282337" /></radialGradient>
+<linearGradient id="city-tower" x2="1" y2="0"><stop stop-color="#313f51" /><stop offset=".45" stop-color="#8f909b" /><stop offset=".7" stop-color="#b3b2b7" /><stop offset="1" stop-color="#535664" /></linearGradient>
+<linearGradient id="main-panel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#08223c" stop-opacity=".97" /><stop offset=".37" stop-color="#141a30" stop-opacity=".97" /><stop offset=".73" stop-color="#101b34" stop-opacity=".97" /><stop offset="1" stop-color="#20213c" stop-opacity=".97" /></linearGradient>
+<linearGradient id="panel-stroke" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#236ca0" /><stop offset=".36" stop-color="#485279" /><stop offset=".6" stop-color="#303857" /><stop offset="1" stop-color="#536080" /></linearGradient>
+<radialGradient id="left-card" cx=".8" cy=".68" r=".85"><stop stop-color="#007be3" /><stop offset=".47" stop-color="#00488f" /><stop offset=".8" stop-color="#06265d" /><stop offset="1" stop-color="#033167" /></radialGradient>
+<radialGradient id="left-wash" cx=".94" cy=".3" r=".72"><stop stop-color="#00c7ff" stop-opacity=".35" /><stop offset="1" stop-color="#008aff" stop-opacity="0" /></radialGradient>
+<radialGradient id="shop-card" cx=".55" cy=".62" r=".8"><stop stop-color="#6314b1" /><stop offset=".5" stop-color="#350963" /><stop offset=".83" stop-color="#34116a" /><stop offset="1" stop-color="#512181" /></radialGradient>
+<radialGradient id="shop-wash" cx=".85" cy=".82" r=".65"><stop stop-color="#bc1bff" stop-opacity=".58" /><stop offset="1" stop-color="#5a16ba" stop-opacity="0" /></radialGradient>
+<radialGradient id="game-card" cx=".6" cy=".72" r=".84"><stop stop-color="#db7807" /><stop offset=".42" stop-color="#a34c00" /><stop offset=".73" stop-color="#5a2600" /><stop offset="1" stop-color="#915314" /></radialGradient>
+<radialGradient id="game-wash" cx=".82" cy=".76" r=".65"><stop stop-color="#ffbd18" stop-opacity=".65" /><stop offset="1" stop-color="#a95000" stop-opacity="0" /></radialGradient>
+<linearGradient id="card-blue-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#07caff" /><stop offset=".6" stop-color="#0099ec" /><stop offset="1" stop-color="#0567d5" /></linearGradient>
+<linearGradient id="card-purple-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#c257f9" /><stop offset=".65" stop-color="#761fbb" /><stop offset="1" stop-color="#5d21aa" /></linearGradient>
+<linearGradient id="card-gold-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffd95b" /><stop offset=".4" stop-color="#e8921a" /><stop offset="1" stop-color="#ffab39" /></linearGradient>
+<linearGradient id="footer-card" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#103554" stop-opacity=".8" /><stop offset=".4" stop-color="#0d1b32" stop-opacity=".75" /><stop offset="1" stop-color="#1e2545" stop-opacity=".7" /></linearGradient>
+<linearGradient id="footer-edge" x1="0" y1="0" x2="1" y2=".4"><stop stop-color="#206286" /><stop offset="1" stop-color="#2c365a" /></linearGradient>
+<linearGradient id="nav-bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0c162b" /><stop offset="1" stop-color="#111a30" /></linearGradient>
+<radialGradient id="resource-bg" cx=".6" cy=".2" r="1"><stop stop-color="#123554" /><stop offset=".5" stop-color="#0c1b2c" /><stop offset="1" stop-color="#080f1e" /></radialGradient>
+<linearGradient id="icon-white" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff" /><stop offset="1" stop-color="#c5dbff" /></linearGradient>
+<linearGradient id="silver-text" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff" /><stop offset=".55" stop-color="#fff" /><stop offset="1" stop-color="#c0eaff" /></linearGradient>
+<linearGradient id="logo-text" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#00f9ff" /><stop offset=".48" stop-color="#00a6f5" /><stop offset="1" stop-color="#006be3" /></linearGradient>
+<linearGradient id="logo-metal" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#78e7ff" /><stop offset=".35" stop-color="#20baff" /><stop offset="1" stop-color="#0568c7" /></linearGradient>
+<linearGradient id="logo-white" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff" /><stop offset=".5" stop-color="#f4fcff" /><stop offset="1" stop-color="#a4c9e7" /></linearGradient>
+<linearGradient id="gold" x1="0" y1="0" x2=".4" y2="1"><stop stop-color="#ffffb7" /><stop offset=".22" stop-color="#ffe051" /><stop offset=".7" stop-color="#ffb21a" /><stop offset="1" stop-color="#ed8706" /></linearGradient>
+<linearGradient id="coin" x1="0" y1="0" x2=".4" y2="1"><stop stop-color="#fff49b" /><stop offset=".3" stop-color="#ffd237" /><stop offset="1" stop-color="#f99d10" /></linearGradient>
+<linearGradient id="cyan-icon" x1="0" y1="0" x2=".6" y2="1"><stop stop-color="#bcffff" /><stop offset=".22" stop-color="#3affff" /><stop offset=".63" stop-color="#00d5ff" /><stop offset="1" stop-color="#0089ee" /></linearGradient>
+<linearGradient id="cyan-dark" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#00aee5" /><stop offset="1" stop-color="#0052af" /></linearGradient>
+<linearGradient id="purple-icon" x1="0" y1="0" x2=".4" y2="1"><stop stop-color="#ffceff" /><stop offset=".32" stop-color="#e179ff" /><stop offset="1" stop-color="#891fff" /></linearGradient>
+<linearGradient id="purple-dark" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#a927fa" /><stop offset="1" stop-color="#640ac8" /></linearGradient>
+<linearGradient id="blue-person" x1="0" y1="0" x2=".1" y2="1"><stop stop-color="#a9f4ff" /><stop offset=".45" stop-color="#33bfff" /><stop offset="1" stop-color="#1672ff" /></linearGradient>
+<linearGradient id="home-button" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#00beef" /><stop offset=".48" stop-color="#087dfb" /><stop offset="1" stop-color="#0064ef" /></linearGradient>
+<linearGradient id="blue-button" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0fe4f4" /><stop offset=".16" stop-color="#00caff" /><stop offset=".56" stop-color="#0094ff" /><stop offset="1" stop-color="#0063f4" /></linearGradient>
+<linearGradient id="purple-button" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d27bff" /><stop offset=".15" stop-color="#b33ff6" /><stop offset=".6" stop-color="#8120f0" /><stop offset="1" stop-color="#5506d7" /></linearGradient>
+<linearGradient id="gold-button" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffe66d" /><stop offset=".17" stop-color="#ffd23b" /><stop offset=".57" stop-color="#ff9f1b" /><stop offset="1" stop-color="#e76b09" /></linearGradient>
+<clipPath id="left-clip"><rect x="77" y="244" width="505" height="490" rx="26" /></clipPath>
+<clipPath id="shop-clip"><rect x="606" y="244" width="504" height="490" rx="26" /></clipPath>
+<clipPath id="game-clip"><rect x="1135" y="244" width="472" height="490" rx="26" /></clipPath>
+<symbol id="home-icon" viewBox="0 0 48 48"><path d="M3 21 22 4Q24 2 26 4L45 21Q48 25 43 26H39V42Q39 45 35 45H28V31H20V45H11Q7 45 7 41V26H4Q0 25 3 21Z" fill="url(#icon-white)" /></symbol>
+<symbol id="cube-icon" viewBox="0 0 48 48"><path d="m24 2 21 11-21 12L3 13ZM3 17l18 10v20L4 36ZM45 17 27 27v20l17-11Z" fill="url(#icon-white)" /></symbol>
+<symbol id="bag-icon" viewBox="0 0 48 48"><path d="M9 16H39L43 44Q44 47 39 47H9Q4 47 5 43Z" fill="url(#icon-white)" /><path d="M16 20V11a8 8 0 0 1 16 0v9" fill="none" stroke="#f8fbff" stroke-width="4" stroke-linecap="round" /><circle cx="16" cy="21" r="2" fill="#23334d" /><circle cx="32" cy="21" r="2" fill="#23334d" /></symbol>
+<symbol id="pad-icon" viewBox="0 0 56 46"><path d="M15 5Q27 1 40 5Q46 6 49 16L54 36Q56 46 48 43L37 34H20L9 43Q0 47 2 36L6 16Q8 8 15 5Z" fill="url(#icon-white)" /><path d="M14 13h5v5h5v5h-5v5h-5v-5H9v-5h5Z" fill="#27314b" /><g fill="#27314b"><circle cx="40" cy="14" r="2.8" /><circle cx="45" cy="20" r="2.8" /><circle cx="34" cy="20" r="2.8" /><circle cx="40" cy="26" r="2.8" /></g></symbol>
+<symbol id="plus-icon" viewBox="0 0 30 30"><path d="M13 3h4v10h10v4H17v10h-4V17H3v-4h10Z" fill="#fff" stroke="#d9faff" stroke-width="1.5" stroke-linejoin="round" /></symbol>
+<symbol id="star-icon" viewBox="0 0 70 70"><path d="M33 5Q35 0 38 6L46 22 64 25Q71 26 66 32L53 44 56 62Q58 69 51 66L35 57 18 66Q12 69 14 62L17 44 4 32Q-1 26 6 25L25 22Z" fill="url(#gold)" stroke="#ffe896" stroke-width="2.4" stroke-linejoin="round" /><path d="M35 7 43 25 63 28 48 40 52 59 35 51 18 60 22 40 7 28 28 25Z" fill="#ffe579" opacity=".24" /></symbol>
+<symbol id="ticket-icon" viewBox="0 0 65 45"><path d="M4 5H61V15Q50 18 61 25V37H4V25Q14 20 4 15Z" fill="url(#cyan-icon)" stroke="#00b7ff" stroke-width="3" /><path d="M11 10H53V31H11Z" fill="none" stroke="#96faff" stroke-width="2" /><path d="m31 11 9 9-9 10-10-10Z" fill="#e2ffff" /><path d="m31 16 5 4-5 5-5-5Z" fill="#00a9ee" /></symbol>
+<symbol id="book-icon" viewBox="0 0 75 75"><path d="M4 17 12 13Q26 10 36 16Q50 8 64 14L69 19V65Q55 61 38 68Q21 61 6 64Z" fill="url(#cyan-dark)" stroke="#02a9ed" stroke-width="2" /><path d="M11 11Q25 6 37 15V62Q23 53 11 57ZM38 15Q50 6 63 11V57Q50 52 38 62Z" fill="url(#cyan-icon)" stroke="#a1ffff" stroke-width="1.4" /><path d="M38 16V60" stroke="#007de0" stroke-width="2" /><path d="M17 21V49M60 19V47" stroke="#c2ffff" stroke-width="2" stroke-linecap="round" opacity=".7" /><path d="m21 23 4-1m23 1 5-1" stroke="#e7ffff" stroke-width="2.5" stroke-linecap="round" /><path d="M7 59Q23 55 37 65Q51 55 67 59" fill="none" stroke="#00c7ff" stroke-width="2" /></symbol>
+<symbol id="missions-icon" viewBox="0 0 75 75"><rect x="11" y="10" width="49" height="59" rx="5" fill="url(#cyan-dark)" /><rect x="15" y="10" width="44" height="55" rx="4" fill="#e6ffff" stroke="#2bf4ff" stroke-width="2.5" /><path d="M28 13V8h5V4h9v4h6v6Z" fill="#fcffff" stroke="#80e6f4" stroke-width="1.5" /><g fill="none" stroke="#009dca" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m23 28 2 3 5-6m-7 18 2 3 5-6" /><path d="M37 29H49M37 43H49M23 55H49" /></g><path d="M18 15V61" stroke="#fff" stroke-width="1.2" /></symbol>
+<symbol id="gift-icon" viewBox="0 0 75 75"><rect x="14" y="31" width="47" height="36" rx="3" fill="url(#purple-icon)" stroke="#a035f2" stroke-width="2" /><rect x="10" y="22" width="55" height="17" rx="3" fill="url(#purple-icon)" stroke="#d9a1ff" stroke-width="2" /><path d="M33 23V67H41V23Z" fill="url(#purple-dark)" /><path d="M38 21Q17 23 20 12Q23 2 37 20Q50 2 55 11Q60 22 38 21Z" fill="none" stroke="#f1c5ff" stroke-width="4" /><path d="M11 25H62" stroke="#ffe5ff" stroke-width="2" /></symbol>
+<symbol id="people-icon" viewBox="0 0 75 75"><ellipse cx="16" cy="24" rx="10" ry="11" fill="url(#purple-icon)" /><path d="M0 54Q1 34 16 34Q29 35 30 54V59H3Q0 59 0 54Z" fill="url(#purple-icon)" /><ellipse cx="57" cy="24" rx="10" ry="11" fill="url(#cyan-icon)" /><path d="M45 38Q69 29 69 55V59H48Z" fill="url(#blue-person)" /><ellipse cx="35" cy="19" rx="13" ry="14" fill="url(#icon-white)" /><path d="M16 60Q16 36 35 34Q56 36 55 60V66H18Z" fill="url(#blue-person)" stroke="#0c6cef" stroke-width="2" /><path d="M20 56Q20 39 31 38" fill="none" stroke="#b7f5ff" stroke-width="2" opacity=".8" /></symbol>
+</defs>
+<g clip-path="url(#game-clip)"><g id="game-art">
+  <defs>
+    <radialGradient id="game-coin-face" cx="35%" cy="20%" r="85%"><stop stop-color="#fff4a3" /><stop offset=".33" stop-color="#ffda51" /><stop offset=".8" stop-color="#ffb719" /><stop offset="1" stop-color="#ea8a00" /></radialGradient>
+    <linearGradient id="game-coin-edge" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff3a0" /><stop offset=".38" stop-color="#ffd43e" /><stop offset=".68" stop-color="#e98800" /><stop offset="1" stop-color="#ffa514" /></linearGradient>
+    <linearGradient id="game-gold-ticket" x1="0" y1="0" x2=".5" y2="1"><stop stop-color="#fff396" /><stop offset=".17" stop-color="#ffd850" /><stop offset=".53" stop-color="#ffbc25" /><stop offset="1" stop-color="#d97700" /></linearGradient>
+    <linearGradient id="game-gold-inner" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffc442" /><stop offset=".5" stop-color="#ffac12" /><stop offset="1" stop-color="#ef8500" /></linearGradient>
+    <linearGradient id="game-blue-ticket" x1="0" y1="0" x2=".2" y2="1"><stop stop-color="#a1fcff" /><stop offset=".16" stop-color="#11d9ff" /><stop offset=".57" stop-color="#009ff5" /><stop offset="1" stop-color="#006bcc" /></linearGradient>
+    <linearGradient id="game-blue-inner" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#009fff" /><stop offset="1" stop-color="#0357b5" /></linearGradient>
+    <linearGradient id="game-white-shell" x1="0" y1="0" x2=".35" y2="1"><stop stop-color="#fff" /><stop offset=".18" stop-color="#edf0fa" /><stop offset=".45" stop-color="#c8d0e2" /><stop offset=".68" stop-color="#b1b7d0" /><stop offset=".86" stop-color="#9698b1" /><stop offset="1" stop-color="#636b85" /></linearGradient>
+    <radialGradient id="game-handle-light" cx="35%" cy="30%" r="70%"><stop stop-color="#fff" stop-opacity=".82" /><stop offset=".4" stop-color="#f8f6fd" stop-opacity=".42" /><stop offset="1" stop-color="#f8f6fd" stop-opacity="0" /></radialGradient>
+    <radialGradient id="game-handle-shade"><stop stop-color="#303c64" stop-opacity=".65" /><stop offset=".55" stop-color="#515a7c" stop-opacity=".3" /><stop offset="1" stop-color="#46506e" stop-opacity="0" /></radialGradient>
+    <radialGradient id="game-black-volume" cx="30%" cy="26%" r="80%"><stop stop-color="#687286" stop-opacity=".52" /><stop offset=".48" stop-color="#394054" stop-opacity=".27" /><stop offset="1" stop-color="#071122" stop-opacity="0" /></radialGradient>
+    <linearGradient id="game-white-edge" x1="0" y1="0" x2="1" y2=".45"><stop stop-color="#8b8fa5" /><stop offset=".32" stop-color="#e3e8f7" /><stop offset=".63" stop-color="#a4abc3" /><stop offset="1" stop-color="#646b80" /></linearGradient>
+    <linearGradient id="game-black-shell" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#434553" /><stop offset=".26" stop-color="#141c2c" /><stop offset=".61" stop-color="#090c13" /><stop offset="1" stop-color="#03070f" /></linearGradient>
+    <linearGradient id="game-black-rim" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#8391a6" /><stop offset=".2" stop-color="#303a4c" /><stop offset="1" stop-color="#03060c" /></linearGradient>
+    <linearGradient id="game-touchpad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1c2636" /><stop offset="1" stop-color="#060b14" /></linearGradient>
+    <radialGradient id="game-stick" cx="34%" cy="26%" r="75%"><stop stop-color="#36404c" /><stop offset=".45" stop-color="#151c29" /><stop offset=".75" stop-color="#0c1119" /><stop offset="1" stop-color="#03060c" /></radialGradient>
+    <linearGradient id="game-button-yellow" x1="0" y1="0" x2=".2" y2="1"><stop stop-color="#fff292" /><stop offset=".35" stop-color="#ffcf35" /><stop offset="1" stop-color="#ee8a02" /></linearGradient>
+    <linearGradient id="game-button-orange" x1="0" y1="0" x2=".5" y2="1"><stop stop-color="#ffdf5c" /><stop offset=".4" stop-color="#ff9d0b" /><stop offset="1" stop-color="#ef5800" /></linearGradient>
+    <linearGradient id="game-button-blue" x1="0" y1="0" x2=".5" y2="1"><stop stop-color="#75f0ff" /><stop offset=".4" stop-color="#1fc1fb" /><stop offset="1" stop-color="#0474de" /></linearGradient>
+    <radialGradient id="game-floor-glow"><stop stop-color="#fff087" stop-opacity=".75" /><stop offset=".55" stop-color="#ffb40b" stop-opacity=".3" /><stop offset="1" stop-color="#ff9900" stop-opacity="0" /></radialGradient>
+    <radialGradient id="game-amber-glow"><stop stop-color="#ffc529" stop-opacity=".58" /><stop offset="1" stop-color="#ffb713" stop-opacity="0" /></radialGradient>
+    <filter id="game-shadow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="7" /></filter>
+    <filter id="game-soft-glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="5" /></filter>
+    <filter id="game-drop" x="-35%" y="-40%" width="180%" height="200%"><feDropShadow dx="2" dy="7" stdDeviation="6" flood-color="#753000" flood-opacity=".56" /></filter>
+    <filter id="game-coin-drop" x="-40%" y="-40%" width="200%" height="200%"><feDropShadow dx="3" dy="5" stdDeviation="3" flood-color="#a75700" flood-opacity=".6" /></filter>
+    <clipPath id="game-controller-clip"><path d="M62 1C40-2 29 16 20 46 10 75-6 121 1 143c4 14 18 23 31 16 12-7 20-26 43-57 27 5 60 9 91 3l28 44c10 16 27 20 38 7 12-13 10-30 5-52l-12-66c-3-14-8-20-22-23l-36-1-32-6C109 3 86-2 62 1Z" /></clipPath>
+    <path id="game-star" d="M0-28 8-10 27-6 13 8 15 28 0 18-18 27-15 7-29-7-9-11Z" />
+    <path id="game-spark" d="M0-12 3-3 12 0 3 3 0 12-3 3-12 0-3-3Z" />
+    <g id="game-small-coin"><ellipse cx="0" cy="2" rx="25" ry="8" fill="#c56b00" /><path d="M-25 0v8c0 10 50 10 50 0V0" fill="url(#game-coin-edge)" stroke="#ffbe20" stroke-width="1.5" /><path d="M-18 3v8m8-7v9m9-8v9m9-10v9m9-12v8" stroke="#cd7200" stroke-width="2" /><ellipse rx="25" ry="8" fill="url(#game-coin-face)" stroke="#ffe58c" stroke-width="2" /><ellipse rx="18" ry="5" fill="none" stroke="#f0a314" stroke-width="2" /><path d="M-5-2 7-1-6 2 7 3M0-4 1 5" fill="none" stroke="#fff090" stroke-width="1.8" /></g>
+  </defs>
+  <ellipse cx="1401" cy="594" rx="257" ry="73" fill="url(#game-floor-glow)" />
+  <ellipse cx="1324" cy="492" rx="182" ry="116" fill="url(#game-amber-glow)" opacity=".64" />
+  <ellipse cx="1412" cy="608" rx="145" ry="18" fill="#512500" opacity=".66" filter="url(#game-shadow)" />
+  <path d="M1147 613 1324 570 1597 599M1182 638 1357 576M1303 638 1400 583M1492 638 1435 588M1155 624 1592 621" fill="none" stroke="#ffde63" stroke-width="1.7" opacity=".22" />
+  <path d="M1186 593 1326 572 1575 589" fill="none" stroke="#ffe995" stroke-width="2" opacity=".45" />
+  <g fill="#ffd360">
+    <use href="#game-spark" xlink:href="#game-spark" transform="translate(1189 431) scale(1.05)" />
+    <use href="#game-spark" xlink:href="#game-spark" transform="translate(1571 474) scale(.67)" />
+    <use href="#game-spark" xlink:href="#game-spark" transform="translate(1280 421) scale(.27)" opacity=".7" />
+    <use href="#game-spark" xlink:href="#game-spark" transform="translate(1445 412) scale(.27)" fill="#fff09b" />
+    <use href="#game-spark" xlink:href="#game-spark" transform="translate(1177 481) scale(.24)" />
+    <use href="#game-spark" xlink:href="#game-spark" transform="translate(1309 432) scale(.25)" />
+    <use href="#game-spark" xlink:href="#game-spark" transform="translate(1502 557) scale(.33)" />
+    <use href="#game-spark" xlink:href="#game-spark" transform="translate(1579 589) scale(.3)" />
+    <use href="#game-spark" xlink:href="#game-spark" transform="translate(1272 446) scale(.2)" />
+    <use href="#game-spark" xlink:href="#game-spark" transform="translate(1427 423) scale(.21)" />
+  </g>
+  <g fill="#fff4ad" opacity=".65"><circle cx="1196" cy="461" r="1.8" /><circle cx="1286" cy="431" r="1.5" /><circle cx="1300" cy="437" r="1.8" /><circle cx="1420" cy="439" r="1.6" /><circle cx="1450" cy="420" r="1.6" /><circle cx="1554" cy="496" r="1.3" /><circle cx="1561" cy="517" r="1.8" /><circle cx="1171" cy="470" r="1.6" /><circle cx="1245" cy="414" r="1.2" /></g>
+  <g transform="translate(1243 492) rotate(18) scale(.94 1)">
+    <ellipse cx="8" cy="-1" rx="55" ry="56" fill="#dd8404" />
+    <path d="M29-50c31 13 44 42 33 68S42 56 19 57L3 51l28-99Z" fill="url(#game-coin-edge)" stroke="#ffc329" stroke-width="2" />
+    <path d="m38-43 10 7m-5 3 12 6m-8 4 12 5m-9 4 13 5m-10 4 12 3m-12 6 10 2m-15 8 12 1m-17 7 12 1m-20 6 10 1m-25 4 10 1" stroke="#c96e00" stroke-width="2.8" opacity=".7" />
+    <ellipse rx="50" ry="55" fill="url(#game-coin-face)" stroke="#ffe993" stroke-width="3" filter="url(#game-coin-drop)" />
+    <ellipse rx="41" ry="46" fill="none" stroke="#da8b08" stroke-width="3" />
+    <path d="M-41 0a41 46 0 0 1 71-30" fill="none" stroke="#fff6b7" stroke-width="2.5" />
+    <path d="M6-35-6 36" stroke="#c97500" stroke-width="9" stroke-linecap="round" transform="translate(3 3)" />
+    <path d="M17-24C3-33-17-26-18-12c-2 17 34 15 30 30-3 9-19 10-29 4l-4 12c20 8 39 0 43-14 4-17-7-24-22-28-17-6-13-14 0-15l12 4Z" fill="#d48000" transform="translate(3 3)" />
+    <path d="M6-35-6 36" stroke="#ffe889" stroke-width="8" stroke-linecap="round" />
+    <path d="M17-24C3-33-17-26-18-12c-2 17 34 15 30 30-3 9-19 10-29 4l-4 12c20 8 39 0 43-14 4-17-7-24-22-28-17-6-13-14 0-15l12 4Z" fill="#ffe377" stroke="#fff2a1" stroke-width="1.7" stroke-linejoin="round" />
+    <path d="m5-33-1 7M-4 28l-1 7" stroke="#fff3aa" stroke-width="2" stroke-linecap="round" />
+  </g>
+  <g transform="translate(1517 424) rotate(20)" filter="url(#game-drop)">
+    <path d="M-40-32H40q5 0 5 5v8q-8 1-8 8t8 8v28q0 6-6 6h-81q-5 0-5-5v-9q7-1 7-8t-7-8v-20q0-5 7-5Z" fill="#e88906" transform="translate(0 5)" />
+    <path d="M-40-32H40q5 0 5 5v8q-8 1-8 8t8 8v24q0 6-6 6h-81q-5 0-5-5v-9q7-1 7-8t-7-8v-16q0-5 7-5Z" fill="url(#game-gold-ticket)" stroke="#ffdd72" stroke-width="3" />
+    <path d="M-29-21H29v8q-6 5-5 12l5 8v12H-29v-12q7-8 3-17l-3-4Z" fill="url(#game-gold-inner)" stroke="#ffe777" stroke-width="2" />
+    <path d="M-1-17 7-9 15-8 18 3 9 16-5 19-15 11-16-2-9-12Z" fill="#c97100" opacity=".7" transform="translate(2 2)" />
+    <path d="M-1-17 7-9 15-8 18 3 9 16-5 19-15 11-16-2-9-12Z" fill="#ffdb65" stroke="#ffe680" stroke-width="1.3" />
+    <path d="m0-5 6 5-7 7-5-5Z" fill="#e99010" />
+    <path d="M-37-27H35" stroke="#fff1a7" stroke-width="3" stroke-linecap="round" />
+  </g>
+  <g transform="translate(1279 593)"><use href="#game-small-coin" xlink:href="#game-small-coin" /><use href="#game-small-coin" xlink:href="#game-small-coin" transform="translate(0 -11)" /><use href="#game-small-coin" xlink:href="#game-small-coin" transform="translate(0 -22)" /></g>
+  <g transform="translate(1303 598) scale(.65)"><use href="#game-small-coin" xlink:href="#game-small-coin" /><use href="#game-small-coin" xlink:href="#game-small-coin" transform="translate(0 -10)" /></g>
+  <g transform="translate(1207 568) rotate(4)" filter="url(#game-drop)">
+    <path d="M-42-33H40q6 0 6 6v12q-7 1-7 8t7 8v24q0 5-5 5h-85q-5 0-5-5v-9q8-2 8-9t-8-9v-26q0-5 7-5Z" fill="#057dd0" transform="translate(2 7)" />
+    <path d="M-43-34H40q6 0 6 6v12q-7 1-7 8t7 8v24q0 5-5 5h-85q-5 0-5-5v-9q8-2 8-9t-8-9v-26q0-5 7-5Z" fill="url(#game-blue-ticket)" stroke="#28e4ff" stroke-width="3" />
+    <path d="M-35-25H29l6 7-5 8 4 11-4 9 5 9H-35V9q8-6 6-15l-6-7Z" fill="url(#game-blue-inner)" stroke="#20c5ff" stroke-width="2" />
+    <path d="M-5-21 4-14 12-8 10 0 4 6-1 17-11 12-16 3-12-6Z" fill="#043e9c" transform="translate(2 3)" />
+    <path d="M-5-21 4-14 12-8 10 0 4 6-1 17-11 12-16 3-12-6Z" fill="#61eaff" stroke="#6ef6ff" stroke-width="1.6" />
+    <path d="m-3-10 5 6-5 9-6-5Z" fill="#078ad8" />
+    <path d="M-44-27H-36M-43 20H-36M34-27H42M34 21H42" stroke="#8cffff" stroke-width="3" />
+    <path d="M-39-31H34" stroke="#a5ffff" stroke-width="2.5" stroke-linecap="round" />
+  </g>
+  <g transform="translate(1568 560) rotate(12)">
+    <use href="#game-star" xlink:href="#game-star" transform="translate(2 6) scale(.82)" fill="#de7900" />
+    <g filter="url(#game-coin-drop)"><use href="#game-star" xlink:href="#game-star" transform="scale(.82)" fill="url(#game-gold-ticket)" stroke="#ffe47e" stroke-width="2.5" /></g>
+    <path d="M0-17 5-7 15-3 6 3 8 16-1 11-10 15-8 3-17-4-5-7Z" fill="#ffc62b" stroke="#f6a410" stroke-width="1.8" />
+    <path d="m0-17 4 12 11 2" fill="none" stroke="#ffef99" stroke-width="2" />
+  </g>
+  <g transform="translate(1377 613) rotate(-8)" filter="url(#game-coin-drop)">
+    <path d="M-23-10 11-12 21-5 23 12-12 15-23 7Z" fill="#d77b00" />
+    <path d="M-23-10 9-14 22-6 16 0-18 4Z" fill="#ffdf68" stroke="#ffe98b" stroke-width="2" />
+    <path d="M-18 4 16 0 23-7 23 11-14 16-18 11Z" fill="#ffb722" />
+    <path d="M-21-3-13 1-11 12M8-7 9 2 13 9M19 0l-6 4v8" fill="none" stroke="#e79307" stroke-width="4" />
+    <path d="m-5-9 9 5-7 4-10-4Z" fill="#ffbd2b" />
+  </g>
+  <g transform="translate(1303 449) rotate(8 120 82)" filter="url(#game-drop)">
+    <path d="M61 5C39 2 28 20 18 50 8 78-8 125-1 147c5 17 20 24 35 16 12-6 23-26 40-54 29 4 61 8 91 2l28 44c12 17 30 21 41 8 13-13 12-27 7-52l-13-69c-4-16-9-21-23-25l-38-1-32-6C110 6 84 2 61 5Z" fill="url(#game-white-edge)" stroke="#677181" stroke-width="2" />
+    <path d="M62 1C40-2 29 16 20 46 10 75-6 121 1 143c4 14 18 23 31 16 12-7 20-26 43-57 27 5 60 9 91 3l28 44c10 16 27 20 38 7 12-13 10-30 5-52l-12-66c-3-14-8-20-22-23l-36-1-32-6C109 3 86-2 62 1Z" fill="url(#game-white-shell)" stroke="#d4dfed" stroke-width="1.5" />
+    <g clip-path="url(#game-controller-clip)">
+      <ellipse cx="7" cy="123" rx="29" ry="62" fill="url(#game-handle-shade)" opacity=".67" />
+      <ellipse cx="54" cy="102" rx="22" ry="69" fill="url(#game-handle-shade)" opacity=".38" transform="rotate(24 54 102)" />
+      <ellipse cx="30" cy="91" rx="30" ry="75" fill="url(#game-handle-light)" transform="rotate(20 30 91)" />
+      <ellipse cx="69" cy="24" rx="49" ry="31" fill="url(#game-handle-light)" />
+      <ellipse cx="113" cy="93" rx="37" ry="21" fill="url(#game-handle-light)" opacity=".6" />
+      <path d="M8 147c4 10 15 16 25 9l26-37" fill="none" stroke="#edd4b9" stroke-width="3" opacity=".38" />
+    </g>
+    <path d="M172 15c8 2 9 4 15 7 11-2 27-1 34 8 6 9 4 20 6 34l12 52c4 20 3 32-4 41-10 15-28 14-40-3l-30-45-14-13 5-24 4-24Z" fill="url(#game-black-rim)" />
+    <path d="M175 17c7 3 9 5 14 7 13-2 25 2 29 10 5 12 4 22 7 36l10 49c4 16 1 29-5 36-9 11-22 9-31-4l-30-46-13-11 7-28 1-22Z" fill="url(#game-black-shell)" />
+    <path d="M184 24c15-3 28 1 32 12 7 19 6 29 13 61 4 16 7 29 3 39-3 9-11 11-18 7-9-7-20-26-29-42-13-22-14-55-1-77Z" fill="url(#game-black-volume)" />
+    <path d="M228 91c6 21 12 43 7 55-4 9-11 15-19 12" fill="none" stroke="#171d2d" stroke-width="5" stroke-linecap="round" opacity=".8" />
+    <path d="M29 44C38 15 48 5 63 7l21 1" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".9" />
+    <path d="M19 64 8 105c-5 20-6 34 3 43" fill="none" stroke="#e9e6ee" stroke-width="2.5" opacity=".65" />
+    <path d="M186 27c11-3 25 0 29 9 4 7 5 17 7 27" fill="none" stroke="#8991a2" stroke-width="1.7" opacity=".6" />
+    <path d="M203 151c8 10 18 13 25 4" fill="none" stroke="#403944" stroke-width="2.5" />
+    <path d="M21 88 16 117c-2 15 3 29 13 32" fill="none" stroke="#a4a4b9" stroke-width="1.4" opacity=".5" />
+    <path d="M75 100 54 135c-7 11-15 21-23 21" fill="none" stroke="#646b84" stroke-width="1.8" opacity=".3" />
+    <path d="M83 9h80v40q0 7-7 7H88q-7 0-7-7Z" fill="#536276" stroke="#e0e8f0" stroke-width="1.5" />
+    <path d="M86 11h75l-1 36q0 5-5 5H89q-5 0-5-5Z" fill="url(#game-touchpad)" stroke="#070e19" stroke-width="2" />
+    <path d="M87 12h72M159 15v29" fill="none" stroke="#4a5668" stroke-width="1" />
+    <ellipse cx="71" cy="18" rx="6" ry="8" fill="#0a1524" stroke="#858e9e" stroke-width="1.3" />
+    <ellipse cx="70" cy="17" rx="3.4" ry="5" fill="#162231" />
+    <ellipse cx="173" cy="24" rx="5" ry="7" fill="#080c16" stroke="#657082" stroke-width="1.1" />
+    <path d="M114 61h15" stroke="#004d9d" stroke-width="4" stroke-linecap="round" />
+    <path d="M115 60h12" stroke="#49bfff" stroke-width="1.5" stroke-linecap="round" />
+    <g transform="translate(44 43)">
+      <circle r="28" fill="#c1c9dc" stroke="#f8faff" stroke-width="2" />
+      <circle cy="1" r="26" fill="#c7cdde" />
+      <path d="M-6-22H7l2 4-3 16-7 1-8-5-1-13Z" fill="url(#game-stick)" stroke="#667385" stroke-width="1.5" />
+      <path d="M21-6V7l-4 2L2 6 1-1 6-9l13-1Z" fill="url(#game-stick)" stroke="#667385" stroke-width="1.5" />
+      <path d="M6 22H-7l-2-4 3-16 7-1 8 5 1 13Z" fill="url(#game-stick)" stroke="#667385" stroke-width="1.5" />
+      <path d="M-21 6V-7l4-2 15 3 1 7-5 8-13 1Z" fill="url(#game-stick)" stroke="#667385" stroke-width="1.5" />
+      <path d="M-7-7 7 7M-7 7 7-7" fill="none" stroke="#10afe6" stroke-width="3.4" stroke-linecap="round" />
+      <path d="M-17-7h7m15-11v7" stroke="#5d7286" stroke-width="1.5" stroke-linecap="round" />
+    </g>
+    <g transform="translate(83 80)">
+      <circle cy="3" r="25" fill="#969eb1" />
+      <circle r="24" fill="#d3d7e4" stroke="#fff" stroke-width="1.4" />
+      <circle r="20.5" fill="#080f1b" stroke="#3b4354" stroke-width="2" />
+      <circle cy="-2" r="15.7" fill="url(#game-stick)" stroke="#00050d" stroke-width="2.2" />
+      <path d="M-13-10C-6-19 6-18 13-9" fill="none" stroke="#42515e" stroke-width="1.1" />
+      <path d="M-14 12c8 7 23 5 30-5" fill="none" stroke="#1d2d3b" stroke-width="2" />
+    </g>
+    <g transform="translate(163 82)">
+      <circle cy="3" r="25" fill="#554f50" />
+      <circle r="24" fill="#c8ccd5" stroke="#f5f7ff" stroke-width="1.4" />
+      <circle r="20.5" fill="#060b11" stroke="#363d4b" stroke-width="2" />
+      <circle cy="-2" r="15.7" fill="url(#game-stick)" stroke="#00050d" stroke-width="2.2" />
+      <path d="M-13-10C-6-19 6-18 13-9" fill="none" stroke="#4f5662" stroke-width="1.1" />
+      <path d="M-14 12c8 7 23 5 30-5" fill="none" stroke="#192131" stroke-width="2" />
+    </g>
+    <g stroke="#2c2a24" stroke-width="2.2">
+      <circle cx="195" cy="34" r="10" fill="#03080e" /><circle cx="213" cy="52" r="10" fill="#03080e" /><circle cx="194" cy="69" r="10" fill="#03080e" /><circle cx="177" cy="52" r="10" fill="#03080e" />
+    </g>
+    <g stroke-width="1.5"><circle cx="195" cy="32" r="8.3" fill="url(#game-button-yellow)" stroke="#ffd752" /><circle cx="213" cy="50" r="8.3" fill="url(#game-button-orange)" stroke="#ffb54b" /><circle cx="194" cy="67" r="8.3" fill="url(#game-button-blue)" stroke="#269deb" /><circle cx="177" cy="50" r="8.3" fill="url(#game-button-yellow)" stroke="#ffd752" /></g>
+    <g fill="none" stroke="#fff7c2" stroke-width="1.2" opacity=".63"><path d="M190 29q5-5 9 0M173 47q5-5 8 0M208 47q5-5 8 0" /></g>
+    <path d="M190 64q5-5 8 0" fill="none" stroke="#b0f9ff" stroke-width="1.2" opacity=".63" />
+    <ellipse cx="121" cy="79" rx="6.2" ry="5.2" fill="#0a1b2e" stroke="#5c7899" stroke-width="1.3" />
+    <path d="m119 77 3-2 3 3-4 3Z" fill="#008de0" />
+    <path d="M117 102h13" stroke="#080d18" stroke-width="3" />
+    <path d="M120 100v4m4-4v4" stroke="#535d74" stroke-width="1" />
+    <g fill="#7b8094"><circle cx="107" cy="75" r=".8" /><circle cx="110" cy="75" r=".8" /><circle cx="108" cy="78" r=".8" /><circle cx="111" cy="78" r=".8" /><circle cx="134" cy="75" r=".8" /><circle cx="137" cy="75" r=".8" /><circle cx="134" cy="78" r=".8" /><circle cx="137" cy="78" r=".8" /></g>
+  </g>
+</g>
+</g></svg>

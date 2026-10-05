@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="866.0 574.0 75.0 75.0">
+  <defs>
+    <symbol id="arcade-icon-target" viewBox="0 0 64 64">
+      <circle cx="30" cy="33" r="25" fill="none" stroke="#00caff" stroke-width="4" />
+      <circle cx="30" cy="33" r="16" fill="none" stroke="#00caff" stroke-width="4" />
+      <circle cx="30" cy="33" r="7" fill="none" stroke="#00caff" stroke-width="4" />
+      <path d="M28 35 54 9M43 10l11-1-1 11" fill="none" stroke="#b9ffff" stroke-width="3" stroke-linecap="round" />
+    </symbol>
+  </defs>
+  <g id="ArcadeGame7Icon">
+    <rect x="869" y="577" width="69" height="69" rx="17" fill="#14223a" stroke="#4c6181" stroke-width="2" />
+    <use href="#arcade-icon-target" x="876" y="584" width="55" height="55" />
+  </g>
+</svg>

@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1542" height="510" viewBox="844.0 492.0 771.0 255.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+    <linearGradient id="screen-gold" x1="0" y1="0" x2=".3" y2="1">
+      <stop offset="0" stop-color="#553514" />
+      <stop offset=".55" stop-color="#352718" />
+      <stop offset="1" stop-color="#172033" />
+    </linearGradient>
+    <linearGradient id="screen-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff" stop-opacity=".16" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g id="SettingsAchievementsPanel">
+    <rect x="852" y="500" width="755" height="235" rx="26" fill="url(#screen-gold)" filter="url(#small-shadow)" stroke="#ffd04e" stroke-width="2" />
+    <rect x="854" y="502" width="751" height="231" rx="25" fill="none" stroke-opacity=".08" stroke="#ffffff" stroke-width="2" />
+    <rect x="861" y="506" width="737" height="66" rx="20" fill="url(#screen-sheen)" />
+    <path d="M1244.6 502L1516.4 502L1244.6 733L972.8 733Z" fill="#ffffff" opacity=".025" />
+  </g>
+</svg>

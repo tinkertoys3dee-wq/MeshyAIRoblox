@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="1254.0 574.0 75.0 75.0">
+  <defs>
+    <linearGradient id="purple-icon" x1="0" y1="0" x2=".4" y2="1">
+      <stop stop-color="#ffceff" />
+      <stop offset=".32" stop-color="#e179ff" />
+      <stop offset="1" stop-color="#891fff" />
+    </linearGradient>
+    <symbol id="arcade-icon-prism" viewBox="0 0 64 64">
+      <path d="M32 6 57 26 41 56H23L7 26Z" fill="url(#purple-icon)" stroke="#edc9ff" stroke-width="2" />
+      <path d="M7 26H57M32 6 22 26 32 56 42 26Z" fill="none" stroke="#e3adff" stroke-width="1.5" />
+      <path d="M12 25 23 15" stroke="#fff" stroke-width="2" opacity=".7" />
+    </symbol>
+  </defs>
+  <g id="ArcadeGame8Icon">
+    <rect x="1257" y="577" width="69" height="69" rx="17" fill="#14223a" stroke="#4c6181" stroke-width="2" />
+    <use href="#arcade-icon-prism" x="1264" y="584" width="55" height="55" />
+  </g>
+</svg>

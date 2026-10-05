@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="634" height="148" viewBox="793.0 726.0 317.0 74.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+    <linearGradient id="purple-button" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#d27bff" />
+      <stop offset=".15" stop-color="#b33ff6" />
+      <stop offset=".6" stop-color="#8120f0" />
+      <stop offset="1" stop-color="#5506d7" />
+    </linearGradient>
+    <linearGradient id="screen-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff" stop-opacity=".16" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g id="MarketCard3TryOnButton">
+    <rect x="801" y="734" width="301" height="54" rx="20" fill="url(#purple-button)" filter="url(#small-shadow)" stroke="#bf67ff" stroke-width="2" />
+    <rect x="809" y="739" width="285" height="19.98" rx="12" fill="url(#screen-sheen)" />
+    <path d="M819 736H1084" stroke="#ffffff" stroke-opacity=".45" />
+  </g>
+</svg>

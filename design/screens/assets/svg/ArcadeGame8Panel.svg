@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="764" height="318" viewBox="1233.0 552.0 382.0 159.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+    <linearGradient id="screen-purple" x1="0" y1="0" x2=".3" y2="1">
+      <stop offset="0" stop-color="#322052" />
+      <stop offset=".55" stop-color="#23183c" />
+      <stop offset="1" stop-color="#141a30" />
+    </linearGradient>
+    <linearGradient id="screen-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff" stop-opacity=".16" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g id="ArcadeGame8Panel">
+    <rect x="1241" y="560" width="366" height="139" rx="26" fill="url(#screen-purple)" filter="url(#small-shadow)" stroke="#bf67ff" stroke-width="2" />
+    <rect x="1243" y="562" width="362" height="135" rx="25" fill="none" stroke-opacity=".08" stroke="#ffffff" stroke-width="2" />
+    <rect x="1250" y="566" width="348" height="66" rx="20" fill="url(#screen-sheen)" />
+    <path d="M1431.32 562L1563.08 562L1431.32 697L1299.56 697Z" fill="#ffffff" opacity=".025" />
+  </g>
+</svg>

@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="136" height="140" viewBox="1460.0 554.0 68.0 70.0">
+  <defs>
+    </defs>
+  <g id="SettingsAchievementMedal4">
+    <circle cx="1494" cy="589" r="29" fill="#24223c" stroke="#8b759e" stroke-width="2" stroke-dasharray="4 4" />
+    <circle cx="1494" cy="589" r="23" fill="none" stroke="#736584" stroke-width="1" opacity=".45" />
+    <rect x="1485" y="586" width="18" height="15" rx="4" fill="#9e8bb4" />
+    <path d="M1488 586V581A6 6 0 0 1 1500 581V586" fill="none" stroke="#9e8bb4" stroke-width="3" />
+  </g>
+</svg>

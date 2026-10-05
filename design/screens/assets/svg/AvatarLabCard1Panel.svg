@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="698" height="728" viewBox="69.0 501.0 349.0 364.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+    <linearGradient id="screen-blue" x1="0" y1="0" x2=".3" y2="1">
+      <stop offset="0" stop-color="#06355c" />
+      <stop offset=".55" stop-color="#082443" />
+      <stop offset="1" stop-color="#111b32" />
+    </linearGradient>
+    <linearGradient id="screen-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff" stop-opacity=".16" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g id="AvatarLabCard1Panel">
+    <rect x="77" y="509" width="333" height="344" rx="26" fill="url(#screen-blue)" filter="url(#small-shadow)" stroke="#00caff" stroke-width="2" />
+    <rect x="79" y="511" width="329" height="340" rx="25" fill="none" stroke-opacity=".08" stroke="#ffffff" stroke-width="2" />
+    <rect x="86" y="515" width="315" height="66" rx="20" fill="url(#screen-sheen)" />
+    <path d="M250.16 511L370.04 511L250.16 851L130.28 851Z" fill="#ffffff" opacity=".025" />
+  </g>
+</svg>

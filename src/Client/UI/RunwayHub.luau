@@ -16,6 +16,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Factory)
+local ModernPageLayouts = require(script.Parent.ModernPageLayouts)
 local Motion = require(script.Parent.Motion)
 local ViewportController = require(script.Parent.ViewportController)
 
@@ -171,9 +172,11 @@ function RunwayHub.Show(app: any)
 	modal.AnchorPoint = Vector2.new(0.5, 0.5)
 	modal.ZIndex = 231
 	modal.ClipsDescendants = true
+	local openingCamera = Workspace.CurrentCamera
+	local openingWidth = openingCamera and openingCamera.ViewportSize.X or 1200
 	Factory.New("UISizeConstraint", {
 		MinSize = Vector2.new(320, 440),
-		MaxSize = Vector2.new(940, 760),
+		MaxSize = if openingWidth >= 900 then Vector2.new(1672, 941) else Vector2.new(940, 760),
 		Parent = modal,
 	})
 	local uiScale = Motion.FitPanel(modal, function()
@@ -419,10 +422,8 @@ function RunwayHub.Show(app: any)
 		local camera = Workspace.CurrentCamera
 		local viewportWidth = camera and camera.ViewportSize.X or 1200
 		local compact = viewportWidth < 760
-		-- The concept art runs the lineup down a wide left column with the
-		-- selected look and the weekly spotlight stacked beside it. Two
-		-- columns need real width -- the modal caps at 940 -- so below 900
-		-- this stays the single stack it has always been.
+		-- ModernPageLayouts separates the weekly standings into a third
+		-- column on desktop; smaller screens keep this scrolling stack.
 		local twoColumn = viewportWidth >= 900
 		local columns = if twoColumn
 			then Factory.New("Frame", {
@@ -1114,6 +1115,7 @@ function RunwayHub.Show(app: any)
 				}
 			)
 		end
+		ModernPageLayouts.Modal(app, modal, "Runway")
 		if restoreFocus and close.Parent then
 			Motion.AutoFocus(close)
 		end

@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1862" height="86" viewBox="650.0 710.0 931.0 43.0">
+  <defs>
+    </defs>
+  <g id="ItemsReadyStrip">
+    <rect x="652" y="712" width="927" height="39" rx="12" fill="#102f3d" stroke="#287277" stroke-width="2" />
+    <circle cx="677" cy="731" r="10" fill="#80f0c3" />
+    <path d="m672 731 4 4 7-8" fill="none" stroke="#103e37" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>

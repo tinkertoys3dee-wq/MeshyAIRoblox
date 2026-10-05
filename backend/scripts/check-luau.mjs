@@ -27,6 +27,12 @@ try {
     AvatarLab: 'src/Client/UI/AvatarLab.luau',
     PlayerStateService: 'src/Server/Services/PlayerStateService.luau',
     WindowFocus: 'src/Client/UI/WindowFocus.luau',
+    HomeAssets: 'src/Shared/HomeAssets.luau',
+    HomeEffects: 'src/Client/UI/HomeEffects.luau',
+    HomeScreen: 'src/Client/UI/HomeScreen.luau',
+    ModernChrome: 'src/Client/UI/ModernChrome.luau',
+    ModernLayouts: 'src/Client/UI/ModernLayouts.luau',
+    ModernPageLayouts: 'src/Client/UI/ModernPageLayouts.luau',
   };
   const definitions = Object.entries(modules).map(([name, file]) =>
     `modules.${name} = function()\n${read(file)}\nend`).join('\n');
@@ -204,6 +210,21 @@ try {
   const run = vm.loadstring(suite, 'ui-avatar-regressions', true);
   const [count] = await run();
   console.log(`Passed ${count} UI/avatar behavior assertions (engine doubles).`);
+  const chrome = appSource.match(/function App:_ApplyHomeChrome\(\)[\s\S]*?(?=\nfunction App:)/)?.[0];
+  if (!chrome) throw new Error('Home chrome transition method not found');
+  const chromeModule = `modules.HomeChrome = function() local App = {}; local ModernChrome = require("ModernChrome"); ${chrome}; return App end`;
+  const navigationInput = appSource.match(/-- Keyboard\/gamepad accessibility:[\s\S]*?UserInputService\.InputBegan:Connect\(function\(input, gameProcessed\)([\s\S]*?)\n\tend\)/)?.[1];
+  if (!navigationInput) throw new Error('Studio keyboard/gamepad navigation callback not found');
+  const navigationModule = `modules.NavigationFocus = function() local App = {}; local GuiService = game:GetService("GuiService"); function App:_TestNavigationInput(input, gameProcessed) ${navigationInput} end; return App end`;
+  const homeSuite = `${read('backend/tests/luau/engine-double.luau')}\n${definitions}\n${chromeModule}\n${read('backend/tests/luau/home-screen.spec.luau')}`;
+  const [homeCount] = await vm.loadstring(homeSuite, 'home-screen-regressions', true)();
+  console.log(`Passed ${homeCount} Home behavior assertions (engine doubles).`);
+  const effectsSuite = `${read('backend/tests/luau/engine-double.luau')}\n${definitions}\n${read('backend/tests/luau/home-effects.spec.luau')}`;
+  const [effectsCount] = await vm.loadstring(effectsSuite, 'home-effects-regressions', true)();
+  console.log(`Passed ${effectsCount} Home effects assertions (engine doubles).`);
+  const modernSuite = `${read('backend/tests/luau/engine-double.luau')}\n${definitions}\n${navigationModule}\n${read('backend/tests/luau/modern-screen.spec.luau')}`;
+  const [modernCount] = await vm.loadstring(modernSuite, 'modern-screen-regressions', true)();
+  console.log(`Passed ${modernCount} modern screen assertions (engine doubles).`);
 } finally {
   vm.destroy();
 }

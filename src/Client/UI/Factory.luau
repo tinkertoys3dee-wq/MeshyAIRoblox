@@ -7,75 +7,107 @@ local Colors = Theme.Colors
 local UIAssets = require(ReplicatedStorage:WaitForChild("UIAssets"))
 local Motion = require(script.Parent.Motion)
 
+local function optionalAssets(name: string): { [string]: any }
+	local success, assets = pcall(function()
+		local module = ReplicatedStorage:FindFirstChild(name)
+		return if module then require(module) else {}
+	end)
+	return if success and type(assets) == "table" then assets else {}
+end
+
+local ScreenAssets = optionalAssets("ScreenAssets")
+local HomeAssets = optionalAssets("HomeAssets")
+
 local Factory = {}
 
--- design/manifest.json's sliceCenter for each sliced decal, mirrored here
--- since Luau can't read that JSON file at runtime.
+-- Shared screen artwork is exported at 240px wide, without outside padding.
+-- Panels are 240x240; rounded controls are 240x64. Keep these source-pixel
+-- centres synchronized with design/export_screen_assets.py.
 local SLICE_CENTER = {
-	PanelFrame = Rect.new(78, 78, 162, 162),
-	-- Buttons, pills and the banner are all the concept art's notched
-	-- hexagon, so all five are 3-sliced rather than 9-sliced: the centre
-	-- band spans the source's full height, leaving only the flat middle to
-	-- stretch and the two angled end caps untouched.
-	--
-	-- These are the art's own numbers, and the source PNGs are authored at
-	-- the art's own size (see export_ui_assets.py). That matters more than it
-	-- looks. A 3-slice never stretches a cap horizontally, but it always
-	-- squashes it vertically to the control's height, so a source authored
-	-- taller than it renders gives the cap region one scale across and a much
-	-- smaller one down: its stroke keeps full weight while the flat top and
-	-- bottom edges thin to a hairline, and the ends read as heavy gold
-	-- arrowheads bracketing a barely-drawn box. Authoring at render height is
-	-- what keeps the gold an even weight the whole way round.
-	ButtonPrimary = Rect.new(18, 0, 222, 42),
-	ButtonDefault = Rect.new(18, 0, 222, 42),
-	ButtonDanger = Rect.new(18, 0, 222, 42),
-	PillFrame = Rect.new(16, 0, 184, 38),
-	SectionBanner = Rect.new(16, 0, 224, 40),
+	PanelBlue = Rect.new(30, 30, 210, 210),
+	PanelPurple = Rect.new(30, 30, 210, 210),
+	PanelGold = Rect.new(30, 30, 210, 210),
+	ButtonBlue = Rect.new(30, 30, 210, 34),
+	ButtonPurple = Rect.new(30, 30, 210, 34),
+	ButtonGold = Rect.new(30, 30, 210, 34),
+	ButtonQuiet = Rect.new(30, 30, 210, 34),
+	ButtonDanger = Rect.new(30, 30, 210, 34),
+	SearchField = Rect.new(30, 30, 210, 34),
+	SectionHeader = Rect.new(30, 30, 210, 34),
 }
 
--- Source height of each 3-sliced hexagon, used to keep its caps isotropic at
--- whatever height the control actually ends up (see bindSliceScale). Cards
--- are a real 9-slice and don't need it.
-local SLICE_SOURCE_HEIGHT = {
-	ButtonPrimary = 42,
-	ButtonDefault = 42,
-	ButtonDanger = 42,
-	PillFrame = 38,
-	SectionBanner = 40,
+local SURFACE_NAMES = {
+	GraphicComposer = "Purple",
+	GraphicActivity = "Purple",
+	CommunityItem = "Purple",
+	CommunityGraphic = "Purple",
+	Collection = "Purple",
+	StarterLook = "Purple",
+	StyleSprint = "Purple",
+	Gallery = "Gold",
+	GraphicGallery = "Gold",
+	GraphicsGallery = "Gold",
+	GraphicItem = "Gold",
+	TokensCard = "Gold",
+	DailyBrief = "Gold",
+	DailyQuests = "Gold",
+	PlayChoice = "Gold",
+	Arcade = "Gold",
+	ArcadeModal = "Gold",
+	GameOverCard = "Gold",
+	Runway = "Purple",
+	RunwayModal = "Purple",
 }
 
--- A slice border draws at its source size unless scaled down. PanelFrame
--- needs that: its 78px gold filigree reached ~40px into the card and
--- swallowed the left edge of every section title sitting at x=16, and 0.6
--- tucks the scrollwork back into the corner.
---
--- The hexagons have no fixed entry here -- bindSliceScale gives each one a
--- live scale instead, from the height it actually gets laid out at.
-local SLICE_SCALE = {
-	PanelFrame = 0.6,
-}
-
--- Keep a 3-sliced hexagon's end caps isotropic. The caps are the only part
--- of the image with a diagonal in them, and a diagonal is the one thing that
--- shows an uneven scale: squash the source to 0.7 of its height without
--- narrowing the caps to match and the angled ends keep a stroke weight the
--- flat edges have lost, which is the whole reason these looked wrong before.
--- Scaling the border by height/sourceHeight makes the cap's two axes agree
--- again, and holds the art's notch angle at every control size.
---
--- The source is already authored at its render height, so SliceScale 1.0 --
--- what the decal starts at, and what it keeps if AbsoluteSize never resolves
--- -- is already close to right. This only refines it.
-local function bindSliceScale(decal: ImageLabel, target: GuiObject, sourceHeight: number)
-	local function apply()
-		local height = target.AbsoluteSize.Y
-		if height > 0 then
-			decal.SliceScale = math.clamp(height / sourceHeight, 0.5, 2)
+local function surfaceOf(target: Instance?): string
+	local current = target
+	while current do
+		local surface = current:GetAttribute("ForgeSurface")
+		if type(surface) == "string" then
+			return surface
 		end
+		current = current.Parent
+	end
+	return "Blue"
+end
+
+local function accent(surface: string): Color3
+	return if surface == "Purple" then Colors.Violet elseif surface == "Gold" then Colors.Gold else Colors.Cyan
+end
+
+local function panelStops(surface: string): { Color3 }
+	if Theme.IsHighContrast then
+		return { Colors.PanelRaised, Colors.Panel }
+	elseif surface == "Purple" then
+		return { Color3.fromRGB(66, 42, 100), Color3.fromRGB(28, 23, 52) }
+	elseif surface == "Gold" then
+		return { Color3.fromRGB(66, 55, 32), Color3.fromRGB(30, 27, 24) }
+	end
+	return { Color3.fromRGB(34, 57, 96), Color3.fromRGB(16, 28, 50) }
+end
+
+local function buttonStops(surface: string): { Color3 }
+	if surface == "Purple" then
+		return { Color3.fromRGB(159, 75, 246), Color3.fromRGB(93, 38, 177) }
+	elseif surface == "Gold" then
+		return { Color3.fromRGB(244, 198, 76), Color3.fromRGB(192, 133, 28) }
+	end
+	return { Color3.fromRGB(15, 153, 239), Color3.fromRGB(5, 84, 173) }
+end
+
+local function bindSliceScale(decal: ImageLabel, target: GuiObject)
+	local function apply()
+		local isPanel = string.sub(decal:GetAttribute("ForgeAssetKey") or "", 1, 5) == "Panel"
+		local size = target.AbsoluteSize
+		local desired = if isPanel then 0.65 else math.min(1, size.Y / 64)
+		-- Tiny reset/remove controls must still have a stretchable centre.
+		decal.SliceScale = math.max(0.1, math.min(desired, size.X / 62, size.Y / 62))
 	end
 	apply()
-	target:GetPropertyChangedSignal("AbsoluteSize"):Connect(apply)
+	local resized = target:GetPropertyChangedSignal("AbsoluteSize"):Connect(apply)
+	target.Destroying:Connect(function()
+		resized:Disconnect()
+	end)
 end
 
 function Factory.New(className: string, properties: { [string]: any }?, children: { Instance }?): any
@@ -96,10 +128,7 @@ function Factory.New(className: string, properties: { [string]: any }?, children
 			child.Parent = instance
 		end
 	end
-	-- Every caller asks for a font by Enum (Theme.Fonts.*), but the display
-	-- serif only exists at one weight there and the art sets it bold. Upgrade
-	-- it to the weighted FontFace centrally, so no call site has to know --
-	-- FontFace overrides Font, so this is the only place the two can differ.
+	-- Support an optional weighted family without changing caller APIs.
 	if
 		Theme.DisplayFace
 		and (instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox"))
@@ -209,11 +238,13 @@ function Factory.Label(parent: Instance, text: string, size: UDim2, options: { [
 end
 
 function Factory.Card(parent: Instance, size: UDim2, position: UDim2?, name: string?): Frame
+	local surface = SURFACE_NAMES[name or ""] or surfaceOf(parent)
 	local card = Factory.New("Frame", {
 		Name = name or "Card",
 		Size = size,
 		Position = position or UDim2.new(),
-		BackgroundColor3 = Colors.PanelRaised,
+		-- UIGradient multiplies the object's color; white preserves its stops.
+		BackgroundColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0,
 		-- Deliberately NOT ClipsDescendants: Roblox clips to the object's
 		-- axis-aligned rectangle, not its UICorner shape, so a clipped card
@@ -221,17 +252,10 @@ function Factory.Card(parent: Instance, size: UDim2, position: UDim2?, name: str
 		-- wherever a child's opaque background reaches into that curve.
 		Parent = parent,
 	})
+	card:SetAttribute("ForgeSurface", surface)
 	Factory.Corner(card)
-	Factory.Stroke(card)
-	-- The gradient's own colors render the card's visible surface (a
-	-- UIGradient paints over BackgroundColor3), so the mid-tone target lives
-	-- here, not just in Colors.PanelRaised. These are the art's panelGlass
-	-- stops, so a card with no decal yet reads as the same purple glass as
-	-- one carrying the PanelFrame image.
-	Factory.Gradient(card, {
-		Color3.fromRGB(51, 32, 94),
-		Color3.fromRGB(26, 16, 53),
-	}, 115)
+	Factory.Stroke(card, accent(surface), if Theme.IsHighContrast then 0.08 else 0.25, 1.4)
+	Factory.Gradient(card, panelStops(surface), 100)
 	-- The art's panelSheen: white falling from 0.13 to nothing down the top
 	-- of a panel, not a flat band that stops on a visible line. Sized in
 	-- scale because the art scales it with the panel too (roughly a third of
@@ -283,22 +307,20 @@ function Factory.Card(parent: Instance, size: UDim2, position: UDim2?, name: str
 end
 
 function Factory.Button(parent: Instance, text: string, size: UDim2, position: UDim2?, kind: string?): TextButton
+	local surface = if kind == "gold" then "Gold"
+		elseif kind == "purple" then "Purple"
+		elseif kind == "blue" then "Blue"
+		else surfaceOf(parent)
 	local background = Colors.PanelSoft
 	local foreground = Colors.Text
-	if kind == "primary" then
-		-- The art's primary action is molten -- a hot orange bar with dark
-		-- lettering -- not a violet one. That is what ButtonPrimary's decal
-		-- paints, so the code-drawn fallback has to agree with it or every
-		-- primary button changes colour the moment that id goes live. Dark
-		-- foreground for the same reason the nav's active row needs one:
-		-- near-white on orange loses most of its contrast.
-		background = Color3.fromRGB(244, 104, 42)
-		foreground = Color3.fromRGB(58, 18, 6)
-	elseif kind == "mint" then
-		background = Colors.Mint
-		foreground = Colors.Ink
+	local primary = kind == "primary" or kind == "mint" or kind == "blue" or kind == "purple" or kind == "gold"
+	if primary then
+		background = Color3.new(1, 1, 1)
+		if surface == "Gold" then
+			foreground = Colors.Ink
+		end
 	elseif kind == "danger" then
-		background = Colors.Danger
+		background = Color3.fromRGB(113, 34, 59)
 	end
 	local button = Factory.New("TextButton", {
 		Name = "Button",
@@ -309,8 +331,6 @@ function Factory.Button(parent: Instance, text: string, size: UDim2, position: U
 		AutoButtonColor = false,
 		Text = text,
 		TextColor3 = foreground,
-		-- The art sets every button label in its display serif, next to the
-		-- sans it keeps for descriptions and for the pill metadata below.
 		Font = Theme.Fonts.Display,
 		TextSize = 14,
 		TextWrapped = true,
@@ -322,20 +342,16 @@ function Factory.Button(parent: Instance, text: string, size: UDim2, position: U
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		Parent = parent,
 	})
+	button:SetAttribute("ForgeSurface", surface)
 	Factory.Corner(button, Theme.SmallCorner)
 	Factory.Stroke(
 		button,
-		if kind == "primary" then Colors.Gold else Colors.Line,
-		if kind == "primary" then 0.2 else 0.55
+		if kind == "danger" then Colors.Danger elseif primary then accent(surface) else Colors.Line,
+		if primary or kind == "danger" then 0.12 else 0.4,
+		1.3
 	)
-	if kind == "primary" then
-		-- The art's own molten stops, top to bottom.
-		Factory.Gradient(button, {
-			Color3.fromRGB(255, 222, 138),
-			Color3.fromRGB(255, 165, 60),
-			Color3.fromRGB(244, 104, 42),
-			Color3.fromRGB(193, 58, 30),
-		}, 90)
+	if primary then
+		Factory.Gradient(button, buttonStops(surface), 90)
 	end
 	-- A soft top highlight and bottom shade -- alpha-blended white/black
 	-- overlays rather than a second UIGradient, so a button whose caller
@@ -373,11 +389,11 @@ function Factory.Pill(parent: Instance, text: string, color: Color3?, width: num
 	local pill = Factory.New("TextLabel", {
 		Name = "Pill",
 		Size = UDim2.fromOffset(width or math.max(72, #text * 7 + 24), 27),
-		BackgroundColor3 = color or Colors.PanelSoft,
-		BackgroundTransparency = 0.12,
+		BackgroundColor3 = Colors.Panel,
+		BackgroundTransparency = 0.05,
 		BorderSizePixel = 0,
 		Text = string.upper(text),
-		TextColor3 = Colors.Text,
+		TextColor3 = color or Colors.Text,
 		Font = Theme.Fonts.Bold,
 		TextSize = 10,
 		-- Pills neither wrap nor scale, so an over-long caption used to run
@@ -386,7 +402,7 @@ function Factory.Pill(parent: Instance, text: string, color: Color3?, width: num
 		Parent = parent,
 	})
 	Factory.Corner(pill, 99)
-	Factory.Stroke(pill, color or Colors.Line, 0.5)
+	Factory.Stroke(pill, color or Colors.Line, if Theme.IsHighContrast then 0.1 else 0.28)
 	-- The same top-highlight overlay Button uses, so pills read with a touch
 	-- of the same glassy depth instead of sitting perfectly flat.
 	local gloss = Factory.New("Frame", {
@@ -457,6 +473,8 @@ local ARCANE_RINGS = {
 function Factory.ArcaneCircle(parent: Instance, heightScale: number?): Frame
 	local circle = Factory.New("Frame", {
 		Name = "ArcaneCircle",
+		-- Preserve the helper for older callers while retiring this decoration.
+		Visible = false,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		-- The art centres it left of middle and slightly low, so the rings
 		-- read behind the content rather than haloing it.
@@ -566,21 +584,8 @@ function Factory.List(parent: Instance, direction: Enum.FillDirection, gap: numb
 	})
 end
 
--- ============================================================================
--- Decal-backed chrome
---
--- Each function below is a thin wrapper around its plain code-drawn
--- counterpart above (Card/Button/Pill): it builds the exact same instance
--- first, then -- only if design/upload_ui_assets.py (or apply_asset_ids.py)
--- has actually put a nonzero id in UIAssets for that piece -- swaps the flat
--- BackgroundColor3/Gradient fill for a 9-sliced decal from design/assets/,
--- inserted at ZIndex 0 so it stays behind the existing Gloss/Shade/
--- DropShadow overlays and text exactly as the flat fill did. Everything
--- interactive (the TextButton/TextLabel itself, its Activated event, text)
--- is completely unchanged -- only the art *behind* it differs. With every
--- id still 0 (the checked-in default), these behave identically to calling
--- Card/Button/Pill directly.
--- ============================================================================
+-- Text-free SVG artwork dresses the existing controls. Their text, enabled
+-- state, selection, focus, callbacks and live contents remain native.
 
 -- A TextButton/TextLabel's own native Text always renders BELOW every child
 -- it has, no matter what ZIndex the child is given -- ZIndex only orders
@@ -611,10 +616,7 @@ function Factory.LiftLabel(target: GuiObject): TextLabel?
 		BackgroundTransparency = 1,
 		Text = textHolder.Text,
 		TextColor3 = textHolder.TextColor3,
-		-- FontFace, not Font: the display serif is set as a weighted
-		-- face, and Font reads back as Unknown once it is, so mirroring
-		-- the enum would silently drop every button label to the
-		-- default face.
+		-- Mirror the resolved face, including its weight.
 		FontFace = textHolder.FontFace,
 		TextSize = textHolder.TextSize,
 		TextWrapped = textHolder.TextWrapped,
@@ -693,49 +695,73 @@ function Factory.LabelPadding(target: GuiObject, horizontal: number, vertical: n
 	return Factory.Padding(label or target, horizontal, vertical)
 end
 
-local function attachDecal(target: GuiObject, assetKey: string): boolean
-	local assetId = (UIAssets :: any)[assetKey]
-	if type(assetId) ~= "number" or assetId == 0 then
+local function modernKey(target: Instance, assetKey: string): string
+	if assetKey == "PanelFrame" then
+		return "Panel" .. surfaceOf(target)
+	elseif assetKey == "ButtonPrimary" then
+		return "Button" .. surfaceOf(target)
+	elseif assetKey == "ButtonDefault" or assetKey == "PillFrame" then
+		return "ButtonQuiet"
+	elseif assetKey == "SectionBanner" then
+		return "SectionHeader"
+	end
+	return assetKey
+end
+
+local decalRefresh: { [Instance]: () -> () } = setmetatable({}, { __mode = "k" }) :: any
+
+local function attachDecal(target: GuiObject, requestedKey: string): boolean
+	local assetKey = modernKey(target, requestedKey)
+	local assetId = ScreenAssets[assetKey]
+	if Theme.IsHighContrast or type(assetId) ~= "number" or assetId <= 0 then
 		return false
 	end
-	target.BackgroundTransparency = 1
-
-	-- The decal is a child, so it would cover the button's own label. Lift
-	-- the label above it.
 	Factory.LiftLabel(target)
-
-	-- Factory.Button/Pill draw their own rounded Gloss and Shade overlays,
-	-- which fit a capsule and hang out past the corners of the hexagon the
-	-- art actually uses. The hexagon art carries its own top highlight, so
-	-- retire the code-drawn pair whenever a decal takes over. Cards keep
-	-- theirs: a panel really is a rounded rectangle.
-	if target:IsA("TextButton") or target:IsA("TextLabel") then
-		for _, overlay in { "Gloss", "Shade" } do
-			local child = target:FindFirstChild(overlay)
-			if child and child:IsA("GuiObject") then
-				child.Visible = false
-			end
-		end
-	end
-
 	local decal = Factory.New("ImageLabel", {
 		Name = "Decal",
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		Image = `rbxassetid://{assetId}`,
+		ImageTransparency = 1,
+		Active = false,
 		ScaleType = Enum.ScaleType.Slice,
 		SliceCenter = SLICE_CENTER[assetKey],
-		SliceScale = SLICE_SCALE[assetKey] or 1,
+		SliceScale = 0.65,
 		ZIndex = 0,
 		Parent = target,
 	})
 	decal:SetAttribute("ForgeDecal", true)
-	local sourceHeight = SLICE_SOURCE_HEIGHT[assetKey]
-	if sourceHeight then
-		bindSliceScale(decal :: ImageLabel, target, sourceHeight)
+	decal:SetAttribute("ForgeAssetKey", assetKey)
+	bindSliceScale(decal, target)
+
+	local backgroundAlpha = target.BackgroundTransparency
+	local border = target:FindFirstChildOfClass("UIStroke")
+	local borderAlpha = if border then border.Transparency else 0
+	local overlays: { GuiObject } = {}
+	for _, name in { "Gloss", "Shade" } do
+		local child = target:FindFirstChild(name)
+		if child and child:IsA("GuiObject") then
+			table.insert(overlays, child :: GuiObject)
+		end
 	end
-	return decal ~= nil
+	local function refresh()
+		-- Loading or moderated textures retain a readable native surface.
+		local loaded = decal.Image ~= "" and decal.IsLoaded == true and not Theme.IsHighContrast
+		decal.ImageTransparency = if loaded then 0 else 1
+		target.BackgroundTransparency = if loaded then 1 else backgroundAlpha
+		if border then
+			local fallbackAlpha = border:GetAttribute("ForgeFallbackTransparency") or borderAlpha
+			border.Transparency = if loaded then 1 else fallbackAlpha
+		end
+		for _, overlay in overlays do
+			overlay.Visible = not loaded
+		end
+	end
+	decalRefresh[decal] = refresh
+	decal:GetPropertyChangedSignal("IsLoaded"):Connect(refresh)
+	refresh()
+	return true
 end
 
 function Factory.ImageCard(parent: Instance, size: UDim2, position: UDim2?, name: string?): Frame
@@ -746,10 +772,10 @@ end
 
 function Factory.ImageButton(parent: Instance, text: string, size: UDim2, position: UDim2?, kind: string?): TextButton
 	local button = Factory.Button(parent, text, size, position, kind)
-	local assetKey = if kind == "primary" or kind == "mint"
-		then "ButtonPrimary"
+	local assetKey = if kind == "primary" or kind == "mint" or kind == "blue" or kind == "purple" or kind == "gold"
+		then "Button" .. surfaceOf(button)
 		elseif kind == "danger" then "ButtonDanger"
-		else "ButtonDefault"
+		else "ButtonQuiet"
 	attachDecal(button, assetKey)
 	return button
 end
@@ -760,15 +786,8 @@ function Factory.ImagePill(parent: Instance, text: string, color: Color3?, width
 	return pill
 end
 
--- The concept art titles every panel with a small notched banner tab
--- straddling the card's own top edge -- "CREATE MODE", "COLLECTION * 6",
--- "YOUR LOOK" -- rather than a pill or label tucked inside the top-left
--- corner. It straddles that edge in the concept art's own proportion (12px
--- of a 30px tab above the card, 18px below), so callers need to leave the
--- card's first ~22px clear and ~12px of daylight above it.
---
--- Falls back to a plain rounded tab when SectionBanner's id is still 0,
--- like every other image-backed helper here.
+-- Existing callers reserve space above their panel for a caption. Keep that
+-- geometry while replacing its ornamental tab with a clean rounded header.
 function Factory.SectionBanner(card: GuiObject, text: string, width: number?): TextLabel
 	local caption = string.upper(text)
 	local banner = Factory.New("TextLabel", {
@@ -776,25 +795,21 @@ function Factory.SectionBanner(card: GuiObject, text: string, width: number?): T
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, 0, 0, 3),
 		Size = UDim2.fromOffset(width or math.clamp(#caption * 9 + 60, 120, 340), 30),
-		BackgroundColor3 = Color3.fromRGB(46, 27, 84),
+		BackgroundColor3 = Colors.Panel,
 		BorderSizePixel = 0,
 		Text = caption,
-		TextColor3 = Colors.Gold,
+		TextColor3 = accent(surfaceOf(card)),
 		Font = Theme.Fonts.Black,
 		TextSize = 12,
 		-- The width above clamps at 340, so a caption longer than that has
 		-- nowhere left to grow into.
 		TextTruncate = Enum.TextTruncate.AtEnd,
-		-- Above the card's own PanelFrame decal (ZIndex 0) and its Gloss, so
-		-- the tab reads as sitting on top of the frame the way it does in
-		-- the concept art.
 		ZIndex = 6,
 		Parent = card,
 	}) :: TextLabel
-	if not attachDecal(banner, "SectionBanner") then
-		Factory.Corner(banner, 8)
-		Factory.Stroke(banner, Colors.Gold, 0.25, 1.4)
-	end
+	Factory.Corner(banner, 12)
+	Factory.Stroke(banner, accent(surfaceOf(card)), 0.28, 1.2)
+	attachDecal(banner, "SectionHeader")
 	return banner
 end
 
@@ -812,17 +827,14 @@ function Factory.BannerHeadroom(stack: Instance): UIPadding
 	})
 end
 
--- The concept art's gold ON/OFF switch: a capsule with a gold knob that
--- sits on the side the state is on, and the state's word on the other.
--- Every one of Settings' real boolean options is drawn this way there
--- instead of as another full-width button.
+-- Settings toggles keep their state word and knob in separate columns.
 local SWITCH_KNOB = 24
 
 -- Moves a Factory.Switch to a state without rebuilding it, for a caller
 -- that flips one optimistically and may have to roll it back (the sound
 -- toggle, which reverts if the server rejects the change).
 function Factory.SetSwitch(switch: GuiObject, on: boolean)
-	switch.BackgroundColor3 = if on then Colors.Mint else Color3.fromRGB(42, 27, 76)
+	switch.BackgroundColor3 = if on then Colors.Cyan else Colors.PanelSoft
 	local label = switch:FindFirstChild("Label")
 	if label and label:IsA("TextLabel") then
 		label.Text = if on then "ON" else "OFF"
@@ -848,7 +860,7 @@ function Factory.Switch(parent: Instance, on: boolean, position: UDim2?, width: 
 		Parent = parent,
 	})
 	Factory.Corner(switch, 99)
-	Factory.Stroke(switch, Colors.Gold, 0.25, 1.4)
+	Factory.Stroke(switch, Colors.Cyan, 0.25, 1.4)
 	Factory.Label(switch, "", UDim2.new(1, -(SWITCH_KNOB + 12), 1, 0), {
 		AlignX = Enum.TextXAlignment.Center,
 		-- ON/OFF is metadata beside a control, which the art keeps in sans.
@@ -859,49 +871,79 @@ function Factory.Switch(parent: Instance, on: boolean, position: UDim2?, width: 
 		Name = "Knob",
 		AnchorPoint = Vector2.new(0, 0.5),
 		Size = UDim2.fromOffset(SWITCH_KNOB, SWITCH_KNOB),
-		BackgroundColor3 = Colors.Gold,
+		BackgroundColor3 = Colors.Text,
 		BorderSizePixel = 0,
 		ZIndex = 2,
 		Parent = switch,
 	})
 	Factory.Corner(dot, SWITCH_KNOB / 2)
-	Factory.Gradient(dot, { Color3.fromRGB(255, 243, 196), Colors.Gold }, 90)
-	Factory.Stroke(dot, Color3.fromRGB(255, 243, 196), 0.35, 1)
+	Factory.Stroke(dot, Colors.Cyan, 0.35, 1)
 	Factory.SetSwitch(switch, on)
 	return switch
 end
 
--- Swaps a Factory.ImageCard/ImageButton/ImagePill's live decal to a
--- different asset key -- e.g. toggling a nav button between "ButtonDefault"
--- and "ButtonPrimary" for an inactive/active state, the decal equivalent of
--- what used to be a plain BackgroundColor3 change before attachDecal made
--- that invisible (a decal-covered target's own background is fully
--- transparent, so recoloring it no longer shows). No-op, keeping whatever
--- image is already showing, if that asset key's id is still 0 or the
--- target never had a decal attached in the first place.
-function Factory.SwapDecal(target: Instance, assetKey: string): boolean
+-- Legacy key names remain accepted by selection/toggle callbacks. Update
+-- their fallback too, so changing a selected state works during loading.
+function Factory.SwapDecal(target: Instance, requestedKey: string): boolean
+	if not target:IsA("GuiObject") then
+		return false
+	end
+	local assetKey = modernKey(target, requestedKey)
+	if target:IsA("TextButton") and string.sub(assetKey, 1, 6) == "Button" then
+		local primary = assetKey == "ButtonBlue" or assetKey == "ButtonPurple" or assetKey == "ButtonGold"
+		local surface = if assetKey == "ButtonPurple" then "Purple"
+			elseif assetKey == "ButtonGold" then "Gold"
+			elseif assetKey == "ButtonBlue" then "Blue"
+			else surfaceOf(target)
+		if primary then
+			target:SetAttribute("ForgeSurface", surface)
+		end
+		local gradient = target:FindFirstChildOfClass("UIGradient")
+		if primary then
+			target.BackgroundColor3 = Color3.new(1, 1, 1)
+			if not gradient then
+				gradient = Factory.Gradient(target, buttonStops(surface), 90)
+			else
+				local stops = buttonStops(surface)
+				gradient.Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, stops[1]),
+					ColorSequenceKeypoint.new(1, stops[2]),
+				})
+			end
+			gradient.Enabled = true
+		else
+			target.BackgroundColor3 = if assetKey == "ButtonDanger" then Color3.fromRGB(113, 34, 59) else Colors.PanelSoft
+			if gradient then
+				gradient.Enabled = false
+			end
+		end
+		target.TextColor3 = if primary and surface == "Gold" then Colors.Ink else Colors.Text
+		local border = target:FindFirstChildOfClass("UIStroke")
+		if border then
+			border.Color = if assetKey == "ButtonDanger" then Colors.Danger elseif primary then accent(surface) else Colors.Line
+			local transparency = if primary or assetKey == "ButtonDanger" then 0.12 else 0.4
+			border:SetAttribute("ForgeFallbackTransparency", transparency)
+			border.Transparency = transparency
+		end
+	end
 	local decal = target:FindFirstChild("Decal")
 	if not decal or not decal:IsA("ImageLabel") then
-		return false
+		return attachDecal(target :: GuiObject, assetKey)
 	end
-	local assetId = (UIAssets :: any)[assetKey]
-	if type(assetId) ~= "number" or assetId == 0 then
-		return false
-	end
-	decal.Image = `rbxassetid://{assetId}`
-	decal.SliceScale = SLICE_SCALE[assetKey] or 1
+	local assetId = ScreenAssets[assetKey]
+	local ready = not Theme.IsHighContrast and type(assetId) == "number" and assetId > 0
+	decal.ImageTransparency = 1
+	decal.Image = if ready then `rbxassetid://{assetId}` else ""
+	decal:SetAttribute("ForgeAssetKey", assetKey)
 	local sliceCenter = SLICE_CENTER[assetKey]
 	if sliceCenter then
 		decal.SliceCenter = sliceCenter
 	end
-	-- Swapping between two hexagons (a nav row going active) can change the
-	-- source height, so the live scale is recomputed for the incoming asset
-	-- rather than left on the outgoing one's.
-	local sourceHeight = SLICE_SOURCE_HEIGHT[assetKey]
-	if sourceHeight and target:IsA("GuiObject") then
-		bindSliceScale(decal, target :: GuiObject, sourceHeight)
+	local refresh = decalRefresh[decal]
+	if refresh then
+		refresh()
 	end
-	return true
+	return ready
 end
 
 -- Small square medallion icon (nav row, brand mark, ...). Returns nil when
@@ -910,7 +952,27 @@ end
 -- see App.luau's nav-row loop for the pattern (build the icon, only hide the
 -- unicode-symbol label if this returns non-nil).
 function Factory.Icon(parent: Instance, assetKey: string, size: UDim2, position: UDim2?): ImageLabel?
-	local assetId = (UIAssets :: any)[assetKey]
+	local modernIcons = {
+		Logo = "LogoMark",
+		NavCreate = "NavCreate",
+		NavDiscover = "NavMarket",
+		NavSettings = "SettingsButton",
+	}
+	local retired = {
+		FlourishDivider = true,
+		CornerOrnament = true,
+		RivetStud = true,
+		TopbarCurve = true,
+		PriceCartouche = true,
+		NavStudio = true,
+		NavAvatarLab = true,
+		NavAvatarArt = true,
+	}
+	if retired[assetKey] then
+		return nil
+	end
+	local modernIcon = modernIcons[assetKey]
+	local assetId = if modernIcon then HomeAssets[modernIcon] else (UIAssets :: any)[assetKey]
 	if type(assetId) ~= "number" or assetId == 0 then
 		return nil
 	end
@@ -932,19 +994,7 @@ end
 -- centred however wide the page gets. No-op (like Factory.Icon) while
 -- FlourishDivider's id is still 0.
 function Factory.FlourishFlank(parent: Instance, centreY: number, halfGap: number, width: number?, height: number?)
-	local w = width or 20
-	local h = height or 14
-	for _, side in { -1, 1 } do
-		local flourish = Factory.Icon(
-			parent,
-			"FlourishDivider",
-			UDim2.fromOffset(w, h),
-			UDim2.new(0.5, if side < 0 then -halfGap - w else halfGap, 0, centreY - h // 2)
-		)
-		if flourish then
-			flourish.ZIndex = 2
-		end
-	end
+	-- Compatibility hook: the approved screens use a clean text link.
 end
 
 -- A circular 0-100% progress ring (the Creator Rank crest), built from

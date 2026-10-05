@@ -1,0 +1,398 @@
+[
+  {
+    "name": "Backdrop",
+    "file": "png/Backdrop.png",
+    "rect": [
+      0,
+      0,
+      1672,
+      941
+    ],
+    "scale": 2
+  },
+  {
+    "name": "Dashboard",
+    "file": "png/Dashboard.png",
+    "rect": [
+      18,
+      84,
+      1634,
+      838
+    ],
+    "scale": 2,
+    "sliceCenter": [
+      130,
+      170,
+      3140,
+      1500
+    ]
+  },
+  {
+    "name": "LogoMark",
+    "file": "png/LogoMark.png",
+    "rect": [
+      68,
+      0,
+      320,
+      228
+    ],
+    "scale": 2
+  },
+  {
+    "name": "NavBar",
+    "file": "png/NavBar.png",
+    "rect": [
+      375,
+      126,
+      1005,
+      98
+    ],
+    "scale": 2,
+    "sliceCenter": [
+      80,
+      60,
+      1930,
+      136
+    ]
+  },
+  {
+    "name": "NavActive",
+    "file": "png/NavActive.png",
+    "rect": [
+      374,
+      125,
+      268,
+      102
+    ],
+    "scale": 2,
+    "sliceCenter": [
+      80,
+      70,
+      456,
+      134
+    ]
+  },
+  {
+    "name": "NavHome",
+    "file": "png/NavHome.png",
+    "rect": [
+      0,
+      0,
+      72,
+      72
+    ],
+    "scale": 2
+  },
+  {
+    "name": "NavCreate",
+    "file": "png/NavCreate.png",
+    "rect": [
+      0,
+      0,
+      72,
+      72
+    ],
+    "scale": 2
+  },
+  {
+    "name": "NavMarket",
+    "file": "png/NavMarket.png",
+    "rect": [
+      0,
+      0,
+      72,
+      72
+    ],
+    "scale": 2
+  },
+  {
+    "name": "NavGames",
+    "file": "png/NavGames.png",
+    "rect": [
+      0,
+      0,
+      72,
+      72
+    ],
+    "scale": 2
+  },
+  {
+    "name": "CreatePanel",
+    "file": "png/CreatePanel.png",
+    "rect": [
+      65,
+      232,
+      529,
+      514
+    ],
+    "scale": 2,
+    "sliceCenter": [
+      90,
+      90,
+      968,
+      938
+    ]
+  },
+  {
+    "name": "CreateArt",
+    "file": "png/CreateArt.png",
+    "rect": [
+      77,
+      244,
+      505,
+      490
+    ],
+    "scale": 2
+  },
+  {
+    "name": "MarketPanel",
+    "file": "png/MarketPanel.png",
+    "rect": [
+      594,
+      232,
+      528,
+      514
+    ],
+    "scale": 2,
+    "sliceCenter": [
+      90,
+      90,
+      966,
+      938
+    ]
+  },
+  {
+    "name": "MarketArt",
+    "file": "png/MarketArt.png",
+    "rect": [
+      606,
+      244,
+      504,
+      490
+    ],
+    "scale": 2
+  },
+  {
+    "name": "GamesPanel",
+    "file": "png/GamesPanel.png",
+    "rect": [
+      1123,
+      232,
+      496,
+      514
+    ],
+    "scale": 2,
+    "sliceCenter": [
+      90,
+      90,
+      902,
+      938
+    ]
+  },
+  {
+    "name": "GamesArt",
+    "file": "png/GamesArt.png",
+    "rect": [
+      1135,
+      244,
+      472,
+      490
+    ],
+    "scale": 2
+  },
+  {
+    "name": "CreateButton",
+    "file": "png/CreateButton.png",
+    "rect": [
+      90,
+      630,
+      479,
+      102
+    ],
+    "scale": 2,
+    "sliceCenter": [
+      90,
+      80,
+      868,
+      124
+    ]
+  },
+  {
+    "name": "MarketButton",
+    "file": "png/MarketButton.png",
+    "rect": [
+      619,
+      630,
+      479,
+      102
+    ],
+    "scale": 2,
+    "sliceCenter": [
+      90,
+      80,
+      868,
+      124
+    ]
+  },
+  {
+    "name": "GamesButton",
+    "file": "png/GamesButton.png",
+    "rect": [
+      1148,
+      630,
+      446,
+      102
+    ],
+    "scale": 2,
+    "sliceCenter": [
+      90,
+      80,
+      802,
+      124
+    ]
+  },
+  {
+    "name": "Arrow",
+    "file": "png/Arrow.png",
+    "rect": [
+      422,
+      663,
+      24,
+      30
+    ],
+    "scale": 2
+  },
+  {
+    "name": "ResourcePill",
+    "file": "png/ResourcePill.png",
+    "rect": [
+      1135,
+      19,
+      219,
+      88
+    ],
+    "scale": 2,
+    "sliceCenter": [
+      84,
+      64,
+      354,
+      112
+    ]
+  },
+  {
+    "name": "TokenIcon",
+    "file": "png/TokenIcon.png",
+    "rect": [
+      1144,
+      26,
+      67,
+      68
+    ],
+    "scale": 2
+  },
+  {
+    "name": "TicketIcon",
+    "file": "png/TicketIcon.png",
+    "rect": [
+      1356,
+      28,
+      70,
+      66
+    ],
+    "scale": 2
+  },
+  {
+    "name": "PlusButton",
+    "file": "png/PlusButton.png",
+    "rect": [
+      1280,
+      28,
+      66,
+      66
+    ],
+    "scale": 2
+  },
+  {
+    "name": "SettingsButton",
+    "file": "png/SettingsButton.png",
+    "rect": [
+      1563,
+      19,
+      84,
+      88
+    ],
+    "scale": 2
+  },
+  {
+    "name": "QuickLink",
+    "file": "png/QuickLink.png",
+    "rect": [
+      67,
+      752,
+      312,
+      128
+    ],
+    "scale": 2,
+    "sliceCenter": [
+      80,
+      70,
+      544,
+      186
+    ]
+  },
+  {
+    "name": "TutorialIcon",
+    "file": "png/TutorialIcon.png",
+    "rect": [
+      0,
+      0,
+      99,
+      99
+    ],
+    "scale": 2
+  },
+  {
+    "name": "MissionsIcon",
+    "file": "png/MissionsIcon.png",
+    "rect": [
+      0,
+      0,
+      99,
+      99
+    ],
+    "scale": 2
+  },
+  {
+    "name": "RewardsIcon",
+    "file": "png/RewardsIcon.png",
+    "rect": [
+      0,
+      0,
+      99,
+      99
+    ],
+    "scale": 2
+  },
+  {
+    "name": "CodesIcon",
+    "file": "png/CodesIcon.png",
+    "rect": [
+      0,
+      0,
+      99,
+      99
+    ],
+    "scale": 2
+  },
+  {
+    "name": "PremiumIcon",
+    "file": "png/PremiumIcon.png",
+    "rect": [
+      0,
+      0,
+      99,
+      99
+    ],
+    "scale": 2
+  }
+]

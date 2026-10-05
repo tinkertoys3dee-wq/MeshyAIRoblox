@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="324" height="96" viewBox="293.0 481.0 162.0 48.0">
+  <defs>
+    </defs>
+  <g id="GraphicsViewBust">
+    <rect x="297" y="485" width="154" height="40" rx="13" fill="#17243e" stroke="#42637f" stroke-width="2" />
+    <path d="m317 500 6 6-6 6-6-6Z" fill="#507b9a" />
+  </g>
+</svg>

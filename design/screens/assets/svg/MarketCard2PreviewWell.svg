@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="618" height="388" viewBox="443.0 457.0 309.0 194.0">
+  <defs>
+    <radialGradient id="shop-aura">
+      <stop stop-color="#f9bdff" stop-opacity=".82" />
+      <stop offset=".32" stop-color="#b326ff" stop-opacity=".68" />
+      <stop offset="1" stop-color="#8b0fff" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <g id="MarketCard2PreviewWell">
+    <rect x="447" y="461" width="301" height="186" rx="16" fill="#11172c" stroke="#75569c" stroke-width="2" />
+    <ellipse cx="597.5" cy="581" rx="122" ry="46" fill="url(#shop-aura)" opacity=".58" />
+    <ellipse cx="597.5" cy="625" rx="100" ry="11" fill="#8a27d2" opacity=".16" />
+  </g>
+</svg>

@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="722" height="122" viewBox="1220.0 436.0 361.0 61.0">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2=".4" y2="1">
+      <stop stop-color="#ffffb7" />
+      <stop offset=".22" stop-color="#ffe051" />
+      <stop offset=".7" stop-color="#ffb21a" />
+      <stop offset="1" stop-color="#ed8706" />
+    </linearGradient>
+  </defs>
+  <g id="RunwayWeeklyRow1">
+    <rect x="1223" y="439" width="357" height="55" rx="12" fill="#252538" stroke="#5c5144" stroke-width="2" />
+    <circle cx="1250" cy="466" r="16" fill="url(#gold)" stroke="#c5a364" stroke-width="1" />
+  </g>
+</svg>

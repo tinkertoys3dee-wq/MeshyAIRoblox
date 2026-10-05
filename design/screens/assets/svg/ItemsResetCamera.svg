@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="86" height="86" viewBox="1522.0 460.0 43.0 43.0">
+  <defs>
+    </defs>
+  <g id="ItemsResetCamera">
+    <circle cx="1543" cy="481" r="18" fill="#162b46" stroke="#3c6486" stroke-width="1.5" />
+    <path d="M1535 480a8 8 0 1 1 4 8M1532 474l3 7 7-3" fill="none" stroke="#b5e6ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>

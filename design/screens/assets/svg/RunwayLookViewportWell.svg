@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="948" height="452" viewBox="681.0 400.0 474.0 226.0">
+  <defs>
+    </defs>
+  <g id="RunwayLookViewportWell">
+    <rect x="685" y="404" width="466" height="218" rx="18" fill="#10203a" stroke="#3486ac" stroke-width="2" />
+    <path d="M774 408 714 616H896L907 408ZM960 408 958 616H1126L1055 408Z" fill="#347aaf" opacity=".08" />
+    <ellipse cx="918" cy="607" rx="109" ry="11" fill="#079cda" opacity=".24" />
+  </g>
+</svg>

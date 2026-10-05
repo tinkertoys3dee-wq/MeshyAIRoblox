@@ -11,6 +11,7 @@
 /backend/dist
 /backend/coverage
 /backend/.env
+/backend/.env.roblox-upload
 /backend/scripts/ui-decals/ids.json
 /node_modules
 *.tsbuildinfo
@@ -25,3 +26,13 @@
 # Misc
 .DS_Store
 __pycache__/
+
+# Local upload progress and recovery ledgers (public Image IDs stay tracked).
+/design/home/upload_state*.json*
+/design/screens/assets/upload_state*.json*
+/design/screens/assets/upload_journal.jsonl
+/design/screens/assets/recovery_required.json
+/design/screens/assets/recovery_retry_audit.jsonl
+/design/screens/assets/.upload-write-self-test.json*
+/design/screens/assets/asset_ids.json.tmp*
+/src/Shared/ScreenAssets.luau.tmp*

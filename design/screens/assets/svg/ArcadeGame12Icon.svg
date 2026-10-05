@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="1254.0 728.0 75.0 75.0">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2=".4" y2="1">
+      <stop stop-color="#ffffb7" />
+      <stop offset=".22" stop-color="#ffe051" />
+      <stop offset=".7" stop-color="#ffb21a" />
+      <stop offset="1" stop-color="#ed8706" />
+    </linearGradient>
+    <symbol id="arcade-icon-trophy" viewBox="0 0 64 64">
+      <path d="M18 10H46V24Q45 39 32 40Q19 39 18 24Z" fill="url(#gold)" stroke="#fff2b7" stroke-width="2" />
+      <path d="M18 14H8Q6 32 22 31M46 14H56Q58 32 42 31M32 40V51M21 55H43" fill="none" stroke="#ffd878" stroke-width="4" stroke-linecap="round" />
+    </symbol>
+  </defs>
+  <g id="ArcadeGame12Icon">
+    <rect x="1257" y="731" width="69" height="69" rx="17" fill="#14223a" stroke="#4c6181" stroke-width="2" />
+    <use href="#arcade-icon-trophy" x="1264" y="738" width="55" height="55" />
+  </g>
+</svg>

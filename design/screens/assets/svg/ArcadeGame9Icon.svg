@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="90.0 728.0 75.0 75.0">
+  <defs>
+    <linearGradient id="cyan-icon" x1="0" y1="0" x2=".6" y2="1">
+      <stop stop-color="#bcffff" />
+      <stop offset=".22" stop-color="#3affff" />
+      <stop offset=".63" stop-color="#00d5ff" />
+      <stop offset="1" stop-color="#0089ee" />
+    </linearGradient>
+    <symbol id="arcade-icon-rocket" viewBox="0 0 64 64">
+      <path d="M21 34Q24 11 48 7Q57 32 36 45Z" fill="url(#cyan-icon)" stroke="#cfffff" stroke-width="2" />
+      <path d="M23 28 10 31 8 49 24 43M41 38 43 54 56 46 51 32" fill="#145680" stroke="#a1e9ff" stroke-width="2" />
+      <circle cx="40" cy="23" r="6" fill="#122a47" stroke="#e6ffff" stroke-width="2" />
+      <path d="M24 44 13 57 29 48" fill="#ffcc4c" stroke="#fff0a6" stroke-width="2" />
+    </symbol>
+  </defs>
+  <g id="ArcadeGame9Icon">
+    <rect x="93" y="731" width="69" height="69" rx="17" fill="#14223a" stroke="#4c6181" stroke-width="2" />
+    <use href="#arcade-icon-rocket" x="100" y="738" width="55" height="55" />
+  </g>
+</svg>

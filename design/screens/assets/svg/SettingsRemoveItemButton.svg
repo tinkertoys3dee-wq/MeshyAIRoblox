@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="278" height="110" viewBox="1430.0 401.0 139.0 55.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+  </defs>
+  <g id="SettingsRemoveItemButton">
+    <rect x="1438" y="409" width="123" height="35" rx="17.5" fill="#14223b" filter="url(#small-shadow)" stroke="#345278" stroke-width="2" />
+  </g>
+</svg>

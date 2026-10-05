@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="1254.0 420.0 75.0 75.0">
+  <defs>
+    <linearGradient id="purple-icon" x1="0" y1="0" x2=".4" y2="1">
+      <stop stop-color="#ffceff" />
+      <stop offset=".32" stop-color="#e179ff" />
+      <stop offset="1" stop-color="#891fff" />
+    </linearGradient>
+    <symbol id="arcade-icon-snake" viewBox="0 0 64 64">
+      <path d="M12 51H42Q51 51 51 42Q51 33 42 33H23Q13 33 13 23Q13 13 25 13H43" fill="none" stroke="#8d3fd0" stroke-width="14" stroke-linecap="round" />
+      <path d="M12 48H41Q48 48 48 41Q48 35 41 35H23Q14 35 14 23Q14 15 25 15H42" fill="none" stroke="#bd83ff" stroke-width="10" stroke-linecap="round" />
+      <ellipse cx="47" cy="15" rx="12" ry="9" fill="url(#purple-icon)" stroke="#eed1ff" stroke-width="1.5" />
+      <circle cx="51" cy="12" r="2" fill="#fff" />
+    </symbol>
+  </defs>
+  <g id="ArcadeGame4Icon">
+    <rect x="1257" y="423" width="69" height="69" rx="17" fill="#14223a" stroke="#4c6181" stroke-width="2" />
+    <use href="#arcade-icon-snake" x="1264" y="430" width="55" height="55" />
+  </g>
+</svg>

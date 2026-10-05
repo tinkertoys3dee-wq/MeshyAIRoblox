@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1090" height="714" viewBox="1070.0 508.0 545.0 357.0">
+  <defs>
+    <filter id="small-shadow" x="-30%" y="-40%" width="160%" height="190%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#030614" flood-opacity=".7" />
+    </filter>
+    <linearGradient id="screen-gold" x1="0" y1="0" x2=".3" y2="1">
+      <stop offset="0" stop-color="#553514" />
+      <stop offset=".55" stop-color="#352718" />
+      <stop offset="1" stop-color="#172033" />
+    </linearGradient>
+    <linearGradient id="screen-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff" stop-opacity=".16" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g id="GraphicsGalleryPanel">
+    <rect x="1078" y="516" width="529" height="337" rx="26" fill="url(#screen-gold)" filter="url(#small-shadow)" stroke="#ffd04e" stroke-width="2" />
+    <rect x="1080" y="518" width="525" height="333" rx="25" fill="none" stroke-opacity=".08" stroke="#ffffff" stroke-width="2" />
+    <rect x="1087" y="522" width="511" height="66" rx="20" fill="url(#screen-sheen)" />
+    <path d="M1353.08 518L1543.52 518L1353.08 851L1162.64 851Z" fill="#ffffff" opacity=".025" />
+  </g>
+</svg>

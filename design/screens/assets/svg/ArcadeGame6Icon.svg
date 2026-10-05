@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="478.0 574.0 75.0 75.0">
+  <defs>
+    <filter id="gold-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7" result="g" />
+      <feFlood flood-color="#ffbb28" flood-opacity=".65" />
+      <feComposite in2="g" operator="in" />
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <linearGradient id="gold" x1="0" y1="0" x2=".4" y2="1">
+      <stop stop-color="#ffffb7" />
+      <stop offset=".22" stop-color="#ffe051" />
+      <stop offset=".7" stop-color="#ffb21a" />
+      <stop offset="1" stop-color="#ed8706" />
+    </linearGradient>
+    <symbol id="arcade-icon-bricks" viewBox="0 0 64 64">
+      <rect x="5" y="8" width="16" height="10" rx="2" fill="url(#gold)" stroke="#fff0bd" stroke-width="2" />
+      <rect x="24" y="8" width="16" height="10" rx="2" fill="url(#gold)" stroke="#fff0bd" stroke-width="2" />
+      <rect x="43" y="8" width="16" height="10" rx="2" fill="url(#gold)" stroke="#fff0bd" stroke-width="2" />
+      <rect x="5" y="21" width="16" height="10" rx="2" fill="url(#gold)" stroke="#fff0bd" stroke-width="2" />
+      <rect x="24" y="21" width="16" height="10" rx="2" fill="url(#gold)" stroke="#fff0bd" stroke-width="2" />
+      <rect x="43" y="21" width="16" height="10" rx="2" fill="url(#gold)" stroke="#fff0bd" stroke-width="2" />
+      <rect x="16" y="52" width="33" height="6" rx="3" fill="url(#gold)" stroke="#fff0bd" stroke-width="2" />
+      <circle cx="36" cy="42" r="5" fill="#fff5bc" filter="url(#gold-glow)" />
+      <path d="M35 44 29 48" stroke="#d2a348" stroke-width="2" />
+    </symbol>
+  </defs>
+  <g id="ArcadeGame6Icon">
+    <rect x="481" y="577" width="69" height="69" rx="17" fill="#14223a" stroke="#4c6181" stroke-width="2" />
+    <use href="#arcade-icon-bricks" x="488" y="584" width="55" height="55" />
+  </g>
+</svg>

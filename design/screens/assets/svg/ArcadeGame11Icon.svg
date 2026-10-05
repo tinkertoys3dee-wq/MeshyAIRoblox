@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="866.0 728.0 75.0 75.0">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2=".4" y2="1">
+      <stop stop-color="#ffffb7" />
+      <stop offset=".22" stop-color="#ffe051" />
+      <stop offset=".7" stop-color="#ffb21a" />
+      <stop offset="1" stop-color="#ed8706" />
+    </linearGradient>
+    <symbol id="arcade-icon-echo" viewBox="0 0 64 64">
+      <path d="M12 46Q20 40 20 27Q20 14 32 14Q44 14 44 27Q44 40 52 46Z" fill="url(#gold)" stroke="#ffefb8" stroke-width="2" />
+      <path d="M27 51Q32 58 37 51M29 10Q32 5 35 10" fill="none" stroke="#ffe6a3" stroke-width="3" stroke-linecap="round" />
+      <path d="M9 20Q4 28 8 36M55 20Q60 28 56 36" fill="none" stroke="#e5b854" stroke-width="2" />
+    </symbol>
+  </defs>
+  <g id="ArcadeGame11Icon">
+    <rect x="869" y="731" width="69" height="69" rx="17" fill="#14223a" stroke="#4c6181" stroke-width="2" />
+    <use href="#arcade-icon-echo" x="876" y="738" width="55" height="55" />
+  </g>
+</svg>

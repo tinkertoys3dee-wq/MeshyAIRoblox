@@ -1,0 +1,190 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="888" height="452" viewBox="620.0 444.0 444.0 226.0">
+  <defs>
+    <filter id="purple-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="g" />
+      <feFlood flood-color="#b62dff" flood-opacity=".5" />
+      <feComposite in2="g" operator="in" />
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <linearGradient id="cyan-icon" x1="0" y1="0" x2=".6" y2="1">
+      <stop stop-color="#bcffff" />
+      <stop offset=".22" stop-color="#3affff" />
+      <stop offset=".63" stop-color="#00d5ff" />
+      <stop offset="1" stop-color="#0089ee" />
+    </linearGradient>
+    <linearGradient id="screen-blue" x1="0" y1="0" x2=".3" y2="1">
+      <stop offset="0" stop-color="#06355c" />
+      <stop offset=".55" stop-color="#082443" />
+      <stop offset="1" stop-color="#111b32" />
+    </linearGradient>
+    <radialGradient id="shop-aura">
+      <stop stop-color="#f9bdff" stop-opacity=".82" />
+      <stop offset=".32" stop-color="#b326ff" stop-opacity=".68" />
+      <stop offset="1" stop-color="#8b0fff" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="shop-metal" x1="0%" y1="0%" x2="90%" y2="100%">
+      <stop stop-color="#8b46c9" />
+      <stop offset=".15" stop-color="#2f1958" />
+      <stop offset=".34" stop-color="#050811" />
+      <stop offset=".6" stop-color="#0b071e" />
+      <stop offset=".8" stop-color="#623092" />
+      <stop offset="1" stop-color="#0d061e" />
+    </linearGradient>
+    <linearGradient id="shop-spike" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop stop-color="#682cb3" />
+      <stop offset=".26" stop-color="#160b2e" />
+      <stop offset=".6" stop-color="#030610" />
+      <stop offset=".83" stop-color="#352356" />
+      <stop offset="1" stop-color="#b57aea" />
+    </linearGradient>
+    <linearGradient id="shop-purple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop stop-color="#f9ceff" />
+      <stop offset=".25" stop-color="#ce64ff" />
+      <stop offset=".65" stop-color="#8c0df3" />
+      <stop offset="1" stop-color="#361164" />
+    </linearGradient>
+    <radialGradient id="shop-gem">
+      <stop stop-color="#fff" />
+      <stop offset=".18" stop-color="#cbaaff" />
+      <stop offset=".65" stop-color="#8839ee" />
+      <stop offset="1" stop-color="#42128f" />
+    </radialGradient>
+    <filter id="shop-glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="3" result="b" />
+      <feMerge>
+        <feMergeNode in="b" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="shop-shadow" x="-40%" y="-40%" width="180%" height="190%">
+      <feDropShadow dx="1" dy="8" stdDeviation="5" flood-color="#160a36" flood-opacity=".75" />
+    </filter>
+    <symbol id="market-crown" viewBox="645 418 250 195">
+      <g filter="url(#shop-shadow)">
+        <ellipse cx="769" cy="536" rx="109" ry="46" fill="url(#shop-aura)" opacity=".82" />
+        <path d="M659 544C651 518 682 490 729 485 788 476 841 489 869 516 879 525 883 537 879 550L862 552C866 531 846 516 815 508 765 495 709 502 684 520 672 529 670 540 675 549Z" fill="url(#shop-metal)" stroke="#100820" stroke-width="2.7" />
+        <path d="M668 534C676 510 715 491 769 493 823 493 860 513 870 537" fill="none" stroke="#50236f" stroke-width="10" />
+        <path d="M675 527C693 507 729 499 769 500 812 500 847 514 861 534" fill="none" stroke="#a718ee" stroke-width="6" />
+        <path d="M675 527C693 507 729 499 769 500 812 500 847 514 861 534" fill="none" stroke="#dc68ff" stroke-width="2.2" filter="url(#shop-glow)" />
+        <path d="M662 529C668 513 671 485 674 458 676 477 680 491 686 503L697 513 684 530 672 536Z" fill="url(#shop-spike)" stroke="#110821" stroke-width="2" />
+        <path d="M700 504C708 487 713 458 720 432 718 455 721 472 728 484L740 497 724 511 709 513Z" fill="url(#shop-spike)" stroke="#0e071b" stroke-width="2" />
+        <path d="M741 490C751 474 758 455 761 443 760 462 761 475 769 487L778 497 763 506 748 499Z" fill="url(#shop-spike)" stroke="#10071f" stroke-width="2" />
+        <path d="M784 495C793 484 800 466 802 455 801 472 806 484 814 493L822 503 807 511 791 504Z" fill="url(#shop-spike)" stroke="#10071e" stroke-width="2" />
+        <path d="M817 502C826 485 832 455 834 432 838 453 839 476 847 493L858 510 845 522 829 517Z" fill="url(#shop-spike)" stroke="#10071c" stroke-width="2" />
+        <path d="M852 523C861 505 869 475 872 458 871 482 872 502 879 518L882 536 867 544Z" fill="url(#shop-spike)" stroke="#10081d" stroke-width="2" />
+        <path d="M668 521C673 495 673 480 674 463M707 499C714 474 717 451 719 437M748 487C755 474 758 460 760 449M824 497C830 476 833 451 834 438M859 521C866 500 870 477 871 465" fill="none" stroke="#b378df" stroke-width="1.1" opacity=".86" />
+        <path d="M705 493 716 480 724 492 718 500Z M745 485 756 476 767 489 758 493Z M821 490 831 479 842 495 833 503Z" fill="#26133f" opacity=".8" />
+        <path d="M687 521C690 508 689 490 690 480 694 498 698 507 708 513L701 529 691 527Z M730 507C732 498 738 486 739 477 741 491 745 499 753 504L743 517Z M777 507C780 495 780 481 780 475 783 490 789 501 797 506L788 517Z M846 531C850 518 856 500 855 489 860 500 860 516 869 525L859 541Z" fill="url(#shop-metal)" stroke="#4a246b" stroke-width="1.1" />
+        <path d="M680 528 695 520 710 517 724 509 741 513 754 506 772 510 784 507 801 515 814 514 829 523 844 524 858 535" fill="none" stroke="#9b19ee" stroke-width="4" />
+        <path d="M680 528 695 521 710 520 724 512 741 516 754 509 772 513 784 510 801 518 814 517 829 526 844 527 858 535" fill="none" stroke="#f09cff" stroke-width="1.8" filter="url(#shop-glow)" />
+        <path d="M681 529 689 533 691 542 697 536 703 523 712 525 716 533 722 528 728 515 738 519 741 528 748 519 754 514 765 518 769 527 775 519 786 516 792 524 799 528 802 521 814 523 820 534 827 529 833 531 841 540 850 538 858 544" fill="none" stroke="#1c0a31" stroke-width="7" />
+        <path d="M659 540C669 563 711 576 769 577 825 578 866 561 879 540L875 566C860 588 819 601 769 600 715 600 677 586 662 565Z" fill="url(#shop-metal)" stroke="#0b0518" stroke-width="3" />
+        <path d="M661 548C680 574 719 588 769 590 818 591 858 574 877 548" fill="none" stroke="#4c246e" stroke-width="10" />
+        <path d="M666 548C683 571 722 584 770 585 817 586 855 571 873 550" fill="none" stroke="#8015d8" stroke-width="8" />
+        <path d="M667 550C687 573 725 584 770 585 816 586 852 572 872 552" fill="none" stroke="#c12aff" stroke-width="3.8" filter="url(#shop-glow)" />
+        <path d="M672 555C694 576 729 584 770 585 811 585 844 574 866 559" fill="none" stroke="#eca0ff" stroke-width="1.2" />
+        <path d="M674 571C696 588 732 596 770 596 808 596 841 586 863 571" fill="none" stroke="#130822" stroke-width="3.5" />
+        <path d="M659 550C655 540 652 522 652 511 657 525 665 530 673 536L678 550 670 570 658 562 653 553Z" fill="url(#shop-spike)" stroke="#0e061c" stroke-width="2" />
+        <path d="M663 559C666 545 663 532 663 524 670 531 677 547 681 555L683 572 674 582 665 573Z" fill="url(#shop-metal)" stroke="#10071e" stroke-width="1.8" />
+        <path d="M676 564C685 550 687 530 685 520 692 532 695 549 704 560L708 578 693 591 680 584 674 572Z" fill="url(#shop-spike)" stroke="#0c061a" stroke-width="2" />
+        <path d="M694 565C702 550 705 522 707 498 710 518 708 538 718 553L732 568 717 588 703 589 690 575Z" fill="url(#shop-spike)" stroke="#0b0617" stroke-width="2.3" />
+        <path d="M701 559C705 543 706 516 707 505M680 560C686 544 686 532 685 526M664 548C662 533 656 524 655 520" fill="none" stroke="#a765db" stroke-width="1.1" opacity=".75" />
+        <path d="M708 575C720 569 729 560 732 551 733 564 737 572 746 579L736 594 724 593 713 585Z" fill="url(#shop-metal)" stroke="#0d061a" stroke-width="1.7" />
+        <path d="M748 584C757 578 761 568 763 559 766 573 771 580 781 585L778 594 766 604 757 595 747 591Z" fill="url(#shop-metal)" stroke="#120822" stroke-width="1.8" />
+        <path d="M778 577C785 561 790 533 794 507 795 527 796 549 805 562L818 572 805 593 790 593 777 585Z" fill="url(#shop-spike)" stroke="#0c0619" stroke-width="2.3" />
+        <path d="M786 568C791 548 793 525 794 513" fill="none" stroke="#b07ee0" stroke-width="1.1" opacity=".78" />
+        <path d="M815 579C827 570 832 557 833 548 836 560 842 570 852 574L844 590 831 593 818 587Z" fill="url(#shop-metal)" stroke="#0d061a" stroke-width="1.9" />
+        <path d="M845 565C853 550 862 531 864 516 866 534 866 545 876 552L874 569 862 582 847 583 842 571Z" fill="url(#shop-spike)" stroke="#0b0618" stroke-width="2" />
+        <path d="M852 560C859 545 863 531 864 521" fill="none" stroke="#b174e3" stroke-width="1.1" opacity=".8" />
+        <path d="M871 551C878 538 880 519 880 506 885 521 883 538 887 548L884 559 873 571Z" fill="url(#shop-metal)" stroke="#10081d" stroke-width="1.7" />
+        <path d="M691 563C691 554 700 544 707 544 718 546 724 558 720 569L709 583 698 579Z" fill="#1b0a31" stroke="#612c89" stroke-width="2" />
+        <path d="M702 550 711 552 716 561 708 573 700 568 697 558Z" fill="url(#shop-gem)" stroke="#aa60ec" stroke-width="1.3" />
+        <path d="M703 552 709 559 705 568 701 560Z" fill="#d7acff" />
+        <path d="M705 553 707 559 703 562Z" fill="#fff0ff" />
+        <path d="M677 548 684 540 691 548 689 562 681 567 674 558Z M852 553 860 544 869 551 867 565 857 570 849 561Z" fill="#180b2d" stroke="#602b8b" stroke-width="1.7" />
+        <path d="M679 550 684 545 687 552 682 560Z M854 554 860 549 864 554 859 563Z" fill="url(#shop-purple)" />
+        <path d="M714 579 727 583 736 579M746 587 757 584 766 592 775 587M817 582 828 579 836 582M849 571 860 562" fill="none" stroke="#bb38fa" stroke-width="2" filter="url(#shop-glow)" />
+        <path d="M652 542C647 537 646 531 647 523L657 542 655 553 649 557 653 548M669 576 668 588 679 582M729 592 726 601 738 594M795 596 801 604 810 592M867 575 871 584 875 570M880 558 885 558 888 550" fill="#10051c" stroke="#4c226d" stroke-width="1" />
+      </g>
+    </symbol>
+    <linearGradient id="market-avatar-skin" x1="0" y1="0" x2=".7" y2="1">
+      <stop offset="0" stop-color="#fff0d6" />
+      <stop offset=".55" stop-color="#f4c79f" />
+      <stop offset="1" stop-color="#c98964" />
+    </linearGradient>
+    <linearGradient id="market-avatar-shirt" x1="0" y1="0" x2=".6" y2="1">
+      <stop offset="0" stop-color="#169fe7" />
+      <stop offset=".45" stop-color="#0d4f8b" />
+      <stop offset="1" stop-color="#082c50" />
+    </linearGradient>
+    <symbol id="market-avatar" viewBox="0 0 300 340">
+      <ellipse cx="150" cy="324" rx="91" ry="11" fill="#0acfff" opacity=".12" />
+      <rect x="103" y="226" width="43" height="91" rx="12" fill="url(#screen-blue)" stroke="#23496a" stroke-width="2" />
+      <rect x="107" y="269" width="35" height="5" rx="2" fill="#1d7499" />
+      <rect x="101" y="300" width="49" height="23" rx="9" fill="#092742" stroke="#276485" stroke-width="2" />
+      <path d="M105 311H143" stroke="#35d8f2" stroke-width="3" />
+      <rect x="156" y="226" width="43" height="91" rx="12" fill="url(#screen-blue)" stroke="#23496a" stroke-width="2" />
+      <rect x="160" y="269" width="35" height="5" rx="2" fill="#1d7499" />
+      <rect x="154" y="300" width="49" height="23" rx="9" fill="#092742" stroke="#276485" stroke-width="2" />
+      <path d="M158 311H196" stroke="#35d8f2" stroke-width="3" />
+      <g transform="rotate(8 83 145)">
+        <rect x="63" y="138" width="39" height="92" rx="13" fill="url(#market-avatar-shirt)" stroke="#22638d" stroke-width="2" />
+        <rect x="67" y="210" width="33" height="33" rx="10" fill="url(#market-avatar-skin)" stroke="#c28e73" stroke-width="2" />
+        <path d="M70 151V203" stroke="#77dcff" stroke-width="2" opacity=".5" />
+      </g>
+      <g transform="rotate(-8 219 145)">
+        <rect x="199" y="138" width="39" height="92" rx="13" fill="url(#market-avatar-shirt)" stroke="#22638d" stroke-width="2" />
+        <rect x="203" y="210" width="33" height="33" rx="10" fill="url(#market-avatar-skin)" stroke="#c28e73" stroke-width="2" />
+        <path d="M206 151V203" stroke="#77dcff" stroke-width="2" opacity=".5" />
+      </g>
+      <rect x="97" y="126" width="106" height="116" rx="18" fill="url(#market-avatar-shirt)" stroke="#3778a0" stroke-width="2" />
+      <path d="M184 130 200 142V225L185 237Z" fill="#05264c" opacity=".7" />
+      <rect x="122" y="153" width="58" height="7" rx="3" fill="url(#cyan-icon)" />
+      <rect x="133" y="176" width="37" height="37" rx="10" fill="#0a2a49" stroke="#2d7197" stroke-width="2" />
+      <path d="m152 185 10 10-10 10-10-10Z" fill="url(#cyan-icon)" />
+      <path d="M103 223H196" stroke="#81b7d3" stroke-width="3" opacity=".4" />
+      <rect x="135" y="107" width="29" height="31" rx="9" fill="url(#market-avatar-skin)" />
+      <rect x="107" y="42" width="87" height="82" rx="22" fill="url(#market-avatar-skin)" stroke="#ebc29e" stroke-width="2" />
+      <path d="M181 48Q194 53 194 67V106Q190 120 179 122V52Z" fill="#bd865f" opacity=".45" />
+      <path d="M118 53Q139 46 173 52" fill="none" stroke="#fff4e3" stroke-width="4" opacity=".8" stroke-linecap="round" />
+      <ellipse cx="132" cy="79" rx="3.3" ry="4.5" fill="#272634" />
+      <ellipse cx="165" cy="79" rx="3.3" ry="4.5" fill="#272634" />
+      <path d="M133 97Q149 110 165 97" fill="none" stroke="#66433c" stroke-width="3" stroke-linecap="round" />
+    </symbol>
+    <symbol id="games-runway-art" viewBox="0 0 400 244">
+      <path d="M-15 0H415V244H-15Z" fill="#131d38" />
+      <path d="M36 12 -37 226 109 226Z" fill="#9758e2" opacity=".07" />
+      <circle cx="36" cy="16" r="5" fill="#d3adff" filter="url(#purple-glow)" />
+      <path d="M118 12 45 226 191 226Z" fill="#9758e2" opacity=".07" />
+      <circle cx="118" cy="16" r="5" fill="#d3adff" filter="url(#purple-glow)" />
+      <path d="M200 12 127 226 273 226Z" fill="#9758e2" opacity=".07" />
+      <circle cx="200" cy="16" r="5" fill="#d3adff" filter="url(#purple-glow)" />
+      <path d="M282 12 209 226 355 226Z" fill="#9758e2" opacity=".07" />
+      <circle cx="282" cy="16" r="5" fill="#d3adff" filter="url(#purple-glow)" />
+      <path d="M364 12 291 226 437 226Z" fill="#9758e2" opacity=".07" />
+      <circle cx="364" cy="16" r="5" fill="#d3adff" filter="url(#purple-glow)" />
+      <path d="M144 142H257L400 244H0Z" fill="#101a30" stroke="#8260c8" stroke-width="2" />
+      <path d="M121.6 158H279.4" stroke="#8760d8" stroke-width="1.2" opacity=".5" />
+      <path d="M93.6 178H307.4" stroke="#8760d8" stroke-width="1.2" opacity=".5" />
+      <path d="M55.80000000000001 205H345.2" stroke="#8760d8" stroke-width="1.2" opacity=".5" />
+      <path d="M13.800000000000011 235H387.2" stroke="#8760d8" stroke-width="1.2" opacity=".5" />
+      <ellipse cx="202" cy="224" rx="83" ry="10" fill="#a55fff" opacity=".24" />
+      <use href="#market-avatar" x="127" y="7" width="149" height="210" />
+      <use href="#market-crown" x="166" y="12" width="70" height="56" />
+      <path d="M57 65 62 57 67 65 62 73Z" fill="#e1b7ff" opacity=".8" />
+      <path d="M322 99 327 91 332 99 327 107Z" fill="#e1b7ff" opacity=".8" />
+      <path d="M281 38 286 30 291 38 286 46Z" fill="#e1b7ff" opacity=".8" />
+      <path d="M100 147 105 139 110 147 105 155Z" fill="#e1b7ff" opacity=".8" />
+    </symbol>
+    <clipPath id="GamesChoice2ArtClip">
+      <rect x="619" y="443" width="446" height="228" rx="18" fill="#fff" />
+    </clipPath>
+  </defs>
+  <g id="GamesChoice2Artwork">
+    <use href="#games-runway-art" x="619" y="443" width="446" height="228" clip-path="url(#GamesChoice2ArtClip)" />
+  </g>
+</svg>

@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="478.0 420.0 75.0 75.0">
+  <defs>
+    <linearGradient id="cyan-icon" x1="0" y1="0" x2=".6" y2="1">
+      <stop stop-color="#bcffff" />
+      <stop offset=".22" stop-color="#3affff" />
+      <stop offset=".63" stop-color="#00d5ff" />
+      <stop offset="1" stop-color="#0089ee" />
+    </linearGradient>
+    <symbol id="arcade-icon-dino" viewBox="0 0 64 64">
+      <path d="M10 52V31L18 43 29 38V12H56V29H43V34H50V41H40V54H33V45H22V54Z" fill="url(#cyan-icon)" stroke="#bdffff" stroke-width="2" />
+      <circle cx="46" cy="18" r="2" fill="#193953" />
+      <path d="M43 27H54M28 52H35" stroke="#e0ffff" stroke-width="2" />
+    </symbol>
+  </defs>
+  <g id="ArcadeGame2Icon">
+    <rect x="481" y="423" width="69" height="69" rx="17" fill="#14223a" stroke="#4c6181" stroke-width="2" />
+    <use href="#arcade-icon-dino" x="488" y="430" width="55" height="55" />
+  </g>
+</svg>

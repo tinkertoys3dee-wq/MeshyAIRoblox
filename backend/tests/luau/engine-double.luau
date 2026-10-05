@@ -217,10 +217,16 @@ function methods:GetDescendants()
 	end
 	return result
 end
-function methods:FindFirstChild(name)
+function methods:FindFirstChild(name, recursive)
 	for _, child in self._children do
 		if child.Name == name then
 			return child
+		end
+	end
+	if recursive then
+		for _, child in self._children do
+			local match = child:FindFirstChild(name, true)
+			if match then return match end
 		end
 	end
 	return nil
@@ -232,6 +238,14 @@ function methods:FindFirstChildOfClass(class)
 		end
 	end
 	return nil
+end
+function methods:IsDescendantOf(ancestor)
+	local current = self.Parent
+	while current do
+		if current == ancestor then return true end
+		current = current.Parent
+	end
+	return false
 end
 function methods:Destroy()
 	if self._destroyed then
@@ -263,6 +277,7 @@ function Instance.new(class)
 			Visible = true,
 			Size = UDim2.new(),
 			Position = UDim2.new(),
+			AnchorPoint = Vector2.zero,
 			AbsoluteSize = Vector2.new(1000, 800),
 			AbsolutePosition = Vector2.zero,
 			BackgroundTransparency = 0,
@@ -357,6 +372,9 @@ local services = {
 		WaitForChild = function(_, name)
 			return name
 		end,
+		FindFirstChild = function(_, name)
+			return if fixtures[name] or modules[name] then name else nil
+		end,
 	},
 	TweenService = {
 		Create = function(_, object, info, properties)
@@ -386,6 +404,7 @@ local services = {
 	RunService = {},
 	ServerStorage = {},
 	UserInputService = {
+		InputBegan = signal(),
 		lastInputType = Enum.UserInputType.MouseButton1,
 		GetLastInputType = function(self)
 			return self.lastInputType

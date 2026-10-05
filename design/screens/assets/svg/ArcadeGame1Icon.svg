@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="90.0 420.0 75.0 75.0">
+  <defs>
+    <linearGradient id="cyan-icon" x1="0" y1="0" x2=".6" y2="1">
+      <stop stop-color="#bcffff" />
+      <stop offset=".22" stop-color="#3affff" />
+      <stop offset=".63" stop-color="#00d5ff" />
+      <stop offset="1" stop-color="#0089ee" />
+    </linearGradient>
+    <symbol id="arcade-icon-bird" viewBox="0 0 64 64">
+      <path d="M48 30 59 35 48 40Q48 52 33 54Q13 52 12 36Q13 19 32 18Q48 18 48 30Z" fill="url(#cyan-icon)" stroke="#bdffff" stroke-width="2" />
+      <path d="M32 38Q12 23 6 35Q11 50 30 48Z" fill="#0c648d" stroke="#72eaff" stroke-width="2" />
+      <circle cx="40" cy="29" r="4" fill="#efffff" />
+      <circle cx="41" cy="29" r="2" fill="#123347" />
+    </symbol>
+  </defs>
+  <g id="ArcadeGame1Icon">
+    <rect x="93" y="423" width="69" height="69" rx="17" fill="#14223a" stroke="#4c6181" stroke-width="2" />
+    <use href="#arcade-icon-bird" x="100" y="430" width="55" height="55" />
+  </g>
+</svg>

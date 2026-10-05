@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="1106.0 398.0 32.0 32.0">
+  <defs>
+    </defs>
+  <g id="GraphicsActivityIcon">
+    <rect x="1107" y="399" width="30" height="30" rx="10" fill="#123653" stroke="#3a98bd" stroke-width="2" />
+    <rect x="1113" y="406" width="18" height="15" rx="3" fill="none" stroke="#9eeaff" stroke-width="2" />
+    <circle cx="1126" cy="410" r="2" fill="#9eeaff" />
+    <path d="m1115 419 5-5 4 4 3-2 3 3" fill="none" stroke="#9eeaff" stroke-width="1.5" />
+  </g>
+</svg>

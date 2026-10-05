@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="90.0 574.0 75.0 75.0">
+  <defs>
+    <linearGradient id="cyan-icon" x1="0" y1="0" x2=".6" y2="1">
+      <stop stop-color="#bcffff" />
+      <stop offset=".22" stop-color="#3affff" />
+      <stop offset=".63" stop-color="#00d5ff" />
+      <stop offset="1" stop-color="#0089ee" />
+    </linearGradient>
+    <symbol id="arcade-icon-stack" viewBox="0 0 64 64">
+      <rect x="8" y="44" width="48" height="12" rx="3" fill="url(#cyan-icon)" stroke="#d0ffff" stroke-width="2" />
+      <path d="M11 47H53" stroke="#fff" stroke-opacity=".6" stroke-width="1" />
+      <rect x="13" y="29" width="43" height="12" rx="3" fill="url(#cyan-icon)" stroke="#d0ffff" stroke-width="2" />
+      <path d="M16 32H53" stroke="#fff" stroke-opacity=".6" stroke-width="1" />
+      <rect x="9" y="14" width="35" height="12" rx="3" fill="url(#cyan-icon)" stroke="#d0ffff" stroke-width="2" />
+      <path d="M12 17H41" stroke="#fff" stroke-opacity=".6" stroke-width="1" />
+    </symbol>
+  </defs>
+  <g id="ArcadeGame5Icon">
+    <rect x="93" y="577" width="69" height="69" rx="17" fill="#14223a" stroke="#4c6181" stroke-width="2" />
+    <use href="#arcade-icon-stack" x="100" y="584" width="55" height="55" />
+  </g>
+</svg>
