@@ -1,0 +1,9302 @@
+{
+  "arcade": {
+    "arcadeBackdrop": {
+      "assetKey": "V2_Arcade_arcadeBackdrop",
+      "rect": [
+        0.0,
+        0.0,
+        1672.0,
+        941.0
+      ],
+      "sourceRect": [
+        0.0,
+        0.0,
+        1672.0,
+        941.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MainShellArt": {
+      "assetKey": "V2_Arcade_MainShellArt",
+      "rect": [
+        41.0,
+        107.0,
+        1600.0,
+        797.0
+      ],
+      "sourceRect": [
+        45.0,
+        111.0,
+        1592.0,
+        789.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "TokenBalanceArt": {
+      "assetKey": "V2_Arcade_TokenBalanceArt",
+      "rect": [
+        1140.0,
+        26.0,
+        207.0,
+        70.0
+      ],
+      "sourceRect": [
+        1144.0,
+        30.0,
+        199.0,
+        62.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "TokenBalancePlusArt": {
+      "assetKey": "V2_Arcade_TokenBalancePlusArt",
+      "rect": [
+        1289.0,
+        40.0,
+        44.0,
+        42.0
+      ],
+      "sourceRect": [
+        1289.0,
+        40.0,
+        44.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "TokenBalancePlusIcon": {
+      "assetKey": "V2_Arcade_TokenBalancePlusIcon",
+      "rect": [
+        1289.0,
+        39.0,
+        45.0,
+        45.0
+      ],
+      "sourceRect": [
+        1293.0,
+        43.0,
+        37.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "PassBalanceArt": {
+      "assetKey": "V2_Arcade_PassBalanceArt",
+      "rect": [
+        1355.0,
+        26.0,
+        201.0,
+        70.0
+      ],
+      "sourceRect": [
+        1359.0,
+        30.0,
+        193.0,
+        62.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "PassBalancePlusArt": {
+      "assetKey": "V2_Arcade_PassBalancePlusArt",
+      "rect": [
+        1498.0,
+        40.0,
+        44.0,
+        42.0
+      ],
+      "sourceRect": [
+        1498.0,
+        40.0,
+        44.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "PassBalancePlusIcon": {
+      "assetKey": "V2_Arcade_PassBalancePlusIcon",
+      "rect": [
+        1498.0,
+        39.0,
+        45.0,
+        45.0
+      ],
+      "sourceRect": [
+        1502.0,
+        43.0,
+        37.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "HeaderToken": {
+      "assetKey": "V2_Arcade_HeaderToken",
+      "rect": [
+        1150.0,
+        31.0,
+        55.0,
+        55.0
+      ],
+      "sourceRect": [
+        1154.0,
+        35.0,
+        47.0,
+        47.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "HeaderPass": {
+      "assetKey": "V2_Arcade_HeaderPass",
+      "rect": [
+        1366.0,
+        33.0,
+        52.0,
+        51.0
+      ],
+      "sourceRect": [
+        1370.0,
+        37.0,
+        44.0,
+        43.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "HeaderSettingsArt": {
+      "assetKey": "V2_Arcade_HeaderSettingsArt",
+      "rect": [
+        1572.0,
+        30.0,
+        65.0,
+        64.0
+      ],
+      "sourceRect": [
+        1572.0,
+        30.0,
+        65.0,
+        64.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsGear": {
+      "assetKey": "V2_Arcade_SettingsGear",
+      "rect": [
+        1578.0,
+        36.0,
+        51.0,
+        52.0
+      ],
+      "sourceRect": [
+        1582.0,
+        40.0,
+        43.0,
+        44.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavigationArt": {
+      "assetKey": "V2_Arcade_NavigationArt",
+      "rect": [
+        378.0,
+        133.0,
+        864.0,
+        82.0
+      ],
+      "sourceRect": [
+        382.0,
+        137.0,
+        856.0,
+        74.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavHomeIcon": {
+      "assetKey": "V2_Arcade_NavHomeIcon",
+      "rect": [
+        420.0,
+        151.0,
+        46.0,
+        45.0
+      ],
+      "sourceRect": [
+        424.0,
+        155.0,
+        38.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavCreateIcon": {
+      "assetKey": "V2_Arcade_NavCreateIcon",
+      "rect": [
+        625.0,
+        151.0,
+        46.0,
+        45.0
+      ],
+      "sourceRect": [
+        629.0,
+        155.0,
+        38.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavMarketIcon": {
+      "assetKey": "V2_Arcade_NavMarketIcon",
+      "rect": [
+        855.0,
+        151.0,
+        46.0,
+        45.0
+      ],
+      "sourceRect": [
+        859.0,
+        155.0,
+        38.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavGamesArt": {
+      "assetKey": "V2_Arcade_NavGamesArt",
+      "rect": [
+        1019.0,
+        139.0,
+        218.0,
+        66.0
+      ],
+      "sourceRect": [
+        1019.0,
+        139.0,
+        218.0,
+        66.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavGamesIcon": {
+      "assetKey": "V2_Arcade_NavGamesIcon",
+      "rect": [
+        1064.0,
+        151.0,
+        46.0,
+        45.0
+      ],
+      "sourceRect": [
+        1068.0,
+        155.0,
+        38.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsArt": {
+      "assetKey": "V2_Arcade_MyItemsArt",
+      "rect": [
+        1276.0,
+        139.0,
+        247.0,
+        67.0
+      ],
+      "sourceRect": [
+        1276.0,
+        139.0,
+        247.0,
+        67.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsBag": {
+      "assetKey": "V2_Arcade_MyItemsBag",
+      "rect": [
+        1298.0,
+        153.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        1302.0,
+        157.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CloseArt": {
+      "assetKey": "V2_Arcade_CloseArt",
+      "rect": [
+        1544.0,
+        139.0,
+        69.0,
+        67.0
+      ],
+      "sourceRect": [
+        1544.0,
+        139.0,
+        69.0,
+        67.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CloseIcon": {
+      "assetKey": "V2_Arcade_CloseIcon",
+      "rect": [
+        1553.0,
+        147.0,
+        52.0,
+        52.0
+      ],
+      "sourceRect": [
+        1557.0,
+        151.0,
+        44.0,
+        44.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeHeroPanelArt": {
+      "assetKey": "V2_Arcade_ArcadeHeroPanelArt",
+      "rect": [
+        61.0,
+        225.0,
+        650.0,
+        148.0
+      ],
+      "sourceRect": [
+        65.0,
+        229.0,
+        642.0,
+        140.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeController": {
+      "assetKey": "V2_Arcade_ArcadeController",
+      "rect": [
+        73.0,
+        238.0,
+        163.0,
+        117.0
+      ],
+      "sourceRect": [
+        73.0,
+        238.0,
+        163.0,
+        117.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeCrown": {
+      "assetKey": "V2_Arcade_ArcadeCrown",
+      "rect": [
+        508.0,
+        235.0,
+        70.0,
+        62.0
+      ],
+      "sourceRect": [
+        508.0,
+        235.0,
+        70.0,
+        62.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WeeklyPrizePanelArt": {
+      "assetKey": "V2_Arcade_WeeklyPrizePanelArt",
+      "rect": [
+        718.0,
+        225.0,
+        495.0,
+        148.0
+      ],
+      "sourceRect": [
+        722.0,
+        229.0,
+        487.0,
+        140.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeTrophy": {
+      "assetKey": "V2_Arcade_ArcadeTrophy",
+      "rect": [
+        733.0,
+        243.0,
+        89.0,
+        112.0
+      ],
+      "sourceRect": [
+        733.0,
+        243.0,
+        89.0,
+        112.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WeeklyMedal1": {
+      "assetKey": "V2_Arcade_WeeklyMedal1",
+      "rect": [
+        825.0,
+        279.0,
+        52.0,
+        61.0
+      ],
+      "sourceRect": [
+        829.0,
+        283.0,
+        44.0,
+        53.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeCoins1": {
+      "assetKey": "V2_Arcade_ArcadeCoins1",
+      "rect": [
+        858.0,
+        324.0,
+        70.0,
+        34.0
+      ],
+      "sourceRect": [
+        858.0,
+        324.0,
+        70.0,
+        34.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WeeklyMedal2": {
+      "assetKey": "V2_Arcade_WeeklyMedal2",
+      "rect": [
+        952.0,
+        279.0,
+        52.0,
+        61.0
+      ],
+      "sourceRect": [
+        956.0,
+        283.0,
+        44.0,
+        53.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeCoins2": {
+      "assetKey": "V2_Arcade_ArcadeCoins2",
+      "rect": [
+        983.0,
+        324.0,
+        70.0,
+        34.0
+      ],
+      "sourceRect": [
+        983.0,
+        324.0,
+        70.0,
+        34.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WeeklyMedal3": {
+      "assetKey": "V2_Arcade_WeeklyMedal3",
+      "rect": [
+        1077.0,
+        279.0,
+        52.0,
+        61.0
+      ],
+      "sourceRect": [
+        1081.0,
+        283.0,
+        44.0,
+        53.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeCoins3": {
+      "assetKey": "V2_Arcade_ArcadeCoins3",
+      "rect": [
+        1106.0,
+        324.0,
+        70.0,
+        34.0
+      ],
+      "sourceRect": [
+        1106.0,
+        324.0,
+        70.0,
+        34.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "DailyChallengePanelArt": {
+      "assetKey": "V2_Arcade_DailyChallengePanelArt",
+      "rect": [
+        1220.0,
+        225.0,
+        396.0,
+        148.0
+      ],
+      "sourceRect": [
+        1224.0,
+        229.0,
+        388.0,
+        140.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeCalendar": {
+      "assetKey": "V2_Arcade_ArcadeCalendar",
+      "rect": [
+        1240.0,
+        240.0,
+        88.0,
+        87.0
+      ],
+      "sourceRect": [
+        1240.0,
+        240.0,
+        88.0,
+        87.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeGift": {
+      "assetKey": "V2_Arcade_ArcadeGift",
+      "rect": [
+        1527.0,
+        247.0,
+        83.0,
+        90.0
+      ],
+      "sourceRect": [
+        1527.0,
+        247.0,
+        83.0,
+        90.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeTileFlappyBirdArt": {
+      "assetKey": "V2_Arcade_ArcadeTileFlappyBirdArt",
+      "rect": [
+        60.0,
+        378.0,
+        386.0,
+        170.0
+      ],
+      "sourceRect": [
+        64.0,
+        382.0,
+        378.0,
+        162.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeFlappyBird": {
+      "assetKey": "V2_Arcade_ArcadeFlappyBird",
+      "rect": [
+        66.0,
+        384.0,
+        181.0,
+        157.0
+      ],
+      "sourceRect": [
+        66.0,
+        384.0,
+        181.0,
+        157.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithGameIllustration"
+    },
+    "PlayFlappyBirdArt": {
+      "assetKey": "V2_Arcade_PlayFlappyBirdArt",
+      "rect": [
+        257.0,
+        474.0,
+        171.0,
+        58.0
+      ],
+      "sourceRect": [
+        257.0,
+        474.0,
+        171.0,
+        58.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeTileDinoRunnerArt": {
+      "assetKey": "V2_Arcade_ArcadeTileDinoRunnerArt",
+      "rect": [
+        452.0,
+        378.0,
+        384.0,
+        170.0
+      ],
+      "sourceRect": [
+        456.0,
+        382.0,
+        376.0,
+        162.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeDinoRunner": {
+      "assetKey": "V2_Arcade_ArcadeDinoRunner",
+      "rect": [
+        458.0,
+        384.0,
+        182.0,
+        157.0
+      ],
+      "sourceRect": [
+        458.0,
+        384.0,
+        182.0,
+        157.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithGameIllustration"
+    },
+    "PlayDinoRunnerArt": {
+      "assetKey": "V2_Arcade_PlayDinoRunnerArt",
+      "rect": [
+        650.0,
+        474.0,
+        168.0,
+        58.0
+      ],
+      "sourceRect": [
+        650.0,
+        474.0,
+        168.0,
+        58.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeTileColorSwitchArt": {
+      "assetKey": "V2_Arcade_ArcadeTileColorSwitchArt",
+      "rect": [
+        842.0,
+        378.0,
+        383.0,
+        170.0
+      ],
+      "sourceRect": [
+        846.0,
+        382.0,
+        375.0,
+        162.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeColorSwitch": {
+      "assetKey": "V2_Arcade_ArcadeColorSwitch",
+      "rect": [
+        848.0,
+        384.0,
+        171.0,
+        157.0
+      ],
+      "sourceRect": [
+        848.0,
+        384.0,
+        171.0,
+        157.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithGameIllustration"
+    },
+    "PlayColorSwitchArt": {
+      "assetKey": "V2_Arcade_PlayColorSwitchArt",
+      "rect": [
+        1027.0,
+        474.0,
+        178.0,
+        58.0
+      ],
+      "sourceRect": [
+        1027.0,
+        474.0,
+        178.0,
+        58.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeTileNeonSnakeArt": {
+      "assetKey": "V2_Arcade_ArcadeTileNeonSnakeArt",
+      "rect": [
+        1230.0,
+        378.0,
+        386.0,
+        170.0
+      ],
+      "sourceRect": [
+        1234.0,
+        382.0,
+        378.0,
+        162.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeNeonSnake": {
+      "assetKey": "V2_Arcade_ArcadeNeonSnake",
+      "rect": [
+        1236.0,
+        384.0,
+        179.0,
+        157.0
+      ],
+      "sourceRect": [
+        1236.0,
+        384.0,
+        179.0,
+        157.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithGameIllustration"
+    },
+    "PlayNeonSnakeArt": {
+      "assetKey": "V2_Arcade_PlayNeonSnakeArt",
+      "rect": [
+        1428.0,
+        474.0,
+        171.0,
+        58.0
+      ],
+      "sourceRect": [
+        1428.0,
+        474.0,
+        171.0,
+        58.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeTileBlockStackerArt": {
+      "assetKey": "V2_Arcade_ArcadeTileBlockStackerArt",
+      "rect": [
+        60.0,
+        554.0,
+        386.0,
+        166.0
+      ],
+      "sourceRect": [
+        64.0,
+        558.0,
+        378.0,
+        158.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeBlockStacker": {
+      "assetKey": "V2_Arcade_ArcadeBlockStacker",
+      "rect": [
+        66.0,
+        560.0,
+        181.0,
+        153.0
+      ],
+      "sourceRect": [
+        66.0,
+        560.0,
+        181.0,
+        153.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithGameIllustration"
+    },
+    "PlayBlockStackerArt": {
+      "assetKey": "V2_Arcade_PlayBlockStackerArt",
+      "rect": [
+        257.0,
+        650.0,
+        171.0,
+        58.0
+      ],
+      "sourceRect": [
+        257.0,
+        650.0,
+        171.0,
+        58.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeTileBrickBreakerArt": {
+      "assetKey": "V2_Arcade_ArcadeTileBrickBreakerArt",
+      "rect": [
+        452.0,
+        554.0,
+        384.0,
+        166.0
+      ],
+      "sourceRect": [
+        456.0,
+        558.0,
+        376.0,
+        158.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeBrickBreaker": {
+      "assetKey": "V2_Arcade_ArcadeBrickBreaker",
+      "rect": [
+        458.0,
+        560.0,
+        182.0,
+        153.0
+      ],
+      "sourceRect": [
+        458.0,
+        560.0,
+        182.0,
+        153.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithGameIllustration"
+    },
+    "PlayBrickBreakerArt": {
+      "assetKey": "V2_Arcade_PlayBrickBreakerArt",
+      "rect": [
+        650.0,
+        650.0,
+        168.0,
+        58.0
+      ],
+      "sourceRect": [
+        650.0,
+        650.0,
+        168.0,
+        58.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeTileReflexTapArt": {
+      "assetKey": "V2_Arcade_ArcadeTileReflexTapArt",
+      "rect": [
+        842.0,
+        554.0,
+        383.0,
+        166.0
+      ],
+      "sourceRect": [
+        846.0,
+        558.0,
+        375.0,
+        158.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeReflexTap": {
+      "assetKey": "V2_Arcade_ArcadeReflexTap",
+      "rect": [
+        848.0,
+        560.0,
+        171.0,
+        153.0
+      ],
+      "sourceRect": [
+        848.0,
+        560.0,
+        171.0,
+        153.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithGameIllustration"
+    },
+    "PlayReflexTapArt": {
+      "assetKey": "V2_Arcade_PlayReflexTapArt",
+      "rect": [
+        1027.0,
+        650.0,
+        178.0,
+        58.0
+      ],
+      "sourceRect": [
+        1027.0,
+        650.0,
+        178.0,
+        58.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeTilePrismMergeArt": {
+      "assetKey": "V2_Arcade_ArcadeTilePrismMergeArt",
+      "rect": [
+        1230.0,
+        554.0,
+        386.0,
+        166.0
+      ],
+      "sourceRect": [
+        1234.0,
+        558.0,
+        378.0,
+        158.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadePrismMerge": {
+      "assetKey": "V2_Arcade_ArcadePrismMerge",
+      "rect": [
+        1236.0,
+        560.0,
+        179.0,
+        153.0
+      ],
+      "sourceRect": [
+        1236.0,
+        560.0,
+        179.0,
+        153.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithGameIllustration"
+    },
+    "PlayPrismMergeArt": {
+      "assetKey": "V2_Arcade_PlayPrismMergeArt",
+      "rect": [
+        1428.0,
+        650.0,
+        171.0,
+        58.0
+      ],
+      "sourceRect": [
+        1428.0,
+        650.0,
+        171.0,
+        58.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeTileMeteorRushArt": {
+      "assetKey": "V2_Arcade_ArcadeTileMeteorRushArt",
+      "rect": [
+        60.0,
+        725.0,
+        386.0,
+        167.0
+      ],
+      "sourceRect": [
+        64.0,
+        729.0,
+        378.0,
+        159.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeMeteorRush": {
+      "assetKey": "V2_Arcade_ArcadeMeteorRush",
+      "rect": [
+        66.0,
+        731.0,
+        181.0,
+        154.0
+      ],
+      "sourceRect": [
+        66.0,
+        731.0,
+        181.0,
+        154.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithGameIllustration"
+    },
+    "PlayMeteorRushArt": {
+      "assetKey": "V2_Arcade_PlayMeteorRushArt",
+      "rect": [
+        257.0,
+        821.0,
+        171.0,
+        58.0
+      ],
+      "sourceRect": [
+        257.0,
+        821.0,
+        171.0,
+        58.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeTileSkyHopperArt": {
+      "assetKey": "V2_Arcade_ArcadeTileSkyHopperArt",
+      "rect": [
+        452.0,
+        725.0,
+        384.0,
+        167.0
+      ],
+      "sourceRect": [
+        456.0,
+        729.0,
+        376.0,
+        159.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeSkyHopper": {
+      "assetKey": "V2_Arcade_ArcadeSkyHopper",
+      "rect": [
+        458.0,
+        731.0,
+        182.0,
+        154.0
+      ],
+      "sourceRect": [
+        458.0,
+        731.0,
+        182.0,
+        154.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithGameIllustration"
+    },
+    "PlaySkyHopperArt": {
+      "assetKey": "V2_Arcade_PlaySkyHopperArt",
+      "rect": [
+        650.0,
+        821.0,
+        168.0,
+        58.0
+      ],
+      "sourceRect": [
+        650.0,
+        821.0,
+        168.0,
+        58.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeTileEchoMatchArt": {
+      "assetKey": "V2_Arcade_ArcadeTileEchoMatchArt",
+      "rect": [
+        842.0,
+        725.0,
+        383.0,
+        167.0
+      ],
+      "sourceRect": [
+        846.0,
+        729.0,
+        375.0,
+        159.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeEchoMatch": {
+      "assetKey": "V2_Arcade_ArcadeEchoMatch",
+      "rect": [
+        848.0,
+        731.0,
+        171.0,
+        154.0
+      ],
+      "sourceRect": [
+        848.0,
+        731.0,
+        171.0,
+        154.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithGameIllustration"
+    },
+    "PlayEchoMatchArt": {
+      "assetKey": "V2_Arcade_PlayEchoMatchArt",
+      "rect": [
+        1027.0,
+        821.0,
+        178.0,
+        58.0
+      ],
+      "sourceRect": [
+        1027.0,
+        821.0,
+        178.0,
+        58.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeTileLeaderboardArt": {
+      "assetKey": "V2_Arcade_ArcadeTileLeaderboardArt",
+      "rect": [
+        1230.0,
+        725.0,
+        386.0,
+        167.0
+      ],
+      "sourceRect": [
+        1234.0,
+        729.0,
+        378.0,
+        159.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ArcadeLeaderboard": {
+      "assetKey": "V2_Arcade_ArcadeLeaderboard",
+      "rect": [
+        1236.0,
+        731.0,
+        179.0,
+        154.0
+      ],
+      "sourceRect": [
+        1236.0,
+        731.0,
+        179.0,
+        154.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithGameIllustration"
+    },
+    "OpenLeaderboardsArt": {
+      "assetKey": "V2_Arcade_OpenLeaderboardsArt",
+      "rect": [
+        1427.0,
+        826.0,
+        177.0,
+        52.0
+      ],
+      "sourceRect": [
+        1427.0,
+        826.0,
+        177.0,
+        52.0
+      ],
+      "imported": true,
+      "role": null
+    }
+  },
+  "avatar-graphics": {
+    "MainShellArt": {
+      "assetKey": "V2_AvatarGraphics_MainShellArt",
+      "rect": [
+        41.0,
+        108.0,
+        1599.0,
+        797.0
+      ],
+      "sourceRect": [
+        45.0,
+        112.0,
+        1591.0,
+        789.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddTokensCounterArt": {
+      "assetKey": "V2_AvatarGraphics_AddTokensCounterArt",
+      "rect": [
+        1141.0,
+        25.0,
+        207.0,
+        72.0
+      ],
+      "sourceRect": [
+        1145.0,
+        29.0,
+        199.0,
+        64.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "avatargraphicsIcon1": {
+      "assetKey": "V2_AvatarGraphics_avatargraphicsIcon1",
+      "rect": [
+        1153.0,
+        33.0,
+        54.0,
+        54.0
+      ],
+      "sourceRect": [
+        1157.0,
+        37.0,
+        46.0,
+        46.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddTokensArt": {
+      "assetKey": "V2_AvatarGraphics_AddTokensArt",
+      "rect": [
+        1288.0,
+        36.0,
+        50.0,
+        50.0
+      ],
+      "sourceRect": [
+        1292.0,
+        40.0,
+        42.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddTokensIcon": {
+      "assetKey": "V2_AvatarGraphics_AddTokensIcon",
+      "rect": [
+        1295.0,
+        43.0,
+        36.0,
+        36.0
+      ],
+      "sourceRect": [
+        1299.0,
+        47.0,
+        28.0,
+        28.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddPassesCounterArt": {
+      "assetKey": "V2_AvatarGraphics_AddPassesCounterArt",
+      "rect": [
+        1355.0,
+        25.0,
+        199.0,
+        72.0
+      ],
+      "sourceRect": [
+        1359.0,
+        29.0,
+        191.0,
+        64.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "avatargraphicsIcon3": {
+      "assetKey": "V2_AvatarGraphics_avatargraphicsIcon3",
+      "rect": [
+        1367.0,
+        33.0,
+        54.0,
+        54.0
+      ],
+      "sourceRect": [
+        1371.0,
+        37.0,
+        46.0,
+        46.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddPassesArt": {
+      "assetKey": "V2_AvatarGraphics_AddPassesArt",
+      "rect": [
+        1494.0,
+        36.0,
+        50.0,
+        50.0
+      ],
+      "sourceRect": [
+        1498.0,
+        40.0,
+        42.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddPassesIcon": {
+      "assetKey": "V2_AvatarGraphics_AddPassesIcon",
+      "rect": [
+        1501.0,
+        43.0,
+        36.0,
+        36.0
+      ],
+      "sourceRect": [
+        1505.0,
+        47.0,
+        28.0,
+        28.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsArt": {
+      "assetKey": "V2_AvatarGraphics_SettingsArt",
+      "rect": [
+        1569.0,
+        25.0,
+        72.0,
+        72.0
+      ],
+      "sourceRect": [
+        1573.0,
+        29.0,
+        64.0,
+        64.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsIcon": {
+      "assetKey": "V2_AvatarGraphics_SettingsIcon",
+      "rect": [
+        1582.0,
+        38.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        1586.0,
+        42.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "PrimaryNavArt": {
+      "assetKey": "V2_AvatarGraphics_PrimaryNavArt",
+      "rect": [
+        381.0,
+        132.0,
+        971.0,
+        85.0
+      ],
+      "sourceRect": [
+        385.0,
+        136.0,
+        963.0,
+        77.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavHomeIcon": {
+      "assetKey": "V2_AvatarGraphics_NavHomeIcon",
+      "rect": [
+        447.96000000000004,
+        152.5,
+        44.0,
+        44.0
+      ],
+      "sourceRect": [
+        451.96000000000004,
+        156.5,
+        36.0,
+        36.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavCreateArt": {
+      "assetKey": "V2_AvatarGraphics_NavCreateArt",
+      "rect": [
+        617.0,
+        133.0,
+        257.0,
+        83.0
+      ],
+      "sourceRect": [
+        621.0,
+        137.0,
+        249.0,
+        75.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavCreateIcon": {
+      "assetKey": "V2_AvatarGraphics_NavCreateIcon",
+      "rect": [
+        676.19,
+        152.5,
+        44.0,
+        44.0
+      ],
+      "sourceRect": [
+        680.19,
+        156.5,
+        36.0,
+        36.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavMarketIcon": {
+      "assetKey": "V2_AvatarGraphics_NavMarketIcon",
+      "rect": [
+        914.19,
+        152.5,
+        44.0,
+        44.0
+      ],
+      "sourceRect": [
+        918.19,
+        156.5,
+        36.0,
+        36.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavGamesIcon": {
+      "assetKey": "V2_AvatarGraphics_NavGamesIcon",
+      "rect": [
+        1159.575,
+        152.5,
+        44.0,
+        44.0
+      ],
+      "sourceRect": [
+        1163.575,
+        156.5,
+        36.0,
+        36.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsArt": {
+      "assetKey": "V2_AvatarGraphics_MyItemsArt",
+      "rect": [
+        1356.0,
+        136.0,
+        192.0,
+        76.0
+      ],
+      "sourceRect": [
+        1360.0,
+        140.0,
+        184.0,
+        68.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsIcon": {
+      "assetKey": "V2_AvatarGraphics_MyItemsIcon",
+      "rect": [
+        1379.58,
+        154.5,
+        39.0,
+        39.0
+      ],
+      "sourceRect": [
+        1383.58,
+        158.5,
+        31.0,
+        31.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CloseArt": {
+      "assetKey": "V2_AvatarGraphics_CloseArt",
+      "rect": [
+        1558.0,
+        137.0,
+        71.0,
+        74.0
+      ],
+      "sourceRect": [
+        1562.0,
+        141.0,
+        63.0,
+        66.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CloseIcon": {
+      "assetKey": "V2_AvatarGraphics_CloseIcon",
+      "rect": [
+        1572.0,
+        152.5,
+        43.0,
+        43.0
+      ],
+      "sourceRect": [
+        1576.0,
+        156.5,
+        35.0,
+        35.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsComposerArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsComposerArt",
+      "rect": [
+        57.0,
+        225.0,
+        926.0,
+        674.0
+      ],
+      "sourceRect": [
+        61.0,
+        229.0,
+        918.0,
+        666.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsTitleSparkle1": {
+      "assetKey": "V2_AvatarGraphics_GraphicsTitleSparkle1",
+      "rect": [
+        82.0,
+        249.0,
+        51.0,
+        51.0
+      ],
+      "sourceRect": [
+        86.0,
+        253.0,
+        43.0,
+        43.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsTitleSparkle2": {
+      "assetKey": "V2_AvatarGraphics_GraphicsTitleSparkle2",
+      "rect": [
+        115.0,
+        248.0,
+        22.0,
+        22.0
+      ],
+      "sourceRect": [
+        119.0,
+        252.0,
+        14.0,
+        14.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsTitleSparkle3": {
+      "assetKey": "V2_AvatarGraphics_GraphicsTitleSparkle3",
+      "rect": [
+        81.0,
+        287.0,
+        21.0,
+        21.0
+      ],
+      "sourceRect": [
+        85.0,
+        291.0,
+        13.0,
+        13.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsTabsArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsTabsArt",
+      "rect": [
+        607.0,
+        246.0,
+        363.0,
+        71.0
+      ],
+      "sourceRect": [
+        611.0,
+        250.0,
+        355.0,
+        63.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsCreateTabArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsCreateTabArt",
+      "rect": [
+        608.0,
+        249.0,
+        182.0,
+        66.0
+      ],
+      "sourceRect": [
+        612.0,
+        253.0,
+        174.0,
+        58.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsCreateTabIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicsCreateTabIcon",
+      "rect": [
+        639.81,
+        264.0,
+        36.0,
+        36.0
+      ],
+      "sourceRect": [
+        643.81,
+        268.0,
+        28.0,
+        28.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsDiscoverTabIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicsDiscoverTabIcon",
+      "rect": [
+        812.2,
+        265.0,
+        34.0,
+        34.0
+      ],
+      "sourceRect": [
+        816.2,
+        269.0,
+        26.0,
+        26.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsFormArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsFormArt",
+      "rect": [
+        73.0,
+        340.0,
+        895.0,
+        437.0
+      ],
+      "sourceRect": [
+        77.0,
+        344.0,
+        887.0,
+        429.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsMyAvatarSourceArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsMyAvatarSourceArt",
+      "rect": [
+        358.0,
+        349.0,
+        289.0,
+        54.0
+      ],
+      "sourceRect": [
+        362.0,
+        353.0,
+        281.0,
+        46.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsMyAvatarSourceIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicsMyAvatarSourceIcon",
+      "rect": [
+        433.1,
+        358.5,
+        35.0,
+        35.0
+      ],
+      "sourceRect": [
+        437.1,
+        362.5,
+        27.0,
+        27.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsTextSourceArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsTextSourceArt",
+      "rect": [
+        650.0,
+        350.0,
+        305.0,
+        54.0
+      ],
+      "sourceRect": [
+        654.0,
+        354.0,
+        297.0,
+        46.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsTextSourceIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicsTextSourceIcon",
+      "rect": [
+        701.47,
+        360.0,
+        34.0,
+        34.0
+      ],
+      "sourceRect": [
+        705.47,
+        364.0,
+        26.0,
+        26.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsSourceThumbnailArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsSourceThumbnailArt",
+      "rect": [
+        86.0,
+        401.0,
+        261.0,
+        267.0
+      ],
+      "sourceRect": [
+        90.0,
+        405.0,
+        253.0,
+        259.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsAvatarArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsAvatarArt",
+      "rect": [
+        93.0,
+        408.0,
+        249.0,
+        252.0
+      ],
+      "sourceRect": [
+        93.0,
+        408.0,
+        249.0,
+        252.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveAvatarThumbnail"
+    },
+    "GraphicsHeadshotViewArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsHeadshotViewArt",
+      "rect": [
+        358.0,
+        444.0,
+        198.0,
+        54.0
+      ],
+      "sourceRect": [
+        362.0,
+        448.0,
+        190.0,
+        46.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsHeadshotViewIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicsHeadshotViewIcon",
+      "rect": [
+        393.2,
+        454.0,
+        34.0,
+        34.0
+      ],
+      "sourceRect": [
+        397.2,
+        458.0,
+        26.0,
+        26.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsBustViewArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsBustViewArt",
+      "rect": [
+        559.0,
+        444.0,
+        196.0,
+        54.0
+      ],
+      "sourceRect": [
+        563.0,
+        448.0,
+        188.0,
+        46.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsBustViewIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicsBustViewIcon",
+      "rect": [
+        613.6,
+        454.0,
+        34.0,
+        34.0
+      ],
+      "sourceRect": [
+        617.6,
+        458.0,
+        26.0,
+        26.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsFullBodyViewArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsFullBodyViewArt",
+      "rect": [
+        758.0,
+        444.0,
+        197.0,
+        54.0
+      ],
+      "sourceRect": [
+        762.0,
+        448.0,
+        189.0,
+        46.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsFullBodyViewIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicsFullBodyViewIcon",
+      "rect": [
+        788.895,
+        453.0,
+        36.0,
+        36.0
+      ],
+      "sourceRect": [
+        792.895,
+        457.0,
+        28.0,
+        28.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsPromptFieldArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsPromptFieldArt",
+      "rect": [
+        357.0,
+        542.0,
+        600.0,
+        80.0
+      ],
+      "sourceRect": [
+        361.0,
+        546.0,
+        592.0,
+        72.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsAdvancedOptionsArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsAdvancedOptionsArt",
+      "rect": [
+        358.0,
+        624.0,
+        599.0,
+        44.0
+      ],
+      "sourceRect": [
+        362.0,
+        628.0,
+        591.0,
+        36.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsAdvancedOptionsIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicsAdvancedOptionsIcon",
+      "rect": [
+        376.0,
+        630.5,
+        31.0,
+        31.0
+      ],
+      "sourceRect": [
+        380.0,
+        634.5,
+        23.0,
+        23.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsAdvancedChevron": {
+      "assetKey": "V2_AvatarGraphics_GraphicsAdvancedChevron",
+      "rect": [
+        910.0,
+        633.0,
+        29.0,
+        29.0
+      ],
+      "sourceRect": [
+        914.0,
+        637.0,
+        21.0,
+        21.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsGenerateArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsGenerateArt",
+      "rect": [
+        83.0,
+        674.0,
+        876.0,
+        64.0
+      ],
+      "sourceRect": [
+        87.0,
+        678.0,
+        868.0,
+        56.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsGenerateIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicsGenerateIcon",
+      "rect": [
+        354.25,
+        685.5,
+        41.0,
+        41.0
+      ],
+      "sourceRect": [
+        358.25,
+        689.5,
+        33.0,
+        33.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsPriceConfirmationIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicsPriceConfirmationIcon",
+      "rect": [
+        371.0,
+        740.0,
+        28.0,
+        28.0
+      ],
+      "sourceRect": [
+        375.0,
+        744.0,
+        20.0,
+        20.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsActivityArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsActivityArt",
+      "rect": [
+        73.0,
+        771.0,
+        897.0,
+        124.0
+      ],
+      "sourceRect": [
+        77.0,
+        775.0,
+        889.0,
+        116.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsActivityClock": {
+      "assetKey": "V2_AvatarGraphics_GraphicsActivityClock",
+      "rect": [
+        89.0,
+        782.0,
+        32.0,
+        32.0
+      ],
+      "sourceRect": [
+        93.0,
+        786.0,
+        24.0,
+        24.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsJobRowArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsJobRowArt",
+      "rect": [
+        127.0,
+        807.0,
+        827.0,
+        87.0
+      ],
+      "sourceRect": [
+        131.0,
+        811.0,
+        819.0,
+        79.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsJobThumbBackgroundArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsJobThumbBackgroundArt",
+      "rect": [
+        132.0,
+        812.0,
+        90.0,
+        76.0
+      ],
+      "sourceRect": [
+        136.0,
+        816.0,
+        82.0,
+        68.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsJobThumbArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsJobThumbArt",
+      "rect": [
+        139.0,
+        818.0,
+        75.0,
+        65.0
+      ],
+      "sourceRect": [
+        139.0,
+        818.0,
+        75.0,
+        65.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveGraphicJobThumbnail"
+    },
+    "GraphicsProgressTrackArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsProgressTrackArt",
+      "rect": [
+        232.0,
+        859.0,
+        628.0,
+        26.0
+      ],
+      "sourceRect": [
+        236.0,
+        863.0,
+        620.0,
+        18.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsGalleryArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsGalleryArt",
+      "rect": [
+        991.0,
+        225.0,
+        632.0,
+        674.0
+      ],
+      "sourceRect": [
+        995.0,
+        229.0,
+        624.0,
+        666.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsGalleryIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicsGalleryIcon",
+      "rect": [
+        1022.0,
+        250.0,
+        49.0,
+        49.0
+      ],
+      "sourceRect": [
+        1026.0,
+        254.0,
+        41.0,
+        41.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicGalleryCard1Art": {
+      "assetKey": "V2_AvatarGraphics_GraphicGalleryCard1Art",
+      "rect": [
+        1003.0,
+        315.0,
+        304.0,
+        534.0
+      ],
+      "sourceRect": [
+        1007.0,
+        319.0,
+        296.0,
+        526.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicGalleryCard1PreviewFrameArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicGalleryCard1PreviewFrameArt",
+      "rect": [
+        1006.0,
+        322.0,
+        296.0,
+        386.0
+      ],
+      "sourceRect": [
+        1010.0,
+        326.0,
+        288.0,
+        378.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsNeonPosterArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsNeonPosterArt",
+      "rect": [
+        1012.0,
+        329.0,
+        283.0,
+        370.0
+      ],
+      "sourceRect": [
+        1012.0,
+        329.0,
+        283.0,
+        370.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveOwnedGraphicPreview"
+    },
+    "GraphicGalleryCard1CopyLinkArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicGalleryCard1CopyLinkArt",
+      "rect": [
+        1016.0,
+        772.0,
+        182.0,
+        59.0
+      ],
+      "sourceRect": [
+        1020.0,
+        776.0,
+        174.0,
+        51.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicGalleryCard1CopyLinkIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicGalleryCard1CopyLinkIcon",
+      "rect": [
+        1046.485,
+        786.0,
+        31.0,
+        31.0
+      ],
+      "sourceRect": [
+        1050.485,
+        790.0,
+        23.0,
+        23.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicGalleryCard1DeleteArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicGalleryCard1DeleteArt",
+      "rect": [
+        1200.0,
+        772.0,
+        95.0,
+        59.0
+      ],
+      "sourceRect": [
+        1204.0,
+        776.0,
+        87.0,
+        51.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicGalleryCard1DeleteIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicGalleryCard1DeleteIcon",
+      "rect": [
+        1204.05,
+        787.0,
+        29.0,
+        29.0
+      ],
+      "sourceRect": [
+        1208.05,
+        791.0,
+        21.0,
+        21.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicGalleryCard2Art": {
+      "assetKey": "V2_AvatarGraphics_GraphicGalleryCard2Art",
+      "rect": [
+        1309.0,
+        315.0,
+        304.0,
+        534.0
+      ],
+      "sourceRect": [
+        1313.0,
+        319.0,
+        296.0,
+        526.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicGalleryCard2PreviewFrameArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicGalleryCard2PreviewFrameArt",
+      "rect": [
+        1312.0,
+        322.0,
+        296.0,
+        386.0
+      ],
+      "sourceRect": [
+        1316.0,
+        326.0,
+        288.0,
+        378.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicsPurplePosterArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicsPurplePosterArt",
+      "rect": [
+        1319.0,
+        329.0,
+        283.0,
+        370.0
+      ],
+      "sourceRect": [
+        1319.0,
+        329.0,
+        283.0,
+        370.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveOwnedGraphicPreview"
+    },
+    "GraphicGalleryCard2CopyLinkArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicGalleryCard2CopyLinkArt",
+      "rect": [
+        1322.0,
+        772.0,
+        182.0,
+        59.0
+      ],
+      "sourceRect": [
+        1326.0,
+        776.0,
+        174.0,
+        51.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicGalleryCard2CopyLinkIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicGalleryCard2CopyLinkIcon",
+      "rect": [
+        1352.485,
+        786.0,
+        31.0,
+        31.0
+      ],
+      "sourceRect": [
+        1356.485,
+        790.0,
+        23.0,
+        23.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicGalleryCard2DeleteArt": {
+      "assetKey": "V2_AvatarGraphics_GraphicGalleryCard2DeleteArt",
+      "rect": [
+        1506.0,
+        772.0,
+        95.0,
+        59.0
+      ],
+      "sourceRect": [
+        1510.0,
+        776.0,
+        87.0,
+        51.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GraphicGalleryCard2DeleteIcon": {
+      "assetKey": "V2_AvatarGraphics_GraphicGalleryCard2DeleteIcon",
+      "rect": [
+        1510.05,
+        787.0,
+        29.0,
+        29.0
+      ],
+      "sourceRect": [
+        1514.05,
+        791.0,
+        21.0,
+        21.0
+      ],
+      "imported": true,
+      "role": null
+    }
+  },
+  "avatar-lab": {
+    "MainShellArt": {
+      "assetKey": "V2_AvatarLab_MainShellArt",
+      "rect": [
+        41.0,
+        108.0,
+        1599.0,
+        797.0
+      ],
+      "sourceRect": [
+        45.0,
+        112.0,
+        1591.0,
+        789.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddTokensCounterArt": {
+      "assetKey": "V2_AvatarLab_AddTokensCounterArt",
+      "rect": [
+        1141.0,
+        25.0,
+        207.0,
+        72.0
+      ],
+      "sourceRect": [
+        1145.0,
+        29.0,
+        199.0,
+        64.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "avatarlabIcon1": {
+      "assetKey": "V2_AvatarLab_avatarlabIcon1",
+      "rect": [
+        1153.0,
+        33.0,
+        54.0,
+        54.0
+      ],
+      "sourceRect": [
+        1157.0,
+        37.0,
+        46.0,
+        46.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddTokensArt": {
+      "assetKey": "V2_AvatarLab_AddTokensArt",
+      "rect": [
+        1288.0,
+        36.0,
+        50.0,
+        50.0
+      ],
+      "sourceRect": [
+        1292.0,
+        40.0,
+        42.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddTokensIcon": {
+      "assetKey": "V2_AvatarLab_AddTokensIcon",
+      "rect": [
+        1295.0,
+        43.0,
+        36.0,
+        36.0
+      ],
+      "sourceRect": [
+        1299.0,
+        47.0,
+        28.0,
+        28.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddPassesCounterArt": {
+      "assetKey": "V2_AvatarLab_AddPassesCounterArt",
+      "rect": [
+        1355.0,
+        25.0,
+        199.0,
+        72.0
+      ],
+      "sourceRect": [
+        1359.0,
+        29.0,
+        191.0,
+        64.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "avatarlabIcon3": {
+      "assetKey": "V2_AvatarLab_avatarlabIcon3",
+      "rect": [
+        1367.0,
+        33.0,
+        54.0,
+        54.0
+      ],
+      "sourceRect": [
+        1371.0,
+        37.0,
+        46.0,
+        46.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddPassesArt": {
+      "assetKey": "V2_AvatarLab_AddPassesArt",
+      "rect": [
+        1494.0,
+        36.0,
+        50.0,
+        50.0
+      ],
+      "sourceRect": [
+        1498.0,
+        40.0,
+        42.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddPassesIcon": {
+      "assetKey": "V2_AvatarLab_AddPassesIcon",
+      "rect": [
+        1501.0,
+        43.0,
+        36.0,
+        36.0
+      ],
+      "sourceRect": [
+        1505.0,
+        47.0,
+        28.0,
+        28.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsArt": {
+      "assetKey": "V2_AvatarLab_SettingsArt",
+      "rect": [
+        1569.0,
+        25.0,
+        72.0,
+        72.0
+      ],
+      "sourceRect": [
+        1573.0,
+        29.0,
+        64.0,
+        64.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsIcon": {
+      "assetKey": "V2_AvatarLab_SettingsIcon",
+      "rect": [
+        1582.0,
+        38.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        1586.0,
+        42.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "PrimaryNavArt": {
+      "assetKey": "V2_AvatarLab_PrimaryNavArt",
+      "rect": [
+        381.0,
+        132.0,
+        971.0,
+        85.0
+      ],
+      "sourceRect": [
+        385.0,
+        136.0,
+        963.0,
+        77.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavHomeIcon": {
+      "assetKey": "V2_AvatarLab_NavHomeIcon",
+      "rect": [
+        447.96000000000004,
+        152.5,
+        44.0,
+        44.0
+      ],
+      "sourceRect": [
+        451.96000000000004,
+        156.5,
+        36.0,
+        36.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavCreateArt": {
+      "assetKey": "V2_AvatarLab_NavCreateArt",
+      "rect": [
+        617.0,
+        133.0,
+        257.0,
+        83.0
+      ],
+      "sourceRect": [
+        621.0,
+        137.0,
+        249.0,
+        75.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavCreateIcon": {
+      "assetKey": "V2_AvatarLab_NavCreateIcon",
+      "rect": [
+        676.19,
+        152.5,
+        44.0,
+        44.0
+      ],
+      "sourceRect": [
+        680.19,
+        156.5,
+        36.0,
+        36.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavMarketIcon": {
+      "assetKey": "V2_AvatarLab_NavMarketIcon",
+      "rect": [
+        914.19,
+        152.5,
+        44.0,
+        44.0
+      ],
+      "sourceRect": [
+        918.19,
+        156.5,
+        36.0,
+        36.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavGamesIcon": {
+      "assetKey": "V2_AvatarLab_NavGamesIcon",
+      "rect": [
+        1159.575,
+        152.5,
+        44.0,
+        44.0
+      ],
+      "sourceRect": [
+        1163.575,
+        156.5,
+        36.0,
+        36.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsArt": {
+      "assetKey": "V2_AvatarLab_MyItemsArt",
+      "rect": [
+        1356.0,
+        136.0,
+        192.0,
+        76.0
+      ],
+      "sourceRect": [
+        1360.0,
+        140.0,
+        184.0,
+        68.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsIcon": {
+      "assetKey": "V2_AvatarLab_MyItemsIcon",
+      "rect": [
+        1379.58,
+        154.5,
+        39.0,
+        39.0
+      ],
+      "sourceRect": [
+        1383.58,
+        158.5,
+        31.0,
+        31.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CloseArt": {
+      "assetKey": "V2_AvatarLab_CloseArt",
+      "rect": [
+        1558.0,
+        137.0,
+        71.0,
+        74.0
+      ],
+      "sourceRect": [
+        1562.0,
+        141.0,
+        63.0,
+        66.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CloseIcon": {
+      "assetKey": "V2_AvatarLab_CloseIcon",
+      "rect": [
+        1572.0,
+        152.5,
+        43.0,
+        43.0
+      ],
+      "sourceRect": [
+        1576.0,
+        156.5,
+        35.0,
+        35.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabTitleIcon": {
+      "assetKey": "V2_AvatarLab_LabTitleIcon",
+      "rect": [
+        75.0,
+        238.0,
+        87.0,
+        87.0
+      ],
+      "sourceRect": [
+        79.0,
+        242.0,
+        79.0,
+        79.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabSecondaryNavArt": {
+      "assetKey": "V2_AvatarLab_LabSecondaryNavArt",
+      "rect": [
+        574.0,
+        240.0,
+        1038.0,
+        75.0
+      ],
+      "sourceRect": [
+        578.0,
+        244.0,
+        1030.0,
+        67.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabWorkspaceTabArt": {
+      "assetKey": "V2_AvatarLab_LabWorkspaceTabArt",
+      "rect": [
+        574.0,
+        239.0,
+        309.0,
+        74.0
+      ],
+      "sourceRect": [
+        578.0,
+        243.0,
+        301.0,
+        66.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabWorkspaceTabIcon": {
+      "assetKey": "V2_AvatarLab_LabWorkspaceTabIcon",
+      "rect": [
+        642.85,
+        255.0,
+        42.0,
+        42.0
+      ],
+      "sourceRect": [
+        646.85,
+        259.0,
+        34.0,
+        34.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabGraphicsTabIcon": {
+      "assetKey": "V2_AvatarLab_LabGraphicsTabIcon",
+      "rect": [
+        958.025,
+        256.0,
+        42.0,
+        42.0
+      ],
+      "sourceRect": [
+        962.025,
+        260.0,
+        34.0,
+        34.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabMoreToolsIcon": {
+      "assetKey": "V2_AvatarLab_LabMoreToolsIcon",
+      "rect": [
+        1351.85,
+        256.0,
+        42.0,
+        42.0
+      ],
+      "sourceRect": [
+        1355.85,
+        260.0,
+        34.0,
+        34.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogWorkspaceArt": {
+      "assetKey": "V2_AvatarLab_CatalogWorkspaceArt",
+      "rect": [
+        59.0,
+        326.0,
+        998.0,
+        563.0
+      ],
+      "sourceRect": [
+        63.0,
+        330.0,
+        990.0,
+        555.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogSearchFieldArt": {
+      "assetKey": "V2_AvatarLab_CatalogSearchFieldArt",
+      "rect": [
+        74.0,
+        337.0,
+        783.0,
+        61.0
+      ],
+      "sourceRect": [
+        78.0,
+        341.0,
+        775.0,
+        53.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogSearchIcon": {
+      "assetKey": "V2_AvatarLab_CatalogSearchIcon",
+      "rect": [
+        94.0,
+        350.0,
+        36.0,
+        36.0
+      ],
+      "sourceRect": [
+        98.0,
+        354.0,
+        28.0,
+        28.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogSearchArt": {
+      "assetKey": "V2_AvatarLab_CatalogSearchArt",
+      "rect": [
+        864.0,
+        337.0,
+        188.0,
+        62.0
+      ],
+      "sourceRect": [
+        868.0,
+        341.0,
+        180.0,
+        54.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryHairArt": {
+      "assetKey": "V2_AvatarLab_CategoryHairArt",
+      "rect": [
+        74.0,
+        405.0,
+        106.0,
+        57.0
+      ],
+      "sourceRect": [
+        78.0,
+        409.0,
+        98.0,
+        49.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryHairIcon": {
+      "assetKey": "V2_AvatarLab_CategoryHairIcon",
+      "rect": [
+        88.18,
+        417.0,
+        33.0,
+        33.0
+      ],
+      "sourceRect": [
+        92.18,
+        421.0,
+        25.0,
+        25.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryHatsArt": {
+      "assetKey": "V2_AvatarLab_CategoryHatsArt",
+      "rect": [
+        183.0,
+        405.0,
+        109.0,
+        57.0
+      ],
+      "sourceRect": [
+        187.0,
+        409.0,
+        101.0,
+        49.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryHatsIcon": {
+      "assetKey": "V2_AvatarLab_CategoryHatsIcon",
+      "rect": [
+        198.68,
+        417.0,
+        33.0,
+        33.0
+      ],
+      "sourceRect": [
+        202.68,
+        421.0,
+        25.0,
+        25.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryFaceArt": {
+      "assetKey": "V2_AvatarLab_CategoryFaceArt",
+      "rect": [
+        294.0,
+        405.0,
+        106.0,
+        57.0
+      ],
+      "sourceRect": [
+        298.0,
+        409.0,
+        98.0,
+        49.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryFaceIcon": {
+      "assetKey": "V2_AvatarLab_CategoryFaceIcon",
+      "rect": [
+        308.18,
+        417.0,
+        33.0,
+        33.0
+      ],
+      "sourceRect": [
+        312.18,
+        421.0,
+        25.0,
+        25.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryShirtsArt": {
+      "assetKey": "V2_AvatarLab_CategoryShirtsArt",
+      "rect": [
+        403.0,
+        405.0,
+        116.0,
+        57.0
+      ],
+      "sourceRect": [
+        407.0,
+        409.0,
+        108.0,
+        49.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryShirtsIcon": {
+      "assetKey": "V2_AvatarLab_CategoryShirtsIcon",
+      "rect": [
+        414.02,
+        417.0,
+        33.0,
+        33.0
+      ],
+      "sourceRect": [
+        418.02,
+        421.0,
+        25.0,
+        25.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryPantsArt": {
+      "assetKey": "V2_AvatarLab_CategoryPantsArt",
+      "rect": [
+        522.0,
+        405.0,
+        114.0,
+        57.0
+      ],
+      "sourceRect": [
+        526.0,
+        409.0,
+        106.0,
+        49.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryPantsIcon": {
+      "assetKey": "V2_AvatarLab_CategoryPantsIcon",
+      "rect": [
+        536.1,
+        417.0,
+        33.0,
+        33.0
+      ],
+      "sourceRect": [
+        540.1,
+        421.0,
+        25.0,
+        25.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryJacketsArt": {
+      "assetKey": "V2_AvatarLab_CategoryJacketsArt",
+      "rect": [
+        638.0,
+        405.0,
+        128.0,
+        57.0
+      ],
+      "sourceRect": [
+        642.0,
+        409.0,
+        120.0,
+        49.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryJacketsIcon": {
+      "assetKey": "V2_AvatarLab_CategoryJacketsIcon",
+      "rect": [
+        650.94,
+        417.0,
+        33.0,
+        33.0
+      ],
+      "sourceRect": [
+        654.94,
+        421.0,
+        25.0,
+        25.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryBackArt": {
+      "assetKey": "V2_AvatarLab_CategoryBackArt",
+      "rect": [
+        770.0,
+        405.0,
+        107.0,
+        57.0
+      ],
+      "sourceRect": [
+        774.0,
+        409.0,
+        99.0,
+        49.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryBackIcon": {
+      "assetKey": "V2_AvatarLab_CategoryBackIcon",
+      "rect": [
+        784.68,
+        417.0,
+        33.0,
+        33.0
+      ],
+      "sourceRect": [
+        788.68,
+        421.0,
+        25.0,
+        25.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryMorefiltersArt": {
+      "assetKey": "V2_AvatarLab_CategoryMorefiltersArt",
+      "rect": [
+        881.0,
+        405.0,
+        171.0,
+        57.0
+      ],
+      "sourceRect": [
+        885.0,
+        409.0,
+        163.0,
+        49.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CategoryMorefiltersIcon": {
+      "assetKey": "V2_AvatarLab_CategoryMorefiltersIcon",
+      "rect": [
+        895.04,
+        417.0,
+        33.0,
+        33.0
+      ],
+      "sourceRect": [
+        899.04,
+        421.0,
+        25.0,
+        25.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard1Art": {
+      "assetKey": "V2_AvatarLab_CatalogCard1Art",
+      "rect": [
+        74.0,
+        474.0,
+        321.0,
+        412.0
+      ],
+      "sourceRect": [
+        78.0,
+        478.0,
+        313.0,
+        404.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabHairArt": {
+      "assetKey": "V2_AvatarLab_LabHairArt",
+      "rect": [
+        80.0,
+        478.0,
+        307.0,
+        202.0
+      ],
+      "sourceRect": [
+        80.0,
+        478.0,
+        307.0,
+        202.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveCatalogThumbnail"
+    },
+    "CatalogCard1BookmarkHeartIcon": {
+      "assetKey": "V2_AvatarLab_CatalogCard1BookmarkHeartIcon",
+      "rect": [
+        345.0,
+        489.5,
+        34.0,
+        34.0
+      ],
+      "sourceRect": [
+        349.0,
+        493.5,
+        26.0,
+        26.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard1ViewInRobloxIcon": {
+      "assetKey": "V2_AvatarLab_CatalogCard1ViewInRobloxIcon",
+      "rect": [
+        351.0,
+        740.0,
+        25.0,
+        25.0
+      ],
+      "sourceRect": [
+        355.0,
+        744.0,
+        17.0,
+        17.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard1TryOnArt": {
+      "assetKey": "V2_AvatarLab_CatalogCard1TryOnArt",
+      "rect": [
+        86.0,
+        769.0,
+        295.0,
+        52.0
+      ],
+      "sourceRect": [
+        90.0,
+        773.0,
+        287.0,
+        44.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard1TryOnIcon": {
+      "assetKey": "V2_AvatarLab_CatalogCard1TryOnIcon",
+      "rect": [
+        180.4,
+        778.5,
+        33.0,
+        33.0
+      ],
+      "sourceRect": [
+        184.4,
+        782.5,
+        25.0,
+        25.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard1BookmarkArt": {
+      "assetKey": "V2_AvatarLab_CatalogCard1BookmarkArt",
+      "rect": [
+        86.0,
+        823.0,
+        295.0,
+        51.0
+      ],
+      "sourceRect": [
+        90.0,
+        827.0,
+        287.0,
+        43.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard1BookmarkIcon": {
+      "assetKey": "V2_AvatarLab_CatalogCard1BookmarkIcon",
+      "rect": [
+        175.28,
+        833.0,
+        31.0,
+        31.0
+      ],
+      "sourceRect": [
+        179.28,
+        837.0,
+        23.0,
+        23.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard2Art": {
+      "assetKey": "V2_AvatarLab_CatalogCard2Art",
+      "rect": [
+        405.0,
+        474.0,
+        320.0,
+        412.0
+      ],
+      "sourceRect": [
+        409.0,
+        478.0,
+        312.0,
+        404.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabCrownArt": {
+      "assetKey": "V2_AvatarLab_LabCrownArt",
+      "rect": [
+        413.0,
+        480.0,
+        304.0,
+        202.0
+      ],
+      "sourceRect": [
+        413.0,
+        480.0,
+        304.0,
+        202.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveCatalogThumbnail"
+    },
+    "CatalogCard2BookmarkHeartIcon": {
+      "assetKey": "V2_AvatarLab_CatalogCard2BookmarkHeartIcon",
+      "rect": [
+        675.0,
+        489.5,
+        34.0,
+        34.0
+      ],
+      "sourceRect": [
+        679.0,
+        493.5,
+        26.0,
+        26.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard2ViewInRobloxIcon": {
+      "assetKey": "V2_AvatarLab_CatalogCard2ViewInRobloxIcon",
+      "rect": [
+        681.0,
+        740.0,
+        25.0,
+        25.0
+      ],
+      "sourceRect": [
+        685.0,
+        744.0,
+        17.0,
+        17.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard2TryOnArt": {
+      "assetKey": "V2_AvatarLab_CatalogCard2TryOnArt",
+      "rect": [
+        417.0,
+        769.0,
+        294.0,
+        52.0
+      ],
+      "sourceRect": [
+        421.0,
+        773.0,
+        286.0,
+        44.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard2TryOnIcon": {
+      "assetKey": "V2_AvatarLab_CatalogCard2TryOnIcon",
+      "rect": [
+        510.9,
+        778.5,
+        33.0,
+        33.0
+      ],
+      "sourceRect": [
+        514.9,
+        782.5,
+        25.0,
+        25.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard2BookmarkArt": {
+      "assetKey": "V2_AvatarLab_CatalogCard2BookmarkArt",
+      "rect": [
+        417.0,
+        823.0,
+        294.0,
+        51.0
+      ],
+      "sourceRect": [
+        421.0,
+        827.0,
+        286.0,
+        43.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard2BookmarkIcon": {
+      "assetKey": "V2_AvatarLab_CatalogCard2BookmarkIcon",
+      "rect": [
+        505.78,
+        833.0,
+        31.0,
+        31.0
+      ],
+      "sourceRect": [
+        509.78,
+        837.0,
+        23.0,
+        23.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard3Art": {
+      "assetKey": "V2_AvatarLab_CatalogCard3Art",
+      "rect": [
+        734.0,
+        474.0,
+        321.0,
+        412.0
+      ],
+      "sourceRect": [
+        738.0,
+        478.0,
+        313.0,
+        404.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabHoodieArt": {
+      "assetKey": "V2_AvatarLab_LabHoodieArt",
+      "rect": [
+        740.0,
+        480.0,
+        308.0,
+        202.0
+      ],
+      "sourceRect": [
+        740.0,
+        480.0,
+        308.0,
+        202.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveCatalogThumbnail"
+    },
+    "CatalogCard3BookmarkHeartIcon": {
+      "assetKey": "V2_AvatarLab_CatalogCard3BookmarkHeartIcon",
+      "rect": [
+        1005.0,
+        489.5,
+        34.0,
+        34.0
+      ],
+      "sourceRect": [
+        1009.0,
+        493.5,
+        26.0,
+        26.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard3ViewInRobloxIcon": {
+      "assetKey": "V2_AvatarLab_CatalogCard3ViewInRobloxIcon",
+      "rect": [
+        1011.0,
+        740.0,
+        25.0,
+        25.0
+      ],
+      "sourceRect": [
+        1015.0,
+        744.0,
+        17.0,
+        17.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard3TryOnArt": {
+      "assetKey": "V2_AvatarLab_CatalogCard3TryOnArt",
+      "rect": [
+        746.0,
+        769.0,
+        295.0,
+        52.0
+      ],
+      "sourceRect": [
+        750.0,
+        773.0,
+        287.0,
+        44.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard3TryOnIcon": {
+      "assetKey": "V2_AvatarLab_CatalogCard3TryOnIcon",
+      "rect": [
+        840.4,
+        778.5,
+        33.0,
+        33.0
+      ],
+      "sourceRect": [
+        844.4,
+        782.5,
+        25.0,
+        25.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard3BookmarkArt": {
+      "assetKey": "V2_AvatarLab_CatalogCard3BookmarkArt",
+      "rect": [
+        746.0,
+        823.0,
+        295.0,
+        51.0
+      ],
+      "sourceRect": [
+        750.0,
+        827.0,
+        287.0,
+        43.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CatalogCard3BookmarkIcon": {
+      "assetKey": "V2_AvatarLab_CatalogCard3BookmarkIcon",
+      "rect": [
+        835.28,
+        833.0,
+        31.0,
+        31.0
+      ],
+      "sourceRect": [
+        839.28,
+        837.0,
+        23.0,
+        23.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AvatarStageArt": {
+      "assetKey": "V2_AvatarLab_AvatarStageArt",
+      "rect": [
+        1057.0,
+        327.0,
+        565.0,
+        563.0
+      ],
+      "sourceRect": [
+        1061.0,
+        331.0,
+        557.0,
+        555.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ResetAvatarCameraArt": {
+      "assetKey": "V2_AvatarLab_ResetAvatarCameraArt",
+      "rect": [
+        1393.0,
+        340.0,
+        215.0,
+        55.0
+      ],
+      "sourceRect": [
+        1397.0,
+        344.0,
+        207.0,
+        47.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ResetAvatarCameraIcon": {
+      "assetKey": "V2_AvatarLab_ResetAvatarCameraIcon",
+      "rect": [
+        1411.0,
+        352.0,
+        31.0,
+        31.0
+      ],
+      "sourceRect": [
+        1415.0,
+        356.0,
+        23.0,
+        23.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ResetCameraOptionsIcon": {
+      "assetKey": "V2_AvatarLab_ResetCameraOptionsIcon",
+      "rect": [
+        1565.0,
+        352.0,
+        30.0,
+        30.0
+      ],
+      "sourceRect": [
+        1569.0,
+        356.0,
+        22.0,
+        22.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabAvatarArt": {
+      "assetKey": "V2_AvatarLab_LabAvatarArt",
+      "rect": [
+        1066.0,
+        398.0,
+        276.0,
+        436.0
+      ],
+      "sourceRect": [
+        1066.0,
+        398.0,
+        276.0,
+        436.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveAvatarViewport"
+    },
+    "WornItemsPanelArt": {
+      "assetKey": "V2_AvatarLab_WornItemsPanelArt",
+      "rect": [
+        1341.0,
+        400.0,
+        271.0,
+        484.0
+      ],
+      "sourceRect": [
+        1345.0,
+        404.0,
+        263.0,
+        476.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WornRow1Art": {
+      "assetKey": "V2_AvatarLab_WornRow1Art",
+      "rect": [
+        1355.0,
+        451.0,
+        248.0,
+        69.0
+      ],
+      "sourceRect": [
+        1359.0,
+        455.0,
+        240.0,
+        61.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabWornHairArt": {
+      "assetKey": "V2_AvatarLab_LabWornHairArt",
+      "rect": [
+        1364.0,
+        459.0,
+        52.0,
+        51.0
+      ],
+      "sourceRect": [
+        1364.0,
+        459.0,
+        52.0,
+        51.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveWornThumbnail"
+    },
+    "RemoveWorn1Art": {
+      "assetKey": "V2_AvatarLab_RemoveWorn1Art",
+      "rect": [
+        1555.0,
+        463.0,
+        41.0,
+        43.0
+      ],
+      "sourceRect": [
+        1559.0,
+        467.0,
+        33.0,
+        35.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RemoveWorn1Icon": {
+      "assetKey": "V2_AvatarLab_RemoveWorn1Icon",
+      "rect": [
+        1562.0,
+        471.0,
+        27.0,
+        27.0
+      ],
+      "sourceRect": [
+        1566.0,
+        475.0,
+        19.0,
+        19.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WornRow2Art": {
+      "assetKey": "V2_AvatarLab_WornRow2Art",
+      "rect": [
+        1355.0,
+        516.0,
+        248.0,
+        69.0
+      ],
+      "sourceRect": [
+        1359.0,
+        520.0,
+        240.0,
+        61.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabWornCrownArt": {
+      "assetKey": "V2_AvatarLab_LabWornCrownArt",
+      "rect": [
+        1364.0,
+        524.0,
+        52.0,
+        51.0
+      ],
+      "sourceRect": [
+        1364.0,
+        524.0,
+        52.0,
+        51.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveWornThumbnail"
+    },
+    "RemoveWorn2Art": {
+      "assetKey": "V2_AvatarLab_RemoveWorn2Art",
+      "rect": [
+        1555.0,
+        528.0,
+        41.0,
+        43.0
+      ],
+      "sourceRect": [
+        1559.0,
+        532.0,
+        33.0,
+        35.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RemoveWorn2Icon": {
+      "assetKey": "V2_AvatarLab_RemoveWorn2Icon",
+      "rect": [
+        1562.0,
+        536.0,
+        27.0,
+        27.0
+      ],
+      "sourceRect": [
+        1566.0,
+        540.0,
+        19.0,
+        19.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WornRow3Art": {
+      "assetKey": "V2_AvatarLab_WornRow3Art",
+      "rect": [
+        1355.0,
+        581.0,
+        248.0,
+        69.0
+      ],
+      "sourceRect": [
+        1359.0,
+        585.0,
+        240.0,
+        61.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabWornHoodieArt": {
+      "assetKey": "V2_AvatarLab_LabWornHoodieArt",
+      "rect": [
+        1364.0,
+        589.0,
+        52.0,
+        51.0
+      ],
+      "sourceRect": [
+        1364.0,
+        589.0,
+        52.0,
+        51.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveWornThumbnail"
+    },
+    "RemoveWorn3Art": {
+      "assetKey": "V2_AvatarLab_RemoveWorn3Art",
+      "rect": [
+        1555.0,
+        593.0,
+        41.0,
+        43.0
+      ],
+      "sourceRect": [
+        1559.0,
+        597.0,
+        33.0,
+        35.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RemoveWorn3Icon": {
+      "assetKey": "V2_AvatarLab_RemoveWorn3Icon",
+      "rect": [
+        1562.0,
+        601.0,
+        27.0,
+        27.0
+      ],
+      "sourceRect": [
+        1566.0,
+        605.0,
+        19.0,
+        19.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WornRow4Art": {
+      "assetKey": "V2_AvatarLab_WornRow4Art",
+      "rect": [
+        1355.0,
+        646.0,
+        248.0,
+        69.0
+      ],
+      "sourceRect": [
+        1359.0,
+        650.0,
+        240.0,
+        61.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabWornPantsArt": {
+      "assetKey": "V2_AvatarLab_LabWornPantsArt",
+      "rect": [
+        1364.0,
+        654.0,
+        52.0,
+        51.0
+      ],
+      "sourceRect": [
+        1364.0,
+        654.0,
+        52.0,
+        51.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveWornThumbnail"
+    },
+    "RemoveWorn4Art": {
+      "assetKey": "V2_AvatarLab_RemoveWorn4Art",
+      "rect": [
+        1555.0,
+        658.0,
+        41.0,
+        43.0
+      ],
+      "sourceRect": [
+        1559.0,
+        662.0,
+        33.0,
+        35.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RemoveWorn4Icon": {
+      "assetKey": "V2_AvatarLab_RemoveWorn4Icon",
+      "rect": [
+        1562.0,
+        666.0,
+        27.0,
+        27.0
+      ],
+      "sourceRect": [
+        1566.0,
+        670.0,
+        19.0,
+        19.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WornRow5Art": {
+      "assetKey": "V2_AvatarLab_WornRow5Art",
+      "rect": [
+        1355.0,
+        711.0,
+        248.0,
+        69.0
+      ],
+      "sourceRect": [
+        1359.0,
+        715.0,
+        240.0,
+        61.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LabWornShoesArt": {
+      "assetKey": "V2_AvatarLab_LabWornShoesArt",
+      "rect": [
+        1364.0,
+        719.0,
+        52.0,
+        51.0
+      ],
+      "sourceRect": [
+        1364.0,
+        719.0,
+        52.0,
+        51.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveWornThumbnail"
+    },
+    "RemoveWorn5Art": {
+      "assetKey": "V2_AvatarLab_RemoveWorn5Art",
+      "rect": [
+        1555.0,
+        723.0,
+        41.0,
+        43.0
+      ],
+      "sourceRect": [
+        1559.0,
+        727.0,
+        33.0,
+        35.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RemoveWorn5Icon": {
+      "assetKey": "V2_AvatarLab_RemoveWorn5Icon",
+      "rect": [
+        1562.0,
+        731.0,
+        27.0,
+        27.0
+      ],
+      "sourceRect": [
+        1566.0,
+        735.0,
+        19.0,
+        19.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SaveNewLookArt": {
+      "assetKey": "V2_AvatarLab_SaveNewLookArt",
+      "rect": [
+        1356.0,
+        801.0,
+        249.0,
+        74.0
+      ],
+      "sourceRect": [
+        1360.0,
+        805.0,
+        241.0,
+        66.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SaveNewLookIcon": {
+      "assetKey": "V2_AvatarLab_SaveNewLookIcon",
+      "rect": [
+        1382.06,
+        819.0,
+        38.0,
+        38.0
+      ],
+      "sourceRect": [
+        1386.06,
+        823.0,
+        30.0,
+        30.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "DragAvatarToRotateArt": {
+      "assetKey": "V2_AvatarLab_DragAvatarToRotateArt",
+      "rect": [
+        1106.0,
+        834.0,
+        184.0,
+        55.0
+      ],
+      "sourceRect": [
+        1110.0,
+        838.0,
+        176.0,
+        47.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "DragAvatarToRotateIcon": {
+      "assetKey": "V2_AvatarLab_DragAvatarToRotateIcon",
+      "rect": [
+        1114.31,
+        844.5,
+        34.0,
+        34.0
+      ],
+      "sourceRect": [
+        1118.31,
+        848.5,
+        26.0,
+        26.0
+      ],
+      "imported": true,
+      "role": null
+    }
+  },
+  "create": {
+    "createNavHomeIconArtwork": {
+      "assetKey": "V2_Create_createNavHomeIconArtwork",
+      "rect": [
+        441.0,
+        151.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        445.0,
+        155.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "createNavCreateSurface": {
+      "assetKey": "V2_Create_createNavCreateSurface",
+      "rect": [
+        617.0,
+        133.0,
+        264.0,
+        83.0
+      ],
+      "sourceRect": [
+        621.0,
+        137.0,
+        256.0,
+        75.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "createNavCreateIconArtwork": {
+      "assetKey": "V2_Create_createNavCreateIconArtwork",
+      "rect": [
+        676.0,
+        151.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        680.0,
+        155.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "createNavMarketIconArtwork": {
+      "assetKey": "V2_Create_createNavMarketIconArtwork",
+      "rect": [
+        932.0,
+        151.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        936.0,
+        155.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "createNavGamesIconArtwork": {
+      "assetKey": "V2_Create_createNavGamesIconArtwork",
+      "rect": [
+        1172.0,
+        151.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        1176.0,
+        155.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "createMyItemsShortcutSurface": {
+      "assetKey": "V2_Create_createMyItemsShortcutSurface",
+      "rect": [
+        1368.0,
+        137.0,
+        199.0,
+        77.0
+      ],
+      "sourceRect": [
+        1372.0,
+        141.0,
+        191.0,
+        69.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "createMyItemsShortcutIconArtwork": {
+      "assetKey": "V2_Create_createMyItemsShortcutIconArtwork",
+      "rect": [
+        1396.4,
+        157.75,
+        35.5,
+        35.5
+      ],
+      "sourceRect": [
+        1400.4,
+        161.75,
+        27.5,
+        27.5
+      ],
+      "imported": true,
+      "role": null
+    },
+    "createCloseSurface": {
+      "assetKey": "V2_Create_createCloseSurface",
+      "rect": [
+        1570.0,
+        138.0,
+        68.0,
+        76.0
+      ],
+      "sourceRect": [
+        1574.0,
+        142.0,
+        60.0,
+        68.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "createCloseIconArtwork": {
+      "assetKey": "V2_Create_createCloseIconArtwork",
+      "rect": [
+        1580.0,
+        152.0,
+        48.0,
+        48.0
+      ],
+      "sourceRect": [
+        1584.0,
+        156.0,
+        40.0,
+        40.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateTitleSparkle0Artwork": {
+      "assetKey": "V2_Create_CreateTitleSparkle0Artwork",
+      "rect": [
+        564.0,
+        248.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        568.0,
+        252.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateTitleSparkle1Artwork": {
+      "assetKey": "V2_Create_CreateTitleSparkle1Artwork",
+      "rect": [
+        39.0,
+        275.0,
+        37.0,
+        37.0
+      ],
+      "sourceRect": [
+        43.0,
+        279.0,
+        29.0,
+        29.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateTitleSparkle2Artwork": {
+      "assetKey": "V2_Create_CreateTitleSparkle2Artwork",
+      "rect": [
+        596.0,
+        291.0,
+        26.0,
+        26.0
+      ],
+      "sourceRect": [
+        600.0,
+        295.0,
+        18.0,
+        18.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreatePromptPanelSurface": {
+      "assetKey": "V2_Create_CreatePromptPanelSurface",
+      "rect": [
+        61.0,
+        347.0,
+        831.0,
+        545.0
+      ],
+      "sourceRect": [
+        65.0,
+        351.0,
+        823.0,
+        537.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreatePromptField": {
+      "assetKey": "V2_Create_CreatePromptField",
+      "rect": [
+        84.0,
+        408.0,
+        785.0,
+        119.0
+      ],
+      "sourceRect": [
+        88.0,
+        412.0,
+        777.0,
+        111.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateIdeaDragonSurface": {
+      "assetKey": "V2_Create_CreateIdeaDragonSurface",
+      "rect": [
+        84.0,
+        577.0,
+        153.0,
+        161.0
+      ],
+      "sourceRect": [
+        88.0,
+        581.0,
+        145.0,
+        153.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateIdeaDragonArt": {
+      "assetKey": "V2_Create_CreateIdeaDragonArt",
+      "rect": [
+        95.0,
+        589.0,
+        131.0,
+        107.0
+      ],
+      "sourceRect": [
+        95.0,
+        589.0,
+        131.0,
+        107.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithIdeaThumbnail"
+    },
+    "CreateIdeaCrownSurface": {
+      "assetKey": "V2_Create_CreateIdeaCrownSurface",
+      "rect": [
+        242.0,
+        577.0,
+        153.0,
+        161.0
+      ],
+      "sourceRect": [
+        246.0,
+        581.0,
+        145.0,
+        153.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateIdeaCrownArt": {
+      "assetKey": "V2_Create_CreateIdeaCrownArt",
+      "rect": [
+        253.0,
+        589.0,
+        131.0,
+        107.0
+      ],
+      "sourceRect": [
+        253.0,
+        589.0,
+        131.0,
+        107.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithIdeaThumbnail"
+    },
+    "CreateIdeaKatanaSurface": {
+      "assetKey": "V2_Create_CreateIdeaKatanaSurface",
+      "rect": [
+        400.0,
+        577.0,
+        153.0,
+        161.0
+      ],
+      "sourceRect": [
+        404.0,
+        581.0,
+        145.0,
+        153.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateIdeaKatanaArt": {
+      "assetKey": "V2_Create_CreateIdeaKatanaArt",
+      "rect": [
+        411.0,
+        589.0,
+        131.0,
+        107.0
+      ],
+      "sourceRect": [
+        411.0,
+        589.0,
+        131.0,
+        107.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithIdeaThumbnail"
+    },
+    "CreateIdeaHatSurface": {
+      "assetKey": "V2_Create_CreateIdeaHatSurface",
+      "rect": [
+        558.0,
+        577.0,
+        153.0,
+        161.0
+      ],
+      "sourceRect": [
+        562.0,
+        581.0,
+        145.0,
+        153.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateIdeaHatArt": {
+      "assetKey": "V2_Create_CreateIdeaHatArt",
+      "rect": [
+        569.0,
+        589.0,
+        131.0,
+        107.0
+      ],
+      "sourceRect": [
+        569.0,
+        589.0,
+        131.0,
+        107.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithIdeaThumbnail"
+    },
+    "CreateIdeaFairySurface": {
+      "assetKey": "V2_Create_CreateIdeaFairySurface",
+      "rect": [
+        716.0,
+        577.0,
+        153.0,
+        161.0
+      ],
+      "sourceRect": [
+        720.0,
+        581.0,
+        145.0,
+        153.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateIdeaFairyArt": {
+      "assetKey": "V2_Create_CreateIdeaFairyArt",
+      "rect": [
+        727.0,
+        589.0,
+        131.0,
+        107.0
+      ],
+      "sourceRect": [
+        727.0,
+        589.0,
+        131.0,
+        107.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithIdeaThumbnail"
+    },
+    "CreateMakeItemSurface": {
+      "assetKey": "V2_Create_CreateMakeItemSurface",
+      "rect": [
+        79.0,
+        754.0,
+        795.0,
+        98.0
+      ],
+      "sourceRect": [
+        83.0,
+        758.0,
+        787.0,
+        90.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateMakeItemIconArtwork": {
+      "assetKey": "V2_Create_CreateMakeItemIconArtwork",
+      "rect": [
+        240.62499999999997,
+        777.125,
+        51.75000000000003,
+        51.75
+      ],
+      "sourceRect": [
+        244.62499999999997,
+        781.125,
+        43.75000000000003,
+        43.75
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreatePreviewPanelSurface": {
+      "assetKey": "V2_Create_CreatePreviewPanelSurface",
+      "rect": [
+        897.0,
+        234.0,
+        724.0,
+        659.0
+      ],
+      "sourceRect": [
+        901.0,
+        238.0,
+        716.0,
+        651.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateSimpleSurface": {
+      "assetKey": "V2_Create_CreateSimpleSurface",
+      "rect": [
+        1316.0,
+        252.0,
+        143.0,
+        58.0
+      ],
+      "sourceRect": [
+        1320.0,
+        256.0,
+        135.0,
+        50.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateHeroV2": {
+      "assetKey": "V2_Create_CreateHeroV2",
+      "rect": [
+        902.0,
+        310.0,
+        714.0,
+        576.0
+      ],
+      "sourceRect": [
+        902.0,
+        310.0,
+        714.0,
+        576.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithCreationPreview"
+    },
+    "CreatePreviewNoteSurface": {
+      "assetKey": "V2_Create_CreatePreviewNoteSurface",
+      "rect": [
+        1045.0,
+        721.0,
+        431.0,
+        95.0
+      ],
+      "sourceRect": [
+        1049.0,
+        725.0,
+        423.0,
+        87.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateNoteSparkleArtwork": {
+      "assetKey": "V2_Create_CreateNoteSparkleArtwork",
+      "rect": [
+        1098.0,
+        745.0,
+        48.0,
+        48.0
+      ],
+      "sourceRect": [
+        1102.0,
+        749.0,
+        40.0,
+        40.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateHelpIcon": {
+      "assetKey": "V2_Create_CreateHelpIcon",
+      "rect": [
+        1162.0,
+        836.0,
+        37.0,
+        37.0
+      ],
+      "sourceRect": [
+        1166.0,
+        840.0,
+        29.0,
+        29.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreateHowChevronArtwork": {
+      "assetKey": "V2_Create_CreateHowChevronArtwork",
+      "rect": [
+        1330.0,
+        841.0,
+        27.0,
+        27.0
+      ],
+      "sourceRect": [
+        1334.0,
+        845.0,
+        19.0,
+        19.0
+      ],
+      "imported": true,
+      "role": null
+    }
+  },
+  "games": {
+    "MainShellArt": {
+      "assetKey": "V2_Games_MainShellArt",
+      "rect": [
+        41.0,
+        108.0,
+        1599.0,
+        797.0
+      ],
+      "sourceRect": [
+        45.0,
+        112.0,
+        1591.0,
+        789.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddTokensCounterArt": {
+      "assetKey": "V2_Games_AddTokensCounterArt",
+      "rect": [
+        1141.0,
+        25.0,
+        207.0,
+        72.0
+      ],
+      "sourceRect": [
+        1145.0,
+        29.0,
+        199.0,
+        64.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "gamesIcon1": {
+      "assetKey": "V2_Games_gamesIcon1",
+      "rect": [
+        1153.0,
+        33.0,
+        54.0,
+        54.0
+      ],
+      "sourceRect": [
+        1157.0,
+        37.0,
+        46.0,
+        46.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddTokensArt": {
+      "assetKey": "V2_Games_AddTokensArt",
+      "rect": [
+        1288.0,
+        36.0,
+        50.0,
+        50.0
+      ],
+      "sourceRect": [
+        1292.0,
+        40.0,
+        42.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddTokensIcon": {
+      "assetKey": "V2_Games_AddTokensIcon",
+      "rect": [
+        1295.0,
+        43.0,
+        36.0,
+        36.0
+      ],
+      "sourceRect": [
+        1299.0,
+        47.0,
+        28.0,
+        28.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddPassesCounterArt": {
+      "assetKey": "V2_Games_AddPassesCounterArt",
+      "rect": [
+        1355.0,
+        25.0,
+        199.0,
+        72.0
+      ],
+      "sourceRect": [
+        1359.0,
+        29.0,
+        191.0,
+        64.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "gamesIcon3": {
+      "assetKey": "V2_Games_gamesIcon3",
+      "rect": [
+        1367.0,
+        33.0,
+        54.0,
+        54.0
+      ],
+      "sourceRect": [
+        1371.0,
+        37.0,
+        46.0,
+        46.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddPassesArt": {
+      "assetKey": "V2_Games_AddPassesArt",
+      "rect": [
+        1494.0,
+        36.0,
+        50.0,
+        50.0
+      ],
+      "sourceRect": [
+        1498.0,
+        40.0,
+        42.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AddPassesIcon": {
+      "assetKey": "V2_Games_AddPassesIcon",
+      "rect": [
+        1501.0,
+        43.0,
+        36.0,
+        36.0
+      ],
+      "sourceRect": [
+        1505.0,
+        47.0,
+        28.0,
+        28.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsArt": {
+      "assetKey": "V2_Games_SettingsArt",
+      "rect": [
+        1569.0,
+        25.0,
+        72.0,
+        72.0
+      ],
+      "sourceRect": [
+        1573.0,
+        29.0,
+        64.0,
+        64.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsIcon": {
+      "assetKey": "V2_Games_SettingsIcon",
+      "rect": [
+        1582.0,
+        38.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        1586.0,
+        42.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "PrimaryNavArt": {
+      "assetKey": "V2_Games_PrimaryNavArt",
+      "rect": [
+        381.0,
+        132.0,
+        971.0,
+        85.0
+      ],
+      "sourceRect": [
+        385.0,
+        136.0,
+        963.0,
+        77.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavHomeIcon": {
+      "assetKey": "V2_Games_NavHomeIcon",
+      "rect": [
+        447.96000000000004,
+        152.5,
+        44.0,
+        44.0
+      ],
+      "sourceRect": [
+        451.96000000000004,
+        156.5,
+        36.0,
+        36.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavCreateIcon": {
+      "assetKey": "V2_Games_NavCreateIcon",
+      "rect": [
+        676.19,
+        152.5,
+        44.0,
+        44.0
+      ],
+      "sourceRect": [
+        680.19,
+        156.5,
+        36.0,
+        36.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavMarketIcon": {
+      "assetKey": "V2_Games_NavMarketIcon",
+      "rect": [
+        914.19,
+        152.5,
+        44.0,
+        44.0
+      ],
+      "sourceRect": [
+        918.19,
+        156.5,
+        36.0,
+        36.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavGamesArt": {
+      "assetKey": "V2_Games_NavGamesArt",
+      "rect": [
+        1093.0,
+        133.0,
+        258.0,
+        83.0
+      ],
+      "sourceRect": [
+        1097.0,
+        137.0,
+        250.0,
+        75.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavGamesIcon": {
+      "assetKey": "V2_Games_NavGamesIcon",
+      "rect": [
+        1159.575,
+        152.5,
+        44.0,
+        44.0
+      ],
+      "sourceRect": [
+        1163.575,
+        156.5,
+        36.0,
+        36.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsArt": {
+      "assetKey": "V2_Games_MyItemsArt",
+      "rect": [
+        1356.0,
+        136.0,
+        192.0,
+        76.0
+      ],
+      "sourceRect": [
+        1360.0,
+        140.0,
+        184.0,
+        68.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsIcon": {
+      "assetKey": "V2_Games_MyItemsIcon",
+      "rect": [
+        1379.58,
+        154.5,
+        39.0,
+        39.0
+      ],
+      "sourceRect": [
+        1383.58,
+        158.5,
+        31.0,
+        31.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CloseArt": {
+      "assetKey": "V2_Games_CloseArt",
+      "rect": [
+        1558.0,
+        137.0,
+        71.0,
+        74.0
+      ],
+      "sourceRect": [
+        1562.0,
+        141.0,
+        63.0,
+        66.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CloseIcon": {
+      "assetKey": "V2_Games_CloseIcon",
+      "rect": [
+        1572.0,
+        152.5,
+        43.0,
+        43.0
+      ],
+      "sourceRect": [
+        1576.0,
+        156.5,
+        35.0,
+        35.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesHeadingSparkle1": {
+      "assetKey": "V2_Games_GamesHeadingSparkle1",
+      "rect": [
+        621.0,
+        240.0,
+        49.0,
+        49.0
+      ],
+      "sourceRect": [
+        625.0,
+        244.0,
+        41.0,
+        41.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesHeadingSparkle2": {
+      "assetKey": "V2_Games_GamesHeadingSparkle2",
+      "rect": [
+        605.0,
+        275.0,
+        29.0,
+        29.0
+      ],
+      "sourceRect": [
+        609.0,
+        279.0,
+        21.0,
+        21.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesSubtitleSparkle": {
+      "assetKey": "V2_Games_GamesSubtitleSparkle",
+      "rect": [
+        78.0,
+        310.0,
+        33.0,
+        33.0
+      ],
+      "sourceRect": [
+        82.0,
+        314.0,
+        25.0,
+        25.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesFreeToPlayBadgeArt": {
+      "assetKey": "V2_Games_GamesFreeToPlayBadgeArt",
+      "rect": [
+        682.0,
+        257.0,
+        226.0,
+        55.0
+      ],
+      "sourceRect": [
+        686.0,
+        261.0,
+        218.0,
+        47.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesFreeToPlayBadgeIcon": {
+      "assetKey": "V2_Games_GamesFreeToPlayBadgeIcon",
+      "rect": [
+        699.12,
+        265.0,
+        39.0,
+        39.0
+      ],
+      "sourceRect": [
+        703.12,
+        269.0,
+        31.0,
+        31.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesDestination1Art": {
+      "assetKey": "V2_Games_GamesDestination1Art",
+      "rect": [
+        64.0,
+        335.0,
+        518.0,
+        553.0
+      ],
+      "sourceRect": [
+        68.0,
+        339.0,
+        510.0,
+        545.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesArcadeSceneArt": {
+      "assetKey": "V2_Games_GamesArcadeSceneArt",
+      "rect": [
+        72.0,
+        454.0,
+        503.0,
+        337.0
+      ],
+      "sourceRect": [
+        72.0,
+        454.0,
+        503.0,
+        337.0
+      ],
+      "imported": true,
+      "role": "DecorativeDestinationScene"
+    },
+    "GamesDestination1Icon": {
+      "assetKey": "V2_Games_GamesDestination1Icon",
+      "rect": [
+        101.0,
+        355.0,
+        84.0,
+        84.0
+      ],
+      "sourceRect": [
+        105.0,
+        359.0,
+        76.0,
+        76.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesDestination1BlueStar": {
+      "assetKey": "V2_Games_GamesDestination1BlueStar",
+      "rect": [
+        465.0,
+        378.0,
+        41.0,
+        41.0
+      ],
+      "sourceRect": [
+        469.0,
+        382.0,
+        33.0,
+        33.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesDestination1GoldStar": {
+      "assetKey": "V2_Games_GamesDestination1GoldStar",
+      "rect": [
+        521.0,
+        376.0,
+        41.0,
+        41.0
+      ],
+      "sourceRect": [
+        525.0,
+        380.0,
+        33.0,
+        33.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesDestination1OpenArt": {
+      "assetKey": "V2_Games_GamesDestination1OpenArt",
+      "rect": [
+        84.0,
+        790.0,
+        478.0,
+        83.0
+      ],
+      "sourceRect": [
+        88.0,
+        794.0,
+        470.0,
+        75.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesDestination2Art": {
+      "assetKey": "V2_Games_GamesDestination2Art",
+      "rect": [
+        591.0,
+        335.0,
+        512.0,
+        553.0
+      ],
+      "sourceRect": [
+        595.0,
+        339.0,
+        504.0,
+        545.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesRunwaySceneArt": {
+      "assetKey": "V2_Games_GamesRunwaySceneArt",
+      "rect": [
+        597.0,
+        454.0,
+        497.0,
+        337.0
+      ],
+      "sourceRect": [
+        597.0,
+        454.0,
+        497.0,
+        337.0
+      ],
+      "imported": true,
+      "role": "DecorativeDestinationScene"
+    },
+    "GamesDestination2Icon": {
+      "assetKey": "V2_Games_GamesDestination2Icon",
+      "rect": [
+        628.0,
+        355.0,
+        77.0,
+        77.0
+      ],
+      "sourceRect": [
+        632.0,
+        359.0,
+        69.0,
+        69.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesDestination2OpenArt": {
+      "assetKey": "V2_Games_GamesDestination2OpenArt",
+      "rect": [
+        611.0,
+        790.0,
+        472.0,
+        83.0
+      ],
+      "sourceRect": [
+        615.0,
+        794.0,
+        464.0,
+        75.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesDestination3Art": {
+      "assetKey": "V2_Games_GamesDestination3Art",
+      "rect": [
+        1114.0,
+        335.0,
+        505.0,
+        553.0
+      ],
+      "sourceRect": [
+        1118.0,
+        339.0,
+        497.0,
+        545.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesLoungeSceneArt": {
+      "assetKey": "V2_Games_GamesLoungeSceneArt",
+      "rect": [
+        1121.0,
+        454.0,
+        491.0,
+        337.0
+      ],
+      "sourceRect": [
+        1121.0,
+        454.0,
+        491.0,
+        337.0
+      ],
+      "imported": true,
+      "role": "DecorativeDestinationScene"
+    },
+    "GamesDestination3Icon": {
+      "assetKey": "V2_Games_GamesDestination3Icon",
+      "rect": [
+        1151.0,
+        355.0,
+        77.0,
+        77.0
+      ],
+      "sourceRect": [
+        1155.0,
+        359.0,
+        69.0,
+        69.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "GamesDestination3OpenArt": {
+      "assetKey": "V2_Games_GamesDestination3OpenArt",
+      "rect": [
+        1134.0,
+        790.0,
+        465.0,
+        83.0
+      ],
+      "sourceRect": [
+        1138.0,
+        794.0,
+        457.0,
+        75.0
+      ],
+      "imported": true,
+      "role": null
+    }
+  },
+  "market": {
+    "marketNavHomeIconArtwork": {
+      "assetKey": "V2_Market_marketNavHomeIconArtwork",
+      "rect": [
+        441.0,
+        151.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        445.0,
+        155.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "marketNavCreateIconArtwork": {
+      "assetKey": "V2_Market_marketNavCreateIconArtwork",
+      "rect": [
+        676.0,
+        151.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        680.0,
+        155.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "marketNavMarketSurface": {
+      "assetKey": "V2_Market_marketNavMarketSurface",
+      "rect": [
+        871.0,
+        133.0,
+        259.0,
+        83.0
+      ],
+      "sourceRect": [
+        875.0,
+        137.0,
+        251.0,
+        75.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "marketNavMarketIconArtwork": {
+      "assetKey": "V2_Market_marketNavMarketIconArtwork",
+      "rect": [
+        932.0,
+        151.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        936.0,
+        155.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "marketNavGamesIconArtwork": {
+      "assetKey": "V2_Market_marketNavGamesIconArtwork",
+      "rect": [
+        1172.0,
+        151.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        1176.0,
+        155.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "marketMyItemsShortcutSurface": {
+      "assetKey": "V2_Market_marketMyItemsShortcutSurface",
+      "rect": [
+        1369.0,
+        138.0,
+        190.0,
+        76.0
+      ],
+      "sourceRect": [
+        1373.0,
+        142.0,
+        182.0,
+        68.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "marketMyItemsShortcutIconArtwork": {
+      "assetKey": "V2_Market_marketMyItemsShortcutIconArtwork",
+      "rect": [
+        1392.9,
+        158.25,
+        35.5,
+        35.5
+      ],
+      "sourceRect": [
+        1396.9,
+        162.25,
+        27.5,
+        27.5
+      ],
+      "imported": true,
+      "role": null
+    },
+    "marketCloseSurface": {
+      "assetKey": "V2_Market_marketCloseSurface",
+      "rect": [
+        1564.0,
+        139.0,
+        70.0,
+        74.0
+      ],
+      "sourceRect": [
+        1568.0,
+        143.0,
+        62.0,
+        66.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "marketCloseIconArtwork": {
+      "assetKey": "V2_Market_marketCloseIconArtwork",
+      "rect": [
+        1575.0,
+        152.0,
+        48.0,
+        48.0
+      ],
+      "sourceRect": [
+        1579.0,
+        156.0,
+        40.0,
+        40.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketSearchField": {
+      "assetKey": "V2_Market_MarketSearchField",
+      "rect": [
+        588.0,
+        241.0,
+        394.0,
+        75.0
+      ],
+      "sourceRect": [
+        592.0,
+        245.0,
+        386.0,
+        67.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketSearchIconArtwork": {
+      "assetKey": "V2_Market_MarketSearchIconArtwork",
+      "rect": [
+        605.0,
+        259.0,
+        40.0,
+        40.0
+      ],
+      "sourceRect": [
+        609.0,
+        263.0,
+        32.0,
+        32.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketSearchSurface": {
+      "assetKey": "V2_Market_MarketSearchSurface",
+      "rect": [
+        982.0,
+        243.0,
+        134.0,
+        73.0
+      ],
+      "sourceRect": [
+        986.0,
+        247.0,
+        126.0,
+        65.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketCardCrownSurface": {
+      "assetKey": "V2_Market_MarketCardCrownSurface",
+      "rect": [
+        61.0,
+        333.0,
+        359.0,
+        542.0
+      ],
+      "sourceRect": [
+        65.0,
+        337.0,
+        351.0,
+        534.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketCrownCreator": {
+      "assetKey": "V2_Market_MarketCrownCreator",
+      "rect": [
+        94.0,
+        398.0,
+        49.0,
+        49.0
+      ],
+      "sourceRect": [
+        94.0,
+        398.0,
+        49.0,
+        49.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithCreatorAvatar"
+    },
+    "MarketCrownDisplay": {
+      "assetKey": "V2_Market_MarketCrownDisplay",
+      "rect": [
+        81.0,
+        447.0,
+        319.0,
+        252.0
+      ],
+      "sourceRect": [
+        81.0,
+        447.0,
+        319.0,
+        252.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithCommunityThumbnail"
+    },
+    "MarketTryCrownSurface": {
+      "assetKey": "V2_Market_MarketTryCrownSurface",
+      "rect": [
+        76.0,
+        702.0,
+        330.0,
+        73.0
+      ],
+      "sourceRect": [
+        80.0,
+        706.0,
+        322.0,
+        65.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketTryCrownIconArtwork": {
+      "assetKey": "V2_Market_MarketTryCrownIconArtwork",
+      "rect": [
+        169.5,
+        717.625,
+        41.75,
+        41.75
+      ],
+      "sourceRect": [
+        173.5,
+        721.625,
+        33.75,
+        33.75
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketLikeCrownSurface": {
+      "assetKey": "V2_Market_MarketLikeCrownSurface",
+      "rect": [
+        76.0,
+        784.0,
+        163.5,
+        72.0
+      ],
+      "sourceRect": [
+        80.0,
+        788.0,
+        155.5,
+        64.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketLikeCrownIconArtwork": {
+      "assetKey": "V2_Market_MarketLikeCrownIconArtwork",
+      "rect": [
+        104.8,
+        802.25,
+        35.500000000000014,
+        35.5
+      ],
+      "sourceRect": [
+        108.8,
+        806.25,
+        27.500000000000014,
+        27.5
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketFavoriteCrownSurface": {
+      "assetKey": "V2_Market_MarketFavoriteCrownSurface",
+      "rect": [
+        241.5,
+        784.0,
+        163.5,
+        72.0
+      ],
+      "sourceRect": [
+        245.5,
+        788.0,
+        155.5,
+        64.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketFavoriteCrownIconArtwork": {
+      "assetKey": "V2_Market_MarketFavoriteCrownIconArtwork",
+      "rect": [
+        276.35,
+        802.25,
+        35.5,
+        35.5
+      ],
+      "sourceRect": [
+        280.35,
+        806.25,
+        27.5,
+        27.5
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketCardWingsSurface": {
+      "assetKey": "V2_Market_MarketCardWingsSurface",
+      "rect": [
+        426.0,
+        333.0,
+        355.0,
+        542.0
+      ],
+      "sourceRect": [
+        430.0,
+        337.0,
+        347.0,
+        534.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketWingsCreator": {
+      "assetKey": "V2_Market_MarketWingsCreator",
+      "rect": [
+        459.0,
+        398.0,
+        49.0,
+        49.0
+      ],
+      "sourceRect": [
+        459.0,
+        398.0,
+        49.0,
+        49.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithCreatorAvatar"
+    },
+    "MarketWingsDisplay": {
+      "assetKey": "V2_Market_MarketWingsDisplay",
+      "rect": [
+        446.0,
+        447.0,
+        315.0,
+        252.0
+      ],
+      "sourceRect": [
+        446.0,
+        447.0,
+        315.0,
+        252.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithCommunityThumbnail"
+    },
+    "MarketTryWingsSurface": {
+      "assetKey": "V2_Market_MarketTryWingsSurface",
+      "rect": [
+        441.0,
+        702.0,
+        326.0,
+        73.0
+      ],
+      "sourceRect": [
+        445.0,
+        706.0,
+        318.0,
+        65.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketTryWingsIconArtwork": {
+      "assetKey": "V2_Market_MarketTryWingsIconArtwork",
+      "rect": [
+        532.5,
+        717.625,
+        41.75,
+        41.75
+      ],
+      "sourceRect": [
+        536.5,
+        721.625,
+        33.75,
+        33.75
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketLikeWingsSurface": {
+      "assetKey": "V2_Market_MarketLikeWingsSurface",
+      "rect": [
+        441.0,
+        784.0,
+        161.5,
+        72.0
+      ],
+      "sourceRect": [
+        445.0,
+        788.0,
+        153.5,
+        64.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketLikeWingsIconArtwork": {
+      "assetKey": "V2_Market_MarketLikeWingsIconArtwork",
+      "rect": [
+        474.85,
+        802.25,
+        35.5,
+        35.5
+      ],
+      "sourceRect": [
+        478.85,
+        806.25,
+        27.5,
+        27.5
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketFavoriteWingsSurface": {
+      "assetKey": "V2_Market_MarketFavoriteWingsSurface",
+      "rect": [
+        604.5,
+        784.0,
+        161.5,
+        72.0
+      ],
+      "sourceRect": [
+        608.5,
+        788.0,
+        153.5,
+        64.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketFavoriteWingsIconArtwork": {
+      "assetKey": "V2_Market_MarketFavoriteWingsIconArtwork",
+      "rect": [
+        638.35,
+        802.25,
+        35.5,
+        35.5
+      ],
+      "sourceRect": [
+        642.35,
+        806.25,
+        27.5,
+        27.5
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketCardKatanaSurface": {
+      "assetKey": "V2_Market_MarketCardKatanaSurface",
+      "rect": [
+        786.0,
+        333.0,
+        340.0,
+        542.0
+      ],
+      "sourceRect": [
+        790.0,
+        337.0,
+        332.0,
+        534.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketKatanaCreator": {
+      "assetKey": "V2_Market_MarketKatanaCreator",
+      "rect": [
+        819.0,
+        398.0,
+        49.0,
+        49.0
+      ],
+      "sourceRect": [
+        819.0,
+        398.0,
+        49.0,
+        49.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithCreatorAvatar"
+    },
+    "MarketKatanaDisplay": {
+      "assetKey": "V2_Market_MarketKatanaDisplay",
+      "rect": [
+        806.0,
+        447.0,
+        300.0,
+        252.0
+      ],
+      "sourceRect": [
+        806.0,
+        447.0,
+        300.0,
+        252.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithCommunityThumbnail"
+    },
+    "MarketTryKatanaSurface": {
+      "assetKey": "V2_Market_MarketTryKatanaSurface",
+      "rect": [
+        801.0,
+        702.0,
+        311.0,
+        73.0
+      ],
+      "sourceRect": [
+        805.0,
+        706.0,
+        303.0,
+        65.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketTryKatanaIconArtwork": {
+      "assetKey": "V2_Market_MarketTryKatanaIconArtwork",
+      "rect": [
+        885.0,
+        717.625,
+        41.75,
+        41.75
+      ],
+      "sourceRect": [
+        889.0,
+        721.625,
+        33.75,
+        33.75
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketLikeKatanaSurface": {
+      "assetKey": "V2_Market_MarketLikeKatanaSurface",
+      "rect": [
+        801.0,
+        784.0,
+        154.0,
+        72.0
+      ],
+      "sourceRect": [
+        805.0,
+        788.0,
+        146.0,
+        64.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketLikeKatanaIconArtwork": {
+      "assetKey": "V2_Market_MarketLikeKatanaIconArtwork",
+      "rect": [
+        825.05,
+        802.25,
+        35.5,
+        35.5
+      ],
+      "sourceRect": [
+        829.05,
+        806.25,
+        27.5,
+        27.5
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketFavoriteKatanaSurface": {
+      "assetKey": "V2_Market_MarketFavoriteKatanaSurface",
+      "rect": [
+        957.0,
+        784.0,
+        154.0,
+        72.0
+      ],
+      "sourceRect": [
+        961.0,
+        788.0,
+        146.0,
+        64.0
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketFavoriteKatanaIconArtwork": {
+      "assetKey": "V2_Market_MarketFavoriteKatanaIconArtwork",
+      "rect": [
+        987.1,
+        802.25,
+        35.5,
+        35.5
+      ],
+      "sourceRect": [
+        991.1,
+        806.25,
+        27.5,
+        27.5
+      ],
+      "imported": true,
+      "role": "ReplaceWithCommunityItem"
+    },
+    "MarketAvatarPanelSurface": {
+      "assetKey": "V2_Market_MarketAvatarPanelSurface",
+      "rect": [
+        1135.0,
+        232.0,
+        492.0,
+        652.0
+      ],
+      "sourceRect": [
+        1139.0,
+        236.0,
+        484.0,
+        644.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketFreeTryOnSurface": {
+      "assetKey": "V2_Market_MarketFreeTryOnSurface",
+      "rect": [
+        1435.0,
+        245.0,
+        178.0,
+        57.0
+      ],
+      "sourceRect": [
+        1439.0,
+        249.0,
+        170.0,
+        49.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketFreeTryOnIconArtwork": {
+      "assetKey": "V2_Market_MarketFreeTryOnIconArtwork",
+      "rect": [
+        1438.625,
+        256.375,
+        34.25,
+        34.25
+      ],
+      "sourceRect": [
+        1442.625,
+        260.375,
+        26.25,
+        26.25
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketAvatarV2": {
+      "assetKey": "V2_Market_MarketAvatarV2",
+      "rect": [
+        1142.0,
+        304.0,
+        479.0,
+        407.0
+      ],
+      "sourceRect": [
+        1142.0,
+        304.0,
+        479.0,
+        407.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithPlayerViewport"
+    },
+    "MarketResetCameraSurface": {
+      "assetKey": "V2_Market_MarketResetCameraSurface",
+      "rect": [
+        1516.0,
+        338.0,
+        102.0,
+        132.0
+      ],
+      "sourceRect": [
+        1520.0,
+        342.0,
+        94.0,
+        124.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketResetIconArtwork": {
+      "assetKey": "V2_Market_MarketResetIconArtwork",
+      "rect": [
+        1541.0,
+        355.0,
+        51.0,
+        51.0
+      ],
+      "sourceRect": [
+        1545.0,
+        359.0,
+        43.0,
+        43.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketRotateHintSurface": {
+      "assetKey": "V2_Market_MarketRotateHintSurface",
+      "rect": [
+        1516.0,
+        476.0,
+        102.0,
+        147.0
+      ],
+      "sourceRect": [
+        1520.0,
+        480.0,
+        94.0,
+        139.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketRotateMouseArtwork": {
+      "assetKey": "V2_Market_MarketRotateMouseArtwork",
+      "rect": [
+        1547.0,
+        506.0,
+        38.0,
+        38.0
+      ],
+      "sourceRect": [
+        1551.0,
+        510.0,
+        30.0,
+        30.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketWearingPanelSurface": {
+      "assetKey": "V2_Market_MarketWearingPanelSurface",
+      "rect": [
+        1138.0,
+        710.0,
+        487.0,
+        172.0
+      ],
+      "sourceRect": [
+        1142.0,
+        714.0,
+        479.0,
+        164.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketWearingItemSurface": {
+      "assetKey": "V2_Market_MarketWearingItemSurface",
+      "rect": [
+        1153.0,
+        759.0,
+        458.0,
+        109.0
+      ],
+      "sourceRect": [
+        1157.0,
+        763.0,
+        450.0,
+        101.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketWearingCrown": {
+      "assetKey": "V2_Market_MarketWearingCrown",
+      "rect": [
+        1166.0,
+        772.0,
+        95.0,
+        84.0
+      ],
+      "sourceRect": [
+        1166.0,
+        772.0,
+        95.0,
+        84.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithEquippedThumbnail"
+    },
+    "MarketRemoveSurface": {
+      "assetKey": "V2_Market_MarketRemoveSurface",
+      "rect": [
+        1526.0,
+        780.0,
+        71.0,
+        69.0
+      ],
+      "sourceRect": [
+        1530.0,
+        784.0,
+        63.0,
+        61.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MarketRemoveIconArtwork": {
+      "assetKey": "V2_Market_MarketRemoveIconArtwork",
+      "rect": [
+        1537.0,
+        791.0,
+        50.0,
+        50.0
+      ],
+      "sourceRect": [
+        1541.0,
+        795.0,
+        42.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    }
+  },
+  "my-items": {
+    "my-itemsNavHomeIconArtwork": {
+      "assetKey": "V2_MyItems_my-itemsNavHomeIconArtwork",
+      "rect": [
+        441.0,
+        151.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        445.0,
+        155.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "my-itemsNavCreateIconArtwork": {
+      "assetKey": "V2_MyItems_my-itemsNavCreateIconArtwork",
+      "rect": [
+        676.0,
+        151.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        680.0,
+        155.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "my-itemsNavMarketIconArtwork": {
+      "assetKey": "V2_MyItems_my-itemsNavMarketIconArtwork",
+      "rect": [
+        932.0,
+        151.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        936.0,
+        155.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "my-itemsNavGamesIconArtwork": {
+      "assetKey": "V2_MyItems_my-itemsNavGamesIconArtwork",
+      "rect": [
+        1172.0,
+        151.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        1176.0,
+        155.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "my-itemsMyItemsShortcutSurface": {
+      "assetKey": "V2_MyItems_my-itemsMyItemsShortcutSurface",
+      "rect": [
+        1384.0,
+        141.0,
+        176.0,
+        69.0
+      ],
+      "sourceRect": [
+        1388.0,
+        145.0,
+        168.0,
+        61.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "my-itemsMyItemsShortcutIconArtwork": {
+      "assetKey": "V2_MyItems_my-itemsMyItemsShortcutIconArtwork",
+      "rect": [
+        1400.9,
+        157.75,
+        35.5,
+        35.5
+      ],
+      "sourceRect": [
+        1404.9,
+        161.75,
+        27.5,
+        27.5
+      ],
+      "imported": true,
+      "role": null
+    },
+    "my-itemsCloseSurface": {
+      "assetKey": "V2_MyItems_my-itemsCloseSurface",
+      "rect": [
+        1566.0,
+        145.0,
+        61.0,
+        62.0
+      ],
+      "sourceRect": [
+        1570.0,
+        149.0,
+        53.0,
+        54.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "my-itemsCloseIconArtwork": {
+      "assetKey": "V2_MyItems_my-itemsCloseIconArtwork",
+      "rect": [
+        1572.5,
+        152.0,
+        48.0,
+        48.0
+      ],
+      "sourceRect": [
+        1576.5,
+        156.0,
+        40.0,
+        40.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsCollectionSurface": {
+      "assetKey": "V2_MyItems_MyItemsCollectionSurface",
+      "rect": [
+        61.0,
+        229.0,
+        569.0,
+        663.0
+      ],
+      "sourceRect": [
+        65.0,
+        233.0,
+        561.0,
+        655.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsCreateNewSurface": {
+      "assetKey": "V2_MyItems_MyItemsCreateNewSurface",
+      "rect": [
+        442.0,
+        241.0,
+        175.0,
+        61.0
+      ],
+      "sourceRect": [
+        446.0,
+        245.0,
+        167.0,
+        53.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsRowCrownSurface": {
+      "assetKey": "V2_MyItems_MyItemsRowCrownSurface",
+      "rect": [
+        73.0,
+        342.0,
+        543.0,
+        135.0
+      ],
+      "sourceRect": [
+        77.0,
+        346.0,
+        535.0,
+        127.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsCrownThumbnail": {
+      "assetKey": "V2_MyItems_MyItemsCrownThumbnail",
+      "rect": [
+        85.0,
+        354.0,
+        157.0,
+        110.0
+      ],
+      "sourceRect": [
+        85.0,
+        354.0,
+        157.0,
+        110.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithCollectionThumbnail"
+    },
+    "MyItemsCrownChevronArtwork": {
+      "assetKey": "V2_MyItems_MyItemsCrownChevronArtwork",
+      "rect": [
+        564.0,
+        394.0,
+        27.0,
+        27.0
+      ],
+      "sourceRect": [
+        568.0,
+        398.0,
+        19.0,
+        19.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsRowDragonSurface": {
+      "assetKey": "V2_MyItems_MyItemsRowDragonSurface",
+      "rect": [
+        73.0,
+        481.0,
+        543.0,
+        135.0
+      ],
+      "sourceRect": [
+        77.0,
+        485.0,
+        535.0,
+        127.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsDragonThumbnail": {
+      "assetKey": "V2_MyItems_MyItemsDragonThumbnail",
+      "rect": [
+        85.0,
+        493.0,
+        157.0,
+        110.0
+      ],
+      "sourceRect": [
+        85.0,
+        493.0,
+        157.0,
+        110.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithCollectionThumbnail"
+    },
+    "MyItemsDragonChevronArtwork": {
+      "assetKey": "V2_MyItems_MyItemsDragonChevronArtwork",
+      "rect": [
+        564.0,
+        533.0,
+        27.0,
+        27.0
+      ],
+      "sourceRect": [
+        568.0,
+        537.0,
+        19.0,
+        19.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsRowKatanaSurface": {
+      "assetKey": "V2_MyItems_MyItemsRowKatanaSurface",
+      "rect": [
+        73.0,
+        620.0,
+        543.0,
+        135.0
+      ],
+      "sourceRect": [
+        77.0,
+        624.0,
+        535.0,
+        127.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsKatanaThumbnail": {
+      "assetKey": "V2_MyItems_MyItemsKatanaThumbnail",
+      "rect": [
+        85.0,
+        632.0,
+        157.0,
+        110.0
+      ],
+      "sourceRect": [
+        85.0,
+        632.0,
+        157.0,
+        110.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithCollectionThumbnail"
+    },
+    "MyItemsKatanaChevronArtwork": {
+      "assetKey": "V2_MyItems_MyItemsKatanaChevronArtwork",
+      "rect": [
+        564.0,
+        672.0,
+        27.0,
+        27.0
+      ],
+      "sourceRect": [
+        568.0,
+        676.0,
+        19.0,
+        19.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsRowHatSurface": {
+      "assetKey": "V2_MyItems_MyItemsRowHatSurface",
+      "rect": [
+        73.0,
+        759.0,
+        543.0,
+        135.0
+      ],
+      "sourceRect": [
+        77.0,
+        763.0,
+        535.0,
+        127.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsHatThumbnail": {
+      "assetKey": "V2_MyItems_MyItemsHatThumbnail",
+      "rect": [
+        85.0,
+        771.0,
+        157.0,
+        110.0
+      ],
+      "sourceRect": [
+        85.0,
+        771.0,
+        157.0,
+        110.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithCollectionThumbnail"
+    },
+    "MyItemsHatChevronArtwork": {
+      "assetKey": "V2_MyItems_MyItemsHatChevronArtwork",
+      "rect": [
+        564.0,
+        811.0,
+        27.0,
+        27.0
+      ],
+      "sourceRect": [
+        568.0,
+        815.0,
+        19.0,
+        19.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsPreviewPanelSurface": {
+      "assetKey": "V2_MyItems_MyItemsPreviewPanelSurface",
+      "rect": [
+        644.0,
+        229.0,
+        975.0,
+        663.0
+      ],
+      "sourceRect": [
+        648.0,
+        233.0,
+        967.0,
+        655.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsReadyBadgeSurface": {
+      "assetKey": "V2_MyItems_MyItemsReadyBadgeSurface",
+      "rect": [
+        1048.0,
+        252.0,
+        218.0,
+        51.0
+      ],
+      "sourceRect": [
+        1052.0,
+        256.0,
+        210.0,
+        43.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsReadyCheckArtwork": {
+      "assetKey": "V2_MyItems_MyItemsReadyCheckArtwork",
+      "rect": [
+        1062.0,
+        259.0,
+        35.0,
+        35.0
+      ],
+      "sourceRect": [
+        1066.0,
+        263.0,
+        27.0,
+        27.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsHeroV2": {
+      "assetKey": "V2_MyItems_MyItemsHeroV2",
+      "rect": [
+        650.0,
+        307.0,
+        962.0,
+        327.0
+      ],
+      "sourceRect": [
+        650.0,
+        307.0,
+        962.0,
+        327.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithItemPreview"
+    },
+    "MyItemsRotateMouseArtwork": {
+      "assetKey": "V2_MyItems_MyItemsRotateMouseArtwork",
+      "rect": [
+        1456.0,
+        305.0,
+        68.0,
+        68.0
+      ],
+      "sourceRect": [
+        1460.0,
+        309.0,
+        60.0,
+        60.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsResetCameraSurface": {
+      "assetKey": "V2_MyItems_MyItemsResetCameraSurface",
+      "rect": [
+        1388.0,
+        520.0,
+        212.0,
+        62.0
+      ],
+      "sourceRect": [
+        1392.0,
+        524.0,
+        204.0,
+        54.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsResetCameraIconArtwork": {
+      "assetKey": "V2_MyItems_MyItemsResetCameraIconArtwork",
+      "rect": [
+        1402.85,
+        533.875,
+        34.25,
+        34.25
+      ],
+      "sourceRect": [
+        1406.85,
+        537.875,
+        26.25,
+        26.25
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsNameField": {
+      "assetKey": "V2_MyItems_MyItemsNameField",
+      "rect": [
+        681.0,
+        649.0,
+        695.0,
+        60.0
+      ],
+      "sourceRect": [
+        685.0,
+        653.0,
+        687.0,
+        52.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsSaveNameSurface": {
+      "assetKey": "V2_MyItems_MyItemsSaveNameSurface",
+      "rect": [
+        1391.0,
+        631.0,
+        192.0,
+        70.0
+      ],
+      "sourceRect": [
+        1395.0,
+        635.0,
+        184.0,
+        62.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsEquipSurface": {
+      "assetKey": "V2_MyItems_MyItemsEquipSurface",
+      "rect": [
+        668.0,
+        715.0,
+        443.0,
+        89.0
+      ],
+      "sourceRect": [
+        672.0,
+        719.0,
+        435.0,
+        81.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsEquipIconArtwork": {
+      "assetKey": "V2_MyItems_MyItemsEquipIconArtwork",
+      "rect": [
+        796.5,
+        730.5,
+        58.0,
+        58.0
+      ],
+      "sourceRect": [
+        800.5,
+        734.5,
+        50.0,
+        50.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsPublishSurface": {
+      "assetKey": "V2_MyItems_MyItemsPublishSurface",
+      "rect": [
+        1119.0,
+        715.0,
+        475.0,
+        89.0
+      ],
+      "sourceRect": [
+        1123.0,
+        719.0,
+        467.0,
+        81.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsPublishIconArtwork": {
+      "assetKey": "V2_MyItems_MyItemsPublishIconArtwork",
+      "rect": [
+        1175.7,
+        735.5,
+        48.0,
+        48.0
+      ],
+      "sourceRect": [
+        1179.7,
+        739.5,
+        40.0,
+        40.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsAdvancedPanelSurface": {
+      "assetKey": "V2_MyItems_MyItemsAdvancedPanelSurface",
+      "rect": [
+        665.0,
+        813.0,
+        936.0,
+        64.0
+      ],
+      "sourceRect": [
+        669.0,
+        817.0,
+        928.0,
+        56.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsAdvancedChevronArtwork": {
+      "assetKey": "V2_MyItems_MyItemsAdvancedChevronArtwork",
+      "rect": [
+        691.0,
+        831.0,
+        26.0,
+        26.0
+      ],
+      "sourceRect": [
+        695.0,
+        835.0,
+        18.0,
+        18.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsPublishingInfoArtwork": {
+      "assetKey": "V2_MyItems_MyItemsPublishingInfoArtwork",
+      "rect": [
+        1102.0,
+        828.0,
+        35.0,
+        35.0
+      ],
+      "sourceRect": [
+        1106.0,
+        832.0,
+        27.0,
+        27.0
+      ],
+      "imported": true,
+      "role": null
+    }
+  },
+  "runway": {
+    "runwayBackdrop": {
+      "assetKey": "V2_Runway_runwayBackdrop",
+      "rect": [
+        0.0,
+        0.0,
+        1672.0,
+        941.0
+      ],
+      "sourceRect": [
+        0.0,
+        0.0,
+        1672.0,
+        941.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MainShellArt": {
+      "assetKey": "V2_Runway_MainShellArt",
+      "rect": [
+        41.0,
+        107.0,
+        1600.0,
+        797.0
+      ],
+      "sourceRect": [
+        45.0,
+        111.0,
+        1592.0,
+        789.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "TokenBalanceArt": {
+      "assetKey": "V2_Runway_TokenBalanceArt",
+      "rect": [
+        1140.0,
+        26.0,
+        207.0,
+        70.0
+      ],
+      "sourceRect": [
+        1144.0,
+        30.0,
+        199.0,
+        62.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "TokenBalancePlusArt": {
+      "assetKey": "V2_Runway_TokenBalancePlusArt",
+      "rect": [
+        1289.0,
+        40.0,
+        44.0,
+        42.0
+      ],
+      "sourceRect": [
+        1289.0,
+        40.0,
+        44.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "TokenBalancePlusIcon": {
+      "assetKey": "V2_Runway_TokenBalancePlusIcon",
+      "rect": [
+        1289.0,
+        39.0,
+        45.0,
+        45.0
+      ],
+      "sourceRect": [
+        1293.0,
+        43.0,
+        37.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "PassBalanceArt": {
+      "assetKey": "V2_Runway_PassBalanceArt",
+      "rect": [
+        1355.0,
+        26.0,
+        201.0,
+        70.0
+      ],
+      "sourceRect": [
+        1359.0,
+        30.0,
+        193.0,
+        62.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "PassBalancePlusArt": {
+      "assetKey": "V2_Runway_PassBalancePlusArt",
+      "rect": [
+        1498.0,
+        40.0,
+        44.0,
+        42.0
+      ],
+      "sourceRect": [
+        1498.0,
+        40.0,
+        44.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "PassBalancePlusIcon": {
+      "assetKey": "V2_Runway_PassBalancePlusIcon",
+      "rect": [
+        1498.0,
+        39.0,
+        45.0,
+        45.0
+      ],
+      "sourceRect": [
+        1502.0,
+        43.0,
+        37.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "HeaderToken": {
+      "assetKey": "V2_Runway_HeaderToken",
+      "rect": [
+        1150.0,
+        31.0,
+        55.0,
+        55.0
+      ],
+      "sourceRect": [
+        1154.0,
+        35.0,
+        47.0,
+        47.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "HeaderPass": {
+      "assetKey": "V2_Runway_HeaderPass",
+      "rect": [
+        1366.0,
+        33.0,
+        52.0,
+        51.0
+      ],
+      "sourceRect": [
+        1370.0,
+        37.0,
+        44.0,
+        43.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "HeaderSettingsArt": {
+      "assetKey": "V2_Runway_HeaderSettingsArt",
+      "rect": [
+        1572.0,
+        30.0,
+        65.0,
+        64.0
+      ],
+      "sourceRect": [
+        1572.0,
+        30.0,
+        65.0,
+        64.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsGear": {
+      "assetKey": "V2_Runway_SettingsGear",
+      "rect": [
+        1578.0,
+        36.0,
+        51.0,
+        52.0
+      ],
+      "sourceRect": [
+        1582.0,
+        40.0,
+        43.0,
+        44.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavigationArt": {
+      "assetKey": "V2_Runway_NavigationArt",
+      "rect": [
+        378.0,
+        133.0,
+        864.0,
+        82.0
+      ],
+      "sourceRect": [
+        382.0,
+        137.0,
+        856.0,
+        74.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavHomeIcon": {
+      "assetKey": "V2_Runway_NavHomeIcon",
+      "rect": [
+        420.0,
+        151.0,
+        46.0,
+        45.0
+      ],
+      "sourceRect": [
+        424.0,
+        155.0,
+        38.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavCreateIcon": {
+      "assetKey": "V2_Runway_NavCreateIcon",
+      "rect": [
+        625.0,
+        151.0,
+        46.0,
+        45.0
+      ],
+      "sourceRect": [
+        629.0,
+        155.0,
+        38.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavMarketIcon": {
+      "assetKey": "V2_Runway_NavMarketIcon",
+      "rect": [
+        855.0,
+        151.0,
+        46.0,
+        45.0
+      ],
+      "sourceRect": [
+        859.0,
+        155.0,
+        38.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavGamesArt": {
+      "assetKey": "V2_Runway_NavGamesArt",
+      "rect": [
+        1019.0,
+        139.0,
+        218.0,
+        66.0
+      ],
+      "sourceRect": [
+        1019.0,
+        139.0,
+        218.0,
+        66.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavGamesIcon": {
+      "assetKey": "V2_Runway_NavGamesIcon",
+      "rect": [
+        1064.0,
+        151.0,
+        46.0,
+        45.0
+      ],
+      "sourceRect": [
+        1068.0,
+        155.0,
+        38.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsArt": {
+      "assetKey": "V2_Runway_MyItemsArt",
+      "rect": [
+        1276.0,
+        139.0,
+        247.0,
+        67.0
+      ],
+      "sourceRect": [
+        1276.0,
+        139.0,
+        247.0,
+        67.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsBag": {
+      "assetKey": "V2_Runway_MyItemsBag",
+      "rect": [
+        1298.0,
+        153.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        1302.0,
+        157.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CloseArt": {
+      "assetKey": "V2_Runway_CloseArt",
+      "rect": [
+        1544.0,
+        139.0,
+        69.0,
+        67.0
+      ],
+      "sourceRect": [
+        1544.0,
+        139.0,
+        69.0,
+        67.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CloseIcon": {
+      "assetKey": "V2_Runway_CloseIcon",
+      "rect": [
+        1553.0,
+        147.0,
+        52.0,
+        52.0
+      ],
+      "sourceRect": [
+        1557.0,
+        151.0,
+        44.0,
+        44.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayTitleCrown": {
+      "assetKey": "V2_Runway_RunwayTitleCrown",
+      "rect": [
+        61.0,
+        225.0,
+        108.0,
+        110.0
+      ],
+      "sourceRect": [
+        61.0,
+        225.0,
+        108.0,
+        110.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CurrentThemeBannerArt": {
+      "assetKey": "V2_Runway_CurrentThemeBannerArt",
+      "rect": [
+        740.0,
+        220.0,
+        429.0,
+        117.0
+      ],
+      "sourceRect": [
+        744.0,
+        224.0,
+        421.0,
+        109.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayThemeLeftCrystals": {
+      "assetKey": "V2_Runway_RunwayThemeLeftCrystals",
+      "rect": [
+        670.0,
+        226.0,
+        124.0,
+        112.0
+      ],
+      "sourceRect": [
+        670.0,
+        226.0,
+        124.0,
+        112.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayThemeRightCrystals": {
+      "assetKey": "V2_Runway_RunwayThemeRightCrystals",
+      "rect": [
+        1152.0,
+        224.0,
+        82.0,
+        112.0
+      ],
+      "sourceRect": [
+        1152.0,
+        224.0,
+        82.0,
+        112.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayThemeCrown": {
+      "assetKey": "V2_Runway_RunwayThemeCrown",
+      "rect": [
+        796.0,
+        240.0,
+        68.0,
+        74.0
+      ],
+      "sourceRect": [
+        796.0,
+        240.0,
+        68.0,
+        74.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayTimerCrystals": {
+      "assetKey": "V2_Runway_RunwayTimerCrystals",
+      "rect": [
+        1538.0,
+        224.0,
+        82.0,
+        112.0
+      ],
+      "sourceRect": [
+        1538.0,
+        224.0,
+        82.0,
+        112.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayPhaseIndicatorArt": {
+      "assetKey": "V2_Runway_RunwayPhaseIndicatorArt",
+      "rect": [
+        1280.0,
+        234.0,
+        256.0,
+        40.0
+      ],
+      "sourceRect": [
+        1280.0,
+        234.0,
+        256.0,
+        40.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "PhaseHanger": {
+      "assetKey": "V2_Runway_PhaseHanger",
+      "rect": [
+        1300.0,
+        238.0,
+        39.0,
+        32.0
+      ],
+      "sourceRect": [
+        1304.0,
+        242.0,
+        31.0,
+        24.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CountdownClock": {
+      "assetKey": "V2_Runway_CountdownClock",
+      "rect": [
+        1341.0,
+        278.0,
+        45.0,
+        48.0
+      ],
+      "sourceRect": [
+        1345.0,
+        282.0,
+        37.0,
+        40.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LineupPanelArt": {
+      "assetKey": "V2_Runway_LineupPanelArt",
+      "rect": [
+        57.0,
+        344.0,
+        509.0,
+        542.0
+      ],
+      "sourceRect": [
+        61.0,
+        348.0,
+        501.0,
+        534.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "EntrantRow1Art": {
+      "assetKey": "V2_Runway_EntrantRow1Art",
+      "rect": [
+        64.0,
+        408.0,
+        494.0,
+        111.0
+      ],
+      "sourceRect": [
+        68.0,
+        412.0,
+        486.0,
+        103.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayPlayer1": {
+      "assetKey": "V2_Runway_RunwayPlayer1",
+      "rect": [
+        129.0,
+        420.0,
+        81.0,
+        86.0
+      ],
+      "sourceRect": [
+        129.0,
+        420.0,
+        81.0,
+        86.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithPlayerPortrait"
+    },
+    "ViewLookPlayer1Art": {
+      "assetKey": "V2_Runway_ViewLookPlayer1Art",
+      "rect": [
+        383.0,
+        436.0,
+        161.0,
+        59.0
+      ],
+      "sourceRect": [
+        383.0,
+        436.0,
+        161.0,
+        59.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ViewLookEye1": {
+      "assetKey": "V2_Runway_ViewLookEye1",
+      "rect": [
+        394.0,
+        447.0,
+        42.0,
+        37.0
+      ],
+      "sourceRect": [
+        398.0,
+        451.0,
+        34.0,
+        29.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "EntrantRow2Art": {
+      "assetKey": "V2_Runway_EntrantRow2Art",
+      "rect": [
+        64.0,
+        518.0,
+        494.0,
+        111.0
+      ],
+      "sourceRect": [
+        68.0,
+        522.0,
+        486.0,
+        103.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayPlayer2": {
+      "assetKey": "V2_Runway_RunwayPlayer2",
+      "rect": [
+        129.0,
+        530.0,
+        81.0,
+        86.0
+      ],
+      "sourceRect": [
+        129.0,
+        530.0,
+        81.0,
+        86.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithPlayerPortrait"
+    },
+    "EntrantReady2": {
+      "assetKey": "V2_Runway_EntrantReady2",
+      "rect": [
+        228.0,
+        573.0,
+        36.0,
+        36.0
+      ],
+      "sourceRect": [
+        232.0,
+        577.0,
+        28.0,
+        28.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ViewLookPlayer2Art": {
+      "assetKey": "V2_Runway_ViewLookPlayer2Art",
+      "rect": [
+        383.0,
+        546.0,
+        161.0,
+        59.0
+      ],
+      "sourceRect": [
+        383.0,
+        546.0,
+        161.0,
+        59.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ViewLookEye2": {
+      "assetKey": "V2_Runway_ViewLookEye2",
+      "rect": [
+        394.0,
+        557.0,
+        42.0,
+        37.0
+      ],
+      "sourceRect": [
+        398.0,
+        561.0,
+        34.0,
+        29.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "EntrantRow3Art": {
+      "assetKey": "V2_Runway_EntrantRow3Art",
+      "rect": [
+        64.0,
+        628.0,
+        494.0,
+        111.0
+      ],
+      "sourceRect": [
+        68.0,
+        632.0,
+        486.0,
+        103.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayPlayer3": {
+      "assetKey": "V2_Runway_RunwayPlayer3",
+      "rect": [
+        129.0,
+        640.0,
+        81.0,
+        86.0
+      ],
+      "sourceRect": [
+        129.0,
+        640.0,
+        81.0,
+        86.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithPlayerPortrait"
+    },
+    "ViewLookPlayer3Art": {
+      "assetKey": "V2_Runway_ViewLookPlayer3Art",
+      "rect": [
+        383.0,
+        656.0,
+        161.0,
+        59.0
+      ],
+      "sourceRect": [
+        383.0,
+        656.0,
+        161.0,
+        59.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ViewLookEye3": {
+      "assetKey": "V2_Runway_ViewLookEye3",
+      "rect": [
+        394.0,
+        667.0,
+        42.0,
+        37.0
+      ],
+      "sourceRect": [
+        398.0,
+        671.0,
+        34.0,
+        29.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "EntrantRow4Art": {
+      "assetKey": "V2_Runway_EntrantRow4Art",
+      "rect": [
+        64.0,
+        743.0,
+        494.0,
+        111.0
+      ],
+      "sourceRect": [
+        68.0,
+        747.0,
+        486.0,
+        103.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayPlayer4": {
+      "assetKey": "V2_Runway_RunwayPlayer4",
+      "rect": [
+        129.0,
+        755.0,
+        81.0,
+        86.0
+      ],
+      "sourceRect": [
+        129.0,
+        755.0,
+        81.0,
+        86.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithPlayerPortrait"
+    },
+    "EntrantReady4": {
+      "assetKey": "V2_Runway_EntrantReady4",
+      "rect": [
+        228.0,
+        798.0,
+        36.0,
+        36.0
+      ],
+      "sourceRect": [
+        232.0,
+        802.0,
+        28.0,
+        28.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ViewLookPlayer4Art": {
+      "assetKey": "V2_Runway_ViewLookPlayer4Art",
+      "rect": [
+        383.0,
+        771.0,
+        161.0,
+        59.0
+      ],
+      "sourceRect": [
+        383.0,
+        771.0,
+        161.0,
+        59.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ViewLookEye4": {
+      "assetKey": "V2_Runway_ViewLookEye4",
+      "rect": [
+        394.0,
+        782.0,
+        42.0,
+        37.0
+      ],
+      "sourceRect": [
+        398.0,
+        786.0,
+        34.0,
+        29.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AvatarPreviewPanelArt": {
+      "assetKey": "V2_Runway_AvatarPreviewPanelArt",
+      "rect": [
+        573.0,
+        343.0,
+        609.0,
+        544.0
+      ],
+      "sourceRect": [
+        577.0,
+        347.0,
+        601.0,
+        536.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayAvatarStage": {
+      "assetKey": "V2_Runway_RunwayAvatarStage",
+      "rect": [
+        579.0,
+        349.0,
+        596.0,
+        366.0
+      ],
+      "sourceRect": [
+        579.0,
+        349.0,
+        596.0,
+        366.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithLiveAvatarViewport"
+    },
+    "DragInstructionArt": {
+      "assetKey": "V2_Runway_DragInstructionArt",
+      "rect": [
+        1013.0,
+        354.0,
+        155.0,
+        82.0
+      ],
+      "sourceRect": [
+        1017.0,
+        358.0,
+        147.0,
+        74.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RotateMouseIcon": {
+      "assetKey": "V2_Runway_RotateMouseIcon",
+      "rect": [
+        1034.0,
+        369.0,
+        36.0,
+        51.0
+      ],
+      "sourceRect": [
+        1038.0,
+        373.0,
+        28.0,
+        43.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ResetCameraArt": {
+      "assetKey": "V2_Runway_ResetCameraArt",
+      "rect": [
+        1017.0,
+        438.0,
+        149.0,
+        44.0
+      ],
+      "sourceRect": [
+        1017.0,
+        438.0,
+        149.0,
+        44.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ResetCameraIcon": {
+      "assetKey": "V2_Runway_ResetCameraIcon",
+      "rect": [
+        1024.0,
+        444.0,
+        34.0,
+        34.0
+      ],
+      "sourceRect": [
+        1028.0,
+        448.0,
+        26.0,
+        26.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreatorXpStripArt": {
+      "assetKey": "V2_Runway_CreatorXpStripArt",
+      "rect": [
+        589.0,
+        712.0,
+        577.0,
+        47.0
+      ],
+      "sourceRect": [
+        593.0,
+        716.0,
+        569.0,
+        39.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreatorXpCrown": {
+      "assetKey": "V2_Runway_CreatorXpCrown",
+      "rect": [
+        1116.0,
+        720.0,
+        33.0,
+        32.0
+      ],
+      "sourceRect": [
+        1120.0,
+        724.0,
+        25.0,
+        24.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "OpenAvatarLabArt": {
+      "assetKey": "V2_Runway_OpenAvatarLabArt",
+      "rect": [
+        585.0,
+        768.0,
+        151.0,
+        73.0
+      ],
+      "sourceRect": [
+        585.0,
+        768.0,
+        151.0,
+        73.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LockInLookArt": {
+      "assetKey": "V2_Runway_LockInLookArt",
+      "rect": [
+        748.0,
+        764.0,
+        260.0,
+        71.0
+      ],
+      "sourceRect": [
+        748.0,
+        764.0,
+        260.0,
+        71.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "LockLookCrown": {
+      "assetKey": "V2_Runway_LockLookCrown",
+      "rect": [
+        768.0,
+        778.0,
+        43.0,
+        42.0
+      ],
+      "sourceRect": [
+        772.0,
+        782.0,
+        35.0,
+        34.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "InviteRunwayFriendsArt": {
+      "assetKey": "V2_Runway_InviteRunwayFriendsArt",
+      "rect": [
+        1020.0,
+        768.0,
+        151.0,
+        73.0
+      ],
+      "sourceRect": [
+        1020.0,
+        768.0,
+        151.0,
+        73.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayInvitePeople": {
+      "assetKey": "V2_Runway_RunwayInvitePeople",
+      "rect": [
+        1076.0,
+        775.0,
+        40.0,
+        35.0
+      ],
+      "sourceRect": [
+        1080.0,
+        779.0,
+        32.0,
+        27.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WeeklyStandingsPanelArt": {
+      "assetKey": "V2_Runway_WeeklyStandingsPanelArt",
+      "rect": [
+        1190.0,
+        344.0,
+        434.0,
+        543.0
+      ],
+      "sourceRect": [
+        1194.0,
+        348.0,
+        426.0,
+        535.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RefreshWeeklyArt": {
+      "assetKey": "V2_Runway_RefreshWeeklyArt",
+      "rect": [
+        1478.0,
+        358.0,
+        132.0,
+        42.0
+      ],
+      "sourceRect": [
+        1478.0,
+        358.0,
+        132.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RefreshWeeklyIcon": {
+      "assetKey": "V2_Runway_RefreshWeeklyIcon",
+      "rect": [
+        1485.0,
+        362.0,
+        35.0,
+        35.0
+      ],
+      "sourceRect": [
+        1489.0,
+        366.0,
+        27.0,
+        27.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WeeklyRow1Art": {
+      "assetKey": "V2_Runway_WeeklyRow1Art",
+      "rect": [
+        1198.0,
+        407.0,
+        416.0,
+        67.0
+      ],
+      "sourceRect": [
+        1202.0,
+        411.0,
+        408.0,
+        59.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayWeeklyPlayer1": {
+      "assetKey": "V2_Runway_RunwayWeeklyPlayer1",
+      "rect": [
+        1272.0,
+        414.0,
+        60.0,
+        55.0
+      ],
+      "sourceRect": [
+        1272.0,
+        414.0,
+        60.0,
+        55.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithPlayerPortrait"
+    },
+    "WeeklyPointCrown1": {
+      "assetKey": "V2_Runway_WeeklyPointCrown1",
+      "rect": [
+        1486.0,
+        425.0,
+        34.0,
+        30.0
+      ],
+      "sourceRect": [
+        1490.0,
+        429.0,
+        26.0,
+        22.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WeeklyRow2Art": {
+      "assetKey": "V2_Runway_WeeklyRow2Art",
+      "rect": [
+        1198.0,
+        472.5,
+        416.0,
+        67.0
+      ],
+      "sourceRect": [
+        1202.0,
+        476.5,
+        408.0,
+        59.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayWeeklyPlayer2": {
+      "assetKey": "V2_Runway_RunwayWeeklyPlayer2",
+      "rect": [
+        1272.0,
+        479.0,
+        60.0,
+        56.0
+      ],
+      "sourceRect": [
+        1272.0,
+        479.0,
+        60.0,
+        56.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithPlayerPortrait"
+    },
+    "WeeklyPointCrown2": {
+      "assetKey": "V2_Runway_WeeklyPointCrown2",
+      "rect": [
+        1486.0,
+        490.5,
+        34.0,
+        30.0
+      ],
+      "sourceRect": [
+        1490.0,
+        494.5,
+        26.0,
+        22.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WeeklyRow3Art": {
+      "assetKey": "V2_Runway_WeeklyRow3Art",
+      "rect": [
+        1198.0,
+        538.0,
+        416.0,
+        67.0
+      ],
+      "sourceRect": [
+        1202.0,
+        542.0,
+        408.0,
+        59.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayWeeklyPlayer3": {
+      "assetKey": "V2_Runway_RunwayWeeklyPlayer3",
+      "rect": [
+        1272.0,
+        545.0,
+        60.0,
+        55.0
+      ],
+      "sourceRect": [
+        1272.0,
+        545.0,
+        60.0,
+        55.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithPlayerPortrait"
+    },
+    "WeeklyPointCrown3": {
+      "assetKey": "V2_Runway_WeeklyPointCrown3",
+      "rect": [
+        1486.0,
+        556.0,
+        34.0,
+        30.0
+      ],
+      "sourceRect": [
+        1490.0,
+        560.0,
+        26.0,
+        22.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WeeklyRow4Art": {
+      "assetKey": "V2_Runway_WeeklyRow4Art",
+      "rect": [
+        1198.0,
+        603.5,
+        416.0,
+        67.0
+      ],
+      "sourceRect": [
+        1202.0,
+        607.5,
+        408.0,
+        59.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayWeeklyPlayer4": {
+      "assetKey": "V2_Runway_RunwayWeeklyPlayer4",
+      "rect": [
+        1272.0,
+        610.0,
+        60.0,
+        55.0
+      ],
+      "sourceRect": [
+        1272.0,
+        610.0,
+        60.0,
+        55.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithPlayerPortrait"
+    },
+    "WeeklyPointCrown4": {
+      "assetKey": "V2_Runway_WeeklyPointCrown4",
+      "rect": [
+        1486.0,
+        621.5,
+        34.0,
+        30.0
+      ],
+      "sourceRect": [
+        1490.0,
+        625.5,
+        26.0,
+        22.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WeeklyRow5Art": {
+      "assetKey": "V2_Runway_WeeklyRow5Art",
+      "rect": [
+        1198.0,
+        669.0,
+        416.0,
+        67.0
+      ],
+      "sourceRect": [
+        1202.0,
+        673.0,
+        408.0,
+        59.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayWeeklyPlayer5": {
+      "assetKey": "V2_Runway_RunwayWeeklyPlayer5",
+      "rect": [
+        1272.0,
+        675.0,
+        60.0,
+        54.0
+      ],
+      "sourceRect": [
+        1272.0,
+        675.0,
+        60.0,
+        54.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithPlayerPortrait"
+    },
+    "WeeklyPointCrown5": {
+      "assetKey": "V2_Runway_WeeklyPointCrown5",
+      "rect": [
+        1486.0,
+        687.0,
+        34.0,
+        30.0
+      ],
+      "sourceRect": [
+        1490.0,
+        691.0,
+        26.0,
+        22.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "WeeklyCreatorXpPanelArt": {
+      "assetKey": "V2_Runway_WeeklyCreatorXpPanelArt",
+      "rect": [
+        1196.0,
+        742.0,
+        423.0,
+        137.0
+      ],
+      "sourceRect": [
+        1200.0,
+        746.0,
+        415.0,
+        129.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RunwayWeeklyRewardArt": {
+      "assetKey": "V2_Runway_RunwayWeeklyRewardArt",
+      "rect": [
+        1207.0,
+        750.0,
+        166.0,
+        121.0
+      ],
+      "sourceRect": [
+        1207.0,
+        750.0,
+        166.0,
+        121.0
+      ],
+      "imported": true,
+      "role": null
+    }
+  },
+  "settings": {
+    "settingsBackdrop": {
+      "assetKey": "V2_Settings_settingsBackdrop",
+      "rect": [
+        0.0,
+        0.0,
+        1672.0,
+        941.0
+      ],
+      "sourceRect": [
+        0.0,
+        0.0,
+        1672.0,
+        941.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MainShellArt": {
+      "assetKey": "V2_Settings_MainShellArt",
+      "rect": [
+        41.0,
+        107.0,
+        1600.0,
+        829.0
+      ],
+      "sourceRect": [
+        45.0,
+        111.0,
+        1592.0,
+        821.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "TokenBalanceArt": {
+      "assetKey": "V2_Settings_TokenBalanceArt",
+      "rect": [
+        1140.0,
+        26.0,
+        207.0,
+        70.0
+      ],
+      "sourceRect": [
+        1144.0,
+        30.0,
+        199.0,
+        62.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "TokenBalancePlusArt": {
+      "assetKey": "V2_Settings_TokenBalancePlusArt",
+      "rect": [
+        1289.0,
+        40.0,
+        44.0,
+        42.0
+      ],
+      "sourceRect": [
+        1289.0,
+        40.0,
+        44.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "TokenBalancePlusIcon": {
+      "assetKey": "V2_Settings_TokenBalancePlusIcon",
+      "rect": [
+        1289.0,
+        39.0,
+        45.0,
+        45.0
+      ],
+      "sourceRect": [
+        1293.0,
+        43.0,
+        37.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "PassBalanceArt": {
+      "assetKey": "V2_Settings_PassBalanceArt",
+      "rect": [
+        1355.0,
+        26.0,
+        201.0,
+        70.0
+      ],
+      "sourceRect": [
+        1359.0,
+        30.0,
+        193.0,
+        62.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "PassBalancePlusArt": {
+      "assetKey": "V2_Settings_PassBalancePlusArt",
+      "rect": [
+        1498.0,
+        40.0,
+        44.0,
+        42.0
+      ],
+      "sourceRect": [
+        1498.0,
+        40.0,
+        44.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "PassBalancePlusIcon": {
+      "assetKey": "V2_Settings_PassBalancePlusIcon",
+      "rect": [
+        1498.0,
+        39.0,
+        45.0,
+        45.0
+      ],
+      "sourceRect": [
+        1502.0,
+        43.0,
+        37.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "HeaderToken": {
+      "assetKey": "V2_Settings_HeaderToken",
+      "rect": [
+        1150.0,
+        31.0,
+        55.0,
+        55.0
+      ],
+      "sourceRect": [
+        1154.0,
+        35.0,
+        47.0,
+        47.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "HeaderPass": {
+      "assetKey": "V2_Settings_HeaderPass",
+      "rect": [
+        1366.0,
+        33.0,
+        52.0,
+        51.0
+      ],
+      "sourceRect": [
+        1370.0,
+        37.0,
+        44.0,
+        43.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "HeaderSettingsArt": {
+      "assetKey": "V2_Settings_HeaderSettingsArt",
+      "rect": [
+        1572.0,
+        30.0,
+        65.0,
+        64.0
+      ],
+      "sourceRect": [
+        1572.0,
+        30.0,
+        65.0,
+        64.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsGear": {
+      "assetKey": "V2_Settings_SettingsGear",
+      "rect": [
+        1578.0,
+        36.0,
+        51.0,
+        52.0
+      ],
+      "sourceRect": [
+        1582.0,
+        40.0,
+        43.0,
+        44.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavigationArt": {
+      "assetKey": "V2_Settings_NavigationArt",
+      "rect": [
+        368.0,
+        133.0,
+        974.0,
+        82.0
+      ],
+      "sourceRect": [
+        372.0,
+        137.0,
+        966.0,
+        74.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavHomeIcon": {
+      "assetKey": "V2_Settings_NavHomeIcon",
+      "rect": [
+        410.0,
+        151.0,
+        46.0,
+        45.0
+      ],
+      "sourceRect": [
+        414.0,
+        155.0,
+        38.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavCreateIcon": {
+      "assetKey": "V2_Settings_NavCreateIcon",
+      "rect": [
+        615.0,
+        151.0,
+        46.0,
+        45.0
+      ],
+      "sourceRect": [
+        619.0,
+        155.0,
+        38.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavMarketIcon": {
+      "assetKey": "V2_Settings_NavMarketIcon",
+      "rect": [
+        845.0,
+        151.0,
+        46.0,
+        45.0
+      ],
+      "sourceRect": [
+        849.0,
+        155.0,
+        38.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavGamesIcon": {
+      "assetKey": "V2_Settings_NavGamesIcon",
+      "rect": [
+        1054.0,
+        151.0,
+        46.0,
+        45.0
+      ],
+      "sourceRect": [
+        1058.0,
+        155.0,
+        38.0,
+        37.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavSettingsArt": {
+      "assetKey": "V2_Settings_NavSettingsArt",
+      "rect": [
+        1243.0,
+        139.0,
+        94.0,
+        71.0
+      ],
+      "sourceRect": [
+        1243.0,
+        139.0,
+        94.0,
+        71.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "NavSettingsGear": {
+      "assetKey": "V2_Settings_NavSettingsGear",
+      "rect": [
+        1264.0,
+        153.0,
+        52.0,
+        50.0
+      ],
+      "sourceRect": [
+        1268.0,
+        157.0,
+        44.0,
+        42.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsArt": {
+      "assetKey": "V2_Settings_MyItemsArt",
+      "rect": [
+        1357.0,
+        139.0,
+        184.0,
+        67.0
+      ],
+      "sourceRect": [
+        1357.0,
+        139.0,
+        184.0,
+        67.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "MyItemsBag": {
+      "assetKey": "V2_Settings_MyItemsBag",
+      "rect": [
+        1379.0,
+        153.0,
+        46.0,
+        46.0
+      ],
+      "sourceRect": [
+        1383.0,
+        157.0,
+        38.0,
+        38.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CloseArt": {
+      "assetKey": "V2_Settings_CloseArt",
+      "rect": [
+        1555.0,
+        139.0,
+        69.0,
+        67.0
+      ],
+      "sourceRect": [
+        1555.0,
+        139.0,
+        69.0,
+        67.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CloseIcon": {
+      "assetKey": "V2_Settings_CloseIcon",
+      "rect": [
+        1564.0,
+        147.0,
+        52.0,
+        52.0
+      ],
+      "sourceRect": [
+        1568.0,
+        151.0,
+        44.0,
+        44.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CreationModePanelArt": {
+      "assetKey": "V2_Settings_CreationModePanelArt",
+      "rect": [
+        61.0,
+        326.0,
+        777.0,
+        216.0
+      ],
+      "sourceRect": [
+        65.0,
+        330.0,
+        769.0,
+        208.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsCreationArt": {
+      "assetKey": "V2_Settings_SettingsCreationArt",
+      "rect": [
+        72.0,
+        338.0,
+        230.0,
+        194.0
+      ],
+      "sourceRect": [
+        72.0,
+        338.0,
+        230.0,
+        194.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AdvancedModeArt": {
+      "assetKey": "V2_Settings_AdvancedModeArt",
+      "rect": [
+        556.0,
+        443.0,
+        258.0,
+        71.0
+      ],
+      "sourceRect": [
+        556.0,
+        443.0,
+        258.0,
+        71.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AdvancedModeGear": {
+      "assetKey": "V2_Settings_AdvancedModeGear",
+      "rect": [
+        603.0,
+        455.0,
+        49.0,
+        47.0
+      ],
+      "sourceRect": [
+        607.0,
+        459.0,
+        41.0,
+        39.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SimpleModeArt": {
+      "assetKey": "V2_Settings_SimpleModeArt",
+      "rect": [
+        322.0,
+        443.0,
+        240.0,
+        71.0
+      ],
+      "sourceRect": [
+        322.0,
+        443.0,
+        240.0,
+        71.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SimpleModeCube": {
+      "assetKey": "V2_Settings_SimpleModeCube",
+      "rect": [
+        376.0,
+        454.0,
+        45.0,
+        47.0
+      ],
+      "sourceRect": [
+        380.0,
+        458.0,
+        37.0,
+        39.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AccessibilityPanelArt": {
+      "assetKey": "V2_Settings_AccessibilityPanelArt",
+      "rect": [
+        844.0,
+        324.0,
+        776.0,
+        218.0
+      ],
+      "sourceRect": [
+        848.0,
+        328.0,
+        768.0,
+        210.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsAccessibilityArt": {
+      "assetKey": "V2_Settings_SettingsAccessibilityArt",
+      "rect": [
+        855.0,
+        337.0,
+        216.0,
+        194.0
+      ],
+      "sourceRect": [
+        855.0,
+        337.0,
+        216.0,
+        194.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "ReduceMotionArt": {
+      "assetKey": "V2_Settings_ReduceMotionArt",
+      "rect": [
+        1504.0,
+        409.0,
+        74.0,
+        35.0
+      ],
+      "sourceRect": [
+        1504.0,
+        409.0,
+        74.0,
+        35.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "HighContrastArt": {
+      "assetKey": "V2_Settings_HighContrastArt",
+      "rect": [
+        1504.0,
+        453.0,
+        74.0,
+        35.0
+      ],
+      "sourceRect": [
+        1504.0,
+        453.0,
+        74.0,
+        35.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "InterfaceScaleArt": {
+      "assetKey": "V2_Settings_InterfaceScaleArt",
+      "rect": [
+        1191.0,
+        501.0,
+        323.0,
+        29.0
+      ],
+      "sourceRect": [
+        1191.0,
+        501.0,
+        323.0,
+        29.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AudioPanelArt": {
+      "assetKey": "V2_Settings_AudioPanelArt",
+      "rect": [
+        61.0,
+        546.0,
+        777.0,
+        168.0
+      ],
+      "sourceRect": [
+        65.0,
+        550.0,
+        769.0,
+        160.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsAudioArt": {
+      "assetKey": "V2_Settings_SettingsAudioArt",
+      "rect": [
+        74.0,
+        560.0,
+        225.0,
+        140.0
+      ],
+      "sourceRect": [
+        74.0,
+        560.0,
+        225.0,
+        140.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SoundEffectsArt": {
+      "assetKey": "V2_Settings_SoundEffectsArt",
+      "rect": [
+        719.0,
+        639.0,
+        74.0,
+        35.0
+      ],
+      "sourceRect": [
+        719.0,
+        639.0,
+        74.0,
+        35.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "EquippedItemsPanelArt": {
+      "assetKey": "V2_Settings_EquippedItemsPanelArt",
+      "rect": [
+        844.0,
+        546.0,
+        776.0,
+        168.0
+      ],
+      "sourceRect": [
+        848.0,
+        550.0,
+        768.0,
+        160.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsEquippedArt": {
+      "assetKey": "V2_Settings_SettingsEquippedArt",
+      "rect": [
+        858.0,
+        559.0,
+        244.0,
+        150.0
+      ],
+      "sourceRect": [
+        858.0,
+        559.0,
+        244.0,
+        150.0
+      ],
+      "imported": false,
+      "role": "ReplaceWithEquippedItemThumbnail"
+    },
+    "RemoveEquippedArt": {
+      "assetKey": "V2_Settings_RemoveEquippedArt",
+      "rect": [
+        1379.0,
+        638.0,
+        224.0,
+        59.0
+      ],
+      "sourceRect": [
+        1379.0,
+        638.0,
+        224.0,
+        59.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "RemoveTrashIcon": {
+      "assetKey": "V2_Settings_RemoveTrashIcon",
+      "rect": [
+        1422.0,
+        646.0,
+        38.0,
+        42.0
+      ],
+      "sourceRect": [
+        1426.0,
+        650.0,
+        30.0,
+        34.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AchievementsPanelArt": {
+      "assetKey": "V2_Settings_AchievementsPanelArt",
+      "rect": [
+        61.0,
+        718.0,
+        777.0,
+        201.0
+      ],
+      "sourceRect": [
+        65.0,
+        722.0,
+        769.0,
+        193.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsTrophyArt": {
+      "assetKey": "V2_Settings_SettingsTrophyArt",
+      "rect": [
+        76.0,
+        738.0,
+        192.0,
+        162.0
+      ],
+      "sourceRect": [
+        76.0,
+        738.0,
+        192.0,
+        162.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsFirstSparkArt": {
+      "assetKey": "V2_Settings_SettingsFirstSparkArt",
+      "rect": [
+        295.0,
+        783.0,
+        91.0,
+        75.0
+      ],
+      "sourceRect": [
+        295.0,
+        783.0,
+        91.0,
+        75.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsInviteArt": {
+      "assetKey": "V2_Settings_SettingsInviteArt",
+      "rect": [
+        427.0,
+        782.0,
+        99.0,
+        76.0
+      ],
+      "sourceRect": [
+        427.0,
+        782.0,
+        99.0,
+        76.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AchievementLockInvite": {
+      "assetKey": "V2_Settings_AchievementLockInvite",
+      "rect": [
+        432.0,
+        880.0,
+        23.0,
+        26.0
+      ],
+      "sourceRect": [
+        436.0,
+        884.0,
+        15.0,
+        18.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsCollectorArt": {
+      "assetKey": "V2_Settings_SettingsCollectorArt",
+      "rect": [
+        565.0,
+        783.0,
+        96.0,
+        75.0
+      ],
+      "sourceRect": [
+        565.0,
+        783.0,
+        96.0,
+        75.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "AchievementLockCollector": {
+      "assetKey": "V2_Settings_AchievementLockCollector",
+      "rect": [
+        570.0,
+        880.0,
+        23.0,
+        26.0
+      ],
+      "sourceRect": [
+        574.0,
+        884.0,
+        15.0,
+        18.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsProlificArt": {
+      "assetKey": "V2_Settings_SettingsProlificArt",
+      "rect": [
+        699.0,
+        782.0,
+        95.0,
+        76.0
+      ],
+      "sourceRect": [
+        699.0,
+        782.0,
+        95.0,
+        76.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "CommunityPanelArt": {
+      "assetKey": "V2_Settings_CommunityPanelArt",
+      "rect": [
+        844.0,
+        718.0,
+        776.0,
+        201.0
+      ],
+      "sourceRect": [
+        848.0,
+        722.0,
+        768.0,
+        193.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "SettingsCommunityArt": {
+      "assetKey": "V2_Settings_SettingsCommunityArt",
+      "rect": [
+        857.0,
+        738.0,
+        213.0,
+        162.0
+      ],
+      "sourceRect": [
+        857.0,
+        738.0,
+        213.0,
+        162.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "InviteFriendsArt": {
+      "assetKey": "V2_Settings_InviteFriendsArt",
+      "rect": [
+        1089.0,
+        814.0,
+        239.0,
+        85.0
+      ],
+      "sourceRect": [
+        1089.0,
+        814.0,
+        239.0,
+        85.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "JoinCreatorGroupArt": {
+      "assetKey": "V2_Settings_JoinCreatorGroupArt",
+      "rect": [
+        1343.0,
+        814.0,
+        259.0,
+        85.0
+      ],
+      "sourceRect": [
+        1343.0,
+        814.0,
+        259.0,
+        85.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "InvitePeople": {
+      "assetKey": "V2_Settings_InvitePeople",
+      "rect": [
+        1106.0,
+        829.0,
+        52.0,
+        54.0
+      ],
+      "sourceRect": [
+        1110.0,
+        833.0,
+        44.0,
+        46.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "JoinPeople": {
+      "assetKey": "V2_Settings_JoinPeople",
+      "rect": [
+        1353.0,
+        829.0,
+        52.0,
+        54.0
+      ],
+      "sourceRect": [
+        1357.0,
+        833.0,
+        44.0,
+        46.0
+      ],
+      "imported": true,
+      "role": null
+    },
+    "InvitePlus": {
+      "assetKey": "V2_Settings_InvitePlus",
+      "rect": [
+        1135.0,
+        840.0,
+        33.0,
+        33.0
+      ],
+      "sourceRect": [
+        1139.0,
+        844.0,
+        25.0,
+        25.0
+      ],
+      "imported": true,
+      "role": null
+    }
+  }
+}

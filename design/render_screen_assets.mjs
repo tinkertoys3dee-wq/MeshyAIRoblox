@@ -9,7 +9,9 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../backend/package.json'));
 const sharp = require('sharp');
-const dir = path.join(here, 'screens/assets');
+const args = process.argv.slice(2);
+const value = flag => args.includes(flag) ? args[args.indexOf(flag) + 1] : undefined;
+const dir = path.resolve(value('--dir') || path.join(here, 'screens/assets'));
 const manifestPath = path.join(dir, 'manifest.json');
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 await mkdir(path.join(dir, 'png'), { recursive: true });
@@ -52,4 +54,4 @@ for (let i = 0; i < show.length; i++) {
 await sharp({ create: { width: columns * cellWidth, height: Math.ceil(show.length / columns) * cellHeight, channels: 4, background: '#15233b' } })
   .composite(cells).png().toFile(path.join(dir, 'contact-sheet.png'));
 console.log(`Rendered ${assets.length} components as ${unique.size} unique transparent PNGs; ${duplicateCount} duplicate names reuse images.`);
-console.log('Contact sheet: design/screens/assets/contact-sheet.png');
+console.log(`Contact sheet: ${path.relative(here, path.join(dir, 'contact-sheet.png'))}`);

@@ -1381,6 +1381,7 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 	local cardHeight = if guided then 310 else 326
 	local guideTargetAssigned = false
 	local grid = Factory.New("Frame", {
+		Name = "CatalogItemsGrid",
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
@@ -1406,6 +1407,7 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 		local card = Factory.ImageCard(grid, UDim2.fromScale(1, 1), nil, "StyleItem")
 		card.LayoutOrder = index
 		local image = Factory.New("ImageLabel", {
+			Name = "CatalogItemThumbnail",
 			Size = UDim2.new(1, -24, 0, 152),
 			Position = UDim2.fromOffset(12, 12),
 			BackgroundColor3 = C.Ink,
@@ -1424,14 +1426,15 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 			{ TextSize = 12, AlignX = Enum.TextXAlignment.Center }
 		)
 		app:_WatchImageLoad(image, hint, modelThumbnail)
-		Factory.Label(
+		local title = Factory.Label(
 			card,
 			item.Name or item.name or "Item",
 			UDim2.new(1, -24, 0, 24),
 			{ Position = UDim2.fromOffset(12, 170), TextSize = 14, Font = Theme.Fonts.Bold }
 		)
+		title.Name = "CatalogItemTitle"
 		local price = tonumber(item.Price or item.LowestPrice)
-		Factory.Label(
+		local priceLabel = Factory.Label(
 			card,
 			if guided
 				then "FREE PREVIEW · NOTHING PURCHASED"
@@ -1443,6 +1446,7 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 			UDim2.new(1, -24, 0, if guided then 20 else 32),
 			{ Position = UDim2.fromOffset(12, 198), TextSize = 11, Wrapped = true, Color = C.TextMuted }
 		)
+		priceLabel.Name = "CatalogItemPrice"
 		local customWorn = forge and table.find(app.state.profile.equippedItemIds, item.id) ~= nil
 		local try = Factory.ImageButton(
 			card,
@@ -1454,6 +1458,7 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 			UDim2.fromOffset(12, if guided then 258 else 236),
 			"primary"
 		)
+		try.Name = "CatalogTryOn"
 		try.Active = not lab.busy
 		local guideTarget = guided == true and not guideTargetAssigned and not forge and not app.triedOnAssetIds[id]
 		if guideTarget then
@@ -1496,6 +1501,7 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 				UDim2.fromOffset(66, 34),
 				UDim2.new(1, -78, 0, 20)
 			)
+			star.Name = "CatalogBookmark"
 			star.Activated:Connect(function()
 				if lab.favorites[id] then
 					lab.favorites[id] = nil
@@ -1514,6 +1520,7 @@ local function itemGrid(app: any, stack: Frame, results: { any }, forge: boolean
 				render(app)
 			end)
 			local buy = Factory.New("TextButton", {
+				Name = "CatalogBuy",
 				BackgroundTransparency = 1,
 				Text = "Buy / view in Roblox",
 				TextColor3 = C.Cyan,
@@ -1577,6 +1584,7 @@ function AvatarLab.Render(app: any)
 	Factory.List(stack, Enum.FillDirection.Vertical, 12)
 	if not guideStep then
 		local tabs = row(stack, -10)
+		tabs.Name = "CatalogTabs"
 		local visibleTabs = {
 			{ "BROWSE", "Find items" },
 			{ "LOOK", "My avatar" },
@@ -1778,7 +1786,7 @@ function AvatarLab.Render(app: any)
 	end
 	local searchRow = Factory.New(
 		"Frame",
-		{ BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44), LayoutOrder = 1, Parent = stack }
+		{ Name = "CatalogSearchRow", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44), LayoutOrder = 1, Parent = stack }
 	)
 	local search =
 		app:_TextBox(searchRow, "Search hair, clothes, accessories…", UDim2.new(1, -104, 0, 42), UDim2.new(), false)
@@ -1807,6 +1815,7 @@ function AvatarLab.Render(app: any)
 		end, app.catalogType == category[1])
 	end
 	local filters = row(stack, 3)
+	filters.Name = "CatalogFilterRow"
 	button(app, filters, if lab.filters then "Hide filters" else "More filters", 138, function()
 		lab.filters = not lab.filters
 		render(app)

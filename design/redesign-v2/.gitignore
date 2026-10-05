@@ -1,0 +1,14 @@
+.deps/
+.font-cache/
+__pycache__/
+assets/upload_state*.json*
+assets/upload_journal.jsonl
+assets/recovery_required.json
+assets/recovery_retry_audit.jsonl
+assets/.upload-write-self-test.json*
+assets/asset_ids.json.tmp*
+assets/explicit_http_rejections.json
+import-check.log
+artwork/
+svg/qa/
+assets/svg/

@@ -1,0 +1,187 @@
+[
+  {
+    "screen": "avatar-graphics",
+    "name": "GraphicsAvatarArt",
+    "role": "ReplaceWithLiveAvatarThumbnail"
+  },
+  {
+    "screen": "avatar-graphics",
+    "name": "GraphicsJobThumbArt",
+    "role": "ReplaceWithLiveGraphicJobThumbnail"
+  },
+  {
+    "screen": "avatar-graphics",
+    "name": "GraphicsNeonPosterArt",
+    "role": "ReplaceWithLiveOwnedGraphicPreview"
+  },
+  {
+    "screen": "avatar-graphics",
+    "name": "GraphicsPurplePosterArt",
+    "role": "ReplaceWithLiveOwnedGraphicPreview"
+  },
+  {
+    "screen": "avatar-lab",
+    "name": "LabHairArt",
+    "role": "ReplaceWithLiveCatalogThumbnail"
+  },
+  {
+    "screen": "avatar-lab",
+    "name": "LabCrownArt",
+    "role": "ReplaceWithLiveCatalogThumbnail"
+  },
+  {
+    "screen": "avatar-lab",
+    "name": "LabHoodieArt",
+    "role": "ReplaceWithLiveCatalogThumbnail"
+  },
+  {
+    "screen": "avatar-lab",
+    "name": "LabAvatarArt",
+    "role": "ReplaceWithLiveAvatarViewport"
+  },
+  {
+    "screen": "avatar-lab",
+    "name": "LabWornHairArt",
+    "role": "ReplaceWithLiveWornThumbnail"
+  },
+  {
+    "screen": "avatar-lab",
+    "name": "LabWornCrownArt",
+    "role": "ReplaceWithLiveWornThumbnail"
+  },
+  {
+    "screen": "avatar-lab",
+    "name": "LabWornHoodieArt",
+    "role": "ReplaceWithLiveWornThumbnail"
+  },
+  {
+    "screen": "avatar-lab",
+    "name": "LabWornPantsArt",
+    "role": "ReplaceWithLiveWornThumbnail"
+  },
+  {
+    "screen": "avatar-lab",
+    "name": "LabWornShoesArt",
+    "role": "ReplaceWithLiveWornThumbnail"
+  },
+  {
+    "screen": "market",
+    "name": "MarketCrownCreator",
+    "role": "ReplaceWithCreatorAvatar"
+  },
+  {
+    "screen": "market",
+    "name": "MarketCrownDisplay",
+    "role": "ReplaceWithCommunityThumbnail"
+  },
+  {
+    "screen": "market",
+    "name": "MarketWingsCreator",
+    "role": "ReplaceWithCreatorAvatar"
+  },
+  {
+    "screen": "market",
+    "name": "MarketWingsDisplay",
+    "role": "ReplaceWithCommunityThumbnail"
+  },
+  {
+    "screen": "market",
+    "name": "MarketKatanaCreator",
+    "role": "ReplaceWithCreatorAvatar"
+  },
+  {
+    "screen": "market",
+    "name": "MarketKatanaDisplay",
+    "role": "ReplaceWithCommunityThumbnail"
+  },
+  {
+    "screen": "market",
+    "name": "MarketAvatarV2",
+    "role": "ReplaceWithPlayerViewport"
+  },
+  {
+    "screen": "market",
+    "name": "MarketWearingCrown",
+    "role": "ReplaceWithEquippedThumbnail"
+  },
+  {
+    "screen": "my-items",
+    "name": "MyItemsCrownThumbnail",
+    "role": "ReplaceWithCollectionThumbnail"
+  },
+  {
+    "screen": "my-items",
+    "name": "MyItemsDragonThumbnail",
+    "role": "ReplaceWithCollectionThumbnail"
+  },
+  {
+    "screen": "my-items",
+    "name": "MyItemsKatanaThumbnail",
+    "role": "ReplaceWithCollectionThumbnail"
+  },
+  {
+    "screen": "my-items",
+    "name": "MyItemsHatThumbnail",
+    "role": "ReplaceWithCollectionThumbnail"
+  },
+  {
+    "screen": "my-items",
+    "name": "MyItemsHeroV2",
+    "role": "ReplaceWithItemPreview"
+  },
+  {
+    "screen": "runway",
+    "name": "RunwayPlayer1",
+    "role": "ReplaceWithPlayerPortrait"
+  },
+  {
+    "screen": "runway",
+    "name": "RunwayPlayer2",
+    "role": "ReplaceWithPlayerPortrait"
+  },
+  {
+    "screen": "runway",
+    "name": "RunwayPlayer3",
+    "role": "ReplaceWithPlayerPortrait"
+  },
+  {
+    "screen": "runway",
+    "name": "RunwayPlayer4",
+    "role": "ReplaceWithPlayerPortrait"
+  },
+  {
+    "screen": "runway",
+    "name": "RunwayAvatarStage",
+    "role": "ReplaceWithLiveAvatarViewport"
+  },
+  {
+    "screen": "runway",
+    "name": "RunwayWeeklyPlayer1",
+    "role": "ReplaceWithPlayerPortrait"
+  },
+  {
+    "screen": "runway",
+    "name": "RunwayWeeklyPlayer2",
+    "role": "ReplaceWithPlayerPortrait"
+  },
+  {
+    "screen": "runway",
+    "name": "RunwayWeeklyPlayer3",
+    "role": "ReplaceWithPlayerPortrait"
+  },
+  {
+    "screen": "runway",
+    "name": "RunwayWeeklyPlayer4",
+    "role": "ReplaceWithPlayerPortrait"
+  },
+  {
+    "screen": "runway",
+    "name": "RunwayWeeklyPlayer5",
+    "role": "ReplaceWithPlayerPortrait"
+  },
+  {
+    "screen": "settings",
+    "name": "SettingsEquippedArt",
+    "role": "ReplaceWithEquippedItemThumbnail"
+  }
+]

@@ -8,6 +8,8 @@ local HomeScreen = require(script.Parent.HomeScreen)
 local HomeAssets = require(ReplicatedStorage:WaitForChild("HomeAssets"))
 local HomeEffects = require(script.Parent.HomeEffects)
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
+local RedesignToolsLayouts = require(script.Parent.RedesignToolsLayouts)
+local RedesignSkin = require(script.Parent.RedesignSkin)
 
 local ModernChrome = {}
 local SURFACES = { Discover = "Purple", ["Avatar Graphics"] = "Purple", Play = "Gold" }
@@ -40,8 +42,8 @@ local function layout(app: any)
 		app.editorScale.Scale = math.min(width/1672, height/941)
 		if app.content.Parent == canvas then
 			local hasPreview = app.activePage == "Avatar Lab" or app.activePage == "Discover"
-			app.content.Position = UDim2.fromOffset(46, 238)
-			app.content.Size = UDim2.fromOffset(if hasPreview then 1087 else 1586, 645)
+			app.content.Position = if app.redesignLayoutActive then UDim2.new() else UDim2.fromOffset(46, 238)
+			app.content.Size = if app.redesignLayoutActive then UDim2.fromOffset(1672, 941) else UDim2.fromOffset(if hasPreview then 1087 else 1586, 645)
 		end
 	end
 end
@@ -118,6 +120,65 @@ function ModernChrome.LayoutPreview(app: any): boolean
 	panel.Visible = wanted
 	if not wanted then return true end
 	panel.Parent = app.editorCanvas
+	if app.redesignLayoutActive then
+		if app.activePage == "Avatar Lab" then
+			if RedesignToolsLayouts.ApplyPreview(app) then layout(app); return true end
+		end
+		if app.activePage == "Discover" then
+			for _, name in { "SaveNewLook", "AvatarDragHint", "V2DecorationWornItemsPanelArt" } do
+				local child = panel:FindFirstChild(name)
+				if child then child.Visible = false end
+			end
+			RedesignSkin.Place(panel, 1139, 236, 484, 644)
+			panel.ZIndex = 3
+			RedesignSkin.Skin(panel, "market", "MarketAvatarPanel")
+			local title = panel:FindFirstChild("PreviewTitle")
+			if title then title.Text = "Your Avatar"; RedesignSkin.Place(title, 24, 10, 300, 53); RedesignSkin.Sized(title, 39) end
+			if not panel:FindFirstChild("V2FreeTryOn") then
+				local badge = Factory.ImagePill(panel, "Free Try-On", Theme.Colors.Mint, 170)
+				badge.Name = "V2FreeTryOn"; RedesignSkin.Place(badge, 300, 13, 170, 49); RedesignSkin.Sized(badge, 21)
+				RedesignSkin.Skin(badge, "market", "MarketFreeTryOnSurface")
+			end
+			panel.V2FreeTryOn.Visible = true
+			local viewport = app.avatarPreviewViewport
+			RedesignSkin.Place(viewport, 3, 68, 479, 407)
+			viewport.BackgroundColor3 = Color3.fromRGB(5, 46, 85)
+			local reset = panel:FindFirstChild("ResetCamera", true)
+			if reset then
+				reset.Parent = panel; reset.Text = "↺\nReset\nCamera"; RedesignSkin.Place(reset, 381, 106, 94, 124)
+				RedesignSkin.Sized(reset, 18); RedesignSkin.Skin(reset, "market", "MarketResetCameraSurface")
+			end
+			local divider = panel:FindFirstChild("Divider")
+			if divider then divider.Visible = false end
+			local worn = panel:FindFirstChild("PreviewWornHeading")
+			if worn then RedesignSkin.Place(worn, 23, 482, 420, 39); RedesignSkin.Sized(worn, 27) end
+			RedesignSkin.Place(app.avatarPreviewList, 18, 527, 450, 104)
+			local list = app.avatarPreviewList:FindFirstChildOfClass("UIListLayout")
+			if list then list.Padding = UDim.new(0, 8) end
+			for _, row in app.avatarPreviewList:GetChildren() do
+				if row.Name ~= "TriedOnItemRow" then continue end
+				row.Size = UDim2.new(1, -10, 0, 101)
+				RedesignSkin.Skin(row, "market", "MarketWearingItem")
+				local image = row:FindFirstChildOfClass("ImageLabel")
+				if image then RedesignSkin.Place(image, 9, 9, 95, 84) end
+				for _, label in RedesignSkin.Direct(row, "TextLabel") do
+					local isTitle = label.Position.Y.Offset < 25
+					RedesignSkin.Place(label, 122, if isTitle then 17 else 53, 252, 32); RedesignSkin.Sized(label, if isTitle then 24 else 18)
+				end
+				local remove = row:FindFirstChildOfClass("TextButton")
+				if remove then remove.Text = "×"; RedesignSkin.Place(remove, 373, 21, 63, 61); RedesignSkin.Sized(remove, 35); RedesignSkin.Skin(remove, "market", "MarketRemoveSurface") end
+			end
+			if worn then worn.Text = "Wearing (" .. tostring(#RedesignSkin.Direct(app.avatarPreviewList, "Frame")) .. ")" end
+			app.avatarPreviewEmptyLabel.TextSize = 19
+			layout(app)
+			return true
+		end
+	end
+	RedesignSkin.Reset(panel)
+	for _, name in { "SaveNewLook", "AvatarDragHint", "V2DecorationWornItemsPanelArt", "V2FreeTryOn" } do
+		local child = panel:FindFirstChild(name)
+		if child then child.Visible = false end
+	end
 	panel.Position = UDim2.fromOffset(1142, 337)
 	panel.Size = UDim2.fromOffset(465, 516)
 	panel.ZIndex = 3
@@ -128,6 +189,10 @@ function ModernChrome.LayoutPreview(app: any): boolean
 	viewport.Position = UDim2.fromOffset(26, 95)
 	viewport.Size = UDim2.new(1, -52, 0, 242)
 	viewport.BackgroundColor3 = Theme.Colors.Ink
+	local reset = panel:FindFirstChild("ResetCamera", true)
+	if reset then RedesignSkin.Reset(reset); reset.Parent = viewport; reset.Text = "↺"; RedesignSkin.Place(reset, 379, 8, 32, 28); RedesignSkin.Sized(reset, 15) end
+	local free = panel:FindFirstChild("V2FreeTryOn")
+	if free then free.Visible = false end
 	local divider = panel:FindFirstChild("Divider")
 	if divider then divider.Position = UDim2.fromOffset(32, 392); divider.Size = UDim2.new(1, -64, 0, 1) end
 	local worn = panel:FindFirstChild("PreviewWornHeading")

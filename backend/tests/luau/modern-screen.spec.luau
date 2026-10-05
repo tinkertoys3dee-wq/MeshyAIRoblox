@@ -169,8 +169,9 @@ check(app.studioOpen == false, "Editor close returns to the game world")
 app.studioOpen = true
 find(app.editorHeader, "PriorityPasses").Activated:Fire()
 check(app.passOpened, "Editor pass balance preserves the existing purchase action")
-find(app.editorHeader, "EditorMoreTools").Activated:Fire()
-check(app.homeModal and app.homeModal.Parent, "More tools opens the native tools menu")
+check(app.editorHeader:FindFirstChild("EditorMoreTools", true) == nil, "Desktop v2 chrome leaves room for page-specific tabs")
+HomeScreen.ShowTools(app)
+check(app.homeModal and app.homeModal.Parent, "Page-specific tools retain the native tools menu")
 for _, item in {{"Style My Avatar  ›", "Avatar Lab"}, {"Avatar Graphics  ›", "Avatar Graphics"}, {"My Items  ›", "My Studio"}, {"Games & Runway  ›", "Play"}, {"Settings  ›", "Settings"}} do
 	-- Opening a destination closes the menu, so rebuild it for each action.
 	HomeScreen.ShowTools(app)
@@ -260,6 +261,8 @@ equal(app.content.Position.Y.Offset, 218, "Phone body clears the compact header"
 equal(app.content.Size.Y.Offset, -230, "Phone body retains an accessible scrolling viewport")
 check(find(app.editorHeader, "HomeNavigation").Size.X.Offset <= 390, "Phone navigation fits the viewport")
 check(find(app.editorHeader, "CloseEditor").Size.X.Offset >= 44, "Phone close control remains touch sized")
+find(app.editorHeader, "EditorMoreTools").Activated:Fire()
+check(app.homeModal and app.homeModal.Parent, "Phone chrome retains its original tools menu")
 app.activePage = "Avatar Lab"
 ModernChrome.Apply(app)
 ModernChrome.LayoutPreview(app)
@@ -771,7 +774,7 @@ local function createFixture(withActivity, retry)
 end
 local editor, live = createFixture(true, false)
 ModernLayouts.Apply(editor)
-local modernPanel = find(editor.content, "ModernPromptPanel")
+local modernPanel = find(editor.content, "V2CreatePromptPanel")
 equal(live.prompt.Parent, modernPanel, "Simple Create moves the existing editable prompt into the approved composition")
 equal(live.prompt.Text, "a crystal crown", "Simple Create preserves an unfinished draft")
 equal(live.counter.Parent, modernPanel, "Simple Create retains the original live character counter")
@@ -791,10 +794,10 @@ equal(live.ideas.ScrollBarThickness, 3, "Idea overflow keeps its visible scrollb
 live.generate.Activated:Fire()
 equal(editor.checkoutPrompt, "a golden crystal crown", "The original checkout callback reads the edited draft")
 equal(editor.checkoutCount, 1, "Imported presentation does not duplicate checkout callbacks")
-equal(live.activity.Parent, editor.content, "Active generations stay visible alongside the new prompt composition")
+equal(live.activity.Parent.Name, "V2CreationActivity", "Active generations stay reachable in the preview overflow")
 equal(live.liveProgress.Parent, live.activity, "Active generation contents remain the original native controls")
 equal(live.liveProgress.Text, "64% · Building your model", "Active generation progress retains its live value")
-equal(find(editor.content, "ModernCreatePreview").Size.Y.Offset, 350, "An active job reserves space beside the preview")
+equal(find(editor.content, "V2CreatePreviewPanel").Size.Y.Offset, 651, "An active job uses the full measured preview panel")
 live.advanced.Activated:Fire()
 check(editor.state.profile.settings.simpleMode == false, "The relocated Advanced options button keeps its setting callback")
 live.help.Activated:Fire()
@@ -802,9 +805,9 @@ check(editor.customUGCGuideRequested, "The relocated help button keeps its conte
 
 local retryEditor, retryLive = createFixture(false, true)
 ModernLayouts.Apply(retryEditor)
-equal(retryLive.safety.Parent, find(retryEditor.content, "ModernPromptPanel"), "Retry-credit Create retains its no-charge explanation")
+equal(retryLive.safety.Parent, find(retryEditor.content, "V2CreatePromptPanel"), "Retry-credit Create retains its no-charge explanation")
 equal(retryLive.generate.Text, "Use retry credit", "Retry-credit Create keeps its real checkout label")
-equal(find(retryEditor.content, "ModernCreatePreview").Size.Y.Offset, 516, "Idle Create uses the full preview height")
+equal(find(retryEditor.content, "V2CreatePreviewPanel").Size.Y.Offset, 651, "Idle Create uses the full measured preview height")
 for _, guard in {"compact", "advanced", "guide"} do
 	local guarded, original = createFixture(false, false)
 	if guard == "compact" then guarded.compact = true
@@ -812,7 +815,7 @@ for _, guard in {"compact", "advanced", "guide"} do
 	else guarded.customUGCGuideRequested = true end
 	ModernLayouts.Apply(guarded)
 	check(original.page.Visible and original.prompt.Parent == original.oldCard, guard .. " Create retains its complete native flow")
-	check(not guarded.content:FindFirstChild("ModernPromptPanel"), guard .. " Create does not receive a duplicate composition")
+	check(not guarded.content:FindFirstChild("V2CreatePromptPanel"), guard .. " Create does not receive a duplicate composition")
 end
 
 fixtures.ScreenAssets = nil

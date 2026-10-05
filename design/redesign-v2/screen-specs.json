@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "auditedOn": "2026-10-05",
+  "scope": "Nine full image mockups followed by editable SVG reconstruction; Home remains the visual reference.",
+  "shared": {
+    "canvas": { "width": 1672, "height": 941, "aspectRatio": "16:9" },
+    "visualReference": "The approved Home image, including its depth, illustrated motifs, button treatments and navigation hierarchy. Do not use the rejected generated SVGs as the visual reference.",
+    "chrome": "Preserve existing Forge brand, page navigation, active-page highlight, live token/pass indicators and close controls. Arcade and Runway are modal destinations with their own close/back navigation.",
+    "defaultMockup": "Show an established player's Simple Mode desktop state. Advanced and conditional controls below remain reachable in their existing mode/tab/state; they do not all need to be expanded in one default image.",
+    "liveMedia": "Generated accessories, catalog thumbnails, avatar viewports, player portraits and generated graphics remain live content slots. Concept artwork may illustrate these slots in the mockup, but must not become permanent sample items or fake player data in the game.",
+    "prices": "Use symbolic live-price labels in the specifications. Generation prices come from app.state.prices, refreshed through MarketplaceService:GetProductInfoAsync and CommerceService:GetPrices; Config SuggestedPrice is a fallback. Roblox purchase/creation prompts determine the final external charge.",
+    "editableSvg": "Use separate named groups for each panel, button, icon and field. Keep labels as editable SVG text. Keep live media and dynamic values replaceable. Do not hide the entire mockup inside one raster image element.",
+    "responsive": "Allow native scrolling for collections, galleries and overflow settings. Preserve compact single-column/list-detail flows, keyboard focus, high contrast, reduced motion and readable text. Do not crop secondary actions to force the mockup to fit.",
+    "sources": [
+      "src/Client/UI/App.luau",
+      "src/Client/UI/AvatarLab.luau",
+      "src/Client/UI/GamesHub.luau",
+      "src/Client/UI/RunwayHub.luau",
+      "src/Shared/Config.luau",
+      "src/Server/Services/CommerceService.luau"
+    ]
+  },
+  "screens": [
+    {
+      "id": "Create",
+      "pageKey": "Create",
+      "title": "Create UGC",
+      "purpose": "Describe a new accessory, confirm its cost, then generate a private 3D creation to fit and wear.",
+      "source": "App:_RenderCreate",
+      "composition": "Make the prompt composer the large left focal panel, with a generous multiline field, a row of illustrated idea chips, a quiet helper strip and a prominent priced generation button. Put latest creation/reference preview and progress in a narrower right rail. Keep payment and balance controls distinct from the main action. Decorative 3D accessory art can connect this to Home without masquerading as a completed user item.",
+      "requiredControls": [
+        "Multiline idea prompt and live character count (maximum from Config.Generation.PromptMaxLength)",
+        "Five existing idea chips: Dragon Wings, Crystal Crown, Neon Katana, Steampunk Hat, Fairy Wings",
+        "Generate / retry-credit action with live Robux or ad-token cost",
+        "HOW IT WORKS guide control and access to Advanced Mode / more creation methods",
+        "Payment choice: Robux or Tokens; token balance; optional rewarded-ad action; buy token pack",
+        "Latest creation progress/status and its existing native follow-up controls"
+      ],
+      "secondaryControls": [
+        "Method choices: Direct Forge, Art-Directed, Upload Reference, My Avatar",
+        "Advanced style presets and fit-region selection; detail density is fixed BALANCED and has no picker",
+        "Art-Directed quality tiers Low/Medium/High; reference image; Approve & build and reroll",
+        "Upload Reference Roblox Image/Decal ID field and one-time CustomImageUpload unlock when needed",
+        "My Avatar view choices: Headshot, Bust, Full body; optional styling notes",
+        "Priority Pass purchase/use action when available",
+        "Existing queue-slot information, daily check-in calendar, daily quests and conditional onboarding guide"
+      ],
+      "liveData": [
+        "draftPrompt, selectedMethod, selectedStylePreset, selectedAccessoryType, selectedAvatarView and selectedImageQuality",
+        "profile.tokens and profile.bonusTokens; generation-eligible balance stays distinct from free reward tokens",
+        "profile.retryCredits, current jobs, reference asset, queue progress and benefit ownership"
+      ],
+      "priceSources": [
+        "state.prices.DirectGeneration, ImagePreviewLow/Medium/High, ImageConversion, AvatarConversion",
+        "state.prices.CustomImageUpload, PriorityPass and TokenPack70",
+        "App.tokenPrice mirrors CommerceService.tokenPriceFor; retry-credit labels must replace paid labels when applicable"
+      ],
+      "states": ["Empty prompt", "Prompt ready", "Paid confirmation", "Retry credit", "Generating/queued", "Reference awaiting approval", "Completed", "Error/moderation failure"],
+      "guardrails": [
+        "Do not add a Save, Download or Publish button to the default prompt composer; fitting/publishing belongs in My Items.",
+        "A reference image and its conversion are separate paid stages. Do not imply one generation price includes Roblox publication.",
+        "Rewarded ads remain optional and disabled/unavailable states remain visible."
+      ]
+    },
+    {
+      "id": "MyItems",
+      "pageKey": "My Studio",
+      "title": "My Items",
+      "purpose": "Select an owned creation, inspect its live avatar fit, equip it in this game or publish a wearable through Roblox.",
+      "source": "App:_RenderStudio",
+      "composition": "Use a tall collection rail on the left and a larger inspection stage on the right. Give the selected item name and status a clear header; make the live avatar/model preview dominant; place fit readiness and equip/publish actions beneath it. Advanced editing belongs in an expandable or scrollable lower region, not across the avatar.",
+      "requiredControls": [
+        "Scrollable owned-item selection with selected-row highlight and real thumbnail/status",
+        "Live selected-item avatar viewport, drag/zoom interaction, reset camera and conditional Retry preview",
+        "Fit/texture readiness status",
+        "Equip in game / Remove and Publish wearable actions with their actual disabled/busy states",
+        "Advanced Mode access; empty collection action Create your first accessory"
+      ],
+      "secondaryControls": [
+        "Advanced position, rotation and scale X/Y/Z sliders with minus, plus and numeric values",
+        "Save fit and Reset fit",
+        "Named fit presets: save, apply, delete",
+        "Named saved outfits: save current outfit, wear outfit, delete saved outfit",
+        "Original-item title/description fields and Save details",
+        "Original-item public/private visibility, listing price field and List for sale / End listing",
+        "Personal-copy license explanation; copies cannot be listed or resold",
+        "Compact ITEMS / DETAIL navigation"
+      ],
+      "liveData": ["profile.items and itemOrder", "selectedItemId, fitDrafts and equippedItemIds", "Private model/texture readiness and actual publishedAssetId", "Saved fit presets/outfits, visibility, listing state and item license"],
+      "priceSources": ["PublishItem opens the Roblox creation flow; show the existing separate-publication-cost disclosure", "Original listing price is selected.listingPriceRobux; equip and fit changes have no generation charge"],
+      "states": ["No items", "Selected original", "Selected personal copy", "Preview loading/error", "Fit ready/too large/pending texture", "Equipped", "Publishing", "Published"],
+      "guardrails": ["Do not replace a user's selected accessory with decorative sample content.", "Publish, share publicly and list for sale are distinct actions with different eligibility."]
+    },
+    {
+      "id": "Market",
+      "pageKey": "Discover",
+      "title": "Market",
+      "purpose": "Browse community-created accessories, inspect them, try them on and optionally buy a personal copy.",
+      "source": "App:_RenderDiscover",
+      "composition": "Place a wide search field and Search button above a clean three-card discovery grid, with a persistent live avatar preview beside it. Each card needs a large real item image, title, creator, ownership price where relevant, free Try on action and separate like/favorite controls. Keep browsing filters visually quieter than item art.",
+      "requiredControls": [
+        "Native search text field and Search button",
+        "Scrollable community item grid with card/detail-opening hit target",
+        "Item image, title and creator identity",
+        "Try on action and live avatar preview/camera controls",
+        "Like and Favorite controls with live counts and selected states",
+        "Advanced Mode access"
+      ],
+      "secondaryControls": [
+        "Search by name or creator; Trending, Newest, Price low first, Most liked sorts",
+        "Buy copy / Not for sale action and listing price in Advanced Mode",
+        "Top Creators leaderboard and existing Plus benefit control where enabled",
+        "Conditional first-look journey/guide controls",
+        "Item detail overlay with its original purchase/try/social actions"
+      ],
+      "liveData": ["marketplaceItems and query/searchBy/sortBy", "Each item's real image, ownerName, listingPriceRobux, likes/favorites and viewer selections", "Current live avatar and actual equipped/try-on state"],
+      "priceSources": ["item.listingPriceRobux and isListed returned by the marketplace", "BeginMarketplacePurchase plus the native Roblox confirmation; try-on is separate from purchase"],
+      "states": ["Loading/searching", "Results", "Empty search", "Item not for sale", "Try-on active", "Purchase pending", "First-look guide"],
+      "guardrails": ["Do not add invented category tabs, sale discounts or a shopping cart.", "Do not depict free preview as ownership or bake sample prices/creator names into production art."]
+    },
+    {
+      "id": "AvatarLab",
+      "pageKey": "Avatar Lab",
+      "title": "Avatar Lab",
+      "purpose": "Try real Roblox catalog items for free, build a mixed catalog/custom look and save it.",
+      "source": "AvatarLab.Render",
+      "composition": "Use a catalog workspace on the left and a generous live-avatar stage on the right. Keep Find items / My avatar tabs near the header, search above category chips, and spacious real item cards below. Each card clearly separates free Try on from Buy / view in Roblox. The avatar stage should feel like Home's polished character pedestal while remaining a live viewport.",
+      "requiredControls": [
+        "Tabs Find items and My avatar; More reveals Bookmarks and My custom items in Simple Mode",
+        "Catalog search text field and Search button",
+        "Simple categories Hair, Hats, Face, Shirts, Pants, Jackets, Back; scrollable chip row",
+        "More filters control and real catalog item grid",
+        "Per-card Try on / Remove, Save bookmark and Buy / view in Roblox",
+        "Live avatar preview and existing camera controls; current worn-item removals"
+      ],
+      "secondaryControls": [
+        "Sorting Relevant, Popular, Newest, Price low/high first, Most saved",
+        "Budget Any price, Free to own, Up to R$ 50/100/250; optional creator-name field",
+        "My avatar Undo, Redo, Reset catalog and Save to Roblox",
+        "Outfit name field and Save in Forge; saved-outfit wear/delete controls",
+        "Bookmarks for the current visit; custom-item wear/remove and links to Create/Runway",
+        "Advanced Style Sparks and Design a matching UGC",
+        "Conditional 90-second Style Sprint, starter looks and guided first makeover",
+        "More catalog results / loading-more behavior"
+      ],
+      "liveData": ["AvatarEditorService catalog results, item.Id/Name/Price/LowestPrice and real thumbnails", "catalogWorkspace state, visit bookmarks and triedOnAssetIds", "Current avatar, profile saved outfits/custom items, style sprint and makeover progress"],
+      "priceSources": ["Catalog item.Price or LowestPrice is ownership pricing; unknown values say check price in Roblox", "MarketplaceService:PromptPurchase confirms final catalog ownership charge", "Try-on, visit bookmarking and Save in Forge are free; Save to Roblox requires owned catalog pieces"],
+      "states": ["Catalog loading", "Search error/empty", "Free-to-try result", "Tried-on item", "Bookmarks", "Current look", "Guided makeover", "Custom item"],
+      "guardrails": ["Do not conflate this catalog styling workspace with AI generation.", "Do not label Save in Forge as a Roblox avatar purchase or permanent catalog ownership."]
+    },
+    {
+      "id": "AvatarGraphics",
+      "pageKey": "Avatar Graphics",
+      "title": "Avatar Graphics",
+      "purpose": "Generate a standalone 2D image from the player's avatar or a text prompt, then manage the image gallery.",
+      "source": "App:_RenderAvatarGraphics and App:_RenderGraphicsDiscoverBody",
+      "composition": "Make a large artistic composer on the left, with From My Avatar / Text Prompt source buttons, multiline prompt and a prominent live-priced Create action. Use the right rail for actual in-progress status and a scrollable personal image gallery. Put Create / Discover tabs above the panels. Illustrative art should emphasize images rather than wearable 3D accessories.",
+      "requiredControls": [
+        "Create and Discover tabs",
+        "Source buttons From My Avatar and Text Prompt",
+        "Avatar source view selection when applicable; Headshot, Bust, Full body",
+        "Multiline prompt/styling-notes field with live character count",
+        "Create image / Create avatar graphic action with live selected-quality price",
+        "Advanced Mode access, in-progress job status and Your Graphics gallery",
+        "Each owned graphic's image preview, copyable full-resolution link and Delete action"
+      ],
+      "secondaryControls": [
+        "Advanced visual-style presets and Low/Medium/High quality-tier choices",
+        "Original graphic title/description editing, Share / Private, listing price and List for sale / End listing",
+        "Personal-copy license restrictions",
+        "Discover prompt/creator search, sorts, detail-opening targets, likes/favorites and Buy copy where listed"
+      ],
+      "liveData": ["graphicMode, graphicsTab, avatar view, style preset, image quality and draft prompt", "Actual avatar thumbnail and graphic job progress", "profile.graphics/graphicOrder, previewAssetId, title, license and backendJobId", "Graphics marketplace listings and live social counts"],
+      "priceSources": ["Selected Config.Generation.ImageQualityTiers.ProductKey maps to state.prices.ImagePreviewLow/Medium/High", "Robux/ad-token payment and retry-credit rules mirror generation commerce", "Community graphic listingPriceRobux via BeginGraphicPurchase"],
+      "states": ["Avatar source", "Text source", "Generating", "Gallery empty", "Image loading/error", "Owned original", "Personal copy", "Public discovery"],
+      "guardrails": ["This output is a 2D picture: no Equip, Fit or Publish wearable controls.", "The existing save-to-device path is a selectable browser link; do not invent a native Download file button."]
+    },
+    {
+      "id": "Games",
+      "pageKey": "Play",
+      "title": "Games",
+      "purpose": "Choose one of the three existing free play destinations while creations continue building.",
+      "source": "App:_RenderPlay",
+      "composition": "Create three equally clear illustrated destination cards across the content area, each with a distinctive themed illustration, short benefit text and one large action: Arcade, Forge Runway, AFK Token Lounge. Use the approved Home depth and visual energy rather than a generic dashboard of many tiny tiles.",
+      "requiredControls": ["Open Arcade", "Open Forge Runway", "Enter AFK Token Lounge", "Existing navigation/close controls"],
+      "secondaryControls": [],
+      "liveData": ["Arcade mini-game count from Config.Arcade.Games", "Existing queued creations continue independently of this destination screen"],
+      "priceSources": ["All three destinations are free to open", "Rewards and AFK grants come from Config/authoritative player state; rewarded ads remain optional"],
+      "states": ["Three destinations available", "Launching selected destination"],
+      "guardrails": ["Do not add unsupported games, daily spin, battle pass, loot box or match-making controls.", "Do not imply every game automatically grants a fixed spendable token payout per play."]
+    },
+    {
+      "id": "Arcade",
+      "pageKey": null,
+      "title": "Arcade",
+      "purpose": "Launch a real mini-game or inspect weekly game leaderboards and personal bests.",
+      "source": "GamesHub.Show",
+      "composition": "Use a dedicated full modal frame with a prominent Arcade title, readable weekly-prize strip and a balanced 4-by-3 grid containing the eleven games plus Leaderboard. Every game tile gets a recognizable illustration/icon, real name, brief description, personal-best slot, daily target where present and Play control. Keep Close clearly separate from tile art; scrolling may handle smaller screens.",
+      "requiredControls": ["Close Arcade", "Play on each of the eleven game tiles", "Leaderboard tile Open action", "Tile-wide activation remains available"],
+      "gameNames": ["Flappy Bird", "Dino Runner", "Color Switch", "Neon Snake", "Block Stacker", "Brick Breaker", "Reflex Tap", "Prism Merge", "Meteor Rush", "Sky Hopper", "Echo Match"],
+      "secondaryControls": ["Leaderboard game tabs; Weekly and Friends scopes; actual standings and own score/rank", "Back to game picker from leaderboard/game view", "Existing GameShell play/restart/in-game controls; mockup depicts the picker rather than a fabricated game round"],
+      "liveData": ["Game module names/descriptions and Config.Arcade.Games", "GetArcadeLeaderboard and GetFriendArcadeLeaderboard results; real self score/rank", "DailyChallenge.GetTarget and daily completion state", "Config.Arcade.WeeklyRewards and leaderboard week"],
+      "priceSources": ["Free play; weekly token prizes come from Config.Arcade.WeeklyRewards", "Daily challenge bonus is its separate configured reward; do not promise the weekly prize for merely launching a game"],
+      "states": ["Picker", "Best score loading", "Leaderboard loading/empty/results", "Weekly/Friends scope", "In-game", "Game over"],
+      "guardrails": ["Show all eleven real games and the Leaderboard destination, with no substitutes.", "Personal best and rank are live fields, not invented score examples used as permanent UI art."]
+    },
+    {
+      "id": "Runway",
+      "pageKey": null,
+      "title": "Forge Runway",
+      "purpose": "Join a live themed style round, lock in a look, inspect entrants and vote when eligible.",
+      "source": "RunwayHub.Show",
+      "composition": "Create a dedicated Runway modal with theme/phase/timer across a spacious header. Arrange entrant lineup on the left, a dominant selected-player live avatar stage in the center, and weekly spotlight on the right. Put phase instructions and primary join/lock action near the avatar, with Avatar Lab and Invite friends controls reachable below. Separate all headings from dynamic instruction rows; long lineups and conditional journey/activity content scroll.",
+      "requiredControls": [
+        "Close Runway; live phase, theme and countdown",
+        "Selectable entrant rows with actual player portrait/name and ready/vote state",
+        "Selected player's live avatar viewport and reset camera",
+        "Phase-dependent primary action: Join next round, Join this round, Lock in my look, or appropriate inactive status",
+        "Eligible per-entrant Vote or own Leave control",
+        "Open Avatar Lab / Forge next look action and Invite friends",
+        "Weekly Spotlight standings and Refresh"
+      ],
+      "secondaryControls": ["Conditional active Forge job summary and view-activity action", "Existing first-makeover journey progress", "Daily first-round/encore rewards, creator XP progression and round results"],
+      "liveData": ["GetRunwayState/push state: theme, phase, endsAt, entrants, ready flags, votedFor and results", "Current selectedUserId and player avatar", "GetRunwayLeaderboard: real weekly standings and self rank/points", "Creator/daily/first-look progress from state; reward amounts from Config.Runway"],
+      "priceSources": ["Joining, styling and voting are free", "Round rewards, daily bonuses and weekly XP come from Config.Runway plus authoritative progress; do not label XP as purchasable tokens"],
+      "states": ["INTERMISSION", "STYLING", "VOTING", "RESULTS", "No entrants", "Own look locked", "Vote cast", "Leaderboard loading"],
+      "guardrails": ["Vote is enabled only for eligible ready entrants and only once; preserve own-player leave restrictions.", "Do not add entry fees, cash-prize claims, automatic vote boosts or an invented competition shop."]
+    },
+    {
+      "id": "Settings",
+      "pageKey": "Settings",
+      "title": "Settings",
+      "purpose": "Adjust creation mode, accessibility and audio; inspect equipped items, achievements and community actions.",
+      "source": "App:_RenderSettings",
+      "composition": "Use two balanced columns of clear titled panels. Left: Create Mode, Accessibility, Audio. Right: Equipped Now, Achievements and community actions. Settings should share Home's polish through restrained illustrated accents and confident controls, with enough spacing for explanatory copy. Keep the full achievements and equipped lists scrollable rather than showing a fixed sample set.",
+      "requiredControls": [
+        "Simple Mode and Advanced Mode choices",
+        "Reduce motion and High contrast toggles with explanatory labels",
+        "Interface size slider and live value; accepted range 0.8 to 1.4, step 0.05",
+        "Sound effects toggle",
+        "Equipped Now list with real items and individual Remove controls",
+        "Achievements grid with locked/unlocked state and current completion count",
+        "Invite friends and Join group / membership status controls"
+      ],
+      "secondaryControls": ["Creator-group benefit explanation and native Roblox group/invite prompting states"],
+      "liveData": ["profile.settings.simpleMode/reduceMotion/highContrast/uiScale/soundsEnabled", "profile.equippedItemIds and associated item names/thumbnails", "Achievements.List plus profile unlocks", "Group membership, Config.Group.Name/benefits and invite state"],
+      "priceSources": ["Settings changes, in-game unequip and these community actions have no generation price", "Invite/group benefits and achievement rewards use configured state; do not invent premium settings upgrades"],
+      "states": ["Simple/Advanced selected", "Toggle on/off", "Dragging interface-size slider", "No equipped items", "Locked/unlocked achievements", "Group member", "Invite/group prompt pending"],
+      "guardrails": ["Do not add account password, notifications, language, graphics-quality, privacy or audio-volume controls that the game does not implement.", "Keep settings labels outside toggle hit targets and leave enough room for larger accessibility text."]
+    }
+  ]
+}

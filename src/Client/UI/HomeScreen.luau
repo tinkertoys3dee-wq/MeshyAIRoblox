@@ -287,7 +287,8 @@ local function navigation(app: any, parent: Instance, x: number, y: number, widt
 		local control = button(app, bar, "HomeNav" .. data[1], data[1], (index - 1) * w, 0, w, height, function() app:_OpenPage(data[3]) end)
 		control.SelectionOrder = index
 		app.homeNavButtons[data[3]] = control
-		local active = (app.activePage or "Home") == data[3]
+		local navigationPage = if app.activePage == "Avatar Lab" or app.activePage == "Avatar Graphics" then "Create" else (app.activePage or "Home")
+		local active = navigationPage == data[3]
 		if active then
 			fallbackSurface(control, Color3.fromRGB(0, 113, 241), BLUE, 17)
 			local selected = image(control, "NavActive", -12, -12, w + 24, height + 27, 1)
@@ -347,10 +348,10 @@ function HomeScreen.Chrome(app: any, canvas: Instance, mobile: boolean, width: n
 		}
 		local library = button(app, canvas, "EditorLibrary", "My Items", 1399, 144, 154, 62, function() app:_OpenPage("My Studio") end)
 		if app.activePage == "My Studio" then
-			fallbackSurface(library, Color3.fromRGB(0, 113, 241), BLUE, 17)
+			fallbackSurface(library, Color3.fromRGB(62, 21, 107), VIOLET, 17)
 		end
 		label(library, "My Items", 0, 0, 154, 62, 21, true, if app.activePage == "My Studio" then WHITE else MUTED, true)
-		tools(1399, 215, 154)
+		-- Page-specific tabs and Advanced controls provide the tools menu.
 	end
 	local settingsX, settingsY, size = if mobile then width-50 else 1573, if mobile then 10 else 29, if mobile then 44 else 64
 	local settings = button(app, canvas, "EditorSettings", "Settings", settingsX, settingsY, size, size, function() app:_OpenPage("Settings") end)

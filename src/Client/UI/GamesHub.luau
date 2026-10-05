@@ -18,6 +18,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SocialService = game:GetService("SocialService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local Motion = require(script.Parent.Motion)
 
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
@@ -25,7 +26,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local DailyChallenge = require(ReplicatedStorage:WaitForChild("DailyChallenge"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Factory = require(script.Parent.Factory)
-local ModernPageLayouts = require(script.Parent.ModernPageLayouts)
+local RedesignGamesLayouts = require(script.Parent.RedesignGamesLayouts)
 local GameShell = require(script.Parent.Games.GameShell)
 local FlappyBird = require(script.Parent.Games.FlappyBird)
 local DinoRunner = require(script.Parent.Games.DinoRunner)
@@ -341,6 +342,7 @@ function GamesHub.Show(app: any)
 		string.format("%d free games · weekly prizes · scores save", #GAMES),
 		UDim2.new(1, -148, 0, 18),
 		{
+			Name = "ArcadeTitle",
 			Position = UDim2.fromOffset(78, 38),
 			Font = Theme.Fonts.Medium,
 			TextSize = 12,
@@ -596,14 +598,24 @@ function GamesHub.Show(app: any)
 		end)
 	end
 
-	closeButton.Activated:Connect(function()
+	local arcadeClosing = false
+	local closeInput: RBXScriptConnection? = nil
+	local function closeArcade()
+		if arcadeClosing then return end
+		arcadeClosing = true
+		if closeInput then closeInput:Disconnect() end
 		app.sounds:Play("PanelClose")
 		if shell then
 			shell:Destroy()
 		end
 		app.arcadeUiScale = nil
 		app:_CloseModal(overlay, modal)
+	end
+	closeButton.Activated:Connect(closeArcade)
+	closeInput = UserInputService.InputBegan:Connect(function(input, processed)
+		if not processed and (input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB) then closeArcade() end
 	end)
+	overlay.Destroying:Connect(function() if closeInput then closeInput:Disconnect() end end)
 
 	-- ===== Leaderboard tab =====
 	-- A back button plus a per-game tab row up top; standings for whichever
@@ -1301,6 +1313,7 @@ function GamesHub.Show(app: any)
 				ZIndex = 216,
 			})
 			local bestLabel = Factory.Label(button, "—", UDim2.fromOffset(140, 28), {
+				Name = "BestScore",
 				Position = UDim2.fromOffset(16, tileHeight - (if roomy then 44 else 28)),
 				Font = Theme.Fonts.Black,
 				TextSize = if roomy then 24 else 18,
@@ -1311,7 +1324,7 @@ function GamesHub.Show(app: any)
 			task.spawn(function()
 				local result = fetchWeeklyTop(statsGameKey)
 				if result and result.self and bestLabel.Parent then
-					bestLabel.Text = formatScore(result.self.score)
+					bestLabel.Text = (if bestLabel:GetAttribute("BestPrefix") then "Best: " else "") .. formatScore(result.self.score)
 				end
 			end)
 
@@ -1423,7 +1436,8 @@ function GamesHub.Show(app: any)
 			showLeaderboardTab
 		)
 	end
-	ModernPageLayouts.Modal(app, modal, "Arcade")
+	RedesignGamesLayouts.Modal(app, modal, "Arcade", closeArcade)
+	Motion.AutoFocus(closeButton)
 end
 
 return GamesHub

@@ -275,6 +275,8 @@ function Instance.new(class)
 			Name = class,
 			Active = true,
 			Visible = true,
+			ZIndex = 1,
+			IsLoaded = false,
 			Size = UDim2.new(),
 			Position = UDim2.new(),
 			AnchorPoint = Vector2.zero,

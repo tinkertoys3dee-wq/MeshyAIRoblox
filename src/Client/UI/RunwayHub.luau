@@ -16,7 +16,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Config"))
 local Network = require(ReplicatedStorage:WaitForChild("Network"))
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Factory = require(script.Parent.Factory)
-local ModernPageLayouts = require(script.Parent.ModernPageLayouts)
+local RedesignGamesLayouts = require(script.Parent.RedesignGamesLayouts)
 local Motion = require(script.Parent.Motion)
 local ViewportController = require(script.Parent.ViewportController)
 
@@ -225,6 +225,7 @@ function RunwayHub.Show(app: any)
 		ZIndex = 234,
 	})
 	Factory.Label(header, "FORGE RUNWAY", UDim2.new(1, -260, 0, 26), {
+		Name = "RunwayTitle",
 		Position = UDim2.fromOffset(80, 13),
 		Font = Theme.Fonts.Black,
 		TextSize = 22,
@@ -233,9 +234,11 @@ function RunwayHub.Show(app: any)
 	})
 	-- The art frames the theme rather than just naming it.
 	local function themeLine(current: { [string]: any }): string
-		return string.format("Tonight's theme · %s", current.theme or "Style challenge")
+		return if app.compact then string.format("Tonight's theme · %s", current.theme or "Style challenge")
+			else tostring(current.theme or "Style challenge")
 	end
 	local themeLabel = Factory.Label(header, themeLine(state), UDim2.new(1, -260, 0, 22), {
+		Name = "RunwayTheme",
 		Position = UDim2.fromOffset(80, 39),
 		Font = Theme.Fonts.Medium,
 		TextSize = 13,
@@ -244,6 +247,7 @@ function RunwayHub.Show(app: any)
 		ZIndex = 233,
 	})
 	local phaseLabel = Factory.Label(header, "", UDim2.fromOffset(98, 20), {
+		Name = "RunwayPhase",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -146, 0, 36),
 		Font = Theme.Fonts.Bold,
@@ -267,6 +271,7 @@ function RunwayHub.Show(app: any)
 	})
 	local setTimerRing = Factory.RadialRing(timerRing, 68, 5, Colors.Gold, Color3.fromRGB(48, 33, 78))
 	local timerLabel = Factory.Label(timerRing, "", UDim2.new(1, -14, 0, 22), {
+		Name = "RunwayClock",
 		Position = UDim2.fromOffset(7, 18),
 		Font = Theme.Fonts.Black,
 		TextSize = 18,
@@ -282,6 +287,7 @@ function RunwayHub.Show(app: any)
 		ZIndex = 234,
 	})
 	local close = Factory.ImageButton(header, "×", UDim2.fromOffset(38, 38), UDim2.new(1, -52, 0, 17), nil)
+	close.Name = "CloseButton"
 	close.TextSize = 21
 	close.ZIndex = 234
 	-- Round, with the art's gold rim: the decal behind it keeps its own
@@ -476,8 +482,10 @@ function RunwayHub.Show(app: any)
 		local selectedName = (entryFor(state, selectedUserId) or {}).name
 		Factory.SectionBanner(hero, if selectedIsSelf then "Your Look" else tostring(selectedName or "Their Look"))
 		local phasePill = Factory.ImagePill(hero, phase.label, phase.color, 116)
+		phasePill.Name = "LookPhase"
 		phasePill.Position = UDim2.fromOffset(16, 34)
 		Factory.Label(hero, phase.instruction, UDim2.new(1, -160, 0, 38), {
+			Name = "LookInstruction",
 			Position = UDim2.fromOffset(144, 30),
 			Color = Colors.TextMuted,
 			TextSize = 12,
@@ -511,6 +519,7 @@ function RunwayHub.Show(app: any)
 			}
 		)
 		local resetCamera = Factory.ImageButton(preview, "↺", UDim2.fromOffset(32, 28), UDim2.new(1, -42, 0, 8), nil)
+		resetCamera.Name = "ResetCamera"
 		resetCamera.ZIndex = 5
 		app:_BindButton(resetCamera)
 		resetCamera.Activated:Connect(function()
@@ -529,6 +538,7 @@ function RunwayHub.Show(app: any)
 			string.format("LEVEL %d", progress.level or 1),
 			UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 18),
 			{
+				Name = "CreatorLevel",
 				Position = UDim2.new(detailScale, detailOffset, 0, detailY),
 				Font = Theme.Fonts.Bold,
 				TextSize = 11,
@@ -540,6 +550,7 @@ function RunwayHub.Show(app: any)
 			progress.title or "Forge Apprentice",
 			UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 30),
 			{
+				Name = "CreatorTitle",
 				Position = UDim2.new(detailScale, detailOffset, 0, detailY + 20),
 				Font = Theme.Fonts.Black,
 				TextSize = 20,
@@ -547,6 +558,7 @@ function RunwayHub.Show(app: any)
 			}
 		)
 		local xpTrack = Factory.New("Frame", {
+			Name = "CreatorXpTrack",
 			Position = UDim2.new(detailScale, detailOffset, 0, detailY + 56),
 			Size = UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 10),
 			BackgroundColor3 = Colors.Ink,
@@ -568,6 +580,7 @@ function RunwayHub.Show(app: any)
 			string.format("%s XP", formatNumber(progress.xp or 0)),
 			UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 18),
 			{
+				Name = "CreatorXp",
 				Position = UDim2.new(detailScale, detailOffset, 0, detailY + 70),
 				Color = Colors.TextMuted,
 				TextSize = 10,
@@ -585,6 +598,7 @@ function RunwayHub.Show(app: any)
 			),
 			UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 20),
 			{
+				Name = "RunwayStats",
 				Position = UDim2.new(detailScale, detailOffset, 0, statsY),
 				Color = Colors.TextMuted,
 				TextSize = 11,
@@ -613,6 +627,7 @@ function RunwayHub.Show(app: any)
 				),
 			UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 20),
 			{
+				Name = "DailyEncore",
 				Position = UDim2.new(detailScale, detailOffset, 0, statsY + 20),
 				Color = if encoreComplete then Colors.Mint else Colors.Gold,
 				Font = Theme.Fonts.Bold,
@@ -643,6 +658,7 @@ function RunwayHub.Show(app: any)
 				if #names == 0 then "Nothing equipped yet" else names[1],
 				UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 20),
 				{
+					Name = "EquippedLookName",
 					Position = UDim2.new(detailScale, detailOffset, 0, lookY),
 					Font = Theme.Fonts.Black,
 					TextSize = 15,
@@ -656,6 +672,7 @@ function RunwayHub.Show(app: any)
 					else "Change it in My Studio before you lock.",
 				UDim2.new(detailWidth.X.Scale, detailWidth.X.Offset, 0, 18),
 				{
+					Name = "EquippedLookHelp",
 					Position = UDim2.new(detailScale, detailOffset, 0, lookY + 20),
 					Color = Colors.TextMuted,
 					TextSize = 11,
@@ -706,6 +723,7 @@ function RunwayHub.Show(app: any)
 			if primaryAction then "primary" else nil
 		)
 		primary.Active = primaryAction ~= nil
+		primary.Name = "LockLook"
 		app:_BindButton(primary)
 		if primaryAction then
 			primary.Activated:Connect(primaryAction)
@@ -719,6 +737,7 @@ function RunwayHub.Show(app: any)
 			"mint"
 		)
 		app:_BindButton(lab)
+		lab.Name = "OpenAvatarLab"
 		lab.Activated:Connect(if state.phase == "RESULTS" then openCreate else openAvatarLab)
 		local invite = Factory.ImageButton(
 			hero,
@@ -733,6 +752,7 @@ function RunwayHub.Show(app: any)
 			nil
 		)
 		app:_BindButton(invite)
+		invite.Name = "InviteRunwayFriends"
 		invite.Activated:Connect(function()
 			app:_PromptFriendInvite()
 		end)
@@ -893,9 +913,12 @@ function RunwayHub.Show(app: any)
 					Parent = participants,
 				})
 				Factory.Corner(row, 10)
+				row:SetAttribute("RunwayEntryIndex", index)
+				row:SetAttribute("RunwaySelected", selectedUserId == entry.userId)
 				Factory.Stroke(row, if selectedUserId == entry.userId then Colors.Gold else Colors.Line, 0.5)
 				app:_BindButton(row)
 				local face = Factory.New("ImageLabel", {
+					Name = "EntryAvatar",
 					Size = UDim2.fromOffset(44, 44),
 					Position = UDim2.fromOffset(6, 6),
 					BackgroundColor3 = Colors.Panel,
@@ -908,6 +931,7 @@ function RunwayHub.Show(app: any)
 				Factory.Stroke(face, Colors.Gold, 0.45)
 				local voteWidth = if compact then 84 else 150
 				Factory.Label(row, entry.name, UDim2.new(1, -(voteWidth + 76), 0, 24), {
+					Name = "EntryName",
 					Position = UDim2.fromOffset(58, 7),
 					Font = Theme.Fonts.Bold,
 					TextSize = 13,
@@ -921,6 +945,7 @@ function RunwayHub.Show(app: any)
 						else string.format("%d VOTE%s", entry.votes, if entry.votes == 1 then "" else "S")
 				end
 				Factory.Label(row, statusText, UDim2.new(1, -(voteWidth + 76), 0, 18), {
+					Name = "EntryStatus",
 					Position = UDim2.fromOffset(58, 31),
 					Font = Theme.Fonts.Bold,
 					Color = if entry.ready then Colors.Mint else Colors.TextMuted,
@@ -959,6 +984,7 @@ function RunwayHub.Show(app: any)
 					if canLeave then "danger" elseif canVote then "mint" else nil
 				)
 				vote.Active = canVote or canLeave
+				vote.Name = "VoteOrLeave"
 				vote.ZIndex = 4
 				app:_BindButton(vote)
 				if canLeave then
@@ -971,6 +997,14 @@ function RunwayHub.Show(app: any)
 					end)
 				end
 				row.Activated:Connect(function()
+					selectedUserId = entry.userId
+					render()
+				end)
+				local viewLook = Factory.ImageButton(row, "View look", UDim2.fromOffset(161, 59), nil, "mint")
+				viewLook.Name = "ViewLook"
+				viewLook.Visible = false -- Shown by the measured desktop layout.
+				app:_BindButton(viewLook)
+				viewLook.Activated:Connect(function()
 					selectedUserId = entry.userId
 					render()
 				end)
@@ -1008,6 +1042,7 @@ function RunwayHub.Show(app: any)
 		-- no clear right-hand corner to sit in.
 		local refresh =
 			Factory.ImageButton(standings, "Refresh", UDim2.fromOffset(78, 28), UDim2.new(1, -94, 0, 36), nil)
+		refresh.Name = "RefreshWeekly"
 		app:_BindButton(refresh)
 		refresh.Activated:Connect(function()
 			leaderboard = nil
@@ -1033,7 +1068,12 @@ function RunwayHub.Show(app: any)
 			else
 				for index = 1, math.min(5, #rows) do
 					local entry = rows[index]
-					local y = 72 + (index - 1) * 46
+					local weeklyRow = Factory.New("Frame", {
+						Name = "WeeklyRow", Position = UDim2.fromOffset(0, 72 + (index - 1) * 46),
+						Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 1, Parent = standings,
+					})
+					weeklyRow:SetAttribute("WeeklyEntryIndex", index)
+					local y = 0
 					local isSelf = entry.userId == localPlayer.UserId
 					local color = if index == 1
 						then Colors.Gold
@@ -1050,18 +1090,19 @@ function RunwayHub.Show(app: any)
 							BackgroundColor3 = Colors.Violet,
 							BackgroundTransparency = 0.7,
 							BorderSizePixel = 0,
-							Parent = standings,
+							Parent = weeklyRow,
 						})
 						Factory.Corner(highlight, 10)
 						Factory.Stroke(highlight, Colors.Gold, 0.5)
 					end
 					local seat = Factory.New("Frame", {
+						Name = "WeeklyRank",
 						Position = UDim2.fromOffset(18, y + 5),
 						Size = UDim2.fromOffset(28, 28),
 						BackgroundColor3 = color,
 						BorderSizePixel = 0,
 						ZIndex = 2,
-						Parent = standings,
+						Parent = weeklyRow,
 					})
 					Factory.Corner(seat, 14)
 					Factory.Label(seat, tostring(index), UDim2.fromScale(1, 1), {
@@ -1072,7 +1113,8 @@ function RunwayHub.Show(app: any)
 						Color = Colors.Ink,
 						ZIndex = 3,
 					})
-					Factory.Label(standings, if isSelf then "You" else entry.name, UDim2.new(1, -170, 0, 38), {
+					Factory.Label(weeklyRow, if isSelf then "You" else entry.name, UDim2.new(1, -170, 0, 38), {
+						Name = "WeeklyName",
 						Position = UDim2.fromOffset(56, y),
 						Font = Theme.Fonts.Bold,
 						TextSize = 12,
@@ -1080,10 +1122,11 @@ function RunwayHub.Show(app: any)
 						ZIndex = 2,
 					})
 					Factory.Label(
-						standings,
+						weeklyRow,
 						string.format("%s pts", formatNumber(entry.score or 0)),
 						UDim2.fromOffset(90, 38),
 						{
+							Name = "WeeklyScore",
 							AnchorPoint = Vector2.new(1, 0),
 							Position = UDim2.new(1, -16, 0, y),
 							AlignX = Enum.TextXAlignment.Right,
@@ -1093,6 +1136,10 @@ function RunwayHub.Show(app: any)
 							ZIndex = 2,
 						}
 					)
+					Factory.New("ImageLabel", {
+						Name = "WeeklyAvatar", Position = UDim2.fromOffset(46, 0), Size = UDim2.fromOffset(38, 38),
+						BackgroundTransparency = 1, Image = avatarBust(entry.userId), Parent = weeklyRow, Visible = false,
+					})
 				end
 			end
 			local own = leaderboard.self
@@ -1115,7 +1162,7 @@ function RunwayHub.Show(app: any)
 				}
 			)
 		end
-		ModernPageLayouts.Modal(app, modal, "Runway")
+		RedesignGamesLayouts.Modal(app, modal, "Runway", closeHub)
 		if restoreFocus and close.Parent then
 			Motion.AutoFocus(close)
 		end

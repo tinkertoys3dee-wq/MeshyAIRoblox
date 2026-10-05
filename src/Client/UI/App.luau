@@ -1645,6 +1645,8 @@ function App:_SyncAvatarPreviewPanel()
 		self.avatarPreviewViewportController = ViewportController.new(self.avatarPreviewViewport)
 		self.avatarPreviewDirty = false
 	end
+	-- Worn rows were rebuilt above; apply their current measured screen layout.
+	ModernChrome.LayoutPreview(self)
 end
 
 -- One row in the shared "WORN NOW" list. Each source has its own server
@@ -9091,7 +9093,7 @@ function App:_RenderAvatarGraphics()
 				break
 			end
 			local generation = self.state.profile.generations[generationId]
-			if generation and generation.method == "AVATAR_GRAPHIC" and generation.stage ~= "SUCCEEDED" then
+			if generation and (generation.method == "AVATAR_GRAPHIC" or generation.method == "TEXT_TO_IMAGE") and generation.stage ~= "SUCCEEDED" then
 				shown += 1
 				local row = Factory.New("Frame", {
 					Position = UDim2.fromOffset(16, y),

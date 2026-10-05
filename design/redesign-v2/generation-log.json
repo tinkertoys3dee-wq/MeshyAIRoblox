@@ -1,0 +1,71 @@
+{
+  "method": "Built-in image_gen, then measured native SVG reconstruction; decorative artwork traced separately with VTracer.",
+  "reference": "design/home/reference.png",
+  "originalPrompts": "prompts.json",
+  "date": "2026-10-05",
+  "screens": [
+    {
+      "slug": "create",
+      "mockup": "mockups/create.png",
+      "vector": "svg/create.svg",
+      "generatedSource": "C:/Users/bgebh/.codex/generated_images/01a10519-ac55-7dc0-91db-c2503af2b0cd/exec-33b29827-784a-418c-a949-7ec819e5e5be.png",
+      "targetedEditPrompt": "Edit only the specific UI regions described; preserve the entire existing image, proportions, crown artwork, buttons, labels, colors and all other layout exactly. Canvas remains 1672 by 941. Add a compact My Items shortcut in the unused header area x1387 y144 width168 height63, with white bag/cube icon, navy-purple rounded beveled button and readable white label. Add close X at x1570 y147 width52 height57. Remove the current large bottom-right X around x1552 y817 and restore the original blue/navy preview background seamlessly. Keep header navigation Create selected and every other control and illustrated object unchanged."
+    },
+    {
+      "slug": "my-items",
+      "mockup": "mockups/my-items.png",
+      "vector": "svg/my-items.svg",
+      "generatedSource": "C:/Users/bgebh/.codex/generated_images/01a10519-ac55-7dc0-91db-c2503af2b0cd/exec-862f21b9-10db-436f-9033-54b86f1ff894.png",
+      "targetedEditPrompt": "Edit only these UI details; preserve the entire existing crown illustration, list rows, controls, original dimensions 1672 by941 and layout. Deactivate the bright cyan Create nav highlight at x620 y137 w245 h75 so it becomes the same dark-navy inactive style as Home/Market; keep My Items shortcut purple selected. In the upper-right of the left collection panel, replace the '4 items' text with a small glossy cyan 'Create new' button at approximately x445 y248 width164 height48; put '4 items' as small white text at x550 y325 below that button, clear of the subtitle and first row. Keep 'Your creations, ready to wear.' readable in its existing left position. Do not move or redraw collection thumbnails, selected crown, name field, Save name, Equip, Publish, Advanced controls or any other content."
+    },
+    {
+      "slug": "market",
+      "mockup": "mockups/market.png",
+      "vector": "svg/market.svg",
+      "generatedSource": "C:/Users/bgebh/.codex/generated_images/01a10519-ac55-7dc0-91db-c2503af2b0cd/exec-a3fa44ca-a0b5-40f4-8513-fd8592c1b40a.png",
+      "targetedEditPrompt": "Edit only missing header controls and unsupported badge marks; preserve the entire existing image 1672 by941, all item artwork, avatar, search, cards, typography and layout exactly. Add a compact My Items shortcut to unused header area x1387 y144 width168 height63, with white bag/cube icon, navy-purple rounded beveled button and readable white label. Add close X at x1570 y147 width52 height57. Remove the small blue verified checkmark badges next to all sample creator names on the three cards and the Wearing row, leaving clean matching background; preserve creator text itself. Keep Market selected and all other controls, item art and avatar identical."
+    },
+    {
+      "slug": "avatar-lab",
+      "mockup": "mockups/avatar-lab.png",
+      "vector": "svg/avatar-lab.svg",
+      "generatedSource": "C:/Users/bgebh/.codex/generated_images/01a10519-ac55-7dc0-91db-c2503af2b0cd/exec-a0b993e2-49a6-4622-a328-66e2b9477947.png",
+      "targetedEditPrompt": "Edit only the specified labels/control rows in this existing 1672 by941 screen. Preserve every existing artwork render, avatar, item card, title, header, categories, panel, color and layout unchanged. On the three catalog cards replace gold coin icons with white 'R$' and retain prices 75,125,85 in the price rows y739–765 at left edges x94/425/754. Add small readable 'View in Roblox' link controls to the right of each price, at approximately x236/566/896 y739 width139 height26. Change each existing 'Save to look' button label to 'Bookmark', preserving bookmark icon and button geometry x90/421/750 y827 width287 height43. Remove blue creator verification check badges only, clean background behind them. Keep every other control, all detailed hair/crown/hoodie and avatar illustration exactly the same. This is a tiny targeted UI correction, no redesign."
+    },
+    {
+      "slug": "avatar-graphics",
+      "mockup": "mockups/avatar-graphics.png",
+      "vector": "svg/avatar-graphics.svg",
+      "generatedSource": "C:/Users/bgebh/.codex/generated_images/01a10519-ac55-7dc0-91db-c2503af2b0cd/exec-8c9cc54c-e640-4b7f-a2e3-2b32a06efd30.png",
+      "targetedEditPrompt": "Edit only the two gallery bottom action rows in this 1672 by941 existing screen. Preserve all original poster artwork, avatar source, composer, title, header, colors and every other pixel/layout unchanged. Remove the standalone download-arrow icon buttons next to Copy link in each gallery card. Expand each Copy link button to fill that removed button space, keeping the link icon and label 'Copy link': first at x1020 y776 width174 height51, second x1326 y776 width174 height51. Keep Delete buttons at x1204 and1510 y776 width87 height51. No other edits; do not alter the illustrated posters or typography elsewhere."
+    },
+    {
+      "slug": "games",
+      "mockup": "mockups/games.png",
+      "vector": "svg/games.svg",
+      "generatedSource": "C:/Users/bgebh/.codex/generated_images/01a10519-ac55-7dc0-91db-c2503af2b0cd/exec-f6552a0d-fa35-4170-99a7-188ad8325003.png",
+      "targetedEditPrompt": null
+    },
+    {
+      "slug": "arcade",
+      "mockup": "mockups/arcade.png",
+      "vector": "svg/arcade.svg",
+      "generatedSource": "C:/Users/bgebh/.codex/generated_images/01a10519-ac55-7dc0-91db-c2503af2b0cd/exec-cc7f4d17-1d55-4d92-84b9-f3cc6a8a8b14.png",
+      "targetedEditPrompt": null
+    },
+    {
+      "slug": "runway",
+      "mockup": "mockups/runway.png",
+      "vector": "svg/runway.svg",
+      "generatedSource": "C:/Users/bgebh/.codex/generated_images/01a10519-ac55-7dc0-91db-c2503af2b0cd/exec-f0fa24e8-17c3-47b2-9118-3bfb86c8f3f6.png",
+      "targetedEditPrompt": "Edit only two details in this 1672 by941 Forge Runway screen, preserving all avatars, scene artwork, lineup, standings, header, timer, panels and remaining controls unchanged. Add a small navy-blue beveled Reset camera button with circular-arrow icon at x1017 y439 width147 height42, immediately below Drag to rotate, clear of the central avatar. In the bottom-right reward card, preserve its existing crown/gift artwork, border and geometry, but change the title to 'Weekly Creator XP' and replace the false exclusive-item copy with two readable lines '1st +600 · 2nd +350 · 3rd +200' and 'Earn XP in this week’s spotlight.' Adjust only this card's lettering to fit comfortably. Do not add a currency purchase control or change any other content."
+    },
+    {
+      "slug": "settings",
+      "mockup": "mockups/settings.png",
+      "vector": "svg/settings.svg",
+      "generatedSource": "C:/Users/bgebh/.codex/generated_images/01a10519-ac55-7dc0-91db-c2503af2b0cd/exec-3b1bf6c7-8fa5-4b82-b8e4-6cbe45259812.png",
+      "targetedEditPrompt": "Edit only the four achievement name labels at the bottom left of this existing 1672 by941 Settings screen. Preserve every other detail, artwork, badge icons, toggles, card geometry, title, header and buttons exactly. Replace 'First Creation' with 'First Spark'; replace 'Social Creator' with 'Bring a Friend'; replace 'Market Star' with 'Collector'; replace 'Game Player' with 'Prolific'. Preserve the existing illustrative Earned/Locked state pills. This is a small text correction only, no redesign."
+    }
+  ]
+}

@@ -8,6 +8,9 @@ local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local HomeAssets = require(ReplicatedStorage:WaitForChild("HomeAssets"))
 local ScreenAssets = require(ReplicatedStorage:WaitForChild("ScreenAssets"))
 local ModernPageLayouts = require(script.Parent.ModernPageLayouts)
+local RedesignCoreLayouts = require(script.Parent.RedesignCoreLayouts)
+local RedesignToolsLayouts = require(script.Parent.RedesignToolsLayouts)
+local RedesignGamesLayouts = require(script.Parent.RedesignGamesLayouts)
 local ModernLayouts = {}
 
 local function sized(control: any, size: number)
@@ -141,6 +144,28 @@ local function create(app: any)
 end
 
 function ModernLayouts.Apply(app: any)
+	app.redesignLayoutActive = false
+	if not app.compact and app.activePage ~= "Home" and app.state and app.state.profile then
+		app.content.Position = UDim2.new()
+		app.content.Size = UDim2.fromOffset(1672, 941)
+		local handled = RedesignCoreLayouts.Apply(app) or RedesignToolsLayouts.Apply(app) or RedesignGamesLayouts.Apply(app)
+		if handled then
+			app.redesignLayoutActive = true
+			for _, child in app.content:GetChildren() do
+				if child:IsA("TextButton") and (child.Text == "HOME" or string.find(child.Text, "←  HOME", 1, true)) then child.Visible = false end
+				if child.Name == "FlourishDivider" then child.Visible = false end
+			end
+			if app.activePage == "Play" then
+				local title, subtitle = app.content:FindFirstChild("PageTitle"), app.content:FindFirstChild("PageSubtitle")
+				if title then title.Visible = false end
+				if subtitle then subtitle.Visible = false end
+			end
+			return
+		end
+		local hasPreview = app.activePage == "Avatar Lab" or app.activePage == "Discover"
+		app.content.Position = UDim2.fromOffset(46, 238)
+		app.content.Size = UDim2.fromOffset(if hasPreview then 1087 else 1586, 645)
+	end
 	if app.activePage == "Create" then create(app) end
 	ModernPageLayouts.Apply(app)
 	if not app.compact and app.avatarPreviewPanel and (app.activePage == "Avatar Lab" or app.activePage == "Discover") then

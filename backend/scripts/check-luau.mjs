@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import { LuauState } from 'luau-web';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -10,9 +11,28 @@ const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
 const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
   entry.isDirectory() ? walk(path.join(dir, entry.name)) : [path.join(dir, entry.name)]);
 const vm = await LuauState.createAsync();
+// Isolate the WASM runtime for each suite: its heap is fixed, and closed
+// state pointer caches are shared within one luau-web process.
+const runSuite = async (source, name) => {
+  const run = spawnSync(process.execPath, [fileURLToPath(new URL('./run-luau-suite.mjs', import.meta.url)), name], {
+    input: source, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024,
+  });
+  if (run.status !== 0) {
+    const detail = (run.stderr || String(run.error || 'Unknown failure')).split('\n').filter(line => line.length < 1000).slice(-8).join('\n');
+    throw new Error(`${name} failed:\n${detail}`);
+  }
+  return JSON.parse(run.stdout.trim());
+};
 try {
   const files = walk(path.join(root, 'src')).filter((name) => name.endsWith('.luau'));
-  for (const file of files) vm.loadstring(fs.readFileSync(file, 'utf8'), path.relative(root, file), true);
+  for (const file of files) {
+    const relative = path.relative(root, file);
+    try {
+      vm.loadstring(fs.readFileSync(file, 'utf8'), relative, true);
+    } catch (error) {
+      throw new Error(`Luau compilation failed in ${relative}: ${String(error).split('\n')[0]}`);
+    }
+  }
   console.log(`Compiled ${files.length} Luau source files.`);
   const modules = {
     AvatarLook: 'src/Shared/AvatarLook.luau',
@@ -28,11 +48,18 @@ try {
     PlayerStateService: 'src/Server/Services/PlayerStateService.luau',
     WindowFocus: 'src/Client/UI/WindowFocus.luau',
     HomeAssets: 'src/Shared/HomeAssets.luau',
+    DailyChallenge: 'src/Shared/DailyChallenge.luau',
     HomeEffects: 'src/Client/UI/HomeEffects.luau',
     HomeScreen: 'src/Client/UI/HomeScreen.luau',
     ModernChrome: 'src/Client/UI/ModernChrome.luau',
     ModernLayouts: 'src/Client/UI/ModernLayouts.luau',
     ModernPageLayouts: 'src/Client/UI/ModernPageLayouts.luau',
+    RedesignAssets: 'src/Shared/RedesignAssets.luau',
+    RedesignMetrics: 'src/Shared/RedesignMetrics.luau',
+    RedesignSkin: 'src/Client/UI/RedesignSkin.luau',
+    RedesignCoreLayouts: 'src/Client/UI/RedesignCoreLayouts.luau',
+    RedesignToolsLayouts: 'src/Client/UI/RedesignToolsLayouts.luau',
+    RedesignGamesLayouts: 'src/Client/UI/RedesignGamesLayouts.luau',
   };
   const definitions = Object.entries(modules).map(([name, file]) =>
     `modules.${name} = function()\n${read(file)}\nend`).join('\n');
@@ -207,8 +234,8 @@ try {
   if (!transition) throw new Error('Studio transition method not found');
   const transitionModule = `modules.StudioTransition = function() local App = {}; local Motion = require("Motion"); ${transition}; return App end`;
   const suite = `${read('backend/tests/luau/engine-double.luau')}\n${definitions}\n${transitionModule}\n${read('backend/tests/luau/ui-avatar.spec.luau')}`;
-  const run = vm.loadstring(suite, 'ui-avatar-regressions', true);
-  const [count] = await run();
+  vm.destroy();
+  const [count] = await runSuite(suite, 'ui-avatar-regressions');
   console.log(`Passed ${count} UI/avatar behavior assertions (engine doubles).`);
   const chrome = appSource.match(/function App:_ApplyHomeChrome\(\)[\s\S]*?(?=\nfunction App:)/)?.[0];
   if (!chrome) throw new Error('Home chrome transition method not found');
@@ -217,14 +244,19 @@ try {
   if (!navigationInput) throw new Error('Studio keyboard/gamepad navigation callback not found');
   const navigationModule = `modules.NavigationFocus = function() local App = {}; local GuiService = game:GetService("GuiService"); function App:_TestNavigationInput(input, gameProcessed) ${navigationInput} end; return App end`;
   const homeSuite = `${read('backend/tests/luau/engine-double.luau')}\n${definitions}\n${chromeModule}\n${read('backend/tests/luau/home-screen.spec.luau')}`;
-  const [homeCount] = await vm.loadstring(homeSuite, 'home-screen-regressions', true)();
+  const [homeCount] = await runSuite(homeSuite, 'home-screen-regressions');
   console.log(`Passed ${homeCount} Home behavior assertions (engine doubles).`);
   const effectsSuite = `${read('backend/tests/luau/engine-double.luau')}\n${definitions}\n${read('backend/tests/luau/home-effects.spec.luau')}`;
-  const [effectsCount] = await vm.loadstring(effectsSuite, 'home-effects-regressions', true)();
+  const [effectsCount] = await runSuite(effectsSuite, 'home-effects-regressions');
   console.log(`Passed ${effectsCount} Home effects assertions (engine doubles).`);
   const modernSuite = `${read('backend/tests/luau/engine-double.luau')}\n${definitions}\n${navigationModule}\n${read('backend/tests/luau/modern-screen.spec.luau')}`;
-  const [modernCount] = await vm.loadstring(modernSuite, 'modern-screen-regressions', true)();
+  const [modernCount] = await runSuite(modernSuite, 'modern-screen-regressions');
   console.log(`Passed ${modernCount} modern screen assertions (engine doubles).`);
+  for (const name of ['core', 'games', 'tools']) {
+    const suite = `${read('backend/tests/luau/engine-double.luau')}\n${definitions}\n${read(`backend/tests/luau/redesign-${name}.spec.luau`)}`;
+    const [count] = await runSuite(suite, `redesign-${name}-regressions`);
+    console.log(`Passed ${count} redesigned ${name} assertions (engine doubles).`);
+  }
 } finally {
-  vm.destroy();
+  if (!vm.destroyed) vm.destroy();
 }

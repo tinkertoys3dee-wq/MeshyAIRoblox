@@ -36,3 +36,4 @@ __pycache__/
 /design/screens/assets/.upload-write-self-test.json*
 /design/screens/assets/asset_ids.json.tmp*
 /src/Shared/ScreenAssets.luau.tmp*
+/src/Shared/RedesignAssets.luau.tmp*

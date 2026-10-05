@@ -1,0 +1,230 @@
+{
+  "method": "Generated bitmap references measured into native controls and editable SVG text; separate decorative crops converted into genuine vector paths using vtracer. Text headings use native affine width scaling for consistent Arial Black rendering.",
+  "traceSettings": {
+    "colors": 8,
+    "layerDifference": 4,
+    "filterSpeckle": 1,
+    "lengthThreshold": 2,
+    "excludedControls": "Real SVG evenodd clipping holes retain transparency."
+  },
+  "sourceImages": [
+    "mockups/avatar-lab.png",
+    "mockups/avatar-graphics.png",
+    "mockups/games.png"
+  ],
+  "outputs": [
+    "svg/avatar-lab.svg",
+    "svg/avatar-graphics.svg",
+    "svg/games.svg"
+  ],
+  "artworkCrops": [
+    {
+      "source": "avatar-lab",
+      "asset": "LabHairArt",
+      "bounds": [
+        80,
+        478,
+        307,
+        202
+      ],
+      "excludedControlRects": [
+        [
+          343,
+          488,
+          40,
+          42
+        ]
+      ]
+    },
+    {
+      "source": "avatar-lab",
+      "asset": "LabCrownArt",
+      "bounds": [
+        413,
+        480,
+        304,
+        202
+      ],
+      "excludedControlRects": [
+        [
+          675,
+          488,
+          40,
+          42
+        ]
+      ]
+    },
+    {
+      "source": "avatar-lab",
+      "asset": "LabHoodieArt",
+      "bounds": [
+        740,
+        480,
+        308,
+        202
+      ],
+      "excludedControlRects": [
+        [
+          1006,
+          488,
+          40,
+          42
+        ]
+      ]
+    },
+    {
+      "source": "avatar-lab",
+      "asset": "LabAvatarArt",
+      "bounds": [
+        1066,
+        398,
+        276,
+        436
+      ],
+      "excludedControlRects": []
+    },
+    {
+      "source": "avatar-lab",
+      "asset": "LabWornHairArt",
+      "bounds": [
+        1364,
+        459,
+        52,
+        51
+      ],
+      "excludedControlRects": []
+    },
+    {
+      "source": "avatar-lab",
+      "asset": "LabWornCrownArt",
+      "bounds": [
+        1364,
+        524,
+        52,
+        51
+      ],
+      "excludedControlRects": []
+    },
+    {
+      "source": "avatar-lab",
+      "asset": "LabWornHoodieArt",
+      "bounds": [
+        1364,
+        589,
+        52,
+        51
+      ],
+      "excludedControlRects": []
+    },
+    {
+      "source": "avatar-lab",
+      "asset": "LabWornPantsArt",
+      "bounds": [
+        1364,
+        654,
+        52,
+        51
+      ],
+      "excludedControlRects": []
+    },
+    {
+      "source": "avatar-lab",
+      "asset": "LabWornShoesArt",
+      "bounds": [
+        1364,
+        719,
+        52,
+        51
+      ],
+      "excludedControlRects": []
+    },
+    {
+      "source": "avatar-graphics",
+      "asset": "GraphicsAvatarArt",
+      "bounds": [
+        93,
+        408,
+        249,
+        252
+      ],
+      "excludedControlRects": []
+    },
+    {
+      "source": "avatar-graphics",
+      "asset": "GraphicsNeonPosterArt",
+      "bounds": [
+        1012,
+        329,
+        283,
+        370
+      ],
+      "excludedControlRects": []
+    },
+    {
+      "source": "avatar-graphics",
+      "asset": "GraphicsPurplePosterArt",
+      "bounds": [
+        1319,
+        329,
+        283,
+        370
+      ],
+      "excludedControlRects": []
+    },
+    {
+      "source": "avatar-graphics",
+      "asset": "GraphicsJobThumbArt",
+      "bounds": [
+        139,
+        818,
+        75,
+        65
+      ],
+      "excludedControlRects": []
+    },
+    {
+      "source": "games",
+      "asset": "GamesArcadeSceneArt",
+      "bounds": [
+        72,
+        454,
+        503,
+        337
+      ],
+      "excludedControlRects": []
+    },
+    {
+      "source": "games",
+      "asset": "GamesRunwaySceneArt",
+      "bounds": [
+        597,
+        454,
+        497,
+        337
+      ],
+      "excludedControlRects": []
+    },
+    {
+      "source": "games",
+      "asset": "GamesLoungeSceneArt",
+      "bounds": [
+        1121,
+        454,
+        491,
+        337
+      ],
+      "excludedControlRects": []
+    }
+  ],
+  "intentionalChanges": {
+    "avatar-lab": [
+      "Ownership prices use R$.",
+      "Card save action is labelled Bookmark; View in Roblox is present."
+    ],
+    "avatar-graphics": [
+      "Unsupported standalone download icon buttons omitted; Copy link buttons widened."
+    ],
+    "games": []
+  },
+  "livePlaceholders": "Avatar/catalog/gallery samples, ownership prices, item/creator titles, job state, balances and counts are representative placeholders with data-role tags."
+}
