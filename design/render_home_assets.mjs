@@ -2,6 +2,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertVectorSvg } from './svg_png_guard.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../backend/package.json'));
@@ -10,7 +11,9 @@ const dir = path.join(here, 'home');
 const manifest = JSON.parse(await readFile(path.join(dir, 'manifest.json'), 'utf8'));
 await mkdir(path.join(dir, 'png'), { recursive: true });
 for (const item of manifest) {
-  await sharp(path.join(dir, 'svg', `${item.name}.svg`)).png().toFile(path.join(dir, item.file));
+  const svg = await readFile(path.join(dir, 'svg', `${item.name}.svg`));
+  assertVectorSvg(svg, item.name);
+  await sharp(svg).png().toFile(path.join(dir, item.file));
 }
 const cells = [];
 const cellWidth = 240, cellHeight = 190, columns = 5;

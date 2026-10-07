@@ -36,6 +36,7 @@ import pathlib
 import subprocess
 
 from build_screens import DEFS, SERIF, SANS, GEMS, ITEM_GLYPHS  # noqa: reuse the approved palette/fonts/glyphs
+from ui_assets_common import validate_vector_svg, svg_origin
 
 HERE = pathlib.Path(__file__).parent
 OUT = HERE / "assets"
@@ -56,13 +57,15 @@ CHROME_HEIGHT_OVERSHOOT = 88
 def render(svg_body: str, w: int, h: int, name: str) -> None:
     svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">' \
           f'<defs>{DEFS}</defs>{svg_body}</svg>'
+    # Reject image/feImage and external resources before any bitmap is made.
+    assert validate_vector_svg(svg, name) == (w, h)
     svg_path = OUT / f"{name}.svg"
-    svg_path.write_text(svg)
+    svg_path.write_text(svg, encoding="utf-8")
     html = OUT / "_r.html"
     html.write_text(
         '<!doctype html><meta charset="utf-8">'
         f'<style>html,body{{margin:0;background:transparent}}img{{display:block;width:{w}px;height:{h}px}}</style>'
-        f'<img src="{svg_path.name}">'
+        f'<img src="{svg_path.name}">', encoding="utf-8"
     )
     raw = OUT / "_raw.png"
     subprocess.run(
@@ -501,7 +504,11 @@ def main():
     for gem in GEMS:
         manifest.append(gem_stud(gem))
 
-    (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    # Both hashes refer to the actual completed SVG -> Chromium PNG output.
+    for item in manifest:
+        png_path = OUT / item["file"]
+        item["origin"] = svg_origin(png_path.with_suffix(".svg"), png_path)
+    (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"\n{len(manifest)} assets exported to {OUT}/")
     print("Next: python3 upload_ui_assets.py  (needs an Open Cloud API key)")
     print("  or: upload the PNGs yourself in Studio, then fill in")

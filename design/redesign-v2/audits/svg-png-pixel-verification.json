@@ -1,0 +1,13 @@
+{
+  "generatedAtUtc": "2026-10-07T12:33:31.596Z",
+  "runtimeNames": 509,
+  "checkedSVGNames": 506,
+  "uniqueStoredPNGFiles": 346,
+  "exactPixelMatches": 506,
+  "reusedHomeAliases": [
+    "V2_Arcade_arcadeBackdrop",
+    "V2_Runway_runwayBackdrop",
+    "V2_Settings_settingsBackdrop"
+  ],
+  "errors": []
+}

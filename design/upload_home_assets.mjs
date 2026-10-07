@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { verifySvgPng } from './svg_png_guard.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dir = path.join(here, 'home');
@@ -12,14 +13,16 @@ const api = 'https://apis.roblox.com/assets/v1';
 const args = process.argv.slice(2);
 const value = (flag) => args.includes(flag) ? args[args.indexOf(flag) + 1] : undefined;
 const envFile = path.resolve(value('--env') || path.join(here, '../backend/.env.roblox-upload'));
-if (existsSync(envFile)) process.loadEnvFile(envFile);
 const dryRun = args.includes('--dry-run');
 const only = value('--only')?.split(',');
-const key = process.env.ROBLOX_API_KEY;
-const creatorType = process.env.ROBLOX_CREATOR_TYPE || 'User';
-const creatorId = process.env.ROBLOX_CREATOR_ID;
 const manifest = JSON.parse(await fs.readFile(path.join(dir, 'manifest.json'), 'utf8'));
 const selected = manifest.filter(item => !only || only.includes(item.name));
+const svgCache = new Map();
+for (const item of selected) await verifySvgPng(dir, item, { cache: svgCache });
+if (!dryRun && existsSync(envFile)) process.loadEnvFile(envFile);
+const key = dryRun ? undefined : process.env.ROBLOX_API_KEY;
+const creatorType = process.env.ROBLOX_CREATOR_TYPE || 'User';
+const creatorId = process.env.ROBLOX_CREATOR_ID;
 if (only?.some(name => !manifest.some(item => item.name === name))) throw new Error('Unknown asset in --only.');
 if (!dryRun && (!key?.trim() || !/^\d+$/.test(creatorId || '') || !['User', 'Group'].includes(creatorType))) {
   console.error('Fill ROBLOX_API_KEY, ROBLOX_CREATOR_TYPE and ROBLOX_CREATOR_ID in backend/.env.roblox-upload.');

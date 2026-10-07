@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertVectorSvg, sha256 } from './svg_png_guard.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../backend/package.json'));
@@ -20,9 +21,8 @@ const assets = manifest.filter(item => !item.homeAsset);
 let duplicateCount = 0;
 for (const item of assets) {
   const svg = await readFile(path.join(dir, item.svg));
-  if (/<(?:[A-Za-z0-9_-]+:)?(?:text|tspan|textPath|image|feImage|script|foreignObject)(?:\s|>)/i.test(svg.toString('utf8'))) {
-    throw new Error(`Unsafe or non-vector content remains in ${item.name}.svg.`);
-  }
+  assertVectorSvg(svg, item.name);
+  item.svgSha256 = sha256(svg);
   const { data, info } = await sharp(svg).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   if (info.width !== item.width || info.height !== item.height) throw new Error(`Incorrect dimensions: ${item.name}`);
   const hash = createHash('sha256').update(`${info.width}x${info.height}:`).update(data).digest('hex');

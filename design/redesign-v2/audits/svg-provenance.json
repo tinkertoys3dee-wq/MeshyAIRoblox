@@ -1,0 +1,431 @@
+{
+  "generatedAtUtc": "2026-10-07T12:53:28.452644+00:00",
+  "scope": "Nine redesign-v2 design SVGs, artwork SVGs, exported runtime SVGs, manifest, and runtime registry.",
+  "runtimeNames": 509,
+  "registryNames": 509,
+  "uniqueRuntimeIds": 347,
+  "svgFilesInspected": 602,
+  "svgCountsByDirectory": {
+    "svg": 9,
+    "artwork": 84,
+    "assets/svg": 509
+  },
+  "rasterEmbeddingsOrExternalReferences": [],
+  "missingSVGOrRegistryNames": [],
+  "homeAliases": [
+    "V2_Arcade_arcadeBackdrop",
+    "V2_Runway_runwayBackdrop",
+    "V2_Settings_settingsBackdrop"
+  ],
+  "rasterRenderingPipeline": "design/render_screen_assets.mjs uses sharp(svg).ensureAlpha().raw() then encodes those pixels as PNG. export_runtime_assets.py extracts SVG groups; it does not crop reference PNGs.",
+  "aiOriginatedVectorTraces": 44,
+  "aiOriginatedVectorTracesByScreen": {
+    "arcade": 20,
+    "create": 6,
+    "games": 3,
+    "runway": 6,
+    "settings": 9
+  },
+  "nativeOrReusedVectorRuntimeNames": 465,
+  "excludedLiveArtNames": 37,
+  "tracedRuntimeArtwork": [
+    {
+      "name": "V2_Arcade_ArcadeController",
+      "sourceName": "ArcadeController",
+      "screen": "arcade",
+      "assetId": 136328975261258,
+      "svg": "svg/V2_Arcade_ArcadeController.svg",
+      "png": "png/V2_Arcade_ArcadeController.png",
+      "sourceBounds": "73 238 163 117"
+    },
+    {
+      "name": "V2_Arcade_ArcadeCrown",
+      "sourceName": "ArcadeCrown",
+      "screen": "arcade",
+      "assetId": 119595461739944,
+      "svg": "svg/V2_Arcade_ArcadeCrown.svg",
+      "png": "png/V2_Arcade_ArcadeCrown.png",
+      "sourceBounds": "508 235 70 62"
+    },
+    {
+      "name": "V2_Arcade_ArcadeTrophy",
+      "sourceName": "ArcadeTrophy",
+      "screen": "arcade",
+      "assetId": 103316369176248,
+      "svg": "svg/V2_Arcade_ArcadeTrophy.svg",
+      "png": "png/V2_Arcade_ArcadeTrophy.png",
+      "sourceBounds": "733 243 89 112"
+    },
+    {
+      "name": "V2_Arcade_ArcadeCoins1",
+      "sourceName": "ArcadeCoins1",
+      "screen": "arcade",
+      "assetId": 132049011645002,
+      "svg": "svg/V2_Arcade_ArcadeCoins1.svg",
+      "png": "png/V2_Arcade_ArcadeCoins1.png",
+      "sourceBounds": "858 324 70 34"
+    },
+    {
+      "name": "V2_Arcade_ArcadeCoins2",
+      "sourceName": "ArcadeCoins2",
+      "screen": "arcade",
+      "assetId": 101090106528758,
+      "svg": "svg/V2_Arcade_ArcadeCoins2.svg",
+      "png": "png/V2_Arcade_ArcadeCoins2.png",
+      "sourceBounds": "983 324 70 34"
+    },
+    {
+      "name": "V2_Arcade_ArcadeCoins3",
+      "sourceName": "ArcadeCoins3",
+      "screen": "arcade",
+      "assetId": 81830890962038,
+      "svg": "svg/V2_Arcade_ArcadeCoins3.svg",
+      "png": "png/V2_Arcade_ArcadeCoins3.png",
+      "sourceBounds": "1106 324 70 34"
+    },
+    {
+      "name": "V2_Arcade_ArcadeCalendar",
+      "sourceName": "ArcadeCalendar",
+      "screen": "arcade",
+      "assetId": 92259050662616,
+      "svg": "svg/V2_Arcade_ArcadeCalendar.svg",
+      "png": "png/V2_Arcade_ArcadeCalendar.png",
+      "sourceBounds": "1240 240 88 87"
+    },
+    {
+      "name": "V2_Arcade_ArcadeGift",
+      "sourceName": "ArcadeGift",
+      "screen": "arcade",
+      "assetId": 108189504853982,
+      "svg": "svg/V2_Arcade_ArcadeGift.svg",
+      "png": "png/V2_Arcade_ArcadeGift.png",
+      "sourceBounds": "1527 247 83 90"
+    },
+    {
+      "name": "V2_Arcade_ArcadeFlappyBird",
+      "sourceName": "ArcadeFlappyBird",
+      "screen": "arcade",
+      "assetId": 106414020560059,
+      "svg": "svg/V2_Arcade_ArcadeFlappyBird.svg",
+      "png": "png/V2_Arcade_ArcadeFlappyBird.png",
+      "sourceBounds": "66 384 181 157"
+    },
+    {
+      "name": "V2_Arcade_ArcadeDinoRunner",
+      "sourceName": "ArcadeDinoRunner",
+      "screen": "arcade",
+      "assetId": 129436921620848,
+      "svg": "svg/V2_Arcade_ArcadeDinoRunner.svg",
+      "png": "png/V2_Arcade_ArcadeDinoRunner.png",
+      "sourceBounds": "458 384 182 157"
+    },
+    {
+      "name": "V2_Arcade_ArcadeColorSwitch",
+      "sourceName": "ArcadeColorSwitch",
+      "screen": "arcade",
+      "assetId": 73792664299435,
+      "svg": "svg/V2_Arcade_ArcadeColorSwitch.svg",
+      "png": "png/V2_Arcade_ArcadeColorSwitch.png",
+      "sourceBounds": "848 384 171 157"
+    },
+    {
+      "name": "V2_Arcade_ArcadeNeonSnake",
+      "sourceName": "ArcadeNeonSnake",
+      "screen": "arcade",
+      "assetId": 94168567056079,
+      "svg": "svg/V2_Arcade_ArcadeNeonSnake.svg",
+      "png": "png/V2_Arcade_ArcadeNeonSnake.png",
+      "sourceBounds": "1236 384 179 157"
+    },
+    {
+      "name": "V2_Arcade_ArcadeBlockStacker",
+      "sourceName": "ArcadeBlockStacker",
+      "screen": "arcade",
+      "assetId": 136719404793531,
+      "svg": "svg/V2_Arcade_ArcadeBlockStacker.svg",
+      "png": "png/V2_Arcade_ArcadeBlockStacker.png",
+      "sourceBounds": "66 560 181 153"
+    },
+    {
+      "name": "V2_Arcade_ArcadeBrickBreaker",
+      "sourceName": "ArcadeBrickBreaker",
+      "screen": "arcade",
+      "assetId": 139239266946858,
+      "svg": "svg/V2_Arcade_ArcadeBrickBreaker.svg",
+      "png": "png/V2_Arcade_ArcadeBrickBreaker.png",
+      "sourceBounds": "458 560 182 153"
+    },
+    {
+      "name": "V2_Arcade_ArcadeReflexTap",
+      "sourceName": "ArcadeReflexTap",
+      "screen": "arcade",
+      "assetId": 130468239723297,
+      "svg": "svg/V2_Arcade_ArcadeReflexTap.svg",
+      "png": "png/V2_Arcade_ArcadeReflexTap.png",
+      "sourceBounds": "848 560 171 153"
+    },
+    {
+      "name": "V2_Arcade_ArcadePrismMerge",
+      "sourceName": "ArcadePrismMerge",
+      "screen": "arcade",
+      "assetId": 86549189020694,
+      "svg": "svg/V2_Arcade_ArcadePrismMerge.svg",
+      "png": "png/V2_Arcade_ArcadePrismMerge.png",
+      "sourceBounds": "1236 560 179 153"
+    },
+    {
+      "name": "V2_Arcade_ArcadeMeteorRush",
+      "sourceName": "ArcadeMeteorRush",
+      "screen": "arcade",
+      "assetId": 113740604476011,
+      "svg": "svg/V2_Arcade_ArcadeMeteorRush.svg",
+      "png": "png/V2_Arcade_ArcadeMeteorRush.png",
+      "sourceBounds": "66 731 181 154"
+    },
+    {
+      "name": "V2_Arcade_ArcadeSkyHopper",
+      "sourceName": "ArcadeSkyHopper",
+      "screen": "arcade",
+      "assetId": 77869883048310,
+      "svg": "svg/V2_Arcade_ArcadeSkyHopper.svg",
+      "png": "png/V2_Arcade_ArcadeSkyHopper.png",
+      "sourceBounds": "458 731 182 154"
+    },
+    {
+      "name": "V2_Arcade_ArcadeEchoMatch",
+      "sourceName": "ArcadeEchoMatch",
+      "screen": "arcade",
+      "assetId": 83501521748726,
+      "svg": "svg/V2_Arcade_ArcadeEchoMatch.svg",
+      "png": "png/V2_Arcade_ArcadeEchoMatch.png",
+      "sourceBounds": "848 731 171 154"
+    },
+    {
+      "name": "V2_Arcade_ArcadeLeaderboard",
+      "sourceName": "ArcadeLeaderboard",
+      "screen": "arcade",
+      "assetId": 125121112560829,
+      "svg": "svg/V2_Arcade_ArcadeLeaderboard.svg",
+      "png": "png/V2_Arcade_ArcadeLeaderboard.png",
+      "sourceBounds": "1236 731 179 154"
+    },
+    {
+      "name": "V2_Create_CreateIdeaDragonArt",
+      "sourceName": "CreateIdeaDragonArt",
+      "screen": "create",
+      "assetId": 124283617556311,
+      "svg": "svg/V2_Create_CreateIdeaDragonArt.svg",
+      "png": "png/V2_Create_CreateIdeaDragonArt.png",
+      "sourceBounds": "95 589 131 107"
+    },
+    {
+      "name": "V2_Create_CreateIdeaCrownArt",
+      "sourceName": "CreateIdeaCrownArt",
+      "screen": "create",
+      "assetId": 122292378419366,
+      "svg": "svg/V2_Create_CreateIdeaCrownArt.svg",
+      "png": "png/V2_Create_CreateIdeaCrownArt.png",
+      "sourceBounds": "253 589 131 107"
+    },
+    {
+      "name": "V2_Create_CreateIdeaKatanaArt",
+      "sourceName": "CreateIdeaKatanaArt",
+      "screen": "create",
+      "assetId": 73288946058634,
+      "svg": "svg/V2_Create_CreateIdeaKatanaArt.svg",
+      "png": "png/V2_Create_CreateIdeaKatanaArt.png",
+      "sourceBounds": "411 589 131 107"
+    },
+    {
+      "name": "V2_Create_CreateIdeaHatArt",
+      "sourceName": "CreateIdeaHatArt",
+      "screen": "create",
+      "assetId": 94804142584353,
+      "svg": "svg/V2_Create_CreateIdeaHatArt.svg",
+      "png": "png/V2_Create_CreateIdeaHatArt.png",
+      "sourceBounds": "569 589 131 107"
+    },
+    {
+      "name": "V2_Create_CreateIdeaFairyArt",
+      "sourceName": "CreateIdeaFairyArt",
+      "screen": "create",
+      "assetId": 72216949293552,
+      "svg": "svg/V2_Create_CreateIdeaFairyArt.svg",
+      "png": "png/V2_Create_CreateIdeaFairyArt.png",
+      "sourceBounds": "727 589 131 107"
+    },
+    {
+      "name": "V2_Create_CreateHeroV2",
+      "sourceName": "CreateHeroV2",
+      "screen": "create",
+      "assetId": 72539383338057,
+      "svg": "svg/V2_Create_CreateHeroV2.svg",
+      "png": "png/V2_Create_CreateHeroV2.png",
+      "sourceBounds": "902 310 714 576"
+    },
+    {
+      "name": "V2_Games_GamesArcadeSceneArt",
+      "sourceName": "GamesArcadeSceneArt",
+      "screen": "games",
+      "assetId": 113393975906354,
+      "svg": "svg/V2_Games_GamesArcadeSceneArt.svg",
+      "png": "png/V2_Games_GamesArcadeSceneArt.png",
+      "sourceBounds": "72 454 503 337"
+    },
+    {
+      "name": "V2_Games_GamesRunwaySceneArt",
+      "sourceName": "GamesRunwaySceneArt",
+      "screen": "games",
+      "assetId": 76195208870908,
+      "svg": "svg/V2_Games_GamesRunwaySceneArt.svg",
+      "png": "png/V2_Games_GamesRunwaySceneArt.png",
+      "sourceBounds": "597 454 497 337"
+    },
+    {
+      "name": "V2_Games_GamesLoungeSceneArt",
+      "sourceName": "GamesLoungeSceneArt",
+      "screen": "games",
+      "assetId": 85424262035040,
+      "svg": "svg/V2_Games_GamesLoungeSceneArt.svg",
+      "png": "png/V2_Games_GamesLoungeSceneArt.png",
+      "sourceBounds": "1121 454 491 337"
+    },
+    {
+      "name": "V2_Runway_RunwayTitleCrown",
+      "sourceName": "RunwayTitleCrown",
+      "screen": "runway",
+      "assetId": 117967666301723,
+      "svg": "svg/V2_Runway_RunwayTitleCrown.svg",
+      "png": "png/V2_Runway_RunwayTitleCrown.png",
+      "sourceBounds": "61 225 108 110"
+    },
+    {
+      "name": "V2_Runway_RunwayThemeLeftCrystals",
+      "sourceName": "RunwayThemeLeftCrystals",
+      "screen": "runway",
+      "assetId": 137202274341949,
+      "svg": "svg/V2_Runway_RunwayThemeLeftCrystals.svg",
+      "png": "png/V2_Runway_RunwayThemeLeftCrystals.png",
+      "sourceBounds": "670 226 124 112"
+    },
+    {
+      "name": "V2_Runway_RunwayThemeRightCrystals",
+      "sourceName": "RunwayThemeRightCrystals",
+      "screen": "runway",
+      "assetId": 111369975598911,
+      "svg": "svg/V2_Runway_RunwayThemeRightCrystals.svg",
+      "png": "png/V2_Runway_RunwayThemeRightCrystals.png",
+      "sourceBounds": "1152 224 82 112"
+    },
+    {
+      "name": "V2_Runway_RunwayThemeCrown",
+      "sourceName": "RunwayThemeCrown",
+      "screen": "runway",
+      "assetId": 126500429115284,
+      "svg": "svg/V2_Runway_RunwayThemeCrown.svg",
+      "png": "png/V2_Runway_RunwayThemeCrown.png",
+      "sourceBounds": "796 240 68 74"
+    },
+    {
+      "name": "V2_Runway_RunwayTimerCrystals",
+      "sourceName": "RunwayTimerCrystals",
+      "screen": "runway",
+      "assetId": 129983733433320,
+      "svg": "svg/V2_Runway_RunwayTimerCrystals.svg",
+      "png": "png/V2_Runway_RunwayTimerCrystals.png",
+      "sourceBounds": "1538 224 82 112"
+    },
+    {
+      "name": "V2_Runway_RunwayWeeklyRewardArt",
+      "sourceName": "RunwayWeeklyRewardArt",
+      "screen": "runway",
+      "assetId": 80080345398404,
+      "svg": "svg/V2_Runway_RunwayWeeklyRewardArt.svg",
+      "png": "png/V2_Runway_RunwayWeeklyRewardArt.png",
+      "sourceBounds": "1207 750 166 121"
+    },
+    {
+      "name": "V2_Settings_SettingsCreationArt",
+      "sourceName": "SettingsCreationArt",
+      "screen": "settings",
+      "assetId": 123478836760795,
+      "svg": "svg/V2_Settings_SettingsCreationArt.svg",
+      "png": "png/V2_Settings_SettingsCreationArt.png",
+      "sourceBounds": "72 338 230 194"
+    },
+    {
+      "name": "V2_Settings_SettingsAccessibilityArt",
+      "sourceName": "SettingsAccessibilityArt",
+      "screen": "settings",
+      "assetId": 100955519448881,
+      "svg": "svg/V2_Settings_SettingsAccessibilityArt.svg",
+      "png": "png/V2_Settings_SettingsAccessibilityArt.png",
+      "sourceBounds": "855 337 216 194"
+    },
+    {
+      "name": "V2_Settings_SettingsAudioArt",
+      "sourceName": "SettingsAudioArt",
+      "screen": "settings",
+      "assetId": 130524651121693,
+      "svg": "svg/V2_Settings_SettingsAudioArt.svg",
+      "png": "png/V2_Settings_SettingsAudioArt.png",
+      "sourceBounds": "74 560 225 140"
+    },
+    {
+      "name": "V2_Settings_SettingsTrophyArt",
+      "sourceName": "SettingsTrophyArt",
+      "screen": "settings",
+      "assetId": 107608268599945,
+      "svg": "svg/V2_Settings_SettingsTrophyArt.svg",
+      "png": "png/V2_Settings_SettingsTrophyArt.png",
+      "sourceBounds": "76 738 192 162"
+    },
+    {
+      "name": "V2_Settings_SettingsFirstSparkArt",
+      "sourceName": "SettingsFirstSparkArt",
+      "screen": "settings",
+      "assetId": 97512140532102,
+      "svg": "svg/V2_Settings_SettingsFirstSparkArt.svg",
+      "png": "png/V2_Settings_SettingsFirstSparkArt.png",
+      "sourceBounds": "295 783 91 75"
+    },
+    {
+      "name": "V2_Settings_SettingsInviteArt",
+      "sourceName": "SettingsInviteArt",
+      "screen": "settings",
+      "assetId": 71660416789634,
+      "svg": "svg/V2_Settings_SettingsInviteArt.svg",
+      "png": "png/V2_Settings_SettingsInviteArt.png",
+      "sourceBounds": "427 782 99 76"
+    },
+    {
+      "name": "V2_Settings_SettingsCollectorArt",
+      "sourceName": "SettingsCollectorArt",
+      "screen": "settings",
+      "assetId": 101263606023574,
+      "svg": "svg/V2_Settings_SettingsCollectorArt.svg",
+      "png": "png/V2_Settings_SettingsCollectorArt.png",
+      "sourceBounds": "565 783 96 75"
+    },
+    {
+      "name": "V2_Settings_SettingsProlificArt",
+      "sourceName": "SettingsProlificArt",
+      "screen": "settings",
+      "assetId": 123059814663909,
+      "svg": "svg/V2_Settings_SettingsProlificArt.svg",
+      "png": "png/V2_Settings_SettingsProlificArt.png",
+      "sourceBounds": "699 782 95 76"
+    },
+    {
+      "name": "V2_Settings_SettingsCommunityArt",
+      "sourceName": "SettingsCommunityArt",
+      "screen": "settings",
+      "assetId": 87586070891006,
+      "svg": "svg/V2_Settings_SettingsCommunityArt.svg",
+      "png": "png/V2_Settings_SettingsCommunityArt.png",
+      "sourceBounds": "857 738 213 162"
+    }
+  ],
+  "interpretation": "The runtime PNGs originate in genuine standalone vector SVGs, but traced decorative SVGs retain the look of their AI-generated reference artwork. Vectorizing an AI bitmap does not redesign it.",
+  "recommendedVisualFix": "Redraw the active traced decorations with a consistent native vector illustration system, then regenerate only changed PNGs and update their approved Roblox image IDs. Preserve live thumbnails, avatars, and user-generated content."
+}

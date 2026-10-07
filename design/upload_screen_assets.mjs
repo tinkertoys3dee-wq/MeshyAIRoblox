@@ -6,6 +6,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
+import { verifySvgPng } from './svg_png_guard.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const api = 'https://apis.roblox.com/assets/v1';
@@ -22,6 +23,13 @@ const selfTest = args.includes('--self-test');
 const retryUncertain = args.includes('--retry-uncertain');
 if (retryUncertain && args.includes('--force')) throw new Error('--retry-uncertain reuses known uploads; do not combine it with --force.');
 const manifest = JSON.parse(await fs.readFile(path.join(dir, 'manifest.json'), 'utf8'));
+if (!selfTest) {
+  const svgCache = new Map();
+  for (const item of manifest) {
+    if (!item.homeAsset) await verifySvgPng(dir, item, { cache: svgCache });
+    else await verifySvgPng(path.join(here, 'home'), { name: item.homeAsset, file: `png/${item.homeAsset}.png` }, { cache: svgCache });
+  }
+}
 const knownNames = new Set(manifest.map(item => item.name));
 const only = value('--only')?.split(',');
 if (only?.some(name => !knownNames.has(name))) throw new Error('Unknown asset in --only.');

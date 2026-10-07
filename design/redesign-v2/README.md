@@ -36,6 +36,11 @@ live content. Complete mobile, Advanced, and public-image discovery flows
 remain available through their existing scrollable layouts. See
 `assets/README.md` and `assets/verification.json` for the upload inventory.
 
+`SVG-ORIGIN.md` records the audit of all static UI SVG-to-PNG origins, including
+the older fallback assets. `node design/verify_svg_png_provenance.mjs` verifies
+the current source/output pairs without credentials or uploads. Vector format
+does not remove the appearance of an AI illustration traced into SVG paths.
+
 The generated mockup is the visual reference for each new screen. Measure its
 actual geometry and colors before reconstructing it; these helpers contain no
 previous screen layout or design.

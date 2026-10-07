@@ -16,48 +16,84 @@
     "file": "button_primary.png",
     "kind": "slice",
     "sliceCenter": [
-      30,
-      30,
-      90,
-      90
+      18,
+      0,
+      222,
+      42
     ],
-    "usage": "Factory.Button kind='primary'/'mint' background"
+    "usage": "Factory.Button kind='primary'/'mint' background",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "button_primary.svg",
+      "sourceSha256": "a689069a1384474fb0f8312fa3603d090edc1cfebe41c10b40c13ac84f1a8728",
+      "pngSha256": "c18536ea674306c5fc464d1799032b1000dbc68cfd590322a43719887028c869",
+      "renderer": "chromium-svg",
+      "width": 240,
+      "height": 42
+    }
   },
   {
     "name": "ButtonDefault",
     "file": "button_default.png",
     "kind": "slice",
     "sliceCenter": [
-      30,
-      30,
-      90,
-      90
+      18,
+      0,
+      222,
+      42
     ],
-    "usage": "Factory.Button default/danger background"
+    "usage": "Factory.Button default background",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "button_default.svg",
+      "sourceSha256": "ef9b5a27bc7610e091b618575f9ceaac6e275cf16a7207c6ec48b08c4f0e8511",
+      "pngSha256": "77de0a10724788e572138b88ab569d0fff7130930cce6eeb279df3668c5d1253",
+      "renderer": "chromium-svg",
+      "width": 240,
+      "height": 42
+    }
   },
   {
     "name": "ButtonDanger",
     "file": "button_danger.png",
     "kind": "slice",
     "sliceCenter": [
-      30,
-      30,
-      90,
-      90
+      18,
+      0,
+      222,
+      42
     ],
-    "usage": "Factory.Button kind='danger' background"
+    "usage": "Factory.Button kind='danger' background",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "button_danger.svg",
+      "sourceSha256": "c9faba5af885d8a49334c983e882dbda4f8847ba8771ce3ebfcd486df4e6936c",
+      "pngSha256": "875e26b5bb95db79fddcfa712cdbce322f5d2e0df4e64ceed0a831f56682a5a4",
+      "renderer": "chromium-svg",
+      "width": 240,
+      "height": 42
+    }
   },
   {
     "name": "PillFrame",
     "file": "pill_frame.png",
     "kind": "slice",
     "sliceCenter": [
-      22,
-      22,
-      58,
-      58
+      16,
+      0,
+      184,
+      38
     ],
-    "usage": "Factory.Pill background"
+    "usage": "Factory.Pill background",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "pill_frame.svg",
+      "sourceSha256": "8ac38168cf5015853c981b1f3288b82d37d10b4fff647a232f27c78f68703fae",
+      "pngSha256": "f238db0898aab60f3cbd80ef970270a0a8462a0bc3ff56affa8271a6ac70cfde",
+      "renderer": "chromium-svg",
+      "width": 200,
+      "height": 38
+    }
   },
   {
     "name": "Logo",

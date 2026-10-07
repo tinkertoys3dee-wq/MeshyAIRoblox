@@ -9,7 +9,16 @@
       162,
       162
     ],
-    "usage": "Factory.Card background"
+    "usage": "Factory.Card background",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "panel_frame.svg",
+      "sourceSha256": "1eda2f92856ca8c9f97eef940aec391c0d0673cd8f55ce493758036a0bc404a6",
+      "pngSha256": "37601fbee48593ddef380d9ba85caf84e8f82e5154fed905975da99f9e816c7e",
+      "renderer": "chromium-svg",
+      "width": 240,
+      "height": 240
+    }
   },
   {
     "name": "ButtonPrimary",
@@ -21,7 +30,16 @@
       222,
       42
     ],
-    "usage": "Factory.Button kind='primary'/'mint' background"
+    "usage": "Factory.Button kind='primary'/'mint' background",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "button_primary.svg",
+      "sourceSha256": "a689069a1384474fb0f8312fa3603d090edc1cfebe41c10b40c13ac84f1a8728",
+      "pngSha256": "c18536ea674306c5fc464d1799032b1000dbc68cfd590322a43719887028c869",
+      "renderer": "chromium-svg",
+      "width": 240,
+      "height": 42
+    }
   },
   {
     "name": "ButtonDefault",
@@ -33,7 +51,16 @@
       222,
       42
     ],
-    "usage": "Factory.Button default background"
+    "usage": "Factory.Button default background",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "button_default.svg",
+      "sourceSha256": "ef9b5a27bc7610e091b618575f9ceaac6e275cf16a7207c6ec48b08c4f0e8511",
+      "pngSha256": "77de0a10724788e572138b88ab569d0fff7130930cce6eeb279df3668c5d1253",
+      "renderer": "chromium-svg",
+      "width": 240,
+      "height": 42
+    }
   },
   {
     "name": "ButtonDanger",
@@ -45,7 +72,16 @@
       222,
       42
     ],
-    "usage": "Factory.Button kind='danger' background"
+    "usage": "Factory.Button kind='danger' background",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "button_danger.svg",
+      "sourceSha256": "c9faba5af885d8a49334c983e882dbda4f8847ba8771ce3ebfcd486df4e6936c",
+      "pngSha256": "875e26b5bb95db79fddcfa712cdbce322f5d2e0df4e64ceed0a831f56682a5a4",
+      "renderer": "chromium-svg",
+      "width": 240,
+      "height": 42
+    }
   },
   {
     "name": "PillFrame",
@@ -57,7 +93,16 @@
       184,
       38
     ],
-    "usage": "Factory.Pill background"
+    "usage": "Factory.Pill background",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "pill_frame.svg",
+      "sourceSha256": "8ac38168cf5015853c981b1f3288b82d37d10b4fff647a232f27c78f68703fae",
+      "pngSha256": "f238db0898aab60f3cbd80ef970270a0a8462a0bc3ff56affa8271a6ac70cfde",
+      "renderer": "chromium-svg",
+      "width": 200,
+      "height": 38
+    }
   },
   {
     "name": "SectionBanner",
@@ -69,210 +114,525 @@
       224,
       40
     ],
-    "usage": "Factory.SectionBanner background -- notched panel title tab"
+    "usage": "Factory.SectionBanner background -- notched panel title tab",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "section_banner.svg",
+      "sourceSha256": "7660e609501e5086fe98af8c32d87f62439c8c54ba71d1dc8730dc205bc283f8",
+      "pngSha256": "febcaf02d9623f67874c0210b4f8165f80ddfe164b696deebd6dc3c9e53eb161",
+      "renderer": "chromium-svg",
+      "width": 240,
+      "height": 40
+    }
   },
   {
     "name": "Logo",
     "file": "logo.png",
     "kind": "fit",
-    "usage": "topbar brand mark"
+    "usage": "topbar brand mark",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "logo.svg",
+      "sourceSha256": "ebfd8caa5d4551d732e37186bfc2289c42b5efcb6d269474f6337a5b868c66f3",
+      "pngSha256": "fd60d41486b9925cdbf42647ef1d2e7d356909d8221264753967dd1d6695f7d8",
+      "renderer": "chromium-svg",
+      "width": 160,
+      "height": 160
+    }
   },
   {
     "name": "NavCreate",
     "file": "navcreate.png",
     "kind": "fit",
-    "usage": "sidebar nav icon for NavCreate"
+    "usage": "sidebar nav icon for NavCreate",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "navcreate.svg",
+      "sourceSha256": "dce2316c5a4b6773abcb6a4d0902703e9e590dedb94a9059832ef8da4a7aff36",
+      "pngSha256": "75cdd61f387cc7f2eda7fec5c42a60b8d3a3e09f54d6d59b3be641b0a2ef9821",
+      "renderer": "chromium-svg",
+      "width": 160,
+      "height": 160
+    }
   },
   {
     "name": "NavStudio",
     "file": "navstudio.png",
     "kind": "fit",
-    "usage": "sidebar nav icon for NavStudio"
+    "usage": "sidebar nav icon for NavStudio",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "navstudio.svg",
+      "sourceSha256": "71487915f2b8c99750412425ba15bf6e735d71bccc18cbf37b36de27428d0704",
+      "pngSha256": "a01b639ca6c476a88438ba318e868321fd9032922e52e12c5c4e68958cd2d30b",
+      "renderer": "chromium-svg",
+      "width": 160,
+      "height": 160
+    }
   },
   {
     "name": "NavDiscover",
     "file": "navdiscover.png",
     "kind": "fit",
-    "usage": "sidebar nav icon for NavDiscover"
+    "usage": "sidebar nav icon for NavDiscover",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "navdiscover.svg",
+      "sourceSha256": "43c56c896dbecac55bc30f6db254d6c9a4a2162329c50e169c12046b6afa3d68",
+      "pngSha256": "65c531e5c9deac63fbb4d8f2c0316592ceef9c9b4bd8b4232f1b575466b503b8",
+      "renderer": "chromium-svg",
+      "width": 160,
+      "height": 160
+    }
   },
   {
     "name": "NavAvatarLab",
     "file": "navavatarlab.png",
     "kind": "fit",
-    "usage": "sidebar nav icon for NavAvatarLab"
+    "usage": "sidebar nav icon for NavAvatarLab",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "navavatarlab.svg",
+      "sourceSha256": "53bcef190ece3a5b5ec3ad9ca3e0a1775522b09496c3a79632f922637bf8f29b",
+      "pngSha256": "7751894e0dba1005d6f343d73ba008a91460969e7bcac19543441efbf63207cc",
+      "renderer": "chromium-svg",
+      "width": 160,
+      "height": 160
+    }
   },
   {
     "name": "NavAvatarArt",
     "file": "navavatarart.png",
     "kind": "fit",
-    "usage": "sidebar nav icon for NavAvatarArt"
+    "usage": "sidebar nav icon for NavAvatarArt",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "navavatarart.svg",
+      "sourceSha256": "a34419e3687b462c99dd030bdc8ae348d15dcbd1e4e5c2ed6ccf45d0b97a50dd",
+      "pngSha256": "83e7c982382523cf92067be065d4f31d7bf5bca2520f23020d6acf646223f867",
+      "renderer": "chromium-svg",
+      "width": 160,
+      "height": 160
+    }
   },
   {
     "name": "NavSettings",
     "file": "navsettings.png",
     "kind": "fit",
-    "usage": "sidebar nav icon for NavSettings"
+    "usage": "sidebar nav icon for NavSettings",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "navsettings.svg",
+      "sourceSha256": "d40665740f2ecdafb1510ede1eb4d0eae89df2af1f424a09014cc0e1a2e9a108",
+      "pngSha256": "cf07b55f7d91bcf4ce769c2de22c835e07d6d318d6e85c0d78f8483c207d4813",
+      "renderer": "chromium-svg",
+      "width": 160,
+      "height": 160
+    }
   },
   {
     "name": "ItemWings",
     "file": "item_wings.png",
     "kind": "fit",
-    "usage": "standalone 'wings' item illustration (idea chips / gallery cards)"
+    "usage": "standalone 'wings' item illustration (idea chips / gallery cards)",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "item_wings.svg",
+      "sourceSha256": "03ce5194d7630cf55ccde16916f5d7293b86dee244c345d003fee36ff19b8630",
+      "pngSha256": "37f3ee2d58ee3653ddd72781fcd9a184a9260ea15288d9c359faf468df94b435",
+      "renderer": "chromium-svg",
+      "width": 360,
+      "height": 200
+    }
   },
   {
     "name": "ItemCrown",
     "file": "item_crown.png",
     "kind": "fit",
-    "usage": "standalone 'crown' item illustration (idea chips / gallery cards)"
+    "usage": "standalone 'crown' item illustration (idea chips / gallery cards)",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "item_crown.svg",
+      "sourceSha256": "dfcbede93bbf069a5b78882001cc33a932f4d8c3020eb1bf72201759ad22e546",
+      "pngSha256": "ac053de1cfa344f82d00e4d8d556af35f7cdbc542b9ef91360496cb3d517d6d3",
+      "renderer": "chromium-svg",
+      "width": 220,
+      "height": 150
+    }
   },
   {
     "name": "ItemKatana",
     "file": "item_katana.png",
     "kind": "fit",
-    "usage": "standalone 'katana' item illustration (idea chips / gallery cards)"
+    "usage": "standalone 'katana' item illustration (idea chips / gallery cards)",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "item_katana.svg",
+      "sourceSha256": "415f0bc364c8d2f70cbb78721429982d29a93b410630650654e019c75cc72318",
+      "pngSha256": "da0f6dea7c04b546cb2135d9e99521732e01d7bdc3775eead76cc6a8b3723814",
+      "renderer": "chromium-svg",
+      "width": 300,
+      "height": 300
+    }
   },
   {
     "name": "ItemHat",
     "file": "item_hat.png",
     "kind": "fit",
-    "usage": "standalone 'hat' item illustration (idea chips / gallery cards)"
+    "usage": "standalone 'hat' item illustration (idea chips / gallery cards)",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "item_hat.svg",
+      "sourceSha256": "6ffb32a0c5e9103be0c2aa751ecb314d7f1d6e8b1313841340287c26980978f9",
+      "pngSha256": "6aa8d21f22c7d9f3db42cb403af57b50140e7bf72ee3912685c5e6afd997a5e0",
+      "renderer": "chromium-svg",
+      "width": 220,
+      "height": 160
+    }
   },
   {
     "name": "ItemButterfly",
     "file": "item_butterfly.png",
     "kind": "fit",
-    "usage": "standalone 'butterfly' item illustration (idea chips / gallery cards)"
+    "usage": "standalone 'butterfly' item illustration (idea chips / gallery cards)",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "item_butterfly.svg",
+      "sourceSha256": "0754007885c0ffafb93ab778c59548066adf363c1c05db30b483d37e9b1f0d8e",
+      "pngSha256": "1f25833ac02fe157b0fde7f1e30a0622934771930084c860f01eefbf35f52011",
+      "renderer": "chromium-svg",
+      "width": 300,
+      "height": 180
+    }
   },
   {
     "name": "ItemHalo",
     "file": "item_halo.png",
     "kind": "fit",
-    "usage": "standalone 'halo' item illustration (idea chips / gallery cards)"
+    "usage": "standalone 'halo' item illustration (idea chips / gallery cards)",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "item_halo.svg",
+      "sourceSha256": "5cab3e64a01fffe095581d8bca2b282083abc9120283435936bc9d643cdfaaf6",
+      "pngSha256": "39a334857fa0b693aa59c22fd32a08ae89f5753b1a7c76120c0cf394d0cb595e",
+      "renderer": "chromium-svg",
+      "width": 200,
+      "height": 110
+    }
   },
   {
     "name": "ItemHorns",
     "file": "item_horns.png",
     "kind": "fit",
-    "usage": "standalone 'horns' item illustration (idea chips / gallery cards)"
+    "usage": "standalone 'horns' item illustration (idea chips / gallery cards)",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "item_horns.svg",
+      "sourceSha256": "ecd3be96081cf7de9909af48f1a162f453ca1c928b329eb8dc1c3ac07e05adb5",
+      "pngSha256": "a751a0eca8f9edd6c0d174e5b472b829e07d97d10af86cb9b8f4097a4dba8780",
+      "renderer": "chromium-svg",
+      "width": 180,
+      "height": 140
+    }
   },
   {
     "name": "ItemVisor",
     "file": "item_visor.png",
     "kind": "fit",
-    "usage": "standalone 'visor' item illustration (idea chips / gallery cards)"
+    "usage": "standalone 'visor' item illustration (idea chips / gallery cards)",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "item_visor.svg",
+      "sourceSha256": "cea730684fcffa46bf4f3fdb21b770831166f5a12eea81b2501c8395b56d4523",
+      "pngSha256": "6e752d5e78c6fb5ba8729b1ab9ee6cdf8184667f6ef2a43abff4ca93df5f9a44",
+      "renderer": "chromium-svg",
+      "width": 200,
+      "height": 110
+    }
   },
   {
     "name": "ItemBackpack",
     "file": "item_backpack.png",
     "kind": "fit",
-    "usage": "standalone 'backpack' item illustration (idea chips / gallery cards)"
+    "usage": "standalone 'backpack' item illustration (idea chips / gallery cards)",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "item_backpack.svg",
+      "sourceSha256": "9fa79c9e0bec7b9ffa99a325412b356480e1d3ccecc5d0555e3ae9d688c9a61e",
+      "pngSha256": "4720e1ab5e2a395e3a34dc0173b098d9dc4d15ce71393d0233ad5379690e1fe0",
+      "renderer": "chromium-svg",
+      "width": 160,
+      "height": 200
+    }
   },
   {
     "name": "ItemAvatar",
     "file": "item_avatar.png",
     "kind": "fit",
-    "usage": "standalone 'avatar' item illustration (idea chips / gallery cards)"
+    "usage": "standalone 'avatar' item illustration (idea chips / gallery cards)",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "item_avatar.svg",
+      "sourceSha256": "636ce9018fa5e1a3b7d94b8a8ba0b58d749f3340305412418c511f23577e0adc",
+      "pngSha256": "66c7758486dcd625ef1d68a5363b368c62aefec34b12986311c419bc07606269",
+      "renderer": "chromium-svg",
+      "width": 160,
+      "height": 180
+    }
   },
   {
     "name": "ItemPicture",
     "file": "item_picture.png",
     "kind": "fit",
-    "usage": "standalone 'picture' item illustration (idea chips / gallery cards)"
+    "usage": "standalone 'picture' item illustration (idea chips / gallery cards)",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "item_picture.svg",
+      "sourceSha256": "c9cb9446ce45e5930e5abf8aafc98787429f62489070a6388ad2a583ca5d5ea7",
+      "pngSha256": "de483b9e1770d225b5b9381f5d0603330a8b270ac6277fbe1138052740934c27",
+      "renderer": "chromium-svg",
+      "width": 180,
+      "height": 150
+    }
   },
   {
     "name": "ItemWand",
     "file": "item_wand.png",
     "kind": "fit",
-    "usage": "standalone 'wand' item illustration (idea chips / gallery cards)"
+    "usage": "standalone 'wand' item illustration (idea chips / gallery cards)",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "item_wand.svg",
+      "sourceSha256": "d2ffd973d888a503e8eaf8067b4b68305dcdc5804a2aea97995ccf316e44d5ee",
+      "pngSha256": "a63f7d3ee83ad3a520f0f63e3bc6bb79a9a00d9db1c107d300c86e2539213c31",
+      "renderer": "chromium-svg",
+      "width": 220,
+      "height": 220
+    }
   },
   {
     "name": "CrystalHero",
     "file": "crystal_hero.png",
     "kind": "fit",
-    "usage": "Direct Forge panel hero illustration"
+    "usage": "Direct Forge panel hero illustration",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "crystal_hero.svg",
+      "sourceSha256": "d09c5cc63d6b45be78b45c6484da09eb85d377d0509bb888767056a96034f971",
+      "pngSha256": "914076c4ae01adde3de436795fb81bc48303ed908c226be31834a4208a8c74b9",
+      "renderer": "chromium-svg",
+      "width": 170,
+      "height": 180
+    }
   },
   {
     "name": "EmberMascot",
     "file": "ember_mascot.png",
     "kind": "fit",
-    "usage": "prompt panel tip sprite"
+    "usage": "prompt panel tip sprite",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "ember_mascot.svg",
+      "sourceSha256": "7b41de5206ba88ab8a9e4f86d7692a8fb47e926d683c904b0fb09ef490f78cc4",
+      "pngSha256": "7212e2c8e7ce82c5f42f12e2aa5a012f40fe26bce6750bd9f3b9a0822766189c",
+      "renderer": "chromium-svg",
+      "width": 140,
+      "height": 140
+    }
   },
   {
     "name": "TopbarCurve",
     "file": "topbar_curve.png",
     "kind": "stretch",
-    "usage": "Topbar bottom-edge curved accent, ScaleType.Stretch across the topbar's full width"
+    "usage": "Topbar bottom-edge curved accent, ScaleType.Stretch across the topbar's full width",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "topbar_curve.svg",
+      "sourceSha256": "e6c8fc1076e1b08741bb15a31f5aee1ddf83dfae81241b340d5fde3af264920a",
+      "pngSha256": "0abdbe3283f1fc508e9ce841931102390a7c76574f4ced463265f613d47c9ab3",
+      "renderer": "chromium-svg",
+      "width": 1200,
+      "height": 30
+    }
   },
   {
     "name": "RankRingFill",
     "file": "rank_ring_fill.png",
     "kind": "fit",
-    "usage": "Creator Rank radial progress ring -- revealed 0-100% via Factory.RadialRing's rotating clip-masks"
+    "usage": "Creator Rank radial progress ring -- revealed 0-100% via Factory.RadialRing's rotating clip-masks",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "rank_ring_fill.svg",
+      "sourceSha256": "042da9da57824d9112df6fa92d5676c5ac2f0cc4bfdb1a72fd486f66813b606e",
+      "pngSha256": "5fb69365b4d177a29b92cf0d69cdd3dcdc055341f8b99e450449da6ce1795f59",
+      "renderer": "chromium-svg",
+      "width": 220,
+      "height": 220
+    }
   },
   {
     "name": "PriceCartouche",
     "file": "price_cartouche.png",
     "kind": "fit",
-    "usage": "decorative price-tag frame (overlay a real TextLabel for the amount)"
+    "usage": "decorative price-tag frame (overlay a real TextLabel for the amount)",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "price_cartouche.svg",
+      "sourceSha256": "4977e014045d1b5d0871c6de9350a237cfbe6dc296b650752d3dd1700dcd24b8",
+      "pngSha256": "3eb34bd9a0644f2848cf073400cc16ab711a1c537ee5dc889601ed95c78ea788",
+      "renderer": "chromium-svg",
+      "width": 220,
+      "height": 140
+    }
   },
   {
     "name": "CornerOrnament",
     "file": "corner_ornament.png",
     "kind": "fit",
-    "usage": "standalone gold-filigree corner scrollwork"
+    "usage": "standalone gold-filigree corner scrollwork",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "corner_ornament.svg",
+      "sourceSha256": "ef3d6751199d2451dd6a507ca28e8ae7796ed9f34574f907fb4098b3b87de98b",
+      "pngSha256": "3c2d11b07b29a2a5d571b62a880f1a7a6d25c6f1ec61e2f1f3cea7a2f2c08b1e",
+      "renderer": "chromium-svg",
+      "width": 200,
+      "height": 200
+    }
   },
   {
     "name": "FlourishDivider",
     "file": "flourish_divider.png",
     "kind": "fit",
-    "usage": "horizontal gold divider with centre gem"
+    "usage": "horizontal gold divider with centre gem",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "flourish_divider.svg",
+      "sourceSha256": "7a0949382726aedfd8aec6c8d19ea9cde836cf5c671af48b2506abe65a3866b7",
+      "pngSha256": "845d575b63256a30491c68a00adcc255736eddbe86be19715df1a13d604e74c2",
+      "renderer": "chromium-svg",
+      "width": 300,
+      "height": 60
+    }
   },
   {
     "name": "RivetStud",
     "file": "rivet_stud.png",
     "kind": "fit",
-    "usage": "small gold rivet/stud accent"
+    "usage": "small gold rivet/stud accent",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "rivet_stud.svg",
+      "sourceSha256": "3c3df7584107ccb7b0063644f5176fef7aa05a70d0cdeda596b20ef40fb291c7",
+      "pngSha256": "dbdfd0cc7da03c0c1efda4316f5549edfad55c6f4c5701d77b7acde3efbb7dd1",
+      "renderer": "chromium-svg",
+      "width": 40,
+      "height": 40
+    }
   },
   {
     "name": "SparkleStar",
     "file": "sparkle_star.png",
     "kind": "fit",
-    "usage": "4-point sparkle accent"
+    "usage": "4-point sparkle accent",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "sparkle_star.svg",
+      "sourceSha256": "c95dc18db98deaa098c0e20feb8cb8ec936a11d3cfd0953911c087061b2d5566",
+      "pngSha256": "26189e18ad755a96e2418d7dbb2db33cd288a1d57cc76c4e5cd0f13cbaf0a115",
+      "renderer": "chromium-svg",
+      "width": 60,
+      "height": 60
+    }
   },
   {
     "name": "GemCyan",
     "file": "gem_cyan.png",
     "kind": "fit",
-    "usage": "standalone gemCyan cut-gem stud"
+    "usage": "standalone gemCyan cut-gem stud",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "gem_cyan.svg",
+      "sourceSha256": "468270d3a2b07fb388a664ab3d779a047b83b5bb9206fd1031e8e707e8c7b9db",
+      "pngSha256": "e4cb577cd96b6b8a17abd0ed361629465aea9b1ef21abadf6abefdd60f956f81",
+      "renderer": "chromium-svg",
+      "width": 60,
+      "height": 60
+    }
   },
   {
     "name": "GemRose",
     "file": "gem_rose.png",
     "kind": "fit",
-    "usage": "standalone gemRose cut-gem stud"
+    "usage": "standalone gemRose cut-gem stud",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "gem_rose.svg",
+      "sourceSha256": "8bcc5d26677f2c5fe88ed00fbb34e174eecfecba337bdf9f87979641dc10fb76",
+      "pngSha256": "aa9f58c5f067f533d2413d3065da7a4ff49c37293c9f134de45813f1ef19c282",
+      "renderer": "chromium-svg",
+      "width": 60,
+      "height": 60
+    }
   },
   {
     "name": "GemMint",
     "file": "gem_mint.png",
     "kind": "fit",
-    "usage": "standalone gemMint cut-gem stud"
+    "usage": "standalone gemMint cut-gem stud",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "gem_mint.svg",
+      "sourceSha256": "4da80af44f613abef53900b290f205df2fb71590e26c86be2990012b5682c51f",
+      "pngSha256": "ec0dd17a416a26ee4dd4caceaa6bb6c23a1e990fe514127b9d7b6e8053fd951e",
+      "renderer": "chromium-svg",
+      "width": 60,
+      "height": 60
+    }
   },
   {
     "name": "GemAmethyst",
     "file": "gem_amethyst.png",
     "kind": "fit",
-    "usage": "standalone gemAmethyst cut-gem stud"
+    "usage": "standalone gemAmethyst cut-gem stud",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "gem_amethyst.svg",
+      "sourceSha256": "e9a5a85e087834e0d9c8b9cf6d8dfb86ca4ddce16a0fb969ec81dbb4ccba1929",
+      "pngSha256": "7a3b5b80964cfa1a1a8576b8319e57182af541ee21c0e89035a4dfd0b35d7df7",
+      "renderer": "chromium-svg",
+      "width": 60,
+      "height": 60
+    }
   },
   {
     "name": "GemGold",
     "file": "gem_gold.png",
     "kind": "fit",
-    "usage": "standalone gemGold cut-gem stud"
+    "usage": "standalone gemGold cut-gem stud",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "gem_gold.svg",
+      "sourceSha256": "1030feb060e3ab4ffa421e3369591957ae54aa6310bdb4f1ff0add8bfc697213",
+      "pngSha256": "f09281ff59f1e074323d5bd34c124191ae9ada1db7eef86e89bdfebe2eb8d42d",
+      "renderer": "chromium-svg",
+      "width": 60,
+      "height": 60
+    }
   },
   {
     "name": "GemRuby",
     "file": "gem_ruby.png",
     "kind": "fit",
-    "usage": "standalone gemRuby cut-gem stud"
+    "usage": "standalone gemRuby cut-gem stud",
+    "origin": {
+      "kind": "pure-svg",
+      "source": "gem_ruby.svg",
+      "sourceSha256": "cbec8fb43d76735cd8c3f71fdf9f8cf8307694059fe62f6d06f9cb43f4060757",
+      "pngSha256": "eaad9eee3acaa9b67e66a0e1ae4e943b10a283704b2c8288c63fc90d195b2e32",
+      "renderer": "chromium-svg",
+      "width": 60,
+      "height": 60
+    }
   }
 ]

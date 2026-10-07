@@ -23,6 +23,11 @@
 //
 // Then, from this directory (backend/scripts/ui-decals/):
 //   node upload.mjs
+//   node upload.mjs --dry-run  (verify only; no keys, network, or ID writes)
+//
+// The original design/assets SVGs, PNGs and manifest must remain available
+// in the checkout. Bundled PNG copies must match those vector exports before
+// this historical uploader can send them. Refresh stale copies explicitly.
 //
 // Each upload goes through Roblox's normal moderation queue like any other
 // asset -- this polls until each one is done (or reports if one gets
@@ -48,18 +53,21 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS_DIR = path.join(HERE, "assets");
 const MANIFEST_PATH = path.join(HERE, "manifest.json");
 const IDS_PATH = path.join(HERE, "ids.json");
+const SOURCE_DIR = path.resolve(HERE, "../../../design/assets");
+const VECTOR_GUARD = path.resolve(HERE, "../../../design/svg_png_guard.mjs");
 const API_BASE = "https://apis.roblox.com/assets/v1";
 
 function parseArgs(argv) {
-  const args = { force: false, only: null };
+  const args = { force: false, only: null, dryRun: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--force") args.force = true;
+    else if (argv[i] === "--dry-run") args.dryRun = true;
     else if (argv[i] === "--only") {
       args.only = [];
       while (argv[i + 1] && !argv[i + 1].startsWith("--")) args.only.push(argv[++i]);
@@ -72,7 +80,90 @@ async function loadManifest() {
   if (!existsSync(MANIFEST_PATH)) {
     throw new Error(`${MANIFEST_PATH} not found -- copy it alongside this script (see design/assets/manifest.json).`);
   }
-  return JSON.parse(await readFile(MANIFEST_PATH, "utf8"));
+  const manifest = JSON.parse(await readFile(MANIFEST_PATH, "utf8"));
+  if (!Array.isArray(manifest)) throw new Error("The bundled UI manifest must be an array.");
+  const names = new Set();
+  for (const item of manifest) {
+    if (!item || !/^[A-Za-z][A-Za-z0-9_]*$/.test(item.name || "")) throw new Error("Invalid bundled UI asset name.");
+    if (names.has(item.name)) throw new Error(`Duplicate bundled UI asset: ${item.name}`);
+    names.add(item.name);
+  }
+  return manifest;
+}
+
+function localAssetPath(directory, relative, extension) {
+  if (typeof relative !== "string" || !relative.toLowerCase().endsWith(extension)) {
+    throw new Error(`Expected a ${extension} asset file.`);
+  }
+  const root = path.resolve(directory), resolved = path.resolve(root, relative);
+  const inside = path.relative(root, resolved);
+  if (inside.startsWith("..") || path.isAbsolute(inside)) throw new Error("Asset files must remain inside their source folder.");
+  return resolved;
+}
+
+function pngDimensions(bytes, label) {
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  if (bytes.length < 33 || !bytes.subarray(0, 8).equals(signature)
+    || bytes.readUInt32BE(8) !== 13 || bytes.toString("ascii", 12, 16) !== "IHDR") {
+    throw new Error(`${label}: expected a PNG with an IHDR header.`);
+  }
+  const width = bytes.readUInt32BE(16), height = bytes.readUInt32BE(20);
+  if (!width || !height) throw new Error(`${label}: invalid PNG dimensions.`);
+  return { width, height };
+}
+
+async function validateAsset(item, { bundledDir = ASSETS_DIR, sourceDir = SOURCE_DIR } = {}) {
+  // This runs before credentials/IDs are read, and again immediately before
+  // each upload. Missing original SVG sources always fail closed.
+  const { assertVectorSvg, sha256 } = await import(pathToFileURL(VECTOR_GUARD).href);
+  const sourceManifest = JSON.parse(await readFile(path.join(sourceDir, "manifest.json"), "utf8"));
+  if (!Array.isArray(sourceManifest)) throw new Error("Original SVG export manifest must be an array.");
+  const originals = sourceManifest.filter(source => source.name === item.name);
+  if (originals.length !== 1) throw new Error(`${item.name}: expected exactly one original vector-export manifest entry.`);
+  const original = originals[0];
+  if (item.file !== original.file) throw new Error(`${item.name}: bundled file does not match its original vector export.`);
+  const originalPng = localAssetPath(sourceDir, original.file, ".png");
+  const originalSvg = originalPng.replace(/\.png$/i, ".svg");
+  const [svgBytes, exportBytes, bundledBytes] = await Promise.all([
+    readFile(originalSvg), readFile(originalPng),
+    readFile(localAssetPath(bundledDir, item.file, ".png")),
+  ]);
+  const source = assertVectorSvg(svgBytes, item.name, { allowText: true });
+  const root = source.match(/<(?:[\w.-]+:)?svg\b([^>]*)>/i)?.[1] || "";
+  const width = Number(root.match(/\bwidth=["']([\d.]+)(?:px)?["']/i)?.[1]);
+  const height = Number(root.match(/\bheight=["']([\d.]+)(?:px)?["']/i)?.[1]);
+  const dimensions = pngDimensions(exportBytes, item.name);
+  pngDimensions(bundledBytes, `${item.name} bundled copy`);
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0
+    || width !== dimensions.width || height !== dimensions.height) {
+    throw new Error(`${item.name}: original PNG dimensions do not match its genuine SVG.`);
+  }
+  if (original.origin !== undefined) {
+    const origin = original.origin;
+    if (!origin || origin.kind !== "pure-svg" || origin.renderer !== "chromium-svg"
+      || origin.source !== path.basename(originalSvg) || origin.width !== width || origin.height !== height
+      || origin.sourceSha256 !== sha256(svgBytes) || origin.pngSha256 !== sha256(exportBytes)) {
+      throw new Error(`${item.name}: SVG/PNG origin stamp is stale; render again.`);
+    }
+  }
+  if (!bundledBytes.equals(exportBytes)) {
+    throw new Error(`${item.name}: bundled PNG differs from the original SVG export; refresh this stale copy before uploading.`);
+  }
+  return { bytes: bundledBytes, svg: originalSvg, width, height,
+    svgSha256: sha256(svgBytes), pngSha256: sha256(bundledBytes) };
+}
+
+async function preflight(manifest) {
+  const failures = [];
+  let verified = 0;
+  for (const item of manifest) {
+    try { await validateAsset(item); verified++; }
+    catch (error) { failures.push(error.message); }
+  }
+  if (failures.length) {
+    throw new Error(`SVG origin preflight blocked ${failures.length}/${manifest.length} bundled images (${verified} verified):\n${failures.join("\n")}`);
+  }
+  return verified;
 }
 
 async function loadIds() {
@@ -89,8 +180,7 @@ function sleep(ms) {
 }
 
 async function uploadOne(apiKey, creatorType, creatorId, item) {
-  const filePath = path.join(ASSETS_DIR, item.file);
-  const bytes = await readFile(filePath);
+  const { bytes } = await validateAsset(item);
 
   const requestPayload = {
     assetType: "Decal",
@@ -138,6 +228,17 @@ async function uploadOne(apiKey, creatorType, creatorId, item) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  const manifest = await loadManifest();
+  if (args.only) {
+    const unknown = args.only.filter(name => !manifest.some(item => item.name === name));
+    if (!args.only.length || unknown.length) throw new Error(`--only requires known bundled asset names: ${unknown.join(", ")}`);
+  }
+  const selected = manifest.filter(item => !args.only || args.only.includes(item.name));
+  const verified = await preflight(selected);
+  if (args.dryRun) {
+    console.log(`Verified ${verified} bundled PNGs against their genuine SVG exports. No credentials read, uploads sent, or IDs written.`);
+    return;
+  }
 
   const apiKey = process.env.ROBLOX_API_KEY;
   const creatorType = process.env.ROBLOX_CREATOR_TYPE || "User";
@@ -156,7 +257,6 @@ async function main() {
     process.exit(1);
   }
 
-  const manifest = await loadManifest();
   const ids = await loadIds();
 
   for (const item of manifest) {
@@ -197,11 +297,11 @@ async function main() {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   main().catch((err) => {
-    console.error(err);
+    console.error(err.message);
     process.exit(1);
   });
 }
 
-export { uploadOne, loadManifest, loadIds, saveIds };
+export { uploadOne, loadManifest, loadIds, saveIds, validateAsset, preflight };

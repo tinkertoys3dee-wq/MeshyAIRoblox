@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { verifySvgPng } from '../svg_png_guard.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dir = path.join(here, 'assets');
@@ -21,6 +22,7 @@ const state = await fs.readFile(path.join(dir, 'upload_state.json'), 'utf8').the
 });
 const registry = requireApproved ? await fs.readFile(path.join(here, '../../src/Shared/RedesignAssets.luau'), 'utf8') : null;
 const checked = new Map();
+const svgCache = new Map();
 let approvedNames = 0;
 const errors = [];
 for (const item of manifest) {
@@ -36,11 +38,13 @@ for (const item of manifest) {
     errors.push(`${item.name}: non-vector or text content in runtime artwork`);
   }
   if (item.homeAsset) {
+    await verifySvgPng(path.join(here, '../home'), { name: item.homeAsset, file: `png/${item.homeAsset}.png` }, { cache: svgCache });
     if (!Number.isSafeInteger(homeIds[item.homeAsset]) || ids[item.name] !== homeIds[item.homeAsset]) {
       errors.push(`${item.name}: existing Home ID was not reused`);
     } else approvedNames++;
     continue;
   }
+  await verifySvgPng(dir, item, { cache: svgCache });
   const canonical = item.uploadName || item.name;
   let actual = checked.get(item.file);
   if (!actual) {
