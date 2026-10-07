@@ -97,5 +97,6 @@ check(not topbar.Visible and not chrome.nav.Visible and chrome.editorRoot.Visibl
 check(chrome.content.Parent == chrome.editorCanvas and chrome.content.Size.X.Offset == 1586, "Editor pages use the shared logical SVG canvas")
 chrome.compact = true
 chrome:_ApplyHomeChrome()
-check(chrome.content.Position.Y.Offset == 218 and chrome.content.Size.Y.Offset == -230, "Mobile editor pages leave room for the compact modern header")
+local compactHeaderHeight = if chrome.editorRoot.AbsoluteSize.X >= 520 then 168 else 200
+check(chrome.content.Position.Y.Offset == compactHeaderHeight and chrome.content.Size.Y.Offset == -compactHeaderHeight - 12, "Mobile editor pages leave room for the shorter compact modern header")
 return checks

@@ -5,6 +5,7 @@
 -- purchase disclosures and overflow content keep their original instances.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Factory = require(script.Parent.Factory)
+local RedesignSkin = require(script.Parent.RedesignSkin)
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local success, uploaded = pcall(function()
 	local module = ReplicatedStorage:FindFirstChild("ScreenAssets")
@@ -60,7 +61,7 @@ function Layouts.Skin(target: GuiObject, key: string): boolean
 		Name = "ForgeScreenArt", Image = "rbxassetid://" .. tostring(id), Active = false,
 		Position = if padded then UDim2.fromOffset(-8, -8) else UDim2.new(),
 		Size = if padded then UDim2.new(1, 16, 1, 20) else UDim2.fromScale(1, 1),
-		BackgroundTransparency = 1, BorderSizePixel = 0, ImageTransparency = 1,
+		BackgroundTransparency = 1, BorderSizePixel = 0, ImageTransparency = 0,
 		ScaleType = if padded then Enum.ScaleType.Stretch else Enum.ScaleType.Fit,
 		ZIndex = layer, Parent = target,
 	})
@@ -78,7 +79,7 @@ function Layouts.Skin(target: GuiObject, key: string): boolean
 	local authoredBorder = if border then border.Transparency else 0
 	local function refresh()
 		local loaded = art.IsLoaded == true and not Theme.IsHighContrast
-		art.ImageTransparency = if loaded then 0 else 1
+		art.ImageTransparency = if Theme.IsHighContrast then 1 else 0
 		if oldDecal then oldDecal.Visible = not loaded end
 		target.BackgroundTransparency = if loaded or (oldDecal and oldDecal.IsLoaded == true) then 1 else authoredAlpha
 		if border then border.Transparency = if loaded then 1 else authoredBorder end
@@ -394,9 +395,276 @@ local function catalog(app: any, simple: boolean)
 	end
 end
 
+local function compactGraphicsDiscover(app: any, simple: boolean)
+	local content = app.content
+	local page = content:FindFirstChild("GraphicsDiscoverScroll")
+	if not page then
+		local children = direct(content, "GuiObject")
+		page = Factory.New("ScrollingFrame", {
+			Name = "GraphicsDiscoverScroll", Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -24, 1, 0),
+			BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5, ZIndex = 3,
+			ScrollBarImageColor3 = Theme.Colors.Violet, AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.Y, Parent = content,
+		})
+		for _, child in children do
+			if child.Name == "FlourishDivider" then child.Visible = false else child.Parent = page end
+		end
+	end
+	local title, subtitle = page:FindFirstChild("PageTitle"), page:FindFirstChild("PageSubtitle")
+	if title then
+		title.Position = UDim2.fromOffset(16, 8); title.Size = UDim2.new(1, -112, 0, 42)
+		textSize(title, 27); title.TextTruncate = Enum.TextTruncate.AtEnd
+	end
+	if subtitle then
+		subtitle.Text = "Explore creator art. Tap a poster to open it."
+		subtitle.Position = UDim2.fromOffset(16, 58); subtitle.Size = UDim2.new(1, -32, 0, 42)
+		textSize(subtitle, 16); subtitle.TextWrapped = true
+	end
+	local grid
+	for _, child in direct(page, "ScrollingFrame") do
+		if child:FindFirstChildOfClass("UIGridLayout") then grid = child; break end
+	end
+	for _, row in direct(page, "Frame") do
+		local buttons = direct(row, "TextButton")
+		if #buttons == 2 and buttons[1].Text == "Create" then
+			row.Position = UDim2.fromOffset(16, 112); row.Size = UDim2.new(1, -32, 0, 48)
+			for _, button in buttons do button.Size = UDim2.new(.5, -4, 0, 46); textSize(button, 18) end
+		elseif row:FindFirstChildOfClass("TextBox") then
+			row.Position = UDim2.fromOffset(16, 176); row.Size = UDim2.new(1, -32, 0, 106)
+			local field = row:FindFirstChildOfClass("TextBox")
+			field.Size = UDim2.new(1, 0, 0, 48); textSize(field, 18)
+			for _, button in buttons do
+				if button.Text == "Search" then
+					button.Position = UDim2.fromOffset(0, 58); button.Size = UDim2.new(1, 0, 0, 46); textSize(button, 19)
+				end
+			end
+		elseif not row:GetAttribute("ForgeV2Decoration") then
+			row.Position = UDim2.fromOffset(16, 176); row.Size = UDim2.new(1, -32, 0, 220)
+			for _, label in direct(row, "TextLabel") do textSize(label, if label.Position.Y.Offset < 60 then 22 else 17) end
+		end
+	end
+	local filters = page:FindFirstChild("GraphicsMarketplaceFilters")
+	if filters then
+		filters.Position = UDim2.fromOffset(16, 294); filters.Size = UDim2.new(1, -32, 0, 54)
+		for _, chip in direct(filters, "TextButton") do
+			chip.Size = UDim2.fromOffset(if string.find(chip.Text, "Simple", 1, true) then 169 else 129, 46); textSize(chip, 17)
+		end
+	end
+	for _, button in direct(page, "TextButton") do
+		if string.find(button.Text, "Advanced Mode", 1, true) then
+			button.Position = UDim2.fromOffset(16, 294); button.Size = UDim2.new(1, -32, 0, 60)
+			textSize(button, 17); button.TextWrapped = true
+		elseif button.Text == "HOME" then
+			button.Position = UDim2.new(1, -88, 0, 8); button.Size = UDim2.fromOffset(72, 40); textSize(button, 16)
+		end
+	end
+	for _, label in direct(page, "TextLabel") do
+		if string.find(label.Text, "Loading trending", 1, true) then
+			label.Position = UDim2.fromOffset(16, 372); label.Size = UDim2.new(1, -32, 0, 72); textSize(label, 21)
+		end
+	end
+	if not grid then return end
+	local columns = math.clamp(app.gridColumns or 1, 1, 2)
+	local cards = direct(grid, "Frame")
+	local rows = math.max(1, math.ceil(#cards / columns))
+	local cardHeight = if simple then 344 else 398
+	grid.Position = UDim2.fromOffset(16, 372); grid.Size = UDim2.new(1, -32, 0, rows * (cardHeight + 16))
+	grid.AutomaticCanvasSize = Enum.AutomaticSize.None; grid.CanvasSize = UDim2.new()
+	grid.ScrollingEnabled = false; grid.ScrollBarThickness = 0; padding(grid, 0)
+	local layout = grid:FindFirstChildOfClass("UIGridLayout")
+	local function cellSize()
+		layout.CellSize = UDim2.new(1 / columns, -16 * (columns - 1) / columns, 0, cardHeight)
+		layout.CellPadding = UDim2.fromOffset(16, 16)
+	end
+	cellSize()
+	if not grid:GetAttribute("ForgeCompactDiscoverGridBound") then
+		grid:SetAttribute("ForgeCompactDiscoverGridBound", true)
+		local resized = layout:GetPropertyChangedSignal("CellSize"):Connect(function()
+			if layout.CellSize.X.Scale ~= 1 / columns or layout.CellSize.X.Offset ~= -16 * (columns - 1) / columns
+				or layout.CellSize.Y.Offset ~= cardHeight then cellSize() end
+		end)
+		grid.Destroying:Connect(function() resized:Disconnect() end)
+	end
+	for _, card in cards do
+		if card.Name ~= "CommunityGraphic" then continue end
+		card.ZIndex = 4; RedesignSkin.Skin(card, "avatar-graphics", "GraphicsFormArt")
+		local image = direct(card, "ImageLabel")[1]
+		if image then image.Position = UDim2.fromOffset(12, 12); image.Size = UDim2.new(1, -24, 0, 180); image.ScaleType = Enum.ScaleType.Fit; image.ZIndex = 7 end
+		for _, label in direct(card, "TextLabel") do
+			local creator = string.sub(label.Text, 1, 4) == "by @"
+			local price = string.sub(label.Text, 1, 3) == "R$ "
+			label.Name = if creator then "GraphicsDiscoverCreator" elseif price then "GraphicsDiscoverPrice" else "GraphicsDiscoverTitle"
+			label.Position = UDim2.fromOffset(12, if creator then 255 elseif price then 24 else 202)
+			label.Size = if price then UDim2.fromOffset(100, 29) else UDim2.new(1, -24, 0, if creator then 26 else 48)
+			textSize(label, if creator then 16 elseif price then 17 else 20); label.ZIndex = 7
+			if price then local caption = Factory.LiftLabel(label); if caption then caption.ZIndex = 8 end end
+		end
+		local expand = card:FindFirstChild("ExpandHit")
+		if expand then expand.Size = UDim2.new(1, 0, 0, 284); expand.ZIndex = 8 end
+		for _, button in direct(card, "TextButton") do
+			if button.Name == "ExpandHit" then continue end
+			local buy = button.Text == "Buy copy" or button.Text == "Not for sale"
+			if buy then
+				button.Name = "GraphicsDiscoverBuy"
+				button.Position = UDim2.fromOffset(12, 289); button.Size = UDim2.new(1, -24, 0, 44); textSize(button, 18)
+			else
+				local favorite = button.Position.X.Scale == .5
+				button.Name = if favorite then "GraphicsDiscoverFavorite" else "GraphicsDiscoverLike"
+				button.Position = UDim2.new(if favorite then .5 else 0, if favorite then 6 else 12, 0, if simple then 289 else 345)
+				button.Size = UDim2.new(.5, -18, 0, 44); textSize(button, 18)
+				for _, glyph in direct(button, "TextLabel") do
+					if glyph.Name ~= "Label" then place(glyph, 8, 0, 24, 44); textSize(glyph, 23); glyph.ZIndex = 11 end
+				end
+			end
+			button.ZIndex = 9
+			local caption = Factory.LiftLabel(button)
+			if caption then caption.ZIndex = 10 end
+		end
+	end
+	for _, label in direct(grid, "TextLabel") do label.Size = UDim2.new(1, -16, 0, 180); textSize(label, 21) end
+end
+
+local function graphicsDiscover(app: any, simple: boolean)
+	local content = app.content
+	local title, subtitle = content:FindFirstChild("PageTitle"), content:FindFirstChild("PageSubtitle")
+	if title then
+		place(title, 96, 4, 1000, 54); textSize(title, 40); title.Font = Theme.Fonts.Black
+	end
+	if subtitle then
+		subtitle.Text = "Explore pictures shared by creators. Open a poster to see the full artwork."
+		place(subtitle, 31, 63, 1180, 29); textSize(subtitle, 19)
+	end
+	RedesignSkin.Decoration(content, "avatar-graphics", "GraphicsTitleSparkle1", 35, 7, 49, 49)
+	local grid
+	for _, child in direct(content, "ScrollingFrame") do
+		if child:FindFirstChildOfClass("UIGridLayout") then grid = child; break end
+	end
+	for _, row in direct(content, "Frame") do
+		local buttons = direct(row, "TextButton")
+		if #buttons == 2 and buttons[1].Text == "Create" then
+			place(row, 1194, 10, 367, 54)
+			for index, button in buttons do
+				button.Size = UDim2.fromOffset(179, 54); textSize(button, 22)
+				button.Font = Theme.Fonts.Bold; button.ZIndex = 5
+				if index == 2 then RedesignSkin.Skin(button, "avatar-graphics", "GraphicsCreateTabArt") end
+				local caption = Factory.LiftLabel(button)
+				if caption then
+					place(caption, 49, 0, 122, 54); caption.TextXAlignment = Enum.TextXAlignment.Left; caption.ZIndex = 7
+				end
+				RedesignSkin.Decoration(button, "avatar-graphics", if index == 1 then "GraphicsCreateTabIcon" else "GraphicsDiscoverTabIcon", 14, 12, 30, 30)
+			end
+		elseif row:FindFirstChildOfClass("TextBox") then
+			place(row, 31, 105, 1530, 54)
+			local field = row:FindFirstChildOfClass("TextBox")
+			field.Size = UDim2.new(1, -183, 0, 54); textSize(field, 22)
+			for _, button in buttons do
+				if button.Text == "Search" then
+					place(button, 1363, 0, 167, 54); textSize(button, 22)
+				end
+			end
+		end
+	end
+	local filters = content:FindFirstChild("GraphicsMarketplaceFilters")
+	if filters then
+		place(filters, 31, 170, 1530, 46)
+		for _, chip in direct(filters, "TextButton") do
+			chip.Size = UDim2.fromOffset(if string.find(chip.Text, "Simple", 1, true) then 183 else 142, 42)
+			textSize(chip, 18)
+		end
+	end
+	for _, button in direct(content, "TextButton") do
+		if string.find(button.Text, "Advanced Mode", 1, true) then
+			place(button, 853, 172, 708, 37); textSize(button, 18)
+		end
+	end
+	if not grid then
+		for _, label in direct(content, "TextLabel") do
+			if string.find(label.Text, "Loading trending", 1, true) then
+				place(label, 31, 230, 1530, 72); textSize(label, 24)
+			end
+		end
+		return
+	end
+	if simple and not content:FindFirstChild("GraphicsDiscoverHeading") then
+		local heading = Factory.Label(content, "CREATOR GALLERY", UDim2.fromOffset(730, 34), {
+			Name = "GraphicsDiscoverHeading", Position = UDim2.fromOffset(31, 174),
+			Font = Theme.Fonts.Bold, TextSize = 22, Color = Theme.Colors.Gold,
+		})
+		heading.Name = "GraphicsDiscoverHeading"; heading:SetAttribute("ForgeSized", true)
+	end
+	local gridTop = if simple then 222 else 230
+	place(grid, 31, gridTop, 1530, 629 - gridTop); padding(grid, 0)
+	grid.ScrollBarThickness = 6; grid.ScrollBarImageColor3 = Theme.Colors.Violet
+	local layout = grid:FindFirstChildOfClass("UIGridLayout")
+	local function columns()
+		layout.CellSize = UDim2.new(.5, -12, 0, 362)
+		layout.CellPadding = UDim2.fromOffset(24, 20)
+	end
+	columns()
+	if not grid:GetAttribute("ForgeGraphicsDiscoverGridBound") then
+		grid:SetAttribute("ForgeGraphicsDiscoverGridBound", true)
+		local resized = layout:GetPropertyChangedSignal("CellSize"):Connect(function()
+			if layout.CellSize.X.Scale ~= .5 or layout.CellSize.X.Offset ~= -12 or layout.CellSize.Y.Offset ~= 362 then columns() end
+		end)
+		grid.Destroying:Connect(function() resized:Disconnect() end)
+	end
+	for _, card in direct(grid, "Frame") do
+		if card.Name ~= "CommunityGraphic" then continue end
+		card.ZIndex = 4
+		RedesignSkin.Skin(card, "avatar-graphics", "GraphicsFormArt")
+		RedesignSkin.Decoration(card, "avatar-graphics", "GraphicsSourceThumbnailArt", 14, 14, 334, 334)
+		local image = direct(card, "ImageLabel")[1]
+		if image then
+			place(image, 22, 22, 318, 318)
+			image.ScaleType = Enum.ScaleType.Fit; image.BackgroundTransparency = 1; image.ZIndex = 7
+		end
+		for _, label in direct(card, "TextLabel") do
+			if label.Name == "GraphicsDiscoverViewHint" then continue end
+			local creator = label.Name == "GraphicsDiscoverCreator" or string.sub(label.Text, 1, 4) == "by @"
+			local price = label.Name == "GraphicsDiscoverPrice" or string.sub(label.Text, 1, 3) == "R$ "
+			label.Name = if creator then "GraphicsDiscoverCreator" elseif price then "GraphicsDiscoverPrice" else "GraphicsDiscoverTitle"
+			label.Position = UDim2.fromOffset(372, if creator then 112 elseif price then 159 else 23)
+			label.Size = if price then UDim2.fromOffset(145, 32) else UDim2.new(1, -395, 0, if creator then 29 else 76)
+			textSize(label, if creator then 20 elseif price then 18 else 26)
+			label.Font = if creator then Theme.Fonts.Medium else Theme.Fonts.Bold
+			label.TextWrapped = not creator and not price; label.ZIndex = 7
+		end
+		local expand = card:FindFirstChild("ExpandHit")
+		if expand then expand.Size = UDim2.fromScale(1, 1); expand.ZIndex = 8 end
+		if not card:FindFirstChild("GraphicsDiscoverViewHint") then
+			local hint = Factory.Label(card, "OPEN ARTWORK  ↗", UDim2.new(1, -395, 0, 30), {
+				Position = UDim2.fromOffset(372, if simple then 184 else 234), Font = Theme.Fonts.Bold,
+				TextSize = 19, Color = Theme.Colors.Cyan, ZIndex = 7,
+			})
+			hint.Name = "GraphicsDiscoverViewHint"; hint:SetAttribute("ForgeSized", true)
+		end
+		for _, button in direct(card, "TextButton") do
+			if button.Name == "ExpandHit" then continue end
+			local buy = button.Name == "GraphicsDiscoverBuy" or button.Text == "Buy copy" or button.Text == "Not for sale"
+			if buy then
+				button.Name = "GraphicsDiscoverBuy"; button.Position = UDim2.fromOffset(372, 192)
+				button.Size = UDim2.new(1, -395, 0, 40); textSize(button, 20)
+			else
+				local favorite = button.Name == "GraphicsDiscoverFavorite" or button.Position.X.Scale == .5
+				button.Name = if favorite then "GraphicsDiscoverFavorite" else "GraphicsDiscoverLike"
+				button.Position = UDim2.new(.5, if favorite then 184 else -2, 0, 289)
+				button.Size = UDim2.new(.25, -29, 0, 48); textSize(button, 21)
+				for _, glyph in direct(button, "TextLabel") do
+					if glyph.Name ~= "Label" then place(glyph, 12, 0, 30, 48); textSize(glyph, 26); glyph.ZIndex = 11 end
+				end
+			end
+			button.ZIndex = 9
+			local caption = Factory.LiftLabel(button)
+			if caption then caption.ZIndex = 10 end
+		end
+	end
+	for _, label in direct(grid, "TextLabel") do
+		label.Size = UDim2.fromOffset(742, 180); textSize(label, 24)
+	end
+end
+
 local function graphics(app: any, simple: boolean)
-	-- The Discover tab keeps the same shared public-art search/grid flow.
-	if app.graphicsTab == "DISCOVER" then return end
+	if app.graphicsTab == "DISCOVER" then graphicsDiscover(app, simple); return end
 	local page = named(app.content, "AvatarGraphicsScroll")
 	local composer = named(app.content, "GraphicComposer")
 	local gallery = named(app.content, "GraphicsGallery")
@@ -544,9 +812,13 @@ local function settings(app: any)
 end
 
 function Layouts.Apply(app: any)
-	if not app.content or app.compact or app.activePage == "Home" or app.activePage == "Create" then return end
+	if not app.content or app.activePage == "Home" or app.activePage == "Create" then return end
 	local profileSettings = app.state and app.state.profile and app.state.profile.settings or {}
 	local simple = profileSettings.simpleMode ~= false
+	if app.compact then
+		if app.activePage == "Avatar Graphics" and app.graphicsTab == "DISCOVER" then compactGraphicsDiscover(app, simple) end
+		return
+	end
 	if app.activePage == "Play" then play(app)
 	elseif app.activePage == "My Studio" then studio(app, simple)
 	elseif app.activePage == "Discover" then marketplace(app, simple)

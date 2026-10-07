@@ -17,6 +17,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
+local HomeAssets = require(ReplicatedStorage:WaitForChild("HomeAssets"))
+local RedesignAssets = require(ReplicatedStorage:WaitForChild("RedesignAssets"))
 local Factory = require(script.Parent.Parent.Factory)
 
 local Colors = Theme.Colors
@@ -47,6 +49,25 @@ export type WeeklyResult = { standings: { WeeklyStanding }, self: PersonalStandi
 
 local GameShell = {}
 GameShell.__index = GameShell
+
+local function approvedGlyph(parent: GuiObject, assetId: number, fallback: TextLabel)
+	local art = Factory.New("ImageLabel", {
+		Name = "ApprovedIcon", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.new(1, -4, 1, -4), Image = "rbxassetid://" .. tostring(assetId),
+		BackgroundTransparency = 1, BorderSizePixel = 0, ImageTransparency = 0,
+		ScaleType = Enum.ScaleType.Fit, Active = false, ZIndex = parent.ZIndex + 1, Parent = parent,
+	})
+	local function refresh()
+		local hasArtwork = type(assetId) == "number" and assetId > 0
+		art.Visible = hasArtwork and not Theme.IsHighContrast
+		-- The action caption is always readable during a fetch. Do not stack
+		-- an ASCII glyph over texture pixels before IsLoaded catches up.
+		fallback.Visible = Theme.IsHighContrast or not hasArtwork
+	end
+	local loaded = art:GetPropertyChangedSignal("IsLoaded"):Connect(refresh)
+	art.Destroying:Connect(function() loaded:Disconnect() end)
+	refresh()
+end
 
 -- UIScale multiplies a GuiObject's AbsoluteSize. Arcade games draw their
 -- actors with offset coordinates under that same scaler, so feeding the
@@ -325,6 +346,8 @@ function GameShell.new(
 		BorderSizePixel = 0,
 		Parent = root,
 	})
+	self.hud = hud
+	self.hudScale = Factory.New("UIScale", { Name = "ReadableScale", Scale = 1, Parent = hud })
 	Factory.Corner(hud, 14)
 	Factory.New("Frame", {
 		Name = "Divider",
@@ -336,14 +359,14 @@ function GameShell.new(
 		BorderSizePixel = 0,
 		Parent = hud,
 	})
-	-- The right-side cluster (score, trophy, exit) reserves a fixed 230px
-	-- from the HUD's right edge; gameTitle's own width stops 8px short of
-	-- that so the two can never formally overlap regardless of text length.
+	-- The score/actions reserve their own lane; responsive layout below
+	-- truncates a long game title before it can enter that lane.
 	self.gameTitle = Factory.Label(hud, "", UDim2.new(1, -230, 1, 0), {
 		Position = UDim2.fromOffset(14, 0),
 		Font = Theme.Fonts.Black,
-		TextSize = 16,
+		TextSize = 22,
 		AlignY = Enum.TextYAlignment.Center,
+		Truncate = Enum.TextTruncate.AtEnd,
 	})
 	local scoreBadge = Factory.New("Frame", {
 		Name = "ScoreBadge",
@@ -354,6 +377,7 @@ function GameShell.new(
 		BorderSizePixel = 0,
 		Parent = hud,
 	})
+	self.scoreBadge = scoreBadge
 	Factory.Corner(scoreBadge, 13)
 	-- Width used to reach the badge's own right edge (0 right padding) since
 	-- it's right-aligned text -- the score number sat flush against the
@@ -361,14 +385,14 @@ function GameShell.new(
 	self.scoreLabel = Factory.Label(scoreBadge, "0", UDim2.new(1, -28, 1, 0), {
 		Position = UDim2.fromOffset(14, 0),
 		Font = Theme.Fonts.Black,
-		TextSize = 14,
+		TextSize = 22,
 		Color = Colors.Gold,
 		AlignX = Enum.TextXAlignment.Right,
 		AlignY = Enum.TextYAlignment.Center,
 	})
-	Factory.Label(scoreBadge, "◆", UDim2.fromOffset(20, 26), {
+	self.scoreGlyph = Factory.Label(scoreBadge, "◆", UDim2.fromOffset(20, 40), {
 		Position = UDim2.fromOffset(-2, 0),
-		TextSize = 11,
+		TextSize = 16,
 		Color = Colors.Gold,
 		AlignX = Enum.TextXAlignment.Center,
 		AlignY = Enum.TextYAlignment.Center,
@@ -382,6 +406,7 @@ function GameShell.new(
 		BorderSizePixel = 0,
 		Parent = hud,
 	})
+	self.trophyShadow = trophyShadow
 	Factory.Corner(trophyShadow, 15)
 	local trophyButton = Factory.New("TextButton", {
 		Name = "TrophyButton",
@@ -390,13 +415,19 @@ function GameShell.new(
 		BackgroundColor3 = Colors.Gold,
 		BorderSizePixel = 0,
 		AutoButtonColor = false,
-		Text = "🏆",
-		TextSize = 15,
+		Text = "",
+		TextSize = 23,
 		Parent = hud,
 	})
+	self.trophyButton = trophyButton
 	Factory.Corner(trophyButton, 15)
 	Factory.Stroke(trophyButton, Colors.Ink, 0.4, 1.5)
 	Factory.Gradient(trophyButton, { Color3.fromRGB(255, 224, 140), Color3.fromRGB(214, 158, 40) }, 120)
+	local trophyFallback = Factory.Label(trophyButton, "TOP", UDim2.fromScale(1, 1), {
+		Font = Theme.Fonts.Bold, TextSize = 12, Color = Colors.Ink,
+		AlignX = Enum.TextXAlignment.Center, AlignY = Enum.TextYAlignment.Center,
+	})
+	approvedGlyph(trophyButton, HomeAssets.RewardsIcon, trophyFallback)
 	sounds:Bind(trophyButton)
 	trophyButton.Activated:Connect(function()
 		self:_ToggleWeeklyStandings()
@@ -411,6 +442,7 @@ function GameShell.new(
 		BorderSizePixel = 0,
 		Parent = hud,
 	})
+	self.exitShadow = exitShadow
 	Factory.Corner(exitShadow, Theme.SmallCorner)
 	local exitButton = Factory.New("TextButton", {
 		Name = "ExitButton",
@@ -422,9 +454,10 @@ function GameShell.new(
 		Text = "Exit",
 		TextColor3 = Colors.Text,
 		Font = Theme.Fonts.Bold,
-		TextSize = 12,
+		TextSize = 18,
 		Parent = hud,
 	})
+	self.exitButton = exitButton
 	Factory.Corner(exitButton, Theme.SmallCorner)
 	Factory.Stroke(exitButton, Colors.Ink, 0.4, 1.5)
 	Factory.Gradient(exitButton, { Color3.fromRGB(255, 140, 150), Colors.Danger }, 120)
@@ -440,11 +473,12 @@ function GameShell.new(
 		ZIndex = 2,
 		Parent = exitButton,
 	})
+	self.exitIcon = exitIcon
 	Factory.Corner(exitIcon, 7)
-	Factory.Label(exitIcon, "✕", UDim2.fromScale(1, 1), {
+	Factory.Label(exitIcon, "×", UDim2.fromScale(1, 1), {
 		Color = Colors.Text,
-		Font = Theme.Fonts.Black,
-		TextSize = 11,
+		Font = Enum.Font.ArialBold,
+		TextSize = 20,
 		AlignX = Enum.TextXAlignment.Center,
 		AlignY = Enum.TextYAlignment.Center,
 		ZIndex = 3,
@@ -478,22 +512,21 @@ function GameShell.new(
 		BackgroundTransparency = 0.35,
 		Visible = false,
 		ZIndex = 30,
-		Parent = canvas,
+		Active = true,
+		Parent = root,
 	})
 	-- The actual game-over content lives on a centered card rather than
-	-- floating directly on the dim backdrop -- reads as a proper modal
-	-- instead of text pasted over the last frame of gameplay. Height is 250,
-	-- not the hubButton's own bottom edge (236) rounded up -- 244 left only
-	-- an 8px gap under the "Back to Arcade" button, under this codebase's own
-	-- established 10px minimum clearance.
-	local card = Factory.ImageCard(overlay, UDim2.fromOffset(252, 250), UDim2.fromScale(0.5, 0.45), "GameOverCard")
+	-- floating directly on the dim backdrop. It can use the full shell's
+	-- height above the dimmed HUD, leaving room for two readable actions.
+	local card = Factory.ImageCard(overlay, UDim2.fromOffset(340, 280), UDim2.fromScale(0.5, 0.5), "GameOverCard")
 	card.AnchorPoint = Vector2.new(0.5, 0.5)
 	card.ZIndex = 31
+	self.cardScale = Factory.New("UIScale", { Name = "ReadableScale", Scale = 1, Parent = card })
 	local badge = Factory.New("Frame", {
 		Name = "Badge",
-		Size = UDim2.fromOffset(48, 48),
+		Size = UDim2.fromOffset(36, 36),
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 14),
+		Position = UDim2.new(0.5, 0, 0, 12),
 		BackgroundColor3 = Colors.Rose,
 		BackgroundTransparency = 0.82,
 		BorderSizePixel = 0,
@@ -507,38 +540,38 @@ function GameShell.new(
 		AlignY = Enum.TextYAlignment.Center,
 		ZIndex = 33,
 	})
-	local titleLabel = Factory.Label(card, "GAME OVER", UDim2.new(1, -20, 0, 26), {
+	local titleLabel = Factory.Label(card, "GAME OVER", UDim2.new(1, -20, 0, 34), {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 70),
+		Position = UDim2.new(0.5, 0, 0, 52),
 		Font = Theme.Fonts.Black,
-		TextSize = 20,
+		TextSize = 30,
 		Color = Colors.Rose,
 		AlignX = Enum.TextXAlignment.Center,
 		ZIndex = 32,
 	})
 	local titleScale = Factory.New("UIScale", { Scale = 1, Parent = titleLabel })
-	local finalScoreLabel = Factory.Label(card, "", UDim2.new(1, -20, 0, 26), {
+	local finalScoreLabel = Factory.Label(card, "", UDim2.new(1, -20, 0, 31), {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 100),
+		Position = UDim2.new(0.5, 0, 0, 87),
 		Font = Theme.Fonts.Black,
-		TextSize = 18,
+		TextSize = 24,
 		Color = Colors.Gold,
 		AlignX = Enum.TextXAlignment.Center,
 		ZIndex = 32,
 	})
-	local bestLabel = Factory.Label(card, "", UDim2.new(1, -20, 0, 18), {
+	local bestLabel = Factory.Label(card, "", UDim2.new(1, -20, 0, 24), {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 126),
+		Position = UDim2.new(0.5, 0, 0, 121),
 		Font = Theme.Fonts.Medium,
-		TextSize = 11,
+		TextSize = 16,
 		Color = Colors.TextMuted,
 		AlignX = Enum.TextXAlignment.Center,
 		ZIndex = 32,
 	})
 	local retryShadow = Factory.New("Frame", {
 		Name = "RetryShadow",
-		Size = UDim2.fromOffset(200, 42),
-		Position = UDim2.new(0.5, -100, 0, 159),
+		Size = UDim2.fromOffset(292, 48),
+		Position = UDim2.new(0.5, -146, 0, 161),
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.55,
 		BorderSizePixel = 0,
@@ -547,14 +580,16 @@ function GameShell.new(
 	})
 	Factory.Corner(retryShadow, Theme.SmallCorner)
 	local retryButton =
-		Factory.ImageButton(card, "Play Again", UDim2.fromOffset(200, 42), UDim2.new(0.5, -100, 0, 156), "mint")
+		Factory.ImageButton(card, "Play Again", UDim2.fromOffset(292, 48), UDim2.new(0.5, -146, 0, 158), "mint")
+	retryButton.Name = "RetryButton"
 	retryButton.ZIndex = 32
+	retryButton.TextSize = 20
 	retryButton.TextXAlignment = Enum.TextXAlignment.Right
 	Factory.Gradient(retryButton, { Color3.fromRGB(150, 255, 210), Colors.Mint }, 90)
 	local retryIcon = Factory.New("Frame", {
 		Name = "Icon",
 		Size = UDim2.fromOffset(28, 28),
-		Position = UDim2.fromOffset(8, 7),
+		Position = UDim2.fromOffset(12, 10),
 		BackgroundColor3 = Colors.Ink,
 		BackgroundTransparency = 0.82,
 		BorderSizePixel = 0,
@@ -562,7 +597,7 @@ function GameShell.new(
 		Parent = retryButton,
 	})
 	Factory.Corner(retryIcon, 9)
-	Factory.Label(retryIcon, "↻", UDim2.fromScale(1, 1), {
+	local retryFallback = Factory.Label(retryIcon, "R", UDim2.fromScale(1, 1), {
 		Color = Colors.Ink,
 		Font = Theme.Fonts.Black,
 		TextSize = 16,
@@ -570,17 +605,20 @@ function GameShell.new(
 		AlignY = Enum.TextYAlignment.Center,
 		ZIndex = 34,
 	})
+	approvedGlyph(retryIcon, RedesignAssets.V2_Market_MarketResetIconArtwork, retryFallback)
 	Factory.New("UIPadding", { PaddingRight = UDim.new(0, 20), Parent = retryButton })
 	sounds:Bind(retryButton)
 
 	local hubButton =
-		Factory.ImageButton(card, "Back to Arcade", UDim2.fromOffset(200, 34), UDim2.new(0.5, -100, 0, 202), nil)
+		Factory.ImageButton(card, "Back to Arcade", UDim2.fromOffset(292, 48), UDim2.new(0.5, -146, 0, 216), nil)
+	hubButton.Name = "HubButton"
 	hubButton.ZIndex = 32
+	hubButton.TextSize = 18
 	hubButton.TextXAlignment = Enum.TextXAlignment.Right
 	local hubIcon = Factory.New("Frame", {
 		Name = "Icon",
-		Size = UDim2.fromOffset(22, 22),
-		Position = UDim2.fromOffset(8, 6),
+		Size = UDim2.fromOffset(28, 28),
+		Position = UDim2.fromOffset(12, 10),
 		BackgroundColor3 = Colors.Rose,
 		BackgroundTransparency = 0.78,
 		BorderSizePixel = 0,
@@ -588,12 +626,13 @@ function GameShell.new(
 		Parent = hubButton,
 	})
 	Factory.Corner(hubIcon, 7)
-	Factory.Label(hubIcon, "🎮", UDim2.fromScale(1, 1), {
+	local hubFallback = Factory.Label(hubIcon, "GO", UDim2.fromScale(1, 1), {
 		TextSize = 12,
 		AlignX = Enum.TextXAlignment.Center,
 		AlignY = Enum.TextYAlignment.Center,
 		ZIndex = 34,
 	})
+	approvedGlyph(hubIcon, HomeAssets.NavGames, hubFallback)
 	Factory.New("UIPadding", { PaddingRight = UDim.new(0, 16), Parent = hubButton })
 	sounds:Bind(hubButton)
 	hubButton.Activated:Connect(function()
@@ -603,31 +642,43 @@ function GameShell.new(
 
 	local standingsPanel = Factory.New("Frame", {
 		Name = "WeeklyStandings",
-		Size = UDim2.fromOffset(232, 258),
+		Size = UDim2.fromOffset(320, 320),
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -8, 0, 8),
 		BackgroundColor3 = Colors.PanelRaised,
 		BackgroundTransparency = 0.03,
 		Visible = false,
-		ZIndex = 25,
-		Parent = canvas,
+		ZIndex = 40,
+		Active = true,
+		Parent = root,
 	})
+	self.standingsScale = Factory.New("UIScale", { Name = "ReadableScale", Scale = 1, Parent = standingsPanel })
 	Factory.Corner(standingsPanel, 14)
 	Factory.Stroke(standingsPanel, Colors.Gold, 0.4)
 	Factory.Gradient(standingsPanel, {
 		Color3.fromRGB(51, 32, 94),
 		Color3.fromRGB(26, 16, 53),
 	}, 115)
-	Factory.Label(standingsPanel, "🏆  THIS WEEK · TOP 10", UDim2.new(1, -20, 0, 22), {
+	Factory.Label(standingsPanel, "THIS WEEK · TOP 10", UDim2.new(1, -68, 0, 28), {
 		Position = UDim2.fromOffset(10, 8),
 		Font = Theme.Fonts.Bold,
-		TextSize = 11,
+		TextSize = 16,
 		Color = Colors.Gold,
 		ZIndex = 26,
 	})
+	local closeStandings = Factory.New("TextButton", {
+		Name = "CloseWeeklyStandings", Size = UDim2.fromOffset(44, 44), Position = UDim2.new(1, -48, 0, 0),
+		BackgroundTransparency = 1, BorderSizePixel = 0, Text = "×", TextColor3 = Colors.Text,
+		TextSize = 26, Font = Enum.Font.ArialBold, ZIndex = 42, Parent = standingsPanel,
+	})
+	sounds:Bind(closeStandings)
+	closeStandings.Activated:Connect(function()
+		standingsPanel.Visible = false
+		self:_LayoutControls()
+	end)
 	Factory.New("Frame", {
 		Name = "Divider",
-		Position = UDim2.fromOffset(10, 30),
+		Position = UDim2.fromOffset(10, 38),
 		Size = UDim2.new(1, -20, 0, 1),
 		BackgroundColor3 = Colors.Gold,
 		BackgroundTransparency = 0.75,
@@ -640,8 +691,8 @@ function GameShell.new(
 	-- growing to swallow the canvas.
 	local standingsList = Factory.New("ScrollingFrame", {
 		Name = "List",
-		Position = UDim2.fromOffset(10, 38),
-		Size = UDim2.new(1, -20, 0, 154),
+		Position = UDim2.fromOffset(10, 46),
+		Size = UDim2.new(1, -20, 1, -106),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 4,
@@ -654,7 +705,7 @@ function GameShell.new(
 	Factory.List(standingsList, Enum.FillDirection.Vertical, 6)
 	Factory.New("Frame", {
 		Name = "FooterDivider",
-		Position = UDim2.fromOffset(10, 198),
+		Position = UDim2.new(0, 10, 1, -54),
 		Size = UDim2.new(1, -20, 0, 1),
 		BackgroundColor3 = Colors.Gold,
 		BackgroundTransparency = 0.75,
@@ -666,10 +717,10 @@ function GameShell.new(
 	-- require scrolling to find, especially when the honest answer is
 	-- "not in the top 10 yet".
 	local selfStandingLabel = Factory.Label(standingsPanel, "", UDim2.new(1, -20, 0, 40), {
-		Position = UDim2.fromOffset(10, 208),
+		Position = UDim2.new(0, 10, 1, -48),
 		Color = Colors.TextMuted,
 		Font = Theme.Fonts.Medium,
-		TextSize = 11,
+		TextSize = 16,
 		Wrapped = true,
 		ZIndex = 26,
 	})
@@ -693,8 +744,60 @@ function GameShell.new(
 			self:Run(self.currentGame)
 		end
 	end)
+	local resized = root:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() self:_LayoutControls() end)
+	root.Destroying:Connect(function() resized:Disconnect() end)
+	self:_LayoutControls()
 
 	return self
+end
+
+-- The painted Arcade modal may be reduced to fit its viewport. Counter that
+-- scale only for shared controls; the game's board and input coordinate space
+-- keep the original ancestor scale and their existing physics.
+function GameShell:_LayoutControls()
+	local scale = effectiveScale(self.root)
+	local logical = GameShell.CanvasSize(self.root, Vector2.new(520, 320))
+	local width, height = logical.X * scale, logical.Y * scale
+	local narrow = width < 460
+	local hudHeight = if narrow then 88 else 54
+	self.hudScale.Scale = 1 / scale
+	self.hud.Size = UDim2.new(scale, 0, 0, hudHeight)
+	self.gameTitle.Position = UDim2.fromOffset(14, 0)
+	self.gameTitle.Size = UDim2.new(1, if narrow then -126 else -310, 0, if narrow then 38 else hudHeight)
+	self.scoreBadge.Position = if narrow then UDim2.fromOffset(14, 42) else UDim2.new(1, -276, 0, 7)
+	self.scoreBadge.Size = UDim2.fromOffset(if narrow then 132 else 112, 40)
+	self.scoreGlyph.Size = UDim2.fromOffset(20, 40)
+	self.trophyButton.Size = UDim2.fromOffset(44, 44)
+	self.trophyButton.Position = if narrow then UDim2.fromOffset(154, 41) else UDim2.new(1, -156, 0, 5)
+	self.trophyShadow.Size = self.trophyButton.Size
+	self.trophyShadow.Position = self.trophyButton.Position + UDim2.fromOffset(0, 2)
+	self.exitButton.Size = UDim2.fromOffset(92, 44)
+	self.exitButton.Position = UDim2.new(1, -104, 0, if narrow then 21 else 5)
+	self.exitShadow.Size = self.exitButton.Size
+	self.exitShadow.Position = self.exitButton.Position + UDim2.fromOffset(0, 2)
+	self.exitIcon.Position = UDim2.fromOffset(8, 10)
+	self.exitIcon.Size = UDim2.fromOffset(24, 24)
+	self.canvas.Position = UDim2.fromOffset(0, hudHeight / scale)
+	self.canvas.Size = UDim2.new(1, 0, 1, -hudHeight / scale)
+	local cardFit = math.min(1, math.max(0.1, (width - 24) / 340), math.max(0.1, (height - 20) / 280))
+	self.cardScale.Scale = cardFit / scale
+	self.standingsScale.Scale = 1 / scale
+	self.standingsPanel.Size = UDim2.fromOffset(math.max(160, math.min(320, width - 16)), math.max(128, math.min(320, height - hudHeight - 16)))
+	self.standingsPanel.Position = UDim2.new(1, -8 / scale, 0, (hudHeight + 8) / scale)
+	self.card.Visible = true
+	self.card.Position = UDim2.fromScale(0.5, 0.5)
+	if self.overlay.Visible and self.standingsPanel.Visible then
+		local cardWidth = 340 * cardFit
+		local panelWidth = self.standingsPanel.Size.X.Offset
+		if width >= cardWidth + panelWidth + 40 then
+			-- Leave the score/retry card beside the weekly list when both fit.
+			self.card.Position = UDim2.fromScale((width - panelWidth - 24) / (2 * width), 0.5)
+		else
+			-- On a phone, weekly results temporarily occupy the card's space.
+			-- Closing the list reveals the same finished-game state and score.
+			self.card.Visible = false
+		end
+	end
 end
 
 function GameShell:SetScore(score: number)
@@ -702,6 +805,7 @@ function GameShell:SetScore(score: number)
 end
 
 function GameShell:_GameOver(score: number)
+	self:_LayoutControls()
 	local gameModule = self.currentGame
 	local name = gameModule and gameModule.Name or ""
 	local previousBest = self.bestScores[name] or 0
@@ -721,7 +825,7 @@ function GameShell:_GameOver(score: number)
 		self.badge.BackgroundColor3 = Colors.Gold
 		self.badgeGlyph.Text = "🏆"
 		self.sounds:Play("Success")
-		GameShell.Confetti(self.card, 252, -10, self.reduceMotion)
+		GameShell.Confetti(self.card, 340, -10, self.reduceMotion)
 	else
 		self.titleLabel.Text = "GAME OVER"
 		self.titleLabel.TextColor3 = Colors.Rose
@@ -756,6 +860,7 @@ function GameShell:_GameOver(score: number)
 		-- game-over screen the player is already looking at.
 		self.onGameEnd(gameModule.Key, score)
 	end
+	self:_LayoutControls()
 end
 
 -- Lazily fetched and cached per game-key for as long as this shell instance
@@ -763,12 +868,15 @@ end
 -- every time -- standings only meaningfully change across a whole play
 -- session, not between two clicks a few seconds apart.
 function GameShell:_ToggleWeeklyStandings()
+	self:_LayoutControls()
 	local panel = self.standingsPanel
 	if panel.Visible then
 		panel.Visible = false
+		self:_LayoutControls()
 		return
 	end
 	panel.Visible = true
+	self:_LayoutControls()
 	local gameModule = self.currentGame
 	if not gameModule then
 		return
@@ -779,11 +887,11 @@ function GameShell:_ToggleWeeklyStandings()
 		return
 	end
 	for _, child in self.standingsList:GetChildren() do
-		child:Destroy()
+		if not child:IsA("UIListLayout") then child:Destroy() end
 	end
-	Factory.Label(self.standingsList, "Loading…", UDim2.new(1, 0, 0, 20), {
+	Factory.Label(self.standingsList, "Loading…", UDim2.new(1, 0, 0, 28), {
 		Color = Colors.TextMuted,
-		TextSize = 11,
+		TextSize = 16,
 		ZIndex = 26,
 	})
 	self.selfStandingLabel.Text = ""
@@ -799,12 +907,12 @@ end
 function GameShell:_RenderStandings(result: WeeklyResult)
 	local standings = result.standings
 	for _, child in self.standingsList:GetChildren() do
-		child:Destroy()
+		if not child:IsA("UIListLayout") then child:Destroy() end
 	end
 	if #standings == 0 then
-		Factory.Label(self.standingsList, "No scores yet this week — be first!", UDim2.new(1, 0, 0, 34), {
+		Factory.Label(self.standingsList, "No scores yet this week — be first!", UDim2.new(1, 0, 0, 50), {
 			Color = Colors.TextMuted,
-			TextSize = 11,
+			TextSize = 16,
 			Wrapped = true,
 			ZIndex = 26,
 		})
@@ -822,7 +930,7 @@ function GameShell:_RenderStandings(result: WeeklyResult)
 		local rankColor = rankColors[rank]
 		local rowColor = if isSelf then Colors.Gold elseif rankColor then rankColor else nil
 		local row = Factory.New("Frame", {
-			Size = UDim2.new(1, 0, 0, 24),
+			Size = UDim2.new(1, 0, 0, 32),
 			BackgroundColor3 = rowColor or Colors.Gold,
 			BackgroundTransparency = if isSelf then 0.85 elseif rankColor then 0.9 else 1,
 			LayoutOrder = rank,
@@ -835,25 +943,25 @@ function GameShell:_RenderStandings(result: WeeklyResult)
 				Factory.Stroke(row, rankColor, 0.75, 1)
 			end
 		end
-		Factory.Label(row, medals[rank] or string.format("#%d", rank), UDim2.fromOffset(24, 24), {
+		Factory.Label(row, medals[rank] or string.format("#%d", rank), UDim2.fromOffset(32, 32), {
 			Position = UDim2.fromOffset(2, 0),
-			TextSize = 13,
+			TextSize = 19,
 			ZIndex = 26,
 		})
-		Factory.Label(row, if isSelf then "You" else string.format("@%s", entry.name), UDim2.new(1, -84, 1, 0), {
-			Position = UDim2.fromOffset(28, 0),
+		Factory.Label(row, if isSelf then "You" else string.format("@%s", entry.name), UDim2.new(1, -108, 1, 0), {
+			Position = UDim2.fromOffset(38, 0),
 			Font = if isSelf or rankColor then Theme.Fonts.Bold else Theme.Fonts.Regular,
-			TextSize = 11,
+			TextSize = 16,
 			Truncate = Enum.TextTruncate.AtEnd,
 			ZIndex = 26,
 		})
-		Factory.Label(row, tostring(entry.score), UDim2.fromOffset(50, 24), {
+		Factory.Label(row, tostring(entry.score), UDim2.fromOffset(62, 32), {
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, -2, 0, 0),
 			AlignX = Enum.TextXAlignment.Right,
 			Font = Theme.Fonts.Bold,
 			Color = Colors.Gold,
-			TextSize = 12,
+			TextSize = 18,
 			ZIndex = 26,
 		})
 	end
@@ -875,6 +983,7 @@ function GameShell:Run(gameModule: GameModule)
 	self:Stop()
 	self.overlay.Visible = false
 	self.standingsPanel.Visible = false
+	self:_LayoutControls()
 	self.currentGame = gameModule
 	self.gameTitle.Text = gameModule.Name
 	self:SetScore(0)

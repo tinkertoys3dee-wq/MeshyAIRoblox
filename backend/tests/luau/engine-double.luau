@@ -399,6 +399,8 @@ local services = {
 	GroupService = {},
 	GuiService = { SelectedObject = nil },
 	MarketplaceService = {},
+	-- Image fetches are exercised through IsLoaded in this non-GPU VM.
+	ContentProvider = {},
 	Players = {},
 	PolicyService = {},
 	AssetService = {},

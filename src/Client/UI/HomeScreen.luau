@@ -302,7 +302,7 @@ local function navigation(app: any, parent: Instance, x: number, y: number, widt
 		end
 		label(control, data[1], if mobile then 0 else 111, if mobile then 27 else 0,
 			if mobile then w else w - 120, if mobile then 23 else height,
-			if mobile then 12 else 28, true, if active then WHITE else MUTED, mobile)
+			if mobile then 16 else 28, true, if active then WHITE else MUTED, mobile)
 	end
 end
 
@@ -327,15 +327,25 @@ function HomeScreen.Chrome(app: any, canvas: Instance, mobile: boolean, width: n
 		label(control, "More tools  ›", 0, 0, w, 32, 16, true, BLUE, true)
 	end
 	if mobile then
-		logo(canvas, 0, 0, math.min(0.43, (width - 184) / 320))
+		local wide = width >= 520
+		local scale = math.max(0.01, if app.uiScaleInstance then app.uiScaleInstance.Scale else 1)
+		local logoX = math.max(180, 208 / scale)
+		if wide and logoX + 104 <= width - 338 then
+			logo(canvas, logoX, 0, 0.30)
+		elseif wide then
+			label(canvas, "FORGE UGC", 8, 48, math.max(140, width - 340), 23, 20, true, WHITE)
+		else
+			logo(canvas, 8, 48, math.min(0.24, (width - 190) / 320))
+		end
 		app.homeBalanceLabels = {
-			tokens = resource(app, canvas, "ForgeTokens", "TokenIcon", width-184, 10, 128, 44, true, function() showWallet(app) end),
-			passes = resource(app, canvas, "PriorityPasses", "TicketIcon", width-184, 62, 128, 44, true, function() app:_BuyPriorityPass() end),
+			tokens = resource(app, canvas, "ForgeTokens", "TokenIcon", if wide then width-326 else width-184, 10, if wide then 112 else 128, 42, true, function() showWallet(app) end),
+			passes = resource(app, canvas, "PriorityPasses", "TicketIcon", if wide then width-208 else width-184, if wide then 10 else 57, if wide then 112 else 128, 42, true, function() app:_BuyPriorityPass() end),
 		}
-		navigation(app, canvas, 8, 124, width-16, 52, true)
-		local library = button(app, canvas, "EditorLibrary", "My Items", 8, 179, (width-24)/2, 36, function() app:_OpenPage("My Studio") end)
-		label(library, "My Items  ›", 0, 0, (width-24)/2, 36, 16, true, WHITE, true)
-		tools(width/2, 181, (width-24)/2)
+		local navY = if wide then 76 else 108
+		navigation(app, canvas, 8, navY, width-16, 47, true)
+		local library = button(app, canvas, "EditorLibrary", "My Items", 8, navY+52, (width-24)/2, 32, function() app:_OpenPage("My Studio") end)
+		label(library, "My Items  ›", 0, 0, (width-24)/2, 32, 16, true, WHITE, true)
+		tools(width/2, navY+52, (width-24)/2)
 	else
 		local dashboard = frame(canvas, "EditorDashboardFallback", 46, 112, 1590, 786)
 		fallbackSurface(dashboard, Color3.fromRGB(19, 28, 49), Color3.fromRGB(58, 76, 108), 37)
@@ -353,11 +363,12 @@ function HomeScreen.Chrome(app: any, canvas: Instance, mobile: boolean, width: n
 		label(library, "My Items", 0, 0, 154, 62, 21, true, if app.activePage == "My Studio" then WHITE else MUTED, true)
 		-- Page-specific tabs and Advanced controls provide the tools menu.
 	end
-	local settingsX, settingsY, size = if mobile then width-50 else 1573, if mobile then 10 else 29, if mobile then 44 else 64
+	local wideMobile = mobile and width >= 520
+	local settingsX, settingsY, size = if mobile then (if wideMobile then width-94 else width-50) else 1573, if mobile then 10 else 29, if mobile then 44 else 64
 	local settings = button(app, canvas, "EditorSettings", "Settings", settingsX, settingsY, size, size, function() app:_OpenPage("Settings") end)
 	if not image(settings, "SettingsButton", -8, -8, size+16, size+20) then label(settings, "⚙", 0, 0, size, size, 28, true, WHITE, true) end
-	local close = button(app, canvas, "CloseEditor", "Back to world", if mobile then width-50 else 1562,
-		if mobile then 62 else 143, if mobile then 44 else 56, if mobile then 44 else 56, function() app:_SetStudioOpen(false) end)
+	local close = button(app, canvas, "CloseEditor", "Back to world", if mobile then (if wideMobile then width-48 else width-50) else 1562,
+		if mobile then (if wideMobile then 10 else 57) else 143, if mobile then 44 else 56, if mobile then 44 else 56, function() app:_SetStudioOpen(false) end)
 	label(close, "×", 0, 0, if mobile then 44 else 56, if mobile then 44 else 56, 30, true, MUTED, true)
 	for _, child in canvas:GetDescendants() do
 		if child:IsA("GuiButton") then HomeEffects.Button(child :: GuiButton, BLUE) end

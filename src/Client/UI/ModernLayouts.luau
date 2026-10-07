@@ -145,6 +145,9 @@ end
 
 function ModernLayouts.Apply(app: any)
 	app.redesignLayoutActive = false
+	if app.compact and app.state and app.state.profile then
+		if RedesignToolsLayouts.Compact(app) then return end
+	end
 	if not app.compact and app.activePage ~= "Home" and app.state and app.state.profile then
 		app.content.Position = UDim2.new()
 		app.content.Size = UDim2.fromOffset(1672, 941)

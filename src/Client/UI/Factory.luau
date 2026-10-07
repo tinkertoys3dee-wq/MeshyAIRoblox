@@ -723,7 +723,7 @@ local function attachDecal(target: GuiObject, requestedKey: string): boolean
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		Image = `rbxassetid://{assetId}`,
-		ImageTransparency = 1,
+		ImageTransparency = 0,
 		Active = false,
 		ScaleType = Enum.ScaleType.Slice,
 		SliceCenter = SLICE_CENTER[assetKey],
@@ -748,7 +748,7 @@ local function attachDecal(target: GuiObject, requestedKey: string): boolean
 	local function refresh()
 		-- Loading or moderated textures retain a readable native surface.
 		local loaded = decal.Image ~= "" and decal.IsLoaded == true and not Theme.IsHighContrast
-		decal.ImageTransparency = if loaded then 0 else 1
+		decal.ImageTransparency = if Theme.IsHighContrast then 1 else 0
 		target.BackgroundTransparency = if loaded then 1 else backgroundAlpha
 		if border then
 			local fallbackAlpha = border:GetAttribute("ForgeFallbackTransparency") or borderAlpha

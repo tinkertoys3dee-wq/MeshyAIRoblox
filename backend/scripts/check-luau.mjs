@@ -61,11 +61,34 @@ try {
     RedesignToolsLayouts: 'src/Client/UI/RedesignToolsLayouts.luau',
     RedesignGamesLayouts: 'src/Client/UI/RedesignGamesLayouts.luau',
   };
-  const definitions = Object.entries(modules).map(([name, file]) =>
+  const defineModulesFor = (names) => Object.entries(modules).filter(([name]) => !names || names.has(name)).map(([name, file]) =>
     `modules.${name} = function()\n${read(file)}\nend`).join('\n');
+  const definitions = defineModulesFor();
   // Exercise the actual studio transition method without bootstrapping the
   // whole Roblox client. Keep the extraction fail-closed if it is renamed.
   const appSource = read('src/Client/UI/App.luau');
+  const graphicsRenderer = appSource.match(/function App:_RenderAvatarGraphics\(\)[\s\S]*?(?=\nfunction App:)/)?.[0];
+  if (!graphicsRenderer) throw new Error('Native Avatar Graphics renderer not found');
+  const graphicsRendererModule = `modules.NativeGraphicsRenderer = function()
+local App = {}; local Factory = require("Factory"); local Theme = require("Theme"); local Colors = Theme.Colors
+local player = { UserId = 123 }
+local Config = { Generation = { PromptMaxLength = 500,
+  AvatarViews = { { Id = "HEADSHOT", Label = "Headshot", ThumbType = "AvatarHeadShot" }, { Id = "BUST", Label = "Bust", ThumbType = "AvatarBust" }, { Id = "FULL_BODY", Label = "Full body", ThumbType = "Avatar" } },
+  ImageQualityTiers = { { Id = "LOW", ProductKey = "ImagePreviewLow" } }
+} }
+local function avatarThumbnail(userId, kind, size) return "rbxthumb://type=" .. kind .. "&id=" .. tostring(userId) .. "&w=" .. tostring(size) .. "&h=" .. tostring(size) end
+local function gemForAccent() return "ForgeGemMint" end
+${graphicsRenderer}
+return App end`;
+  const graphicsDiscoverRenderer = appSource.match(/function App:_RenderGraphicsDiscoverBody\(\)[\s\S]*?(?=\nfunction App:)/)?.[0];
+  if (!graphicsDiscoverRenderer) throw new Error('Native public Graphics renderer not found');
+  const graphicsDiscoverModule = `modules.NativeGraphicsDiscoverRenderer = function()
+local App = {}; local Factory = require("Factory"); local Theme = require("Theme"); local Colors = Theme.Colors
+local Network = require("Network")
+local function directImage(id) return "rbxassetid://" .. tostring(id) end
+local function formatNumber(value) return tostring(value) end
+${graphicsDiscoverRenderer}
+return App end`;
   const avatarLabSource = read('src/Client/UI/AvatarLab.luau');
   const gamesHubSource = read('src/Client/UI/GamesHub.luau');
   const motionSource = read('src/Client/UI/Motion.luau');
@@ -252,11 +275,20 @@ try {
   const modernSuite = `${read('backend/tests/luau/engine-double.luau')}\n${definitions}\n${navigationModule}\n${read('backend/tests/luau/modern-screen.spec.luau')}`;
   const [modernCount] = await runSuite(modernSuite, 'modern-screen-regressions');
   console.log(`Passed ${modernCount} modern screen assertions (engine doubles).`);
+  const graphicsModules = new Set(['Motion', 'Factory', 'HomeAssets', 'HomeEffects', 'HomeScreen', 'RedesignAssets', 'RedesignMetrics', 'RedesignSkin', 'RedesignToolsLayouts']);
+  const graphicsDefinitions = defineModulesFor(graphicsModules);
   for (const name of ['core', 'games', 'tools']) {
-    const suite = `${read('backend/tests/luau/engine-double.luau')}\n${definitions}\n${read(`backend/tests/luau/redesign-${name}.spec.luau`)}`;
+    const suite = `${read('backend/tests/luau/engine-double.luau')}\n${name === 'tools' ? graphicsDefinitions : definitions}\n${read(`backend/tests/luau/redesign-${name}.spec.luau`)}`;
     const [count] = await runSuite(suite, `redesign-${name}-regressions`);
     console.log(`Passed ${count} redesigned ${name} assertions (engine doubles).`);
   }
+  const graphicsSuite = `${read('backend/tests/luau/engine-double.luau')}\n${graphicsDefinitions}\n${graphicsRendererModule}\n${read('backend/tests/luau/redesign-graphics-native.spec.luau')}`;
+  const [graphicsCount] = await runSuite(graphicsSuite, 'redesign-graphics-native-regressions');
+  console.log(`Passed ${graphicsCount} native Graphics assertions (engine doubles).`);
+  const discoverDefinitions = defineModulesFor(new Set(['Motion', 'Factory', 'RedesignSkin', 'ModernPageLayouts']));
+  const discoverSuite = `${read('backend/tests/luau/engine-double.luau')}\n${discoverDefinitions}\n${graphicsDiscoverModule}\n${read('backend/tests/luau/graphics-discover.spec.luau')}`;
+  const [discoverCount] = await runSuite(discoverSuite, 'graphics-discover-regressions');
+  console.log(`Passed ${discoverCount} native Graphics Discover assertions (engine doubles).`);
 } finally {
   if (!vm.destroyed) vm.destroy();
 }

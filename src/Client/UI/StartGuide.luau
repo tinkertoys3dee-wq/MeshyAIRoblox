@@ -149,10 +149,10 @@ function StartGuide.Show(app: any)
 		local card = Factory.ImageCard(content, UDim2.new(1, 0, 0, if compact then 128 else 88), nil, "StartChoice")
 		card.LayoutOrder = 2 + index
 		card.ZIndex = 353
-		Factory.Label(card, option.body, UDim2.new(1, if compact then -32 else -190, 0, if compact then 44 else 68), {
+		Factory.Label(card, option.body, UDim2.new(1, if compact then -32 else -220, 0, if compact then 44 else 68), {
 			Position = UDim2.fromOffset(16, 10),
 			Color = Theme.Colors.TextMuted,
-			TextSize = 12,
+			TextSize = 14,
 			Wrapped = true,
 			AlignY = Enum.TextYAlignment.Center,
 			ZIndex = 354,
@@ -164,7 +164,7 @@ function StartGuide.Show(app: any)
 			if compact then UDim2.fromOffset(16, 74) else UDim2.new(1, -180, 0.5, -24),
 			option.kind
 		)
-		control.TextSize = 11
+		control.TextSize = 13
 		control.ZIndex = 354
 		app:_BindButton(control)
 		control.Activated:Connect(function()

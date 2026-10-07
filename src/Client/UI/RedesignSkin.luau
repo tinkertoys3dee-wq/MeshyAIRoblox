@@ -2,6 +2,7 @@
 
 -- Image artwork sits behind the existing native controls and captions.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ContentProvider = game:GetService("ContentProvider")
 local Factory = require(script.Parent.Factory)
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local Assets = require(ReplicatedStorage:WaitForChild("RedesignAssets"))
@@ -63,6 +64,9 @@ end
 function Skin.Reset(target: GuiObject)
 	local art = target:FindFirstChild("RedesignArt")
 	if art then art:Destroy() end
+	for _, child in target:GetChildren() do
+		if child:IsA("GuiObject") and child:GetAttribute("ForgeV2Decoration") then child.Visible = false end
+	end
 	local decal = target:FindFirstChild("Decal")
 	if decal then decal.Visible = not Theme.IsHighContrast end
 	local loaded = decal and decal.IsLoaded and not Theme.IsHighContrast
@@ -70,6 +74,10 @@ function Skin.Reset(target: GuiObject)
 	if alpha ~= nil then target.BackgroundTransparency = if loaded then 1 else alpha end
 	local border = target:FindFirstChildOfClass("UIStroke")
 	if border then border.Transparency = if loaded then 1 else (target:GetAttribute("V2AuthoredStroke") or 0) end
+	for _, name in { "Gloss", "Shade" } do
+		local overlay = target:FindFirstChild(name)
+		if overlay then overlay.Visible = not loaded and not Theme.IsHighContrast end
+	end
 end
 
 function Skin.Skin(target: GuiObject, slug: string, name: string): boolean
@@ -93,6 +101,9 @@ function Skin.Skin(target: GuiObject, slug: string, name: string): boolean
 	local previous = target:FindFirstChild("RedesignArt")
 	if previous then
 		if previous:GetAttribute("ForgeAssetKey") == key then return true end
+		for _, child in target:GetChildren() do
+			if child:IsA("GuiObject") and child:GetAttribute("ForgeV2Decoration") then child.Visible = false end
+		end
 		previous:Destroy()
 	end
 	local oldScreen = target:FindFirstChild("ForgeScreenArt")
@@ -111,7 +122,7 @@ function Skin.Skin(target: GuiObject, slug: string, name: string): boolean
 	local art = Factory.New("ImageLabel", {
 		Name = "RedesignArt", Image = "rbxassetid://" .. tostring(id), Active = false,
 		Position = UDim2.fromScale(dx, dy), Size = UDim2.fromScale(sx, sy),
-		BackgroundTransparency = 1, BorderSizePixel = 0, ImageTransparency = 1,
+		BackgroundTransparency = 1, BorderSizePixel = 0, ImageTransparency = 0,
 		ScaleType = Enum.ScaleType.Stretch, ZIndex = target.ZIndex, Parent = target,
 	})
 	art:SetAttribute("ForgeAssetKey", key)
@@ -130,7 +141,10 @@ function Skin.Skin(target: GuiObject, slug: string, name: string): boolean
 	local authoredStroke = target:GetAttribute("V2AuthoredStroke") or 0
 	local function refresh()
 		local loaded = art.IsLoaded and not Theme.IsHighContrast
-		art.ImageTransparency = if loaded then 0 else 1
+		-- An unloaded image has no pixels to cover the fallback. Keeping it
+		-- renderable prevents the engine from unloading an invisible texture
+		-- while IsLoaded is the condition that would reveal it.
+		art.ImageTransparency = if Theme.IsHighContrast then 1 else 0
 		if oldDecal then oldDecal.Visible = not loaded end
 		target.BackgroundTransparency = if loaded or (oldDecal and oldDecal.IsLoaded) then 1 else authoredAlpha
 		if stroke then stroke.Transparency = if loaded then 1 else authoredStroke end
@@ -147,6 +161,13 @@ function Skin.Skin(target: GuiObject, slug: string, name: string): boolean
 		if decalConnection then decalConnection:Disconnect() end
 	end)
 	refresh()
+	-- Request the texture while the native fallback remains visible.
+	if type(ContentProvider.PreloadAsync) == "function" then
+		task.spawn(function()
+			pcall(function() ContentProvider:PreloadAsync({ art }) end)
+			if art.Parent then refresh() end
+		end)
+	end
 	return true
 end
 

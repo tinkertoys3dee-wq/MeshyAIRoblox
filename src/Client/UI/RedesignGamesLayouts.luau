@@ -69,11 +69,37 @@ local function control(app: any, parent: Instance, slug: string, name: string, a
 	local button = Factory.ImageButton(parent, caption, UDim2.fromOffset(w, h), UDim2.fromOffset(x, y), "mint")
 	button.Name = name
 	button.ZIndex = (parent :: any).ZIndex + 2
+	button.TextColor3 = Theme.Colors.Text
 	Skin.Sized(button, size)
 	Skin.Skin(button, slug, asset)
 	app:_BindButton(button)
 	button.Activated:Connect(action)
 	return button
+end
+
+local function captionIcon(button: TextButton, slug: string, asset: string, width: number)
+	local icon = Skin.Decoration(button, slug, asset, 22, 14, 39, 39)
+	if icon then
+		local caption = Factory.LiftLabel(button)
+		if caption then Skin.Place(caption, 66, 0, width-78, button.Size.Y.Offset) end
+	end
+end
+
+local function nativeEllipse(parent: Instance, name: string, x: number, y: number, w: number, h: number,
+	color: Color3, alpha: number, layer: number)
+	local holder = Factory.New("Frame", { Name = name, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h),
+		BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = layer, Active = false, Parent = parent })
+	-- Flat native spans make a light ring beneath the real avatar. There is
+	-- no painted example avatar, fake scenery or extra Roblox asset upload.
+	for top = 0, h-1, 2 do
+		local stripHeight = math.min(2, h-top)
+		local normalizedY = (top+stripHeight/2-h/2)/(h/2)
+		local span = w*math.sqrt(math.max(0, 1-normalizedY*normalizedY))
+		Factory.New("Frame", { Position = UDim2.fromOffset((w-span)/2, top), Size = UDim2.fromOffset(span, stripHeight),
+			BackgroundColor3 = color, BackgroundTransparency = alpha, BorderSizePixel = 0,
+			ZIndex = layer, Active = false, Parent = holder })
+	end
+	return holder
 end
 
 local function modalCanvas(app: any, modal: GuiObject, slug: string)
@@ -120,13 +146,17 @@ local function modalHeader(app: any, modal: GuiObject, slug: string, close: GuiB
 		local x = ({ 382, 590, 814, 1019 })[index]
 		local button = control(app, modal, slug, "ModalNav" .. pair[1], if index == 4 then "NavGamesArt" else "",
 			pair[1], x, 139, if index == 4 then 218 else 208, 66, 27, function() openPage(pair[2]) end)
+		captionIcon(button, slug, "Nav" .. pair[1] .. "Icon", if index == 4 then 218 else 208)
 		if index ~= 4 then
 			button.BackgroundTransparency = 1
 			for _, name in { "Decal", "Gloss", "Shade" } do local child = button:FindFirstChild(name); if child then child.Visible = false end end
+			local border = button:FindFirstChildOfClass("UIStroke")
+			if border then border.Transparency = 1 end
 		end
 	end
-	control(app, modal, slug, "ModalMyItems", "MyItemsArt", "My Items", 1276, 139, 247, 67, 26,
+	local items = control(app, modal, slug, "ModalMyItems", "MyItemsArt", "My Items", 1276, 139, 247, 67, 26,
 		function() openPage("My Studio") end)
+	captionIcon(items, slug, "MyItemsBag", 247)
 	close.Parent = modal
 	Skin.Place(close, 1544, 139, 69, 67); Skin.Sized(close, 32); Skin.Skin(close, slug, "CloseArt")
 	close.ZIndex = modal.ZIndex + 4
@@ -177,11 +207,16 @@ function Layouts.Apply(app: any): boolean
 		local labels = children(card, "TextLabel")
 		table.sort(labels, function(a, b) return a.Position.Y.Offset < b.Position.Y.Offset end)
 		if labels[1] then
-			Skin.Place(labels[1], 22, 10, w-44, 73); Skin.Sized(labels[1], ({ 56, 50, 45 })[index])
+			Skin.Place(labels[1], 119, 10, w-136, 73); Skin.Sized(labels[1], ({ 56, 44, 47 })[index])
+			labels[1].Font = Theme.Fonts.Black
+			labels[1].Text = ({ "Arcade", "Forge Runway", "AFK Lounge" })[index]
 			labels[1].TextXAlignment = Enum.TextXAlignment.Center
 		end
+		Skin.Decoration(card, "games", "GamesDestination" .. index .. "Icon", 35, 16, 76, 76)
 		if labels[2] then
 			Skin.Place(labels[2], 20, 82, w-40, 42); Skin.Sized(labels[2], 24)
+			labels[2].Font = Theme.Fonts.Bold
+			labels[2].TextColor3 = Theme.Colors.Text
 			labels[2].Text = ({ string.format("%d mini-games. Chase a new best.", #Config.Arcade.Games),
 				"Style a look. Walk the runway.", "Relax in the lounge. Earn tokens." })[index]
 			labels[2].TextXAlignment = Enum.TextXAlignment.Center
@@ -191,13 +226,19 @@ function Layouts.Apply(app: any): boolean
 		if action then
 			Skin.Place(action, 20, 455, w-40, 75); Skin.Sized(action, 31)
 			action.Text = ({ "Open Arcade  ›", "Open Runway  ›", "Enter Lounge  ›" })[index]
+			-- The old gold destination card authored a dark foreground. The
+			-- new cyan and purple actions need their own bright captions.
+			action.TextColor3 = if index == 3 then Theme.Colors.Ink else Theme.Colors.Text
 			Skin.Skin(action, "games", "GamesDestination" .. index .. "OpenArt")
 		end
 	end
-	text(page, "GamesHeading", "Play & Earn", 80, 229, 585, 77, 76)
+	text(page, "GamesHeading", "Play & Earn", 80, 229, 585, 77, 76).Font = Theme.Fonts.Black
+	Skin.Decoration(page, "games", "GamesHeadingSparkle1", 621, 240, 49, 49)
+	Skin.Decoration(page, "games", "GamesHeadingSparkle2", 605, 275, 29, 29)
 	text(page, "GamesSubtitle", "Take a break. Find your next challenge.", 124, 302, 650, 36, 28)
 	local badge = surface(page, "games", "GamesFreeToPlayBadgeArt", 686, 261, 218, 47)
-	text(badge, "FreeBadgeCaption", "Free to play", 12, 0, 194, 47, 23, nil, true)
+	Skin.Decoration(badge, "games", "GamesFreeToPlayBadgeIcon", 13, 8, 31, 31)
+	text(badge, "FreeBadgeCaption", "Free to play", 45, 0, 164, 47, 23, nil, true)
 	return true
 end
 
@@ -223,9 +264,18 @@ local function arcade(app: any, modal: GuiObject, closeModal: () -> ())
 	end
 	local title = nil
 	for _, label in children(modal, "TextLabel") do if label.Text == "ARCADE" then title = label end end
-	if title then Skin.Place(title, 241, 234, 452, 82); Skin.Sized(title, 78); title.Text = "Arcade" end
+	if title then
+		Skin.Place(title, 241, 234, 452, 82); Skin.Sized(title, 78); title.Text = "Arcade"
+		title.Font = Theme.Fonts.Black
+		-- The loaded hero painting is created later than these native labels.
+		-- Keep its surface below the title rather than relying on sibling order.
+		title.ZIndex = modal.ZIndex + 5
+	end
 	local subtitle = named(modal, "ArcadeTitle")
-	if subtitle then Skin.Place(subtitle, 241, 319, 452, 39); Skin.Sized(subtitle, 25) end
+	if subtitle then
+		Skin.Place(subtitle, 241, 319, 452, 39); Skin.Sized(subtitle, 25)
+		subtitle.ZIndex = modal.ZIndex + 5
+	end
 	local hero = surface(modal, "arcade", "ArcadeHeroPanelArt", 65, 229, 642, 140)
 	hero.ZIndex = modal.ZIndex + 2
 	Skin.Decoration(hero, "arcade", "ArcadeController", 8, 9, 163, 117)
@@ -286,20 +336,24 @@ local function arcade(app: any, modal: GuiObject, closeModal: () -> ())
 		if challenge then
 			Skin.Place(challenge, 7, height-26, 174, 22)
 			challenge.AnchorPoint = Vector2.zero
+			for _, label in children(challenge, "TextLabel") do Skin.Sized(label, 18) end
 		end
 		local play = tile:FindFirstChild("PlayPill")
 		if play then
 			Skin.Place(play, 193, 92, width-207, if key == "Leaderboard" then 52 else 58)
 			Skin.Sized(play, if key == "Leaderboard" then 20 else 27)
 			play.Text = if key == "Leaderboard" then "View rankings" else "Play"
+			play.TextColor3 = if key == "NeonSnake" or key == "BrickBreaker" or key == "EchoMatch"
+				then Theme.Colors.Ink else Theme.Colors.Text
 			Skin.Skin(play, "arcade", if key == "Leaderboard" then "OpenLeaderboardsArt" else "Play" .. key .. "Art")
 		end
 	end
-	for _, name in { "GameView", "LeaderboardView", "TransitionOverlay" } do
+	for _, name in { "GameView", "LeaderboardView", "ViewTransition" } do
 		local view = named(modal, name)
 		if view then
-			Skin.Place(view, 65, 348, 1547, 540)
-			view.ZIndex = if name == "TransitionOverlay" then modal.ZIndex+8 else modal.ZIndex+3
+			-- All view changes stay beneath the shared title and navigation.
+			Skin.Place(view, 65, 377, 1547, 511)
+			view.ZIndex = if name == "ViewTransition" then modal.ZIndex+8 else modal.ZIndex+3
 		end
 	end
 end
@@ -326,23 +380,29 @@ local function runway(app: any, modal: GuiObject, closeModal: () -> ())
 	local title = named(header, "RunwayTitle")
 	Skin.Place(title, 171, 16, 495, 80); Skin.Sized(title, 60); title.Text = "Forge Runway"
 	local theme = named(header, "RunwayTheme")
-	Skin.Place(theme, 824, 58, 335, 50); Skin.Sized(theme, 37)
+	Skin.Place(theme, 824, 58, 335, 50); Skin.Sized(theme, 34)
 	theme.Text = string.gsub(theme.Text, "Tonight's theme · ", "")
 	local themePanel = header:FindFirstChild("CurrentThemeBannerArt")
 		or surface(header, "runway", "CurrentThemeBannerArt", 744, 6, 421, 109)
-	theme.Parent = themePanel; Skin.Place(theme, 80, 52, 335, 50); theme.ZIndex = themePanel.ZIndex+2
+	theme.Parent = themePanel; Skin.Place(theme, 110, 49, 299, 50); theme.ZIndex = themePanel.ZIndex+2
+	Skin.Decoration(themePanel, "runway", "RunwayThemeCrown", 18, 24, 78, 80)
 	if not themePanel:FindFirstChild("CurrentThemeCaption") then text(themePanel, "CurrentThemeCaption", "Current Theme", 110, 7, 298, 30, 21) end
 	Skin.Decoration(header, "runway", "RunwayThemeLeftCrystals", 670, 8, 124, 112)
 	Skin.Decoration(header, "runway", "RunwayThemeRightCrystals", 1152, 6, 82, 112)
+	Skin.Decoration(header, "runway", "RunwayTimerCrystals", 1538, 6, 82, 112)
 	local phase = named(header, "RunwayPhase")
 	Skin.Place(phase, 1280, 16, 256, 40); Skin.Sized(phase, 21)
 	phase.TextXAlignment = Enum.TextXAlignment.Center
 	Skin.Skin(phase, "runway", "RunwayPhaseIndicatorArt")
+	Skin.Decoration(phase, "runway", "PhaseHanger", 12, 5, 34, 29)
+	local phaseCaption = Factory.LiftLabel(phase)
+	if phaseCaption then Skin.Place(phaseCaption, 48, 0, 197, 40) end
 	local timer = named(header, "TimerRing")
 	Skin.Place(timer, 1335, 61, 201, 50)
 	for _, child in children(timer, "GuiObject") do child.Visible = child.Name == "RunwayClock" end
 	local clock = named(timer, "RunwayClock")
-	Skin.Place(clock, 0, 0, 201, 50); Skin.Sized(clock, 39)
+	Skin.Decoration(timer, "runway", "CountdownClock", 5, 1, 45, 48)
+	Skin.Place(clock, 54, 0, 147, 50); Skin.Sized(clock, 39)
 	if not header:FindFirstChild("RunwaySubheading") then text(header, "RunwaySubheading", "Style it. Lock it. Own the stage.", 184, 84, 540, 32, 27) end
 	local body = named(modal, "RunwayContent")
 	body.ZIndex = modal.ZIndex + 3
@@ -360,7 +420,31 @@ local function runway(app: any, modal: GuiObject, closeModal: () -> ())
 	Skin.Place(weekly, 1194, 0, 426, 535); Skin.Skin(weekly, "runway", "WeeklyStandingsPanelArt")
 	local extraY = 553
 	for _, card in extraCards do
-		card.Parent = stack; Skin.Place(card, 61, extraY, 501, card.Size.Y.Offset)
+		card.Parent = stack
+		if card.Name == "FirstLookJourney" then
+			local steps = {}
+			for _, row in children(card, "Frame") do if row.Name == "JourneyStep" then table.insert(steps, row) end end
+			if #steps > 0 then
+				Skin.Place(card, 61, extraY, 501, 117+#steps*58)
+				local heading, count, help = named(card, "JourneyTitle"), named(card, "JourneyCount"), named(card, "JourneyHelp")
+				Skin.Place(heading, 21, 14, 353, 35); Skin.Sized(heading, 26)
+				Skin.Place(count, 378, 14, 102, 35); Skin.Sized(count, 26)
+				Skin.Place(help, 21, 53, 459, 56); Skin.Sized(help, 20)
+				for index, row in steps do
+					Skin.Place(row, 17, 111+(index-1)*58, 467, 49)
+					local icon, caption, prize = named(row, "JourneyStepIcon"), named(row, "JourneyStepName"), named(row, "JourneyStepReward")
+					Skin.Place(icon, 6, 0, 43, 49); Skin.Sized(icon, 26)
+					Skin.Place(caption, 53, 0, 337, 49); Skin.Sized(caption, 22)
+					Skin.Place(prize, 392, 0, 65, 49); Skin.Sized(prize, 20)
+				end
+			else Skin.Place(card, 61, extraY, 501, card.Size.Y.Offset) end
+		elseif card.Name == "RunwayForgeActivity" then
+			Skin.Place(card, 61, extraY, 501, 119)
+			local heading, help, action = named(card, "ForgeActivityTitle"), named(card, "ForgeActivityHelp"), named(card, "ViewForgeActivity")
+			if heading then Skin.Place(heading, 21, 12, 298, 44); Skin.Sized(heading, 22); heading.TextWrapped = true end
+			if help then Skin.Place(help, 21, 60, 298, 48); Skin.Sized(help, 20); help.TextWrapped = true end
+			if action then Skin.Place(action, 334, 30, 148, 64); Skin.Sized(action, 21); action.TextWrapped = true end
+		else Skin.Place(card, 61, extraY, 501, card.Size.Y.Offset) end
 		extraY += card.Size.Y.Offset + 18
 	end
 	Skin.Place(stack, 0, 0, 1672, math.max(540, extraY))
@@ -377,6 +461,19 @@ local function runway(app: any, modal: GuiObject, closeModal: () -> ())
 			local border = banner:FindFirstChildOfClass("UIStroke"); if border then border.Transparency = 1 end
 			for _, name in { "Gloss", "Shade" } do local overlay = banner:FindFirstChild(name); if overlay then overlay.Visible = false end end
 		end
+	end
+	local emptyLineup = lineup:FindFirstChild("RunwayLineupEmpty")
+	if emptyLineup then
+		local crown = Skin.Decoration(lineup, "runway", "RunwayTitleCrown", 188, 83, 125, 127)
+		if crown and crown:FindFirstChild("RedesignArt") then Factory.Corner(crown.RedesignArt, 22) end
+		Skin.Place(emptyLineup, 30, 220, 441, 77); Skin.Sized(emptyLineup, 30)
+		emptyLineup.Text = "The spotlight is waiting"
+		emptyLineup.TextColor3 = Theme.Colors.Text
+		emptyLineup.Font = Theme.Fonts.Black; emptyLineup.TextWrapped = true
+		emptyLineup.ZIndex = lineup.ZIndex+3
+		local hint = text(lineup, "RunwayLineupEmptyHelp", "Join the round, style your avatar, then lock in your look.", 39, 304, 423, 84, 23, Theme.Colors.TextMuted, true)
+		hint.TextWrapped = true; hint.TextTruncate = Enum.TextTruncate.None
+		text(lineup, "RunwayLineupEmptyNote", "Live players appear here when they join.", 36, 433, 429, 57, 20, Theme.Colors.Cyan, true).TextWrapped = true
 	end
 	-- Entrants overflow inside their panel; all server entries stay reachable.
 	local entries = children(lineup, "TextButton")
@@ -404,35 +501,71 @@ local function runway(app: any, modal: GuiObject, closeModal: () -> ())
 		end
 		local vote = row:FindFirstChild("VoteOrLeave")
 		if vote then
-			Skin.Place(vote, 160, 68, 145, 27); Skin.Sized(vote, 16)
 			vote.Visible = vote.Active == true or vote.Text == "✓" or vote.Text == "Voted"
-			if vote.Visible and status then Skin.Place(status, 164, 44, 143, 23); Skin.Sized(status, 15) end
+			-- Voting and viewing share a clear action column. A short vote
+			-- button underneath the player's status was too small after fit.
+			Skin.Place(vote, 315, 55, 161, 41); Skin.Sized(vote, 20)
+			if vote.Visible and view then Skin.Place(view, 315, 7, 161, 43); Skin.Sized(view, 20) end
 		end
 	end
 	local preview = named(hero, "SelectedLook")
 	Skin.Place(preview, 12, 55, 577, 300)
-	preview.BackgroundTransparency = 0.2
-	preview.BackgroundColor3 = if Theme.IsHighContrast then Theme.Colors.Ink else Color3.fromRGB(48, 27, 90)
+	preview.BackgroundTransparency = 1
+	local stage = Factory.New("Frame", { Name = "V2RunwayAvatarStage", Position = UDim2.fromOffset(12, 55),
+		Size = UDim2.fromOffset(577, 300), BackgroundColor3 = if Theme.IsHighContrast then Theme.Colors.Ink else Color3.new(1,1,1),
+		BorderSizePixel = 0, ClipsDescendants = true, Active = false, ZIndex = hero.ZIndex+1, Parent = hero })
+	Factory.Corner(stage, 16)
+	if not Theme.IsHighContrast then
+		Factory.Gradient(stage, { Color3.fromRGB(17, 14, 45), Color3.fromRGB(27, 30, 76), Color3.fromRGB(14, 62, 109) }, 90)
+		nativeEllipse(stage, "HologramHalo", 4, 205, 569, 90, Color3.fromRGB(24, 162, 247), 0.85, stage.ZIndex)
+		nativeEllipse(stage, "HologramRim", 87, 239, 403, 51, Color3.fromRGB(57, 211, 255), 0.12, stage.ZIndex)
+		nativeEllipse(stage, "HologramCentre", 106, 245, 365, 33, Color3.fromRGB(13, 51, 107), 0.04, stage.ZIndex)
+	end
+	preview.ZIndex = stage.ZIndex+1
+	local previewName = preview:FindFirstChild("SelectedLookName")
+	if previewName then Skin.Place(previewName, 16, 11, 363, 35); Skin.Sized(previewName, 23); previewName.ZIndex = preview.ZIndex+2 end
+	local heroBanner = hero:FindFirstChild("SectionBanner")
+	if heroBanner then Skin.Place(heroBanner, 20, 10, 391, 44) end
+	local rotateHint = surface(hero, "runway", "DragInstructionArt", 436, 7, 155, 46)
+	Skin.Decoration(rotateHint, "runway", "RotateMouseIcon", 10, 8, 24, 28)
+	text(rotateHint, "RunwayRotateCaption", "Drag to rotate", 39, 2, 109, 42, 18, Theme.Colors.Text, true).TextWrapped = true
 	local reset = named(preview, "ResetCamera")
 	reset.Parent = hero; Skin.Place(reset, 440, 91, 149, 44); Skin.Sized(reset, 16)
 	reset.Text = "Reset camera"; Skin.Skin(reset, "runway", "ResetCameraArt")
+	reset.ZIndex = hero.ZIndex+4
 	local phasePill = hero:FindFirstChild("LookPhase"); if phasePill then phasePill.Visible = false end
 	local instruction = hero:FindFirstChild("LookInstruction")
 	if instruction then Skin.Place(instruction, 14, 495, 573, 36); Skin.Sized(instruction, 16) end
 	local xp = hero:FindFirstChild("CreatorXp")
-	if xp then Skin.Place(xp, 344, 369, 230, 31); Skin.Sized(xp, 18); xp.TextXAlignment = Enum.TextXAlignment.Right end
+	if xp then Skin.Place(xp, 344, 369, 208, 31); Skin.Sized(xp, 21); xp.TextXAlignment = Enum.TextXAlignment.Right; xp.ZIndex = hero.ZIndex+3 end
 	local level = hero:FindFirstChild("CreatorLevel")
-	if level then Skin.Place(level, 26, 369, 300, 31); Skin.Sized(level, 18) end
+	if level then Skin.Place(level, 26, 369, 300, 31); Skin.Sized(level, 21); level.ZIndex = hero.ZIndex+3 end
 	Skin.Decoration(hero, "runway", "CreatorXpStripArt", 16, 368, 569, 39)
-	local track = hero:FindFirstChild("CreatorXpTrack"); if track then Skin.Place(track, 24, 406, 552, 7) end
-	for _, name in { "CreatorTitle", "RunwayStats", "DailyEncore", "EquippedLookName", "EquippedLookHelp" } do
-		local node = hero:FindFirstChild(name)
+	Skin.Decoration(hero, "runway", "CreatorXpCrown", 552, 369, 30, 29)
+	local track = hero:FindFirstChild("CreatorXpTrack")
+	if track then
+		Skin.Place(track, 24, 406, 552, 7); track.ZIndex = hero.ZIndex+3
+		for _, fill in children(track, "Frame") do fill.ZIndex = track.ZIndex+1 end
+	end
+	-- Profile details get their own middle-column card directly below the
+	-- avatar. Long journey cards in the left column no longer push these
+	-- labels into an unrelated blank area far down the scroll.
+	local summary: Frame? = nil
+	for _, spec in { { "CreatorTitle", 51, 34, 26 }, { "RunwayStats", 89, 34, 22 },
+		{ "DailyEncore", 126, 51, 21 }, { "EquippedLookName", 182, 34, 24 }, { "EquippedLookHelp", 218, 45, 20 } } do
+		local node = hero:FindFirstChild(spec[1])
 		if node then
-			node.Parent = stack
-			Skin.Place(node, 588, extraY, 590, 32); Skin.Sized(node, 19)
-			extraY += 36
+			if not summary then
+				summary = surface(stack, "runway", "AvatarPreviewPanelArt", 577, 553, 601, 278)
+				summary.Name = "CreatorSummaryPanel"
+				text(summary, "CreatorSummaryHeading", "Your Creator Progress", 24, 9, 553, 37, 28, Theme.Colors.Gold)
+			end
+			node.Parent = summary
+			Skin.Place(node, 24, spec[2], 553, spec[3]); Skin.Sized(node, spec[4])
+			node.ZIndex = summary.ZIndex+3; node.TextWrapped = true; node.TextTruncate = Enum.TextTruncate.None
 		end
 	end
+	if summary then extraY = math.max(extraY, 849) end
 	Skin.Place(stack, 0, 0, 1672, math.max(540, extraY))
 	for _, spec in { { "OpenAvatarLab", "OpenAvatarLabArt", 8, 420, 151, 73, 17 },
 		{ "LockLook", "LockInLookArt", 171, 416, 260, 71, 26 },
@@ -443,14 +576,27 @@ local function runway(app: any, modal: GuiObject, closeModal: () -> ())
 	local refresh = weekly:FindFirstChild("RefreshWeekly")
 	Skin.Place(refresh, 284, 10, 132, 42); Skin.Sized(refresh, 19); Skin.Skin(refresh, "runway", "RefreshWeeklyArt")
 	local weeklyBanner = weekly:FindFirstChild("SectionBanner")
-	if weeklyBanner then Skin.Place(weeklyBanner, 17, 10, 265, 44); Skin.Sized(weeklyBanner, 28) end
+	if weeklyBanner then
+		Skin.Place(weeklyBanner, 17, 10, 253, 44); Skin.Sized(weeklyBanner, 27)
+		weeklyBanner.Text = "Weekly Spotlight"
+	end
 	for _, label in children(weekly, "TextLabel") do
 		if label.Name ~= "SectionBanner" then
 			local y = label.Position.Y.Offset
-			if y == 36 or y == 53 then label.Visible = false
-			elseif y == 301 then Skin.Place(label, 12, 377, 402, 24); Skin.Sized(label, 14)
+			if label.Name == "WeeklyPointsHelp" or label.Name == "WeeklyRewardsHelp" or y == 36 or y == 53 then label.Visible = false
+			elseif label.Name == "WeeklyOwnSummary" or y == 301 then Skin.Place(label, 12, 377, 402, 24); Skin.Sized(label, 18)
+			elseif label.Name == "RunwayWeeklyEmpty" or label.Name == "RunwayWeeklyLoading" then
+				Skin.Place(label, 25, 192, 376, 83); Skin.Sized(label, 27)
+				label.TextWrapped = true; label.TextTruncate = Enum.TextTruncate.None
+				label.TextColor3 = Theme.Colors.Text; label.ZIndex = weekly.ZIndex+3
 			else Skin.Place(label, 16, 76, 394, 88); Skin.Sized(label, 20) end
 		end
+	end
+	if weekly:FindFirstChild("RunwayWeeklyEmpty") or weekly:FindFirstChild("RunwayWeeklyLoading") then
+		local crown = Skin.Decoration(weekly, "runway", "RunwayTitleCrown", 161, 74, 104, 106)
+		if crown and crown:FindFirstChild("RedesignArt") then Factory.Corner(crown.RedesignArt, 20) end
+		local help = text(weekly, "WeeklyEmptyHelp", "Finish rounds and cast votes to earn real weekly points.", 28, 281, 370, 73, 22, Theme.Colors.TextMuted, true)
+		help.TextWrapped = true; help.TextTruncate = Enum.TextTruncate.None
 	end
 	for _, row in children(weekly, "Frame") do
 		if row.Name ~= "WeeklyRow" then continue end
@@ -466,8 +612,8 @@ local function runway(app: any, modal: GuiObject, closeModal: () -> ())
 	Skin.Decoration(rewards, "runway", "RunwayWeeklyRewardArt", 7, 4, 166, 121)
 	text(rewards, "WeeklyXpTitle", "Weekly Creator XP", 172, 12, 237, 36, 24)
 	text(rewards, "WeeklyXpRewards", string.format("1st +%d · 2nd +%d · 3rd +%d", table.unpack(Config.Runway.WeeklyPlacementXP)),
-		172, 62, 237, 24, 15, Theme.Colors.Gold)
-	text(rewards, "WeeklyXpHelp", "Earn XP in this week's spotlight.", 172, 86, 237, 22, 14, Theme.Colors.TextMuted)
+		172, 50, 237, 45, 19, Theme.Colors.Gold).TextWrapped = true
+	text(rewards, "WeeklyXpHelp", "Weekly spotlight rewards", 172, 97, 237, 27, 18, Theme.Colors.TextMuted)
 end
 
 function Layouts.Modal(app: any, modal: GuiObject, kind: string, closeModal: () -> ())

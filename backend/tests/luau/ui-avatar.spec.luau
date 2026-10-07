@@ -107,6 +107,84 @@ scaledGameCanvas.AbsoluteSize = Vector2.zero
 local preLayoutGameSize = GameShell.CanvasSize(scaledGameCanvas, Vector2.new(520, 320))
 equal(preLayoutGameSize.X, 560, "Pre-layout Arcade width derives from the visible scaled parent")
 equal(preLayoutGameSize.Y, 320, "Pre-layout Arcade height derives from the visible scaled parent")
+local readableHost = Factory.New("Frame", { AbsoluteSize = Vector2.new(900, 300), Parent = parent })
+local readableAncestorScale = Factory.New("UIScale", { Scale = 0.58, Parent = readableHost })
+local readableExitCount, readableSubmitCount = 0, 0
+local readableShell = GameShell.new(readableHost, { Bind = function() end, Play = function() end },
+	function() readableExitCount += 1 end, function() readableSubmitCount += 1 end,
+	function() return { standings = {}, self = nil } end, true)
+readableShell.root.AbsoluteSize = Vector2.new(900, 300)
+local chromeScale = readableShell.hudScale.Scale * readableAncestorScale.Scale
+check(math.abs(chromeScale - 1) < 0.001, "Arcade HUD counters ancestor downscaling")
+equal(readableShell.exitButton.Size.Y.Offset * chromeScale, 44, "Arcade exit retains a 44-pixel physical target")
+equal(readableShell.trophyButton.Size.Y.Offset * chromeScale, 44, "Arcade trophy retains a 44-pixel physical target")
+check(readableShell.gameTitle.TextSize * chromeScale >= 20, "Arcade game title remains readable under modal scaling")
+equal(readableShell.canvas:FindFirstChildOfClass("UIScale"), nil, "Readable controls never introduce a gameplay scaler")
+local readableRetryIcon = readableShell.card:FindFirstChild("RetryButton"):FindFirstChild("Icon")
+local readableRetryArt = readableRetryIcon:FindFirstChild("ApprovedIcon")
+local readableRetryFallback = readableRetryIcon:FindFirstChildOfClass("TextLabel")
+equal(readableRetryFallback.Text, "R", "Retry uses a supported ASCII fallback while artwork loads")
+equal(readableRetryFallback.Visible, false, "Normal retry does not stack its ASCII glyph over renderable approved artwork")
+readableRetryArt.IsLoaded = true
+equal(readableRetryFallback.Visible, false, "Loaded approved retry artwork replaces its fallback")
+equal(readableShell.exitIcon:FindFirstChildOfClass("TextLabel").Font, Enum.Font.ArialBold, "Exit cross uses a font with its supported Latin-1 glyph")
+local readableGameStarts, readableGameStops = 0, 0
+local readableGame = { Name = "Test Game", Key = "TestGame", Start = function()
+	readableGameStarts += 1
+	return function() readableGameStops += 1 end
+end }
+readableShell:Run(readableGame)
+readableShell:_GameOver(7)
+local cardPhysicalScale = readableShell.cardScale.Scale * readableAncestorScale.Scale
+check(readableShell.card.Size.Y.Offset * cardPhysicalScale <= 280.01, "Game-over card fits a short scaled shell")
+check(readableShell.card:FindFirstChild("RetryButton").Size.Y.Offset * cardPhysicalScale >= 44, "Game-over retry retains a readable physical target when space permits")
+check(readableShell.bestLabel.TextSize * cardPhysicalScale >= 15, "Game-over session best is readable")
+equal(readableShell.bestLabel.Text, "Best this session: 7", "Readable game-over preserves honest session-best text")
+equal(readableSubmitCount, 1, "Readable game-over preserves one score submission")
+readableShell.standingsCache.TestGame = { standings = {}, self = nil }
+readableShell:_ToggleWeeklyStandings()
+check(readableShell.standingsPanel.ZIndex > readableShell.overlay.ZIndex, "Weekly results stay above the game-over dimmer")
+local readableCardRight = readableShell.card.Position.X.Scale * 900 + readableShell.card.Size.X.Offset * cardPhysicalScale / 2
+local readableWeeklyLeft = 900 - 8 - readableShell.standingsPanel.Size.X.Offset
+check(readableCardRight < readableWeeklyLeft, "Wide weekly results and game-over actions occupy separate lanes")
+readableShell.standingsPanel:FindFirstChild("CloseWeeklyStandings").Activated:Fire()
+equal(readableShell.card.Position.X.Scale, 0.5, "Closing weekly results recenters the same finished-game card")
+equal(readableSubmitCount, 1, "Opening and closing results never resubmits a score")
+readableShell.card:FindFirstChild("RetryButton").Activated:Fire()
+equal(readableGameStarts, 2, "Readable retry still restarts the current game")
+equal(readableGameStops, 1, "Readable retry still cleans up the preceding game")
+readableShell.root.AbsoluteSize = Vector2.new(320, 568)
+equal(readableShell.hud.Size.Y.Offset, 88, "Narrow Arcade HUD uses two rows without overlapping actions")
+check(readableShell.card.Size.X.Offset * readableShell.cardScale.Scale * readableAncestorScale.Scale <= 296.01, "Narrow game-over card fits inside the viewport")
+readableShell:_GameOver(4)
+readableShell:_ToggleWeeklyStandings()
+equal(readableShell.card.Visible, false, "Narrow weekly results hide only the presentation of the finished-game card")
+check(readableShell.overlay.Visible, "Narrow weekly results preserve the finished-game state")
+readableShell.standingsPanel:FindFirstChild("CloseWeeklyStandings").Activated:Fire()
+equal(readableShell.card.Visible, true, "Closing narrow weekly results restores the same finished-game card")
+equal(readableShell.finalScoreLabel.Text, "Score: 4", "Weekly result navigation preserves the final score")
+local readableStandingsLayout = readableShell.standingsList:FindFirstChildOfClass("UIListLayout")
+readableShell:_RenderStandings({ standings = {
+	{ userId = 1, name = "Player", score = 7 }, { userId = 2, name = "OtherPlayer", score = 5 },
+}, self = nil })
+equal(readableShell.standingsList:FindFirstChildOfClass("UIListLayout"), readableStandingsLayout, "Weekly refresh preserves the layout that prevents overlapping rows")
+equal(#readableShell.standingsList:GetChildren(), 3, "Weekly refresh retains two live rows plus their layout")
+readableShell:_RenderStandings({ standings = {}, self = nil })
+equal(readableShell.standingsList:FindFirstChildOfClass("UIListLayout"), readableStandingsLayout, "Weekly empty refresh preserves scrolling row layout")
+equal(readableShell.selfStandingLabel.TextSize, 16, "Weekly standings retain readable physical text")
+readableShell.exitButton.Activated:Fire()
+equal(readableExitCount, 1, "Readable exit retains its original callback")
+readableShell:Destroy()
+local readableTheme = require("Theme")
+readableTheme.IsHighContrast = true
+local contrastGameShell = GameShell.new(readableHost, { Bind = function() end, Play = function() end },
+	function() end, function() end, function() return nil end, true)
+local contrastRetryIcon = contrastGameShell.card:FindFirstChild("RetryButton"):FindFirstChild("Icon")
+contrastRetryIcon:FindFirstChild("ApprovedIcon").IsLoaded = true
+equal(contrastRetryIcon:FindFirstChild("ApprovedIcon").Visible, false, "High contrast hides approved decorative retry artwork")
+check(contrastRetryIcon:FindFirstChildOfClass("TextLabel").Visible, "High contrast keeps retry's supported fallback readable")
+contrastGameShell:Destroy()
+readableTheme.IsHighContrast = false
 local overlay = Instance.new("Frame")
 overlay.Parent = parent
 local panel = Instance.new("Frame")

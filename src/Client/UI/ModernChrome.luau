@@ -21,6 +21,8 @@ local function layout(app: any)
 	local width, height = root.AbsoluteSize.X / scale, root.AbsoluteSize.Y / scale
 	if width <= 0 or height <= 0 then return end
 	local mobile = app.compact == true
+	local shade = root:FindFirstChild("CompactBackdropShade")
+	if shade then shade.Visible = mobile and not Theme.IsHighContrast end
 	if app.editorMobile ~= mobile or (mobile and math.abs((app.editorWidth or 0)-width) > 1) then
 		app.editorMobile, app.editorWidth = mobile, width
 		for _, child in app.editorHeader:GetChildren() do child:Destroy() end
@@ -32,8 +34,9 @@ local function layout(app: any)
 		canvas.Position = UDim2.fromOffset(0, 0)
 		canvas.Size = UDim2.fromScale(1, 1)
 		if app.content.Parent == canvas then
-			app.content.Position = UDim2.fromOffset(0, 218)
-			app.content.Size = UDim2.new(1, 0, 1, -230)
+			local headerHeight = if width >= 520 then 168 else 200
+			app.content.Position = UDim2.fromOffset(0, headerHeight)
+			app.content.Size = UDim2.new(1, 0, 1, -headerHeight - 12)
 		end
 	else
 		canvas.AnchorPoint = Vector2.new(.5, .5)
@@ -58,6 +61,9 @@ local function ensure(app: any)
 			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Crop,
 			ZIndex = 0, Parent = root })
 	end
+	Factory.New("Frame", { Name = "CompactBackdropShade", Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Theme.Colors.Ink, BackgroundTransparency = 0.28, BorderSizePixel = 0,
+		Active = false, Visible = false, ZIndex = 0, Parent = root })
 	app.editorCanvas = Factory.New("Frame", { Name = "EditorCanvas", Size = UDim2.fromOffset(1672, 941),
 		BackgroundTransparency = 1, BorderSizePixel = 0, Parent = root })
 	app.editorScale = Factory.New("UIScale", { Scale = 1, Parent = app.editorCanvas })
@@ -133,7 +139,7 @@ function ModernChrome.LayoutPreview(app: any): boolean
 			panel.ZIndex = 3
 			RedesignSkin.Skin(panel, "market", "MarketAvatarPanel")
 			local title = panel:FindFirstChild("PreviewTitle")
-			if title then title.Text = "Your Avatar"; RedesignSkin.Place(title, 24, 10, 300, 53); RedesignSkin.Sized(title, 39) end
+			if title then title.Text = "Your Avatar"; RedesignSkin.Place(title, 24, 10, 250, 53); RedesignSkin.Sized(title, 36) end
 			if not panel:FindFirstChild("V2FreeTryOn") then
 				local badge = Factory.ImagePill(panel, "Free Try-On", Theme.Colors.Mint, 170)
 				badge.Name = "V2FreeTryOn"; RedesignSkin.Place(badge, 300, 13, 170, 49); RedesignSkin.Sized(badge, 21)
@@ -145,8 +151,11 @@ function ModernChrome.LayoutPreview(app: any): boolean
 			viewport.BackgroundColor3 = Color3.fromRGB(5, 46, 85)
 			local reset = panel:FindFirstChild("ResetCamera", true)
 			if reset then
-				reset.Parent = panel; reset.Text = "↺\nReset\nCamera"; RedesignSkin.Place(reset, 381, 106, 94, 124)
+				reset.Parent = panel; reset.Text = "Reset\nCamera"; RedesignSkin.Place(reset, 381, 106, 94, 124)
 				RedesignSkin.Sized(reset, 18); RedesignSkin.Skin(reset, "market", "MarketResetCameraSurface")
+				local caption = Factory.LiftLabel(reset)
+				if caption then RedesignSkin.Place(caption, 4, 55, 86, 61); caption.TextXAlignment = Enum.TextXAlignment.Center end
+				RedesignSkin.Decoration(reset, "market", "MarketResetIconArtwork", 25, 14, 43, 43)
 			end
 			local divider = panel:FindFirstChild("Divider")
 			if divider then divider.Visible = false end

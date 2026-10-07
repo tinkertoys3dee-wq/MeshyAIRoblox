@@ -512,6 +512,7 @@ function RunwayHub.Show(app: any)
 			selectedEntry and selectedEntry.name or selectedPlayer.DisplayName,
 			UDim2.new(1, -54, 0, 26),
 			{
+				Name = "SelectedLookName",
 				Position = UDim2.fromOffset(12, 10),
 				Font = Theme.Fonts.Bold,
 				TextSize = 12,
@@ -780,6 +781,7 @@ function RunwayHub.Show(app: any)
 				),
 				UDim2.new(1, -142, 0, 22),
 				{
+					Name = "ForgeActivityTitle",
 					Position = UDim2.fromOffset(16, 9),
 					Font = Theme.Fonts.Bold,
 					Color = Colors.Cyan,
@@ -792,6 +794,7 @@ function RunwayHub.Show(app: any)
 				"Keep styling—we'll celebrate as soon as it is ready.",
 				UDim2.new(1, -142, 0, 18),
 				{
+					Name = "ForgeActivityHelp",
 					Position = UDim2.fromOffset(16, 31),
 					Color = Colors.TextMuted,
 					TextSize = 10,
@@ -805,6 +808,7 @@ function RunwayHub.Show(app: any)
 				UDim2.new(1, -148, 0, 14),
 				nil
 			)
+			viewActivity.Name = "ViewForgeActivity"
 			app:_BindButton(viewActivity)
 			viewActivity.Activated:Connect(function()
 				closeHub()
@@ -824,6 +828,7 @@ function RunwayHub.Show(app: any)
 			if journeyComplete then "FIRST MAKEOVER COMPLETE" else "YOUR FIRST MAKEOVER",
 			UDim2.new(1, -126, 0, 20),
 			{
+				Name = "JourneyTitle",
 				Position = UDim2.fromOffset(16, 13),
 				Font = Theme.Fonts.Bold,
 				TextSize = 12,
@@ -835,6 +840,7 @@ function RunwayHub.Show(app: any)
 			string.format("%d / %d", journey.doneCount or 0, journey.total or #Config.Retention.FirstLookJourney),
 			UDim2.fromOffset(90, 20),
 			{
+				Name = "JourneyCount",
 				AnchorPoint = Vector2.new(1, 0),
 				Position = UDim2.new(1, -16, 0, 13),
 				Font = Theme.Fonts.Black,
@@ -847,12 +853,13 @@ function RunwayHub.Show(app: any)
 			journeyCard,
 			"Free path · each step +2 bonus tokens · finish +12 and +100 Creator XP",
 			UDim2.new(1, -32, 0, 26),
-			{ Position = UDim2.fromOffset(16, 37), Color = Colors.TextMuted, TextSize = 10, Wrapped = true }
+			{ Name = "JourneyHelp", Position = UDim2.fromOffset(16, 37), Color = Colors.TextMuted, TextSize = 10, Wrapped = true }
 		)
 		local journeyY = 70
 		for _, definition in Config.Retention.FirstLookJourney do
 			local done = journey.done and journey.done[definition.key] == true
 			local row = Factory.New("Frame", {
+				Name = "JourneyStep",
 				Position = UDim2.fromOffset(16, journeyY),
 				Size = UDim2.new(1, -32, 0, 27),
 				BackgroundColor3 = if done then Colors.Mint else Colors.Ink,
@@ -862,18 +869,21 @@ function RunwayHub.Show(app: any)
 			})
 			Factory.Corner(row, 8)
 			Factory.Label(row, if done then "✓" else definition.icon, UDim2.fromOffset(32, 27), {
+				Name = "JourneyStepIcon",
 				Font = Theme.Fonts.Bold,
 				Color = if done then Colors.Mint else Colors.Text,
 				AlignX = Enum.TextXAlignment.Center,
 				TextSize = 12,
 			})
 			Factory.Label(row, definition.label, UDim2.new(1, -90, 1, 0), {
+				Name = "JourneyStepName",
 				Position = UDim2.fromOffset(34, 0),
 				Color = if done then Colors.Text else Colors.TextMuted,
 				TextSize = 11,
 				Truncate = Enum.TextTruncate.AtEnd,
 			})
 			Factory.Label(row, if done then "DONE" else "+2", UDim2.fromOffset(44, 27), {
+				Name = "JourneyStepReward",
 				AnchorPoint = Vector2.new(1, 0),
 				Position = UDim2.new(1, -8, 0, 0),
 				Color = if done then Colors.Mint else Colors.Gold,
@@ -894,6 +904,7 @@ function RunwayHub.Show(app: any)
 		Factory.SectionBanner(participants, string.format("Runway Lineup · %d joined", #entries))
 		if #entries == 0 then
 			Factory.Label(participants, "Be the first player under the spotlight.", UDim2.new(1, -32, 0, 34), {
+				Name = "RunwayLineupEmpty",
 				Position = UDim2.fromOffset(16, 48),
 				Color = Colors.TextMuted,
 				AlignX = Enum.TextXAlignment.Center,
@@ -1017,6 +1028,7 @@ function RunwayHub.Show(app: any)
 		standings.LayoutOrder = 2
 		Factory.SectionBanner(standings, "Weekly Spotlight")
 		Factory.Label(standings, "Points from rounds, votes cast/received, and placements", UDim2.new(1, -32, 0, 16), {
+			Name = "WeeklyPointsHelp",
 			Position = UDim2.fromOffset(16, 36),
 			AlignX = Enum.TextXAlignment.Center,
 			Color = Colors.TextMuted,
@@ -1032,6 +1044,7 @@ function RunwayHub.Show(app: any)
 			),
 			UDim2.new(1, -32, 0, 14),
 			{
+				Name = "WeeklyRewardsHelp",
 				Position = UDim2.fromOffset(16, 53),
 				AlignX = Enum.TextXAlignment.Center,
 				Color = Colors.Gold,
@@ -1051,6 +1064,7 @@ function RunwayHub.Show(app: any)
 		end)
 		if not leaderboard then
 			Factory.Label(standings, "Loading this week's creators…", UDim2.new(1, -32, 0, 80), {
+				Name = "RunwayWeeklyLoading",
 				Position = UDim2.fromOffset(16, 86),
 				Color = Colors.TextMuted,
 				AlignX = Enum.TextXAlignment.Center,
@@ -1060,6 +1074,7 @@ function RunwayHub.Show(app: any)
 			local rows = leaderboard.standings or {}
 			if #rows == 0 then
 				Factory.Label(standings, "No weekly points yet. Lock in the first look.", UDim2.new(1, -32, 0, 80), {
+					Name = "RunwayWeeklyEmpty",
 					Position = UDim2.fromOffset(16, 86),
 					Color = Colors.TextMuted,
 					AlignX = Enum.TextXAlignment.Center,
@@ -1154,6 +1169,7 @@ function RunwayHub.Show(app: any)
 					else "FINISH A ROUND TO JOIN THE SPOTLIGHT",
 				UDim2.new(1, -32, 0, 18),
 				{
+					Name = "WeeklyOwnSummary",
 					Position = UDim2.fromOffset(16, 301),
 					Color = if own then Colors.Cyan else Colors.TextMuted,
 					Font = Theme.Fonts.Bold,

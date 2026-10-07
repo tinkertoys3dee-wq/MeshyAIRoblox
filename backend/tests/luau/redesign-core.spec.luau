@@ -56,8 +56,17 @@ equal(counter.Text,"19 / 300","The existing character counter follows the moved 
 equal(generate.Text,"Make my item · R$199","Generation retains its configured price disclosure")
 generate.Activated:Fire(); more.Activated:Fire(); help.Activated:Fire(); find(create.content,"Idea3").Activated:Fire()
 equal(clicked,4,"Generation, advanced, help, and idea callbacks remain attached")
-equal(prompt.Parent.Name,"V2CreatePromptPanel","The live prompt moves into its measured panel")
+equal(prompt.Parent.Name,"V2CreatePromptField","The live prompt sits inside its measured field artwork")
+equal(prompt.Parent.Parent.Name,"V2CreatePromptPanel","The decorated field stays in the creation panel")
+equal(prompt.BackgroundTransparency,1,"The native input leaves its measured artwork visible")
 equal(generate.Parent.Position.X.Offset,65,"The creation panel uses measured geometry")
+local generateIcon=find(generate,"V2DecorationCreateMakeItemIconArtwork")
+local generateCaption=find(generate,"Label")
+check(generateIcon.Position.X.Offset+generateIcon.Size.X.Offset < generateCaption.Position.X.Offset,
+	"Generation glyph and live configured-price caption have separate lanes")
+check(generateCaption.Position.X.Offset+generateCaption.Size.X.Offset <= generate.Size.X.Offset,
+	"Generation prices remain inside the action's hit area")
+equal(find(more,"RedesignArt"):GetAttribute("ForgeAssetKey"),"create/CreateSimpleSurface","Advanced uses the matching imported tab surface")
 check(not page.Visible,"Original containers remain alive for callbacks without duplicating the old screen")
 create.compact=true
 local before=prompt.Parent
@@ -78,6 +87,7 @@ local progress=label(activity,"RealProgress","64%")
 button(activity,"InspectPending","Inspect pending item")
 check(Layouts.Apply(running),"An active creation uses the redesigned frame")
 equal(activity.Parent.Name,"V2CreationActivity","Actual activity moves into reachable preview overflow")
+check(activity.Parent.Size.Y.Offset < 300,"One active job does not reserve a mostly empty full-height rail")
 equal(activity.Visible,true,"A running job remains visible after its old parent is hidden")
 equal(find(running.content,"RealStage"),stage,"The original live generation-stage label survives")
 equal(progress.Text,"64%","Generation progress remains actual server data")
@@ -85,6 +95,32 @@ local beforeActivity=clicked
 find(running.content,"InspectPending").Activated:Fire()
 equal(clicked,beforeActivity+1,"An active job retains its inspect callback")
 stage.Text="SUCCEEDED"; equal(find(running.content,"RealStage").Text,"SUCCEEDED","Existing completion updates reach the moved activity")
+
+local history=appFor("Create")
+history.state.profile.generationOrder={"finished"}
+history.state.profile.generations={finished={stage="SUCCEEDED"}}
+local historyPage=Factory.New("ScrollingFrame",{Name="CreateScroll",Parent=history.content})
+local historyCard=Factory.ImageCard(historyPage,UDim2.fromOffset(600,400))
+Factory.New("TextBox",{Name="CustomUGCPrompt",Text="A future idea",Parent=historyCard})
+Factory.New("ScrollingFrame",{Name="IdeaSuggestions",Parent=historyCard})
+button(historyCard,"CreatePersonalUGCButton","Make my item · R$199")
+local historyActivity=Factory.New("Frame",{Name="Activity",Size=UDim2.fromOffset(600,113),Visible=true,Parent=historyPage})
+label(historyActivity,"SectionBanner","Latest creation")
+local historyRow=Factory.New("Frame",{Parent=historyActivity})
+local historyPrompt=label(historyRow,"FinishedPrompt","A real completed idea",46,4)
+local historyPercent=label(historyRow,"FinishedPercent","100%",0,4); historyPercent.AnchorPoint=Vector2.new(1,0)
+local historyStage=label(historyRow,"FinishedStage","Your item is ready",46,22)
+local historyTrack=Factory.New("Frame",{Size=UDim2.fromOffset(500,3),Parent=historyRow})
+Factory.New("Frame",{Size=UDim2.fromScale(1,1),Parent=historyTrack})
+check(Layouts.Apply(history),"Terminal generation history uses the rich creation preview")
+check(find(history.content,"V2DecorationCreateHeroV2")~=nil,"Completed history keeps the clearly labeled aspirational hero visible")
+check(historyActivity.Parent.Size.Y.Offset <= 172,"A completed row stays in compact history space")
+check(historyActivity.Parent.Position.Y.Offset >= 400,"Completed history sits below the hero instead of replacing it")
+equal(historyPrompt.Text,"A real completed idea","History preserves the real prompt")
+equal(historyPercent.Text,"100%","History never fabricates progress")
+check(historyStage.TextSize>=18,"The actual job status has a readable native font")
+find(history.content,"V2OpenLatestItems").Activated:Fire()
+equal(history.opened,"My Studio","Completed history opens the real item collection")
 
 local function makeStudio(personalCopy)
 	local app=appFor("My Studio")
@@ -109,6 +145,8 @@ local function makeStudio(personalCopy)
 	local bodyScroll=Factory.New("ScrollingFrame",{Parent=inspector,ScrollBarThickness=4})
 	local body=Factory.New("Frame",{Parent=bodyScroll})
 	local readiness=Factory.New("Frame",{Name="Readiness",Parent=body})
+	local badge=Factory.New("Frame",{Name="LiveReadinessBadge",Position=UDim2.fromOffset(12,15),Size=UDim2.fromOffset(30,30),Parent=readiness})
+	label(badge,"LiveReadinessGlyph","…")
 	label(readiness,"ActualReadiness","Ready to wear",16,12)
 	label(readiness,"ActualReadinessHelp","This is your actual readiness explanation",16,42)
 	button(body,"Equip","Equip in game",50); button(body,"Publish","Publish to Roblox",100)
@@ -125,11 +163,31 @@ equal(find(rows[2],"ItemTitle").Text,"Live crown title","Collection labels show 
 equal(find(studio.content,"V2ItemName").Text,"Live crown title","The rename field starts from the actual selected item")
 equal(find(studio.content,"ActualReadiness").Text,"Ready to wear","Selected-item readiness stays live")
 equal(find(studio.content,"ActualReadinessHelp").Text,"This is your actual readiness explanation","Readiness help survives relocation")
-equal(find(studio.content,"ActualReadinessHelp").Parent,viewport,"Readiness details remain visible beside the live selected model")
+local readinessHelp=find(studio.content,"ActualReadinessHelp")
+equal(readinessHelp.Parent.Name,"V2ReadinessStrip","Continuous readiness detail occupies a separate strip")
+check(viewport.Position.Y.Offset+viewport.Size.Y.Offset+viewport.Parent.Position.Y.Offset < readinessHelp.Parent.Position.Y.Offset,
+	"Continuous readiness text stays below the live model instead of crossing its body")
+equal(viewport.BackgroundTransparency,1,"The live model renders over an honest native display stage")
+check(find(studio.content,"V2LiveModelStage").ZIndex < viewport.ZIndex,"The decorative stage stays behind the untouched model viewport")
+check(readinessHelp.TextSize>=20,"Continuous readiness details remain readable at the real display scale")
 local selectedHeading=find(studio.content,"SelectedItemHeading")
 local readiness=find(studio.content,"Readiness")
 check(selectedHeading.Position.X.Offset+selectedHeading.Size.X.Offset+selectedHeading.Parent.Position.X.Offset <= readiness.Position.X.Offset,
 	"Long live item titles remain clear of the readiness badge")
+local readinessBadge=find(studio.content,"LiveReadinessBadge")
+local readinessCaption=find(studio.content,"ActualReadiness")
+check(readinessBadge.Position.X.Offset+readinessBadge.Size.X.Offset < readinessCaption.Position.X.Offset,
+	"The live readiness badge does not cover its verdict")
+check(readinessBadge.Position.Y.Offset+readinessBadge.Size.Y.Offset <= readiness.Size.Y.Offset,
+	"The native readiness badge fits in the imported strip")
+find(studio.content,"LiveReadinessGlyph").Text="!"
+equal(find(studio.content,"LiveReadinessGlyph").Text,"!","Readiness can still change from checking to a warning")
+for _,entry in {{"Equip","MyItemsEquipIconArtwork"},{"Publish","MyItemsPublishIconArtwork"},{"ResetCamera","MyItemsResetCameraIconArtwork"}} do
+	local action=find(studio.content,entry[1])
+	local icon=find(action,"V2Decoration"..entry[2])
+	local caption=find(action,"Label")
+	check(icon.Position.X.Offset+icon.Size.X.Offset < caption.Position.X.Offset,"The "..entry[1].." caption clears its imported glyph")
+end
 rows[2].Activated:Fire(); find(studio.content,"Equip").Activated:Fire(); find(studio.content,"Publish").Activated:Fire(); find(studio.content,"Advanced").Activated:Fire(); find(studio.content,"ResetCamera").Activated:Fire()
 equal(clicked,countBefore+5,"Collection, equip, publish, advanced, and reset callbacks remain functional")
 local createNew
@@ -145,12 +203,34 @@ equal(studio.invoked,"SetItemDetails","Save name uses the existing server action
 equal(studio.payload.itemId,"itemB","Rename sends the actual selected item ID")
 equal(studio.payload.title,"My renamed crown","Rename sends editable native field text")
 check(save.Active,"A failed server rename restores the action")
+local saveIcon=find(save,"V2DecorationSaveNewLookIcon")
+check(saveIcon.Position.X.Offset+saveIcon.Size.X.Offset < find(save,"Label").Position.X.Offset,
+	"The save-name glyph has a separate lane even after pending text changes")
 local personal=makeStudio(true)
 check(Layouts.Apply(personal),"Personal copies retain their new presentation")
 check(not find(personal.content,"V2ItemName").TextEditable,"Personal-copy licensing still blocks edits")
 for _,node in personal.content:GetDescendants() do
 	if node:IsA("TextButton") and node.Text=="Personal copy" then check(not node.Active,"Personal-copy save is disabled") end
 end
+
+local empty=appFor("My Studio")
+check(Layouts.Apply(empty),"An empty collection gets the finished illustrated screen")
+check(find(empty.content,"V2DecorationCreateHeroV2")~=nil,"The empty inspector includes the approved aspirational crown artwork")
+local exampleLabel,emptyCreate
+local hasFakeViewport,hasItemAction=false,false
+for _,node in empty.content:GetDescendants() do
+	if node:IsA("TextLabel") and node.Text=="EXAMPLE DESIGN" then exampleLabel=node end
+	if node:IsA("TextButton") and node.Text=="Create your first accessory" then emptyCreate=node end
+	if node:IsA("ViewportFrame") then hasFakeViewport=true end
+	if node:IsA("TextButton") then
+		if string.find(node.Text,"Publish",1,true) or string.find(node.Text,"Equip",1,true) then hasItemAction=true end
+	end
+end
+check(not hasFakeViewport,"An empty profile never presents example artwork as an owned 3D model")
+check(not hasItemAction,"An empty collection never creates real item actions")
+check(exampleLabel~=nil,"The decorative item is explicitly labeled as an example")
+emptyCreate.Activated:Fire(); equal(empty.opened,"Create","The illustrated empty-state action opens real creation")
+equal(#empty.state.profile.itemOrder,0,"Empty-state artwork does not invent owned items")
 
 local market=appFor("Discover")
 local tools=Factory.New("Frame",{Parent=market.content})
@@ -167,12 +247,17 @@ local favorite=button(result,"Favorite","Saved ★",298); favorite.Position=UDim
 local previous=clicked
 check(Layouts.Apply(market),"Allowed community results use the new Market screen")
 equal(searchField.Text,"A user search","The native search query survives")
+equal(searchField.Parent.Name,"V2MarketSearchField","The search is surrounded by its approved field artwork")
+local searchIcon=find(searchField.Parent,"V2DecorationMarketSearchIconArtwork")
+check(searchIcon.Position.X.Offset+searchIcon.Size.X.Offset < searchField.Position.X.Offset,"The search text never crosses its search glyph")
 equal(thumb.Image,"rbxthumb://real-creator-item","The live community thumbnail survives")
 equal(title.Text,"An actual creator's item","Actual creator labels survive")
 equal(favorite.Text,"Saved ★","Favorite state remains native instead of using sample artwork")
 find(market.content,"Search").Activated:Fire(); find(result,"TryOn").Activated:Fire(); find(result,"Like").Activated:Fire(); favorite.Activated:Fire()
 equal(clicked,previous+4,"Search, try-on, like, and favorite keep original callbacks")
 equal(grid.ScrollBarThickness,4,"Result overflow stays reachable")
+local tryIcon=find(find(result,"TryOn"),"V2DecorationMarketTryCrownIconArtwork")
+check(tryIcon.Position.X.Offset+tryIcon.Size.X.Offset < find(find(result,"TryOn"),"Label").Position.X.Offset,"Try-on labels clear their imported glyphs")
 layout.CellSize=UDim2.new(.5,-12,0,200)
 equal(layout.CellSize.X.Scale,1/3,"The measured three-column grid survives responsive callbacks")
 market.state.policy.contentSharingAllowed=false
@@ -186,6 +271,7 @@ local native=Factory.New("ViewportFrame",{Parent=pending,ZIndex=1})
 check(Skin.Skin(pending,"my-items","MyItemsPreviewPanel"),"Text-free panel art can surround a native viewport")
 local art=pending:FindFirstChild("RedesignArt")
 equal(pending.BackgroundTransparency,.7,"Pending images retain their native authored fill")
+equal(art.ImageTransparency,0,"Pending artwork stays renderable so the engine can load and retain its texture")
 check(native.ZIndex>art.ZIndex,"Live viewport pixels stay above pending artwork")
 art.IsLoaded=true; equal(pending.BackgroundTransparency,1,"Loaded artwork replaces only its native background")
 art.IsLoaded=false; equal(pending.BackgroundTransparency,.7,"Unavailable artwork restores the original fill")
