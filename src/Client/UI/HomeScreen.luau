@@ -9,6 +9,8 @@ local HomeAssets = require(ReplicatedStorage:WaitForChild("HomeAssets"))
 local Factory = require(script.Parent.Factory)
 local Motion = require(script.Parent.Motion)
 local HomeEffects = require(script.Parent.HomeEffects)
+local PopupStyle = require(script.Parent.PopupStyle)
+local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 
 local HomeScreen = {}
 local WHITE = Color3.fromRGB(248, 250, 255)
@@ -94,12 +96,13 @@ local function modal(app: any, title: string): (Frame, ScrollingFrame)
 		BackgroundTransparency = 0.3, BorderSizePixel = 0, Active = true, ZIndex = 240, Parent = app.gui,
 	})
 	app.homeModal = overlay
+	local safeArea = PopupStyle.SafeArea(overlay)
 	local panel = Factory.New("Frame", {
 		Name = "DetailsPanel", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromScale(0.94, 0.82), BackgroundColor3 = INK, BorderSizePixel = 0,
-		ZIndex = 241, Parent = overlay,
+		Size = UDim2.new(0.94, 0, 1, -24), BackgroundColor3 = INK, BorderSizePixel = 0,
+		ZIndex = 241, Parent = safeArea,
 	})
-	Factory.New("UISizeConstraint", { MaxSize = Vector2.new(580, 560), Parent = panel })
+	Factory.New("UISizeConstraint", { MaxSize = Vector2.new(580, 620), Parent = panel })
 	Factory.Corner(panel, 22)
 	Factory.Stroke(panel, BLUE, 0.35, 1.5)
 	local heading = label(panel, title, 20, 12, 450, 40, 23, true)
@@ -110,13 +113,18 @@ local function modal(app: any, title: string): (Frame, ScrollingFrame)
 	close.ZIndex = 243
 	local cross = label(close, "×", 0, 0, 44, 44, 28, true, WHITE, true)
 	cross.ZIndex = 244
+	close.BackgroundColor3 = Color3.fromRGB(34, 49, 74)
+	close.BackgroundTransparency = 0.35
+	Factory.Corner(close, 12)
+	HomeEffects.Button(close, BLUE)
+	PopupStyle.Panel(panel, title)
 	local body = Factory.New("ScrollingFrame", {
-		Name = "DetailsScroll", Position = UDim2.fromOffset(20, 68), Size = UDim2.new(1, -40, 1, -88),
+		Name = "DetailsScroll", Position = UDim2.fromOffset(22, 86), Size = UDim2.new(1, -44, 1, -106),
 		BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 5,
 		ScrollBarImageColor3 = BLUE, ZIndex = 242, Parent = panel,
 	})
-	Factory.List(body, Enum.FillDirection.Vertical, 12)
+	Factory.List(body, Enum.FillDirection.Vertical, 10)
 	Motion.AutoFocus(close)
 	local connection = UserInputService.InputBegan:Connect(function(input, processed)
 		if not processed and (input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB) then
@@ -128,34 +136,60 @@ local function modal(app: any, title: string): (Frame, ScrollingFrame)
 end
 
 local function paragraph(parent: Instance, text: string, height: number?): TextLabel
-	local result = label(parent, text, 0, 0, 1, height or 68, 15, false, MUTED)
-	result.Size = UDim2.new(1, -8, 0, height or 68)
+	local result = label(parent, text, 0, 0, 1, height or 60, 15, false, MUTED)
+	result.Size = UDim2.new(1, -8, 0, height or 60)
 	result.TextYAlignment = Enum.TextYAlignment.Top
+	result.AutomaticSize = Enum.AutomaticSize.Y
 	result.ZIndex = 243
 	return result
 end
 
-local function modalAction(app: any, parent: Instance, text: string, action: () -> ()): TextButton
-	local control = button(app, parent, "DetailAction", text, 0, 0, 1, 48, action)
-	control.Size = UDim2.new(1, -8, 0, 48)
+local function modalAction(app: any, parent: Instance, text: string, action: () -> (), options: any?): TextButton
+	local height = if options and options.detail then 70 else 58
+	local control = button(app, parent, "DetailAction", text, 0, 0, 1, height, action)
+	control.Size = UDim2.new(1, -8, 0, height)
 	control.ZIndex = 243
-	fallbackSurface(control, Color3.fromRGB(7, 77, 141), BLUE, 13)
-	local caption = label(control, text, 10, 0, 1, 48, 16, true, WHITE, true)
-	caption.Size = UDim2.new(1, -20, 1, 0)
-	caption.ZIndex = 244
+	PopupStyle.Action(control, text, options)
 	return control
+end
+
+local function statCard(parent: Instance, name: string, title: string, value: string, note: string, accent: Color3): Frame
+	local card = Factory.New("Frame", { Name = name, Size = UDim2.new(1, -8, 0, 92),
+		BackgroundColor3 = if Theme.IsHighContrast then Theme.Colors.PanelRaised else Color3.new(1, 1, 1),
+		BorderSizePixel = 0, ZIndex = 243, Parent = parent })
+	Factory.Corner(card, 15)
+	Factory.Stroke(card, accent, 0.6, 1)
+	if not Theme.IsHighContrast then Factory.Gradient(card, { Color3.fromRGB(31, 48, 75), Color3.fromRGB(21, 33, 55) }, 90) end
+	local heading = label(card, title, 16, 9, 1, 20, 13, true, accent)
+	heading.Size = UDim2.new(1, -32, 0, 20); heading.ZIndex = 244
+	local amount = label(card, value, 16, 29, 1, 33, 28, true, WHITE)
+	amount.Name = "StatValue"; amount.Size = UDim2.new(1, -32, 0, 33); amount.ZIndex = 244
+	local help = label(card, note, 16, 65, 1, 19, 12, false, MUTED)
+	help.Name = "StatNote"
+	help.Size = UDim2.new(1, -32, 0, 19); help.ZIndex = 244
+	return card
+end
+
+local function integer(value: number): string
+	local result = string.reverse(tostring(math.floor(value)))
+	result = string.gsub(result, "(%d%d%d)", "%1,")
+	result = string.gsub(string.reverse(result), "^,", "")
+	return result
 end
 
 local function showMissions(app: any)
 	local _, body = modal(app, "Daily Missions")
-	paragraph(body, "Complete these activities to earn bonus tokens. Rewards are added automatically.", 48)
 	local done = (app.state.questState and app.state.questState.questsDone) or {}
+	local completed = 0
+	for _, quest in Config.Retention.Quests do if done[quest.key] then completed += 1 end end
+	statCard(body, "MissionProgress", "DAILY PROGRESS", string.format("%d / %d complete", completed, #Config.Retention.Quests), "Bonus tokens arrive automatically when you finish.", BLUE)
 	for _, quest in Config.Retention.Quests do
 		local destination = if quest.key == "TRY_STYLE" then "Avatar Lab" else "Play"
 		modalAction(app, body, (if done[quest.key] then "✓ " else "") .. quest.label .. "  ·  +" .. quest.tokens, function()
 			closeModal(app)
 			app:_OpenPage(destination)
-		end)
+		end, { icon = if quest.key == "TRY_STYLE" then "NavMarket" elseif quest.key == "RUNWAY" then "NavCreate" else "NavGames",
+			kind = if done[quest.key] then "secondary" else "primary", detail = if done[quest.key] then "Complete · bonus tokens credited" else "Play today to earn the reward" })
 	end
 	paragraph(body, string.format("Finish all three for +%d extra bonus tokens. Bonus tokens can fund Priority Passes.", Config.Retention.QuestClearBonusTokens), 60)
 end
@@ -163,49 +197,73 @@ end
 local function showRewards(app: any)
 	local _, body = modal(app, "Daily Rewards")
 	local brief = app.state.dailyBrief or {}
-	paragraph(body, string.format("Your streak: %d day%s. Daily rewards are credited when you join.", brief.streak or 0,
-		if brief.streak == 1 then "" else "s"), 48)
+	local streak = statCard(body, "DailyStreak", "YOUR CHECK-IN STREAK", string.format("%d day%s", brief.streak or 0,
+		if brief.streak == 1 then "" else "s"), "Today's reward is credited when you join.", GOLD)
+	streak.Size = UDim2.new(1, -8, 0, 78)
+	local streakNote = streak:FindFirstChild("StatNote")
+	if streakNote then streakNote.Visible = false end
+	local calendar = frame(body, "RewardCalendar", 0, 0, 1, 186)
+	calendar.Size = UDim2.new(1, -8, 0, math.ceil(#Config.Retention.DailyStreakTokens / 4) * 90 - 4)
+	calendar.ZIndex = 243
 	for index, reward in Config.Retention.DailyStreakTokens do
 		local current = brief.rewardDay == index
-		local row = paragraph(body, string.format("%sDay %d  ·  +%d bonus tokens", if current then "✓ " else "", index, reward), 26)
-		row.TextColor3 = if current then GOLD else MUTED
+		local col, row = (index - 1) % 4, math.floor((index - 1) / 4)
+		local tile = Factory.New("Frame", { Name = "RewardDay" .. tostring(index),
+			Position = UDim2.new(col / 4, if col == 0 then 0 else 2, 0, row * 90 + 2),
+			Size = UDim2.new(0.25, -7, 0, 80), BackgroundColor3 = if current then Color3.fromRGB(89, 66, 22) else Color3.fromRGB(27, 41, 63),
+			BorderSizePixel = 0, ZIndex = 244, Parent = calendar })
+		Factory.Corner(tile, 13); Factory.Stroke(tile, if current then GOLD else Color3.fromRGB(81, 105, 139), if current then 0.1 else 0.65, 1)
+		local day = label(tile, if current then "TODAY" else "DAY " .. tostring(index), 6, 7, 1, 18, 12, true, if current then GOLD else MUTED, true)
+		day.Size = UDim2.new(1, -12, 0, 18); day.ZIndex = 245
+		local amount = label(tile, "+" .. tostring(reward), 6, 28, 1, 28, 23, true, WHITE, true)
+		amount.Size = UDim2.new(1, -12, 0, 28); amount.ZIndex = 245
+		local note = label(tile, "bonus tokens", 6, 57, 1, 17, 10, false, MUTED, true)
+		note.Size = UDim2.new(1, -12, 0, 17); note.ZIndex = 245
 	end
-	paragraph(body, string.format("Next check-in: +%d bonus tokens. Bonus tokens can fund Priority Passes.", brief.nextDailyTokens or 0), 48)
-	modalAction(app, body, "View Missions", function() showMissions(app) end)
+	paragraph(body, string.format("Next check-in: +%d bonus tokens. Bonus tokens can fund Priority Passes.", brief.nextDailyTokens or 0), 32)
+	modalAction(app, body, "View Missions", function() showMissions(app) end, { kind = "primary", icon = "MissionsIcon" })
 end
 
 local function showWallet(app: any)
 	local _, body = modal(app, "Forge Tokens")
 	local profile = app.state.profile
-	paragraph(body, string.format("%d spendable tokens\n%d bonus tokens for Priority Passes", profile.tokens or 0, profile.bonusTokens or 0), 56)
-	paragraph(body, "Earn tokens in the AFK Lounge. Roblox shows the price before any purchase.", 52)
+	local balances = frame(body, "WalletBalances", 0, 0, 1, 92)
+	balances.Size = UDim2.new(1, -8, 0, 92); balances.ZIndex = 243
+	local spendable = statCard(balances, "SpendableBalance", "SPENDABLE TOKENS", integer(profile.tokens or 0), "Your token balance", GOLD)
+	spendable.Size = UDim2.new(0.5, -6, 1, 0)
+	local bonus = statCard(balances, "BonusBalance", "BONUS TOKENS", integer(profile.bonusTokens or 0), "For Priority Passes", VIOLET)
+	bonus.Position = UDim2.new(0.5, 6, 0, 0); bonus.Size = UDim2.new(0.5, -6, 1, 0)
+	paragraph(body, "Earn tokens in the lounge, or add more through Roblox checkout.", 38)
 	modalAction(app, body, "Open Token Lounge", function()
 		closeModal(app)
 		app:_SetStudioOpen(false)
 		task.spawn(function() app:_OpenAfkLounge() end)
-	end)
+	end, { kind = "gold", icon = "TokenIcon", detail = "Relax in the lounge and earn bonus tokens" })
 	modalAction(app, body, "Buy Tokens", function()
 		task.spawn(function() app:_Invoke(Network.Actions.BuyTokens, {}) end)
-	end)
-	modalAction(app, body, "Get a Priority Pass", function() closeModal(app); app:_BuyPriorityPass() end)
+	end, { kind = "secondary", icon = "PlusButton", detail = "Roblox shows the price before purchase" })
+	modalAction(app, body, "Get a Priority Pass", function() closeModal(app); app:_BuyPriorityPass() end,
+		{ kind = "violet", icon = "TicketIcon", detail = "A faster queue for model and image jobs" })
 end
 
 local function showCodes(app: any)
 	local _, body = modal(app, "UGC Item Codes")
-	paragraph(body, "Enter a Roblox catalog item ID to try it on for free. Choose its category below. Your saved creations are in My Items.", 72)
+	paragraph(body, "Paste a Roblox catalog item ID, choose its category, and preview it on your avatar.", 46)
 	local entry = Factory.New("TextBox", {
 		Name = "CatalogItemId", Size = UDim2.new(1, -8, 0, 48), Text = "", PlaceholderText = "Roblox catalog item ID",
 		ClearTextOnFocus = false, BackgroundColor3 = Color3.fromRGB(27, 40, 65), BorderSizePixel = 0,
 		TextColor3 = WHITE, PlaceholderColor3 = MUTED, Font = Enum.Font.Gotham, TextSize = 18, ZIndex = 243, Parent = body,
 	})
 	Factory.Corner(entry, 12)
+	Factory.Stroke(entry, Color3.fromRGB(100, 128, 163), 0.45, 1)
 	local categories = { "Hat", "HairAccessory", "FaceAccessory", "NeckAccessory", "ShoulderAccessory", "FrontAccessory", "BackAccessory", "WaistAccessory", "Shirt", "Pants", "TShirt", "Face" }
 	local categoryIndex = 1
-	local category = modalAction(app, body, "Category: Hat  ›", function() end)
+	local category = modalAction(app, body, "Category: Hat  ›", function() end, { icon = "CodesIcon" })
 	category.Activated:Connect(function()
 		categoryIndex = categoryIndex % #categories + 1
 		local caption = category:FindFirstChild("Caption") :: TextLabel
-		caption.Text = "Category: " .. categories[categoryIndex] .. "  ›"
+		category.Text = "Category: " .. categories[categoryIndex] .. "  ›"
+		caption.Text = "Category: " .. categories[categoryIndex]
 	end)
 	local busy = false
 	local tryButton: TextButton
@@ -230,9 +288,9 @@ local function showCodes(app: any)
 				app:_OpenPage("Avatar Lab")
 			elseif tryButton.Parent then tryButton.Active = true end
 		end)
-	end)
-	modalAction(app, body, "Open My Items", function() closeModal(app); app:_OpenPage("My Studio") end)
-	modalAction(app, body, "Browse Avatar Styles", function() closeModal(app); app:_OpenPage("Avatar Lab") end)
+	end, { kind = "primary", icon = "NavMarket" })
+	modalAction(app, body, "Open My Items", function() closeModal(app); app:_OpenPage("My Studio") end, { icon = "NavCreate" })
+	modalAction(app, body, "Browse Avatar Styles", function() closeModal(app); app:_OpenPage("Avatar Lab") end, { icon = "NavMarket" })
 end
 
 local function logo(parent: Instance, x: number, y: number, scale: number)
@@ -308,16 +366,27 @@ end
 
 function HomeScreen.ShowTools(app: any)
 	local _, body = modal(app, "More tools")
-	for _, tool in {
-		{ "Style My Avatar", "Avatar Lab" }, { "Avatar Graphics", "Avatar Graphics" },
-		{ "My Items", "My Studio" }, { "Games & Runway", "Play" }, { "Settings", "Settings" },
+	paragraph(body, "Choose what you want to do next.", 28)
+	local columns = if app.compact then 1 else 2
+	local grid = frame(body, "ToolDestinations", 0, 0, 1, math.ceil(6 / columns) * 90)
+	grid.Size = UDim2.new(1, -8, 0, math.ceil(6 / columns) * 90)
+	grid.ZIndex = 243
+	for index, tool in {
+		{ "Style My Avatar", "Avatar Lab", "NavMarket", "Create a fresh look" },
+		{ "Avatar Graphics", "Avatar Graphics", "NavCreate", "Make/share pictures" },
+		{ "My Items", "My Studio", "NavCreate", "Wear your creations" },
+		{ "Games & Runway", "Play", "NavGames", "Play and earn" },
+		{ "Settings", "Settings", "SettingsButton", "Make Forge feel right" },
+		{ "Tutorial", "TUTORIAL", "TutorialIcon", "Get a quick tour" },
 	} do
-		modalAction(app, body, tool[1] .. "  ›", function()
+		local action = modalAction(app, grid, tool[1] .. "  ›", function()
 			closeModal(app)
-			app:_OpenPage(tool[2])
-		end)
+			if tool[2] == "TUTORIAL" then app:_ShowVisualTutorial() else app:_OpenPage(tool[2]) end
+		end, { icon = tool[3], detail = tool[4] })
+		local col, row = (index - 1) % columns, math.floor((index - 1) / columns)
+		action.Position = UDim2.new(col / columns, if col == 0 then 2 else 6, 0, row * 90 + 2)
+		action.Size = UDim2.new(1 / columns, -8, 0, 76)
 	end
-	modalAction(app, body, "Tutorial  ›", function() closeModal(app); app:_ShowVisualTutorial() end)
 end
 
 -- The same uploaded, text-free Home chrome surrounds every editor page.

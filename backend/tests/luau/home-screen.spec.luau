@@ -23,6 +23,8 @@ local app = {
 	_ShowVisualTutorial = function(self) self.tutorialOpened = true end,
 	_ShowPlus = function(self) self.plusOpened = true end,
 	_BuyPriorityPass = function(self) self.passOpened = true end,
+	_OpenAfkLounge = function(self) self.afkOpened = true end,
+	_Invoke = function(self, action, payload) self.invokedAction = action; self.invokedPayload = payload; return true end,
 }
 local function find(name)
 	for _, child in app.content:GetDescendants() do if child.Name == name then return child end end
@@ -51,6 +53,23 @@ find("CloseHome").Activated:Fire()
 check(app.studioOpen == false, "Home can return to the game world")
 find("PriorityPasses").Activated:Fire()
 check(app.passOpened, "Ticket control uses the existing Priority Pass purchase flow")
+find("ForgeTokens").Activated:Fire()
+local wallet = app.homeModal
+check(wallet:FindFirstChild("SpendableBalance", true):FindFirstChild("StatValue").Text == "15", "Wallet card preserves actual spendable tokens")
+check(wallet:FindFirstChild("BonusBalance", true):FindFirstChild("StatValue").Text == "8", "Wallet card preserves actual bonus tokens separately")
+local walletActions = {}
+for _, child in wallet:GetDescendants() do if child.Name == "DetailAction" then walletActions[child.Text] = child end end
+for _, text in { "Open Token Lounge", "Buy Tokens", "Get a Priority Pass" } do
+	local action = walletActions[text]
+	check(action and action.Selectable and action.Size.Y.Offset >= 58, "Wallet action retains a readable native hit target: " .. text)
+	local caption = action:FindFirstChild("Caption")
+	check(caption.Position.X.Offset >= 60 and caption.ZIndex > action.ZIndex, "Wallet caption clears its icon and surface: " .. text)
+end
+walletActions["Buy Tokens"].Activated:Fire()
+runSpawn(#spawned)
+check(app.invokedAction == "BuyTokens", "Wallet purchase keeps its original native server action in the offline fixture")
+walletActions["Get a Priority Pass"].Activated:Fire()
+check(app.passOpened and app.homeModal == nil, "Priority action retains existing purchase handler and closes the wallet")
 find("MissionsShortcut").Activated:Fire()
 check(app.homeModal and app.homeModal.Parent, "Missions opens a functional modal")
 app.homeModal:Destroy()
@@ -59,6 +78,11 @@ find("CodesShortcut").Activated:Fire()
 local codeField
 for _, child in app.homeModal:GetDescendants() do if child.Name == "CatalogItemId" then codeField = child end end
 check(codeField and codeField:IsA("TextBox"), "Item code entry remains a native editable control")
+local category
+for _, child in app.homeModal:GetDescendants() do if child:IsA("TextButton") and child.Text == "Category: Hat  ›" then category = child end end
+category.Activated:Fire()
+check(category:FindFirstChild("Caption").Text == "Category: HairAccessory", "Restyled category selector updates its native caption")
+check(category:FindFirstChild("ActionChevron") ~= nil, "Category selector keeps one separate arrow lane")
 app.homeModal:Destroy()
 app.homeModal = nil
 local root = find("ForgeHome")

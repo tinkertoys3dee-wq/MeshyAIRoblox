@@ -26,6 +26,7 @@ local RunwayHub = require(script.Parent.RunwayHub)
 local SoundController = require(script.Parent.SoundController)
 local ViewportController = require(script.Parent.ViewportController)
 local Motion = require(script.Parent.Motion)
+local PopupStyle = require(script.Parent.PopupStyle)
 local NotificationService = require(script.Parent.NotificationService)
 local WindowFocus = require(script.Parent.WindowFocus)
 local AvatarLab = require(script.Parent.AvatarLab)
@@ -10192,148 +10193,103 @@ end
 
 function App:_ShowPlus()
 	local overlay = Factory.New("Frame", {
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Colors.Ink,
-		BackgroundTransparency = 0.2,
-		BorderSizePixel = 0,
-		ZIndex = 210,
-		Parent = self.gui,
+		Name = "PlusOverlay", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Colors.Ink,
+		BackgroundTransparency = 0.26, BorderSizePixel = 0, Active = true, ZIndex = 210, Parent = self.gui,
 	})
-	local modal = Factory.ImageCard(overlay, UDim2.new(1, -32, 0, 400), UDim2.fromScale(0.5, 0.5), "PlusModal")
-	modal.AnchorPoint = Vector2.new(0.5, 0.5)
-	modal.ClipsDescendants = false
-	modal.ZIndex = 211
-	Factory.New("UISizeConstraint", {
-		MaxSize = Vector2.new(480, 400),
-		Parent = modal,
+	local safeArea = PopupStyle.SafeArea(overlay)
+	local modal = Factory.New("Frame", {
+		Name = "PlusModal", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.new(1, -32, 0, 518), BorderSizePixel = 0, ZIndex = 211, Parent = safeArea,
 	})
-	-- Soft gold glow behind the modal reads as a premium/upsell accent from
-	-- across the screen, before the reader's eye even reaches the copy.
-	local glow = Factory.Blob(modal, 360, UDim2.new(0.5, 0, 0, -40), Colors.Gold, 0.88)
-	glow.AnchorPoint = Vector2.new(0.5, 0.5)
-	glow.ZIndex = 210
+	Factory.New("UISizeConstraint", { MaxSize = Vector2.new(520, 518), Parent = modal })
+	Factory.Label(modal, "Roblox Plus", UDim2.new(1, -132, 0, 42), {
+		Position = UDim2.fromOffset(68, 14), Font = Theme.Fonts.Bold, TextSize = 23, ZIndex = 214,
+	})
+	PopupStyle.Panel(modal, "Roblox Plus", { icon = "PremiumIcon", accent = Colors.Gold })
 
-	local badge = Factory.New("Frame", {
-		Name = "PlusBadge",
-		Size = UDim2.fromOffset(64, 64),
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 22),
-		BackgroundColor3 = Colors.Gold,
-		BorderSizePixel = 0,
-		ZIndex = 212,
-		Parent = modal,
+	local function closePlus()
+		self.sounds:Play("PanelClose")
+		self:_CloseModal(overlay, modal)
+	end
+	local dismiss = Factory.New("TextButton", {
+		Name = "ClosePlus", Text = "×", Size = UDim2.fromOffset(48, 48), Position = UDim2.new(1, -62, 0, 10),
+		AutoButtonColor = false, ZIndex = 213, Parent = modal,
 	})
-	Factory.Corner(badge, 32)
-	Factory.Gradient(badge, { Color3.fromRGB(255, 220, 130), Colors.Gold }, 120)
-	Factory.Stroke(badge, Colors.Ink, 0.3, 1.5)
-	local badgeShadow = Factory.New("Frame", {
-		Size = UDim2.fromOffset(64, 64),
-		Position = UDim2.fromOffset(0, 4),
-		BackgroundColor3 = Colors.Ink,
-		BackgroundTransparency = 0.72,
-		BorderSizePixel = 0,
-		ZIndex = 211,
-		Parent = badge,
-	})
-	Factory.Corner(badgeShadow, 32)
-	Factory.Label(badge, "♛", UDim2.fromScale(1, 1), {
-		Color = Colors.Ink,
-		TextSize = 30,
-		AlignX = Enum.TextXAlignment.Center,
-		AlignY = Enum.TextYAlignment.Center,
-		ZIndex = 213,
-	})
+	PopupStyle.Action(dismiss, "×", { chevron = false })
+	local dismissCaption = dismiss:FindFirstChild("Caption") :: TextLabel
+	dismissCaption.Position = UDim2.new()
+	dismissCaption.Size = UDim2.fromScale(1, 1)
+	dismissCaption.TextXAlignment = Enum.TextXAlignment.Center
+	dismissCaption.TextSize = 26
+	self:_BindButton(dismiss)
+	dismiss.Activated:Connect(closePlus)
 
-	Factory.Label(modal, "Support creators directly", UDim2.new(1, -50, 0, 30), {
-		Position = UDim2.fromOffset(25, 96),
-		AlignX = Enum.TextXAlignment.Center,
-		Font = Theme.Fonts.Black,
-		TextSize = 21,
-		ZIndex = 212,
+	Factory.Label(modal, "Support creators directly", UDim2.new(1, -48, 0, 34), {
+		Position = UDim2.fromOffset(24, 88), Font = Theme.Fonts.Bold,
+		TextSize = 23, Wrapped = true, ZIndex = 213,
 	})
 	Factory.Label(
 		modal,
 		"Plus is required to send Robux to another creator. You can still sell your own work and try on every public design without it.",
-		UDim2.new(1, -70, 0, 56),
+		UDim2.new(1, -48, 0, 64),
 		{
-			Position = UDim2.fromOffset(35, 130),
-			AlignX = Enum.TextXAlignment.Center,
-			AlignY = Enum.TextYAlignment.Top,
-			Color = Colors.TextMuted,
-			TextSize = 12,
-			Wrapped = true,
-			ZIndex = 212,
+			Position = UDim2.fromOffset(24, 132), AlignY = Enum.TextYAlignment.Top,
+			Color = Colors.TextMuted, TextSize = 16, Wrapped = true, ZIndex = 213,
 		}
 	)
 
 	local benefits = Factory.New("Frame", {
-		Position = UDim2.fromOffset(28, 196),
-		Size = UDim2.new(1, -56, 0, 96),
-		BackgroundTransparency = 1,
-		ZIndex = 212,
-		Parent = modal,
+		Name = "PlusBenefits", Position = UDim2.fromOffset(24, 204), Size = UDim2.new(1, -48, 0, 148),
+		BackgroundTransparency = 1, ZIndex = 212, Parent = modal,
 	})
 	Factory.List(benefits, Enum.FillDirection.Vertical, 8)
-	for _, line in
-		{
-			"Send Robux straight to the creators you support",
-			"Unlock purchasing across every listed design",
-			"Nothing changes about selling or trying on your own work",
-		}
-	do
+	for _, line in {
+		"Send Robux straight to the creators you support",
+		"Unlock purchasing across every listed design",
+		"Nothing changes about selling or trying on your own work",
+	} do
 		local row = Factory.New("Frame", {
-			Size = UDim2.new(1, 0, 0, 26),
-			BackgroundTransparency = 1,
-			ZIndex = 212,
-			Parent = benefits,
+			Name = "PlusBenefit", Size = UDim2.new(1, 0, 0, 44),
+			BackgroundColor3 = Colors.PanelSoft, BackgroundTransparency = 0.3, BorderSizePixel = 0,
+			ZIndex = 212, Parent = benefits,
 		})
+		Factory.Corner(row, 12)
 		local check = Factory.New("Frame", {
-			Size = UDim2.fromOffset(18, 18),
-			Position = UDim2.fromOffset(0, 4),
-			BackgroundColor3 = Colors.Mint,
-			BackgroundTransparency = 0.15,
-			BorderSizePixel = 0,
-			ZIndex = 213,
-			Parent = row,
+			Size = UDim2.fromOffset(26, 26), Position = UDim2.fromOffset(12, 9),
+			BackgroundColor3 = Colors.Mint, BackgroundTransparency = 0.85, BorderSizePixel = 0,
+			ZIndex = 213, Parent = row,
 		})
-		Factory.Corner(check, 9)
+		Factory.Corner(check, 13)
 		Factory.Label(check, "✓", UDim2.fromScale(1, 1), {
-			Color = Colors.Ink,
-			Font = Theme.Fonts.Bold,
-			TextSize = 11,
-			AlignX = Enum.TextXAlignment.Center,
-			AlignY = Enum.TextYAlignment.Center,
-			ZIndex = 214,
+			Color = Colors.Mint, Font = Theme.Fonts.Bold, TextSize = 16,
+			AlignX = Enum.TextXAlignment.Center, AlignY = Enum.TextYAlignment.Center, ZIndex = 214,
 		})
-		Factory.Label(row, line, UDim2.new(1, -30, 1, 0), {
-			Position = UDim2.fromOffset(28, 0),
-			Color = Colors.TextMuted,
-			TextSize = 12,
-			Wrapped = true,
-			ZIndex = 213,
+		Factory.Label(row, line, UDim2.new(1, -62, 1, -6), {
+			Position = UDim2.fromOffset(50, 3), Color = Colors.Text, TextSize = 16, Wrapped = true, ZIndex = 213,
 		})
 	end
 
-	local subscribe =
-		Factory.ImageButton(modal, "View Roblox Plus", UDim2.new(0.5, -24, 0, 44), UDim2.fromOffset(16, 316), "mint")
-	local closeButton =
-		Factory.ImageButton(modal, "Maybe later", UDim2.new(0.5, -24, 0, 44), UDim2.new(0.5, 8, 0, 316), nil)
-	subscribe.ZIndex = 213
-	closeButton.ZIndex = 213
+	local subscribe = Factory.New("TextButton", {
+		Name = "ViewRobloxPlus", Text = "View Roblox Plus", Size = UDim2.new(1, -48, 0, 58),
+		Position = UDim2.fromOffset(24, 370), AutoButtonColor = false, ZIndex = 213, Parent = modal,
+	})
+	local closeButton = Factory.New("TextButton", {
+		Name = "MaybeLater", Text = "Maybe later", Size = UDim2.new(1, -48, 0, 58),
+		Position = UDim2.fromOffset(24, 438), AutoButtonColor = false, ZIndex = 213, Parent = modal,
+	})
+	PopupStyle.Action(subscribe, "View Roblox Plus", { kind = "gold", icon = "PremiumIcon", chevron = false })
+	PopupStyle.Action(closeButton, "Maybe later", { chevron = false })
 	self:_BindButton(subscribe)
 	self:_BindButton(closeButton)
 	subscribe.Activated:Connect(function()
 		task.spawn(function()
 			self:_Invoke(Network.Actions.PromptPlus, {})
 		end)
-		self.sounds:Play("PanelClose")
-		self:_CloseModal(overlay)
+		closePlus()
 	end)
-	closeButton.Activated:Connect(function()
-		self.sounds:Play("PanelClose")
-		self:_CloseModal(overlay)
-	end)
+	closeButton.Activated:Connect(closePlus)
 	self:_AnimateModalIn(overlay, modal)
+	Motion.AutoFocus(dismiss)
 end
 
 function App:_ShowLeaderboard()

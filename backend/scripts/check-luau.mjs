@@ -50,6 +50,7 @@ try {
     HomeAssets: 'src/Shared/HomeAssets.luau',
     DailyChallenge: 'src/Shared/DailyChallenge.luau',
     HomeEffects: 'src/Client/UI/HomeEffects.luau',
+    PopupStyle: 'src/Client/UI/PopupStyle.luau',
     HomeScreen: 'src/Client/UI/HomeScreen.luau',
     ModernChrome: 'src/Client/UI/ModernChrome.luau',
     ModernLayouts: 'src/Client/UI/ModernLayouts.luau',
@@ -272,10 +273,14 @@ return App end`;
   const effectsSuite = `${read('backend/tests/luau/engine-double.luau')}\n${definitions}\n${read('backend/tests/luau/home-effects.spec.luau')}`;
   const [effectsCount] = await runSuite(effectsSuite, 'home-effects-regressions');
   console.log(`Passed ${effectsCount} Home effects assertions (engine doubles).`);
+  const popupDefinitions = defineModulesFor(new Set(['Motion', 'Factory', 'HomeAssets', 'PopupStyle']));
+  const popupSuite = `${read('backend/tests/luau/engine-double.luau')}\n${popupDefinitions}\n${read('backend/tests/luau/popup-style.spec.luau')}`;
+  const [popupCount] = await runSuite(popupSuite, 'popup-style-regressions');
+  console.log(`Passed ${popupCount} popup style assertions (engine doubles).`);
   const modernSuite = `${read('backend/tests/luau/engine-double.luau')}\n${definitions}\n${navigationModule}\n${read('backend/tests/luau/modern-screen.spec.luau')}`;
   const [modernCount] = await runSuite(modernSuite, 'modern-screen-regressions');
   console.log(`Passed ${modernCount} modern screen assertions (engine doubles).`);
-  const graphicsModules = new Set(['Motion', 'Factory', 'HomeAssets', 'HomeEffects', 'HomeScreen', 'RedesignAssets', 'RedesignMetrics', 'RedesignSkin', 'RedesignToolsLayouts']);
+  const graphicsModules = new Set(['Motion', 'Factory', 'HomeAssets', 'HomeEffects', 'PopupStyle', 'HomeScreen', 'RedesignAssets', 'RedesignMetrics', 'RedesignSkin', 'RedesignToolsLayouts']);
   const graphicsDefinitions = defineModulesFor(graphicsModules);
   for (const name of ['core', 'games', 'tools']) {
     const suite = `${read('backend/tests/luau/engine-double.luau')}\n${name === 'tools' ? graphicsDefinitions : definitions}\n${read(`backend/tests/luau/redesign-${name}.spec.luau`)}`;
