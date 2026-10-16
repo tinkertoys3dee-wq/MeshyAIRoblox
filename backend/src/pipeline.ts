@@ -126,10 +126,20 @@ export class JobRunner {
       const jobId = this.#pending.shift();
       if (!jobId) break;
       this.#active.add(jobId);
-      void this.#run(jobId).finally(() => {
-        this.#active.delete(jobId);
-        this.#drain();
-      });
+      void this.#run(jobId)
+        .catch((error: unknown) => {
+          // Database reads before the job is loaded, or writes while recording
+          // its failure, can reject outside #run's provider-error boundary.
+          // Keep that infrastructure failure from becoming an unhandled
+          // rejection that terminates every other player's worker. Its durable
+          // checkpoint remains available to recover/re-enqueue; do not replay a
+          // paid provider request automatically after a failed checkpoint write.
+          this.#logger.error({ jobId, error }, "Worker could not load or persist its job");
+        })
+        .finally(() => {
+          this.#active.delete(jobId);
+          this.#drain();
+        });
     }
   }
 
